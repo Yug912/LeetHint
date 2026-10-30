@@ -71,8 +71,8 @@ Every hint set includes:
 
 1. **Clone this repository**
    ```bash
-   git clone https://github.com/Yug912/LeetHint.git
-   cd LeetHint
+   git clone https://github.com/Yug912/AlgoMentor.git
+   cd AlgoMentor
    ```
 
 2. **Open Chrome Extensions**
