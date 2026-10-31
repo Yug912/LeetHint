@@ -39,6 +39,9 @@ let hintsGenerationId = 0;
 // Prevents PROBLEM_DETECTED message handler from firing a duplicate load.
 let isInitializing = false;
 
+// A problem change that arrived while isInitializing — applied right after
+let pendingProblem = null;
+
 
 // Score values for each level
 const SCORE_MAP = { 1: 100, 2: 80, 3: 60, 4: 40, solution: 20 };
@@ -124,6 +127,7 @@ const DOM = {
   tcscResult:   $('tcsc-result'),
   optimalTcDisplay: $('optimal-tc-display'),
   optimalScDisplay: $('optimal-sc-display'),
+  scBreakdown:      $('sc-breakdown'),
   tcMatchIcon:  $('tc-match-icon'),
   scMatchIcon:  $('sc-match-icon'),
 
@@ -174,6 +178,7 @@ async function init() {
   setupTcScListener();
   setupExplanationAutoSave();
   setupRetryListener();
+  setupActiveTabWatcher();
 
   // Load bundled company DB in background (non-blocking)
   loadCompaniesDB();
@@ -215,7 +220,7 @@ async function checkApiKeyStatus() {
   // Update OpenRouter status
   if (DOM.orKeyStatus) {
     DOM.orKeyStatus.textContent = openRouterApiKey
-      ? '✅ OpenRouter active — using ' + 'google/gemini-2.5-pro'
+      ? '✅ OpenRouter active — DeepSeek R1 solves, Gemini 2.5 Flash writes hints'
       : 'Not set — add for best results';
     if (DOM.btnChangeOrKey) DOM.btnChangeOrKey.textContent = openRouterApiKey ? 'Change' : 'Set Key';
   }
@@ -302,7 +307,7 @@ async function saveOpenRouterKey() {
 
   await chrome.storage.local.set({ openRouterApiKey: key });
   DOM.orKeySection.classList.remove('visible');
-  DOM.orKeyStatus.textContent = '✅ OpenRouter active — using google/gemini-2.5-pro';
+  DOM.orKeyStatus.textContent = '✅ OpenRouter active — DeepSeek R1 solves, Gemini 2.5 Flash writes hints';
   DOM.btnChangeOrKey.textContent = 'Change';
   DOM.orKeyInput.value = '';
   DOM.apiBanner.style.display = 'none'; // hide banner — OR key is better
@@ -312,7 +317,7 @@ async function saveOpenRouterKey() {
   const staleKeys = Object.keys(all).filter(k => k.startsWith('hints_'));
   if (staleKeys.length) await chrome.storage.local.remove(staleKeys);
 
-  showToast('✅ OpenRouter key saved! Regenerating with gemini-2.5-pro...');
+  showToast('✅ OpenRouter key saved! Regenerating hints...');
 }
 
 
@@ -345,6 +350,13 @@ async function loadCurrentProblem() {
   } finally {
     // Always clear the flag so future PROBLEM_DETECTED messages are handled
     isInitializing = false;
+  }
+
+  // User switched problems while we were loading — catch up now
+  if (pendingProblem) {
+    const next = pendingProblem;
+    pendingProblem = null;
+    applyProblem(next);
   }
 }
 
@@ -397,11 +409,13 @@ async function loadHints() {
   // Claim this generation slot — any older concurrent call will be a lower ID
   const myId = ++hintsGenerationId;
 
-  DOM.loadingName.textContent = state.problem.title;
+  // Capture the problem now — state.problem may change during the awaits below
+  const problem = state.problem;
+  DOM.loadingName.textContent = problem.title;
   showState('loading');
 
   // Check cache first
-  const cacheKey = `hints_${state.problem.slug}`;
+  const cacheKey = `hints_v3_${problem.slug}`; // v3: verified hint 4 pitfalls + SC breakdown
   const cached = await chrome.storage.local.get(cacheKey);
 
   // If a newer loadHints() started while we were awaiting, drop this result
@@ -413,12 +427,13 @@ async function loadHints() {
   if (cached[cacheKey]) {
     const cachedHints = cached[cacheKey];
 
-    // If the cached hints have no TC/SC (old generation before the fix),
-    // treat them as stale and regenerate rather than serving N/A.
+    // If the cached hints have no TC/SC, treat them as stale and regenerate.
+    // (Missing code is NOT a reason — regenerating everything would burn API
+    // quota; hint 5 shows a "Generate Solution" button for that instead.)
     const tcMissing = !cachedHints.optimal_tc;
     const scMissing = !cachedHints.optimal_sc;
     if (tcMissing || scMissing) {
-      console.log('LeetHint: Cached hints missing TC/SC — invalidating and regenerating...');
+      console.log('LeetHint: Cached hints incomplete — invalidating and regenerating...');
       await chrome.storage.local.remove(cacheKey);
       // Fall through to fresh generation below
     } else {
@@ -429,46 +444,68 @@ async function loadHints() {
     }
   }
 
-  // ── SEPARATE TC/SC CACHE — survives hint regenerations ──────────────────────
-  // TC/SC for a problem is deterministic (there IS one optimal answer).
-  // We cache it separately so it never changes for the same problem.
-  const tcscCacheKey = `tcsc_${state.problem.slug}`;
-  const cachedTcSc   = await chrome.storage.local.get(tcscCacheKey);
-  const savedTcSc    = cachedTcSc[tcscCacheKey]; // { tc, sc } or undefined
+  // TC/SC comes from the same solve step as the hint 5 code, so it always
+  // describes that code — no separate TC/SC cache that could drift from it.
 
-  // Generate fresh hints directly (gemini.js loaded via script tag)
+  // Generate fresh hints directly (gemini.js loaded via script tag).
+  // The reply is streamed: each finished hint is shown right away, while the
+  // later hints and the solution are still being written.
+  let partialShown = false;
   try {
-    const hints = await generateHints(state.problem);
+    const hints = await generateHints(problem, {
+      onPartial: partial => {
+        if (myId !== hintsGenerationId) return;
+        state.hints = { ...partial, hint5: '', generating: true };
+        if (!partialShown) {
+          partialShown = true;
+          renderHints();
+          showState('hints');
+        } else {
+          renderHintTexts();  // no unlock animation / scroll on every update
+        }
+      }
+    });
 
-    // Drop result if a newer call has since started (e.g. user navigated away)
+    // Cache under THIS problem's key even if the user moved on — generation is
+    // slow, so coming back to this problem should be instant
+    await chrome.storage.local.set({ [cacheKey]: hints });
+
+    // Don't render if a newer call has since started (e.g. user navigated away)
     if (myId !== hintsGenerationId) {
-      console.log('LeetHint: stale loadHints() call dropped (after generate), id', myId);
+      console.log('LeetHint: stale loadHints() result cached but not shown, id', myId);
       return;
     }
 
-    // If we already have a cached TC/SC for this problem, use it — never overwrite
-    if (savedTcSc?.tc && savedTcSc?.sc) {
-      hints.optimal_tc = savedTcSc.tc;
-      hints.optimal_sc = savedTcSc.sc;
-      console.log('LeetHint: Using cached TC/SC →', savedTcSc.tc, savedTcSc.sc);
-    } else if (hints.optimal_tc && hints.optimal_sc) {
-      // Fresh TC/SC — save it permanently for this problem
-      await chrome.storage.local.set({ [tcscCacheKey]: { tc: hints.optimal_tc, sc: hints.optimal_sc } });
-      console.log('LeetHint: Saved TC/SC to cache →', hints.optimal_tc, hints.optimal_sc);
-    }
-
-    await chrome.storage.local.set({ [cacheKey]: hints });
     state.hints = hints;
-    renderHints();
-    showState('hints');
+    if (partialShown) {
+      renderHintTexts();  // already on screen — just fill in the rest
+    } else {
+      renderHints();
+      showState('hints');
+    }
   } catch (e) {
     if (myId !== hintsGenerationId) return; // Stale error, ignore
     console.error('LeetHint: hint generation failed →', e);
-    showState('error', e.message);
+    if (partialShown && state.hints?.hint1) {
+      // Some hints already arrived — keep them; hint 5 offers "Generate Solution"
+      state.hints.generating = false;
+      renderHintTexts();
+      showToast('❌ ' + e.message);
+    } else {
+      showState('error', e.message);
+    }
   }
 }
 
 function renderHints() {
+  if (!state.hints) return;
+  renderHintTexts();
+  applyUnlockState(state.hintsUnlocked);
+}
+
+const PENDING_HTML = '<span class="hint-pending">⏳ Still being written…</span>';
+
+function renderHintTexts() {
   if (!state.hints) return;
 
   const hintKeys = ['hint1', 'hint2', 'hint3', 'hint4', 'hint5'];
@@ -476,14 +513,14 @@ function renderHints() {
 
   hintKeys.forEach((key, i) => {
     const cardKey = cardKeys[i];
+    const text = state.hints[key] || '';
     if (cardKey === 'solution') {
-      renderSolutionCard(state.hints[key] || '');
+      if (!text && state.hints.generating) DOM.hintTexts.solution.innerHTML = PENDING_HTML;
+      else renderSolutionCard(text);
     } else if (DOM.hintTexts[cardKey]) {
-      DOM.hintTexts[cardKey].innerHTML = formatHintText(state.hints[key] || '');
+      DOM.hintTexts[cardKey].innerHTML = (!text && state.hints.generating) ? PENDING_HTML : formatHintText(text);
     }
   });
-
-  applyUnlockState(state.hintsUnlocked);
 }
 
 // Renders the solution card with a syntax-highlighted code block + Copy button
@@ -523,9 +560,9 @@ function renderSolutionCard(raw) {
       fixBtn.textContent = '⏳ Generating...';
       fixBtn.disabled = true;
       try {
-        const { title, description } = state.problem;
-        const fixed = await validateSolutionCode('', title, description);
-        buildSolutionUI(el, fixed, '✅ Generated by AI validator');
+        const fixed = await validateSolutionCode('', state.problem);
+        const note = await saveSolutionToCache(fixed);
+        buildSolutionUI(el, fixed.code, '✅ Generated by AI validator' + note);
         showToast('✅ Solution generated!');
       } catch (e) {
         fixBtn.textContent = '🔧 Generate Solution';
@@ -543,6 +580,29 @@ function renderSolutionCard(raw) {
   buildSolutionUI(el, code, afterFence);
 }
 
+
+// Persist generated/fixed code into the hints cache so reopening the problem
+// shows it again instead of spending another API request.
+// The optimal TC/SC follow the code: a fix can change the implementation
+// (e.g. recursion → iteration), and with it the space complexity.
+// Returns a short " · TC … · SC …" note for the card.
+async function saveSolutionToCache({ code, tc, sc, scBreakdown }) {
+  if (!state.hints || !state.problem?.slug || !code) return '';
+  const note = [tc && `TC ${tc}`, sc && `SC ${sc}`].filter(Boolean).map(x => ' · ' + x).join('');
+  state.hints.hint5 = '```cpp\n' + code + '\n```' + (note ? `\nApproach:${note}` : '');
+  if (tc) state.hints.optimal_tc = tc;
+  if (sc) {
+    state.hints.optimal_sc = sc;
+    state.hints.sc_breakdown = scBreakdown || '';
+  }
+  await chrome.storage.local.set({ [`hints_v3_${state.problem.slug}`]: state.hints });
+
+  // Checker already showing a result → refresh it against the new implementation
+  if (DOM.tcscResult?.style.display === 'block' && DOM.tcInput.value.trim() && DOM.scInput.value.trim()) {
+    checkTcSc();
+  }
+  return note;
+}
 
 // Builds (or rebuilds) the solution card UI with code + buttons
 function buildSolutionUI(el, code, approachNote) {
@@ -580,10 +640,10 @@ function buildSolutionUI(el, code, approachNote) {
       fixBtn.textContent = '⏳ Fixing...';
       fixBtn.disabled = true;
       try {
-        const { title, description } = state.problem;
-        const fixed = await validateSolutionCode(code, title, description);
+        const fixed = await validateSolutionCode(code, state.problem);
+        const note = await saveSolutionToCache(fixed);
         // Rebuild the card with the fixed code
-        buildSolutionUI(el, fixed, '✅ Validated & fixed by AI — ready to submit');
+        buildSolutionUI(el, fixed.code, '✅ Validated & fixed by AI — ready to submit' + note);
         showToast('✅ Solution validated and fixed!');
       } catch (e) {
         console.error('LeetHint: Validation failed →', e);
@@ -604,18 +664,21 @@ function formatHintText(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // Replace ```lang ... ``` blocks with styled <pre><code>
-  let html = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-    return `<pre class="hint-code-block"><code class="lang-${lang || 'cpp'}">${escape(code.trim())}</code></pre>`;
-  });
-
-  // Replace inline `code` with <code>
-  html = html.replace(/`([^`]+)`/g, (_, code) => `<code class="hint-inline-code">${escape(code)}</code>`);
-
-  // Newlines → <br> (outside code blocks)
-  html = html.replace(/\n/g, '<br>');
-
-  return html;
+  // Split out ```code blocks``` first; everything else is plain text that must
+  // be escaped too — otherwise "nums[i] <target" is parsed as an HTML tag and vanishes
+  return text.split(/(```\w*\n?[\s\S]*?```)/g).map(part => {
+    const block = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
+    if (block) {
+      return `<pre class="hint-code-block"><code class="lang-${block[1] || 'cpp'}">${escape(block[2].trim())}</code></pre>`;
+    }
+    return escape(part)
+      // Inline `code`
+      .replace(/`([^`]+)`/g, (_, code) => `<code class="hint-inline-code">${code}</code>`)
+      // **bold** (used for edge-case names in hint 4)
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      // Newlines → <br> (outside code blocks)
+      .replace(/\n/g, '<br>');
+  }).join('');
 }
 
 
@@ -753,12 +816,20 @@ function checkTcSc() {
   const optimalTc = state.hints.optimal_tc || '';
   const optimalSc = state.hints.optimal_sc || '';
 
-  const tcMatch = normalizeComplexity(userTc) === normalizeComplexity(optimalTc);
-  const scMatch = normalizeComplexity(userSc) === normalizeComplexity(optimalSc);
+  // compareComplexity (api/gemini.js) matches equivalent forms: m+n = n+m, n² = n^2 ...
+  const tcMatch = compareComplexity(userTc, optimalTc);
+  const scMatch = compareComplexity(userSc, optimalSc);
 
   // Show results
   DOM.optimalTcDisplay.textContent = optimalTc || 'N/A';
   DOM.optimalScDisplay.textContent = optimalSc || 'N/A';
+
+  // SC depends on the implementation — show what in the hint 5 code uses memory
+  const breakdown = (state.hints.sc_breakdown || '').trim();
+  if (DOM.scBreakdown) {
+    DOM.scBreakdown.textContent = breakdown ? 'Space in this solution:\n' + breakdown : '';
+    DOM.scBreakdown.hidden = !breakdown;
+  }
   DOM.tcMatchIcon.textContent = tcMatch ? '✅' : '❌';
   DOM.scMatchIcon.textContent = scMatch ? '✅' : '❌';
   DOM.tcscResult.style.display = 'block';
@@ -770,23 +841,13 @@ function resetTcScChecker() {
   if (DOM.tcscResult) DOM.tcscResult.style.display = 'none';
   if (DOM.optimalTcDisplay) DOM.optimalTcDisplay.textContent = '';
   if (DOM.optimalScDisplay) DOM.optimalScDisplay.textContent = '';
+  if (DOM.scBreakdown) { DOM.scBreakdown.textContent = ''; DOM.scBreakdown.hidden = true; }
   if (DOM.tcMatchIcon) DOM.tcMatchIcon.textContent = '';
   if (DOM.scMatchIcon) DOM.scMatchIcon.textContent = '';
   // Also clear company tags
   if (DOM.companyTagsRow) DOM.companyTagsRow.style.display = 'none';
   if (DOM.companyBadges)  DOM.companyBadges.innerHTML = '';
 }
-
-function normalizeComplexity(input) {
-  return input
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/o\(/g, '')
-    .replace(/\)/g, '')
-    .replace(/\*/g, '')
-    .replace(/×/g, '');
-}
-
 
 // ─────────────────────────────────────────────
 // 8. PROGRESS SAVE & LOAD
@@ -938,11 +999,12 @@ function showToast(message) {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     background: #1c2128; border: 1px solid #30363d; color: #e6edf3;
     padding: 8px 16px; border-radius: 8px; font-size: 12px;
-    z-index: 9999; white-space: nowrap;
+    z-index: 9999; white-space: normal; max-width: 90vw; text-align: center;
     animation: fadeSlideIn 0.3s ease;
   `;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  // Long messages (e.g. quota errors) need time to be read
+  setTimeout(() => toast.remove(), message.length > 80 ? 8000 : 3000);
 }
 
 // ─────────────────────────────────────────────
@@ -964,44 +1026,80 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 
   if (message.type === 'PROBLEM_DETECTED' || message.type === 'PROBLEM_CHANGED') {
-    const newProblem = message.payload;
-
-    // Ignore if init() is still running — it will call loadHints() itself,
-    // and we don't want a duplicate concurrent load.
-    if (isInitializing) {
-      console.log('LeetHint: PROBLEM_DETECTED ignored — init() still in flight');
-      return;
-    }
-
-    // Ignore if it's the same problem we already have
-    if (newProblem?.slug && newProblem.slug === state.problem?.slug) return;
-
-    console.log('LeetHint: Problem changed →', newProblem?.title);
-
-    // Reset state for new problem — including TC/SC checker
-    state.hints        = null;
-    state.hintsUnlocked = 1;
-    state.score        = 100;
-    resetTcScChecker();
-
-    if (newProblem?.title) {
-      // We already have the data from the message — use it directly
-      state.problem = newProblem;
-
-      // Clear stale hints immediately so the UI never shows the wrong problem
-      state.hints = null;
-      if (DOM.hintsContainer) DOM.hintsContainer.innerHTML = '';
-      if (DOM.tcValue) DOM.tcValue.textContent = '—';
-      if (DOM.scValue) DOM.scValue.textContent = '—';
-
-      updateProblemHeader();
-      loadSavedProgress().then(() => loadHints());
-    } else {
-      // No data in message — fetch fresh
-      loadCurrentProblem();
-    }
+    applyProblem(message.payload);
   }
 });
+
+function applyProblem(newProblem) {
+  // init()/loadCurrentProblem() still running — don't start a duplicate load,
+  // but remember this problem so it's applied once that finishes (never dropped)
+  if (isInitializing) {
+    console.log('LeetHint: problem change queued — load still in flight');
+    pendingProblem = newProblem;
+    return;
+  }
+
+  // Ignore if it's the same problem we already have
+  if (newProblem?.slug && newProblem.slug === state.problem?.slug) return;
+
+  console.log('LeetHint: Problem changed →', newProblem?.title);
+
+  // Reset state for new problem — including TC/SC checker
+  state.hints        = null;
+  state.hintsUnlocked = 1;
+  state.score        = 100;
+  resetTcScChecker();
+
+  if (newProblem?.title) {
+    // We already have the data from the message — use it directly
+    state.problem = newProblem;
+
+    // Clear stale hints immediately so the UI never shows the wrong problem
+    if (DOM.hintsContainer) DOM.hintsContainer.innerHTML = '';
+    if (DOM.tcValue) DOM.tcValue.textContent = '—';
+    if (DOM.scValue) DOM.scValue.textContent = '—';
+
+    updateProblemHeader();
+    loadSavedProgress().then(() => loadHints());
+  } else {
+    // No data in message — fetch fresh
+    loadCurrentProblem();
+  }
+}
+
+
+// ─────────────────────────────────────────────
+// 12. WATCH THE ACTIVE TAB DIRECTLY
+//     Messages from the page can be missed (service worker asleep, content
+//     script orphaned after an extension reload, switching between two
+//     LeetCode tabs). The URL is the source of truth — if its slug differs
+//     from what the panel shows, reload the problem.
+// ─────────────────────────────────────────────
+let panelWindowId = null;
+
+function slugFromUrl(url) {
+  return (String(url || '').match(/leetcode\.com\/problems\/([^/?#]+)/)?.[1] || '').toLowerCase();
+}
+
+function syncWithTab(tab) {
+  if (!tab?.active || (panelWindowId !== null && tab.windowId !== panelWindowId)) return;
+  const slug = slugFromUrl(tab.url);
+  if (!slug || slug === state.problem?.slug?.toLowerCase()) return;
+  if (isInitializing) return; // the in-flight load (or its queued follow-up) handles it
+  console.log('LeetHint: active tab now on', slug, '— reloading panel');
+  loadCurrentProblem();
+}
+
+function setupActiveTabWatcher() {
+  chrome.windows.getCurrent().then(w => { panelWindowId = w.id; }).catch(() => {});
+
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.url) syncWithTab(tab);
+  });
+  chrome.tabs.onActivated.addListener(({ tabId }) => {
+    chrome.tabs.get(tabId).then(syncWithTab).catch(() => {});
+  });
+}
 
 
 // ─────────────────────────────────────────────
