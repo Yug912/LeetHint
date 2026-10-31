@@ -57,8 +57,9 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
   // Clear stale cached problem immediately
   await chrome.storage.local.remove('currentProblem');
 
-  // Wait for React to unmount/remount the problem DOM
-  await new Promise(r => setTimeout(r, 1500));
+  // Brief pause so a rapid second navigation can cancel this one. The content
+  // script fetches by slug from the API, so it doesn't need React to re-render.
+  await new Promise(r => setTimeout(r, 300));
 
   // Verify tab still has the same slug (user didn't navigate again)
   try {
@@ -126,9 +127,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
-        // ── FAST PATH: return cached data from storage immediately ──
+        // ── FAST PATH: return cached data — only if it's for THIS tab's problem ──
+        const tabSlug = (tab.url.match(/leetcode\.com\/problems\/([^/?#]+)/)?.[1] || '').toLowerCase();
         const stored = await chrome.storage.local.get('currentProblem');
-        if (stored.currentProblem?.title) {
+        if (stored.currentProblem?.title && stored.currentProblem.slug?.toLowerCase() === tabSlug) {
           sendResponse({ success: true, data: stored.currentProblem });
           return;
         }
@@ -180,7 +182,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         // Check cache first — don't call AI again for same problem
-        const cacheKey = `hints_${currentProblem.slug}`;
+        const cacheKey = `hints_v3_${currentProblem.slug}`;
         const cached = await chrome.storage.local.get(cacheKey);
         if (cached[cacheKey]) {
           sendResponse({ success: true, data: cached[cacheKey] });
