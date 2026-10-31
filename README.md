@@ -6,7 +6,7 @@
 
 **AI-powered progressive hints for LeetCode — right in your browser sidebar.**
 
-[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/Yug912/LeetHint)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/Yug912/AlgoMentor)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-orange?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![Gemini AI](https://img.shields.io/badge/Powered%20by-Gemini%20AI-8E75B2?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
@@ -14,7 +14,7 @@
 <br/>
 
 > 🧠 Get 4 progressive hints — from pattern nudges to pseudocode — without spoiling the solution.  
-> Track your performance score, see what companies asked this problem, and stay in the zone.
+> Every hint is grounded on a verified C++ solution, so hints, code and complexity always agree.
 
 <br/>
 
@@ -25,14 +25,26 @@
 ## ✨ Features
 
 ### 🎯 Progressive AI Hints
-LeetHint generates **4 intelligent, layered hints** powered by **Gemini 2.5 Pro**:
+LeetHint generates **4 layered hints plus a full solution** with **Gemini** (or any model via **OpenRouter**):
 
 | Hint | Name | What it gives you |
 |------|------|-------------------|
-| 💡 Hint 1 | **Pattern Recognition** | A pointed question about constraints — no algorithm spoilers |
-| 🔑 Hint 2 | **Concrete Technique** | Names the exact data structure with a walkthrough step |
-| 📋 Hint 3 | **Algorithm Skeleton** | Clean pseudocode for the happy path (4–6 lines) |
-| ⚠️ Hint 4 | **Edge Cases & Gotchas** | 2–3 tricky test cases unique to this problem |
+| 💡 Hint 1 | **Pattern Recognition** | A pointed question about the real constraints — no algorithm spoilers |
+| 🔑 Hint 2 | **Concrete Technique** | Names the exact data structure with a walkthrough step on a real example |
+| 📋 Hint 3 | **Algorithm Skeleton** | Language-neutral pseudocode for the happy path |
+| ⚠️ Hint 4 | **Edge Cases & Gotchas** | 3–5 valid edge cases with exact expected outputs and the concrete bug each one catches |
+| 💀 Solution | **Accepted C++ Code** | Copy-paste-ready `class Solution` using LeetCode's exact signature |
+
+### ✅ Accuracy First
+- **Solve first, then teach** — the model solves the problem and traces its code on every example *before* writing hints, so every hint leads to the same correct approach
+- **Exact problem data** — statement, constraints, topic tags, official hints and the C++ signature come straight from LeetCode's API (constraints like `10^5` are never mangled)
+- **🔧 Fix button** — re-checks the solution against the examples and constraints and repairs it
+
+### ⚡ Fast & Live
+- **Streaming** — each hint appears the moment it's written; no waiting for the whole answer
+- **One request per problem** — light on free-tier API quota
+- **Cached** — revisiting a problem is instant and costs no API calls
+- **Follows you** — switch problems (Next, links, back/forward, tabs) and the panel updates automatically
 
 ### 📊 Smart Scoring System
 Your **performance score** drops the more hints you use:
@@ -50,14 +62,15 @@ Each solved problem logs to your **Stats tab** with timestamp, difficulty, and s
 ### 🏢 Company Tags
 Know which **top tech companies** have asked each problem — pulled from a curated database of **hundreds of problems**, tagged with companies like Google, Meta, Amazon, Apple, and more.
 
-### ⚡ Complexity Analysis
-Every hint set includes:
-- **Time Complexity** — Optimal Big-O for the problem
-- **Space Complexity** — Memory trade-offs explained
+### 📐 TC / SC Checker
+Enter your own complexity and check it against the solution:
+- **Time & Space Complexity** of the actual solution code — not a generic guess
+- **Space breakdown** — shows exactly what uses memory (maps, recursion depth, queues…)
+- **Smart matching** — equivalent forms count as correct: `m+n` = `n+m`, `n²` = `n^2`, `log₂ n` = `log n`
 - **Algorithm Pattern** — e.g., Sliding Window, Two Pointers, DP, Backtracking
 
 ### 🔒 Privacy First
-- Your **Gemini API key** is stored locally in Chrome storage — never sent to any third-party server
+- Your API keys are stored **locally** in Chrome storage and sent only to the AI provider you chose (Google or OpenRouter)
 - Falls back to **Chrome's built-in AI** (`window.ai`) if no key is provided
 - Zero data collection
 
@@ -81,21 +94,32 @@ Every hint set includes:
 
 3. **Load the extension**
    - Click **"Load unpacked"**
-   - Select the `LeetHint` folder
+   - Select the cloned `AlgoMentor` folder
 
 4. **Pin it** to your toolbar for quick access 📌
 
 ---
 
-## 🔑 Setting Up Your Gemini API Key
+## 🔑 Setting Up an API Key
 
-LeetHint uses **Google Gemini 2.5 Pro** for the smartest hints. Get your free API key:
+LeetHint works with either key. If both are set, OpenRouter is tried first and Gemini is the fallback.
 
+### Option 1 — Google Gemini (free)
 1. Visit [Google AI Studio](https://aistudio.google.com/apikey)
-2. Click **"Create API Key"** (it's free!)
+2. Click **"Create API Key"**
 3. Open LeetHint sidebar → Click **"Add Key"** → Paste and save
 
-> **No key?** No problem — LeetHint falls back to Chrome's built-in AI for basic hints.
+> **Free-tier limits:** Google limits free keys per minute and per day. LeetHint uses one request per problem, waits out short per-minute limits automatically, and tells you when the daily quota is used up (it resets at midnight Pacific). Check usage at [ai.dev/rate-limit](https://ai.dev/rate-limit).
+>
+> If Google retires the Gemini model LeetHint uses, the extension switches to the replacement model Google recommends automatically.
+
+### Option 2 — OpenRouter (pay-as-you-go)
+1. Create a key at [openrouter.ai/keys](https://openrouter.ai/keys)
+2. Open LeetHint sidebar → **OpenRouter** → Paste and save
+
+Uses **DeepSeek R1** by default — change `OR_MODEL` in `api/gemini.js` to use any OpenRouter model.
+
+> **No key?** LeetHint falls back to Chrome's built-in AI for basic hints (no solution code).
 
 ---
 
@@ -107,20 +131,20 @@ LeetHint uses **Google Gemini 2.5 Pro** for the smartest hints. Get your free AP
 │  ┌─────────────────────────┐    ┌─────────────────────────┐ │
 │  │   Problem Page (DOM)    │    │     LeetHint Sidebar     │ │
 │  │                         │    │                          │ │
-│  │  content.js extracts:   │───▶│  Problem info + diff.   │ │
-│  │  • Title                │    │  ┌────────────────────┐  │ │
-│  │  • Difficulty           │    │  │  4 Progressive     │  │ │
-│  │  • Description          │    │  │  AI Hints          │  │ │
-│  │  • Problem Number       │    │  └────────────────────┘  │ │
+│  │  content.js fetches     │───▶│  Problem info + diff.   │ │
+│  │  (LeetCode GraphQL):    │    │  ┌────────────────────┐  │ │
+│  │  • Statement + limits   │    │  │  4 Hints + C++     │  │ │
+│  │  • C++ signature        │    │  │  (streamed live)   │  │ │
+│  │  • Topic tags, hints    │    │  └────────────────────┘  │ │
 │  └─────────────────────────┘    │  • Score tracker         │ │
 │                                 │  • Company tags          │ │
-│  service-worker.js              │  • TC / SC analysis      │ │
+│  service-worker.js              │  • TC / SC checker       │ │
 │  (message relay)         ◀─────▶│  • Stats history         │ │
 │                                 └─────────────────────────┘ │
 │         ▲                                                    │
 │         │                                                    │
-│  gemini.js  ──────────▶  Gemini 2.5 Pro API                 │
-│  (hint generation)                                           │
+│  gemini.js  ──────────▶  Gemini API  /  OpenRouter          │
+│  (one streamed request: solve → hints → code)                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -130,11 +154,11 @@ LeetHint uses **Google Gemini 2.5 Pro** for the smartest hints. Get your free AP
 LeetHint/
 ├── manifest.json          # Extension config (MV3)
 ├── api/
-│   └── gemini.js          # AI hint generation + prompt engineering
+│   └── gemini.js          # AI providers, prompts, streaming, parsing
 ├── background/
 │   └── service-worker.js  # Message relay between content & sidepanel
 ├── content/
-│   ├── content.js         # DOM scraper for LeetCode problem data
+│   ├── content.js         # LeetCode problem data (GraphQL + DOM fallback)
 │   └── content.css        # Content-script styles
 ├── sidepanel/
 │   ├── sidepanel.html     # Side panel UI
@@ -190,9 +214,12 @@ LeetHint/
 ## 🧠 Prompt Engineering
 
 LeetHint uses carefully tuned prompts that enforce:
-- **Strict output format** — delimiter-based parsing (`---HINT1---`, `---TC---`, etc.)
+- **Solve before hinting** — one reply contains approach → TC/SC → Hints 1–4 → code, all derived from a solution the model has traced on every example
+- **Implementation-specific complexity** — space is derived item by item from the actual code
+- **Verifiable edge cases** — Hint 4 must show exact expected outputs and a concrete wrong implementation, never vague "may fail" warnings
 - **No spoilers in early hints** — Hint 1 never names the algorithm
 - **Problem-specific examples** — uses *actual* numbers from the problem, not generic placeholders
+- **Strict output format** — delimiter-based parsing (`---HINT1---`, `---TC---`, etc.), parsed incrementally while streaming
 - **Nested Big-O parsing** — custom paren-counting extractor handles `O(n·log(log(n)))` correctly
 
 ---
@@ -216,7 +243,8 @@ LeetHint uses carefully tuned prompts that enforce:
 | Layer | Technology |
 |-------|-----------|
 | Extension Framework | Chrome Extension Manifest V3 |
-| AI Backend | Google Gemini 2.5 Pro (`gemini-2.5-pro`) |
+| AI Backend | Google Gemini (Flash, auto-updated) or OpenRouter (DeepSeek R1 by default) |
+| Problem Data | LeetCode GraphQL API (DOM scraping fallback) |
 | Fallback AI | Chrome Built-in AI (`window.ai`) |
 | Styling | Vanilla CSS with CSS Variables |
 | Fonts | Inter, JetBrains Mono (Google Fonts) |
@@ -252,6 +280,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 ## 🙏 Acknowledgements
 
 - [Google AI Studio](https://aistudio.google.com/) — for the Gemini API
+- [OpenRouter](https://openrouter.ai/) — for multi-model API access
 - [LeetCode](https://leetcode.com/) — for the amazing problem platform
 - [Chrome for Developers](https://developer.chrome.com/docs/extensions/) — for MV3 documentation
 
