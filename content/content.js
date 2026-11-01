@@ -331,8 +331,58 @@ titleObserver.observe(titleEl, { childList: true, subtree: true, characterData: 
 
 
 // ─────────────────────────────────────────────
-// 6. KICK OFF ON LOAD
+// 6. SOLVE DETECTION — read-only
+//    Only LISTENS to the page: never adds, changes or patches anything.
+//    A solve = an "Accepted" submission result shown soon after the user
+//    pressed Submit (button or Ctrl/Cmd+Enter). Old accepted submissions
+//    opened from the Submissions tab don't count — no Submit was pressed.
+// ─────────────────────────────────────────────
+const SUBMIT_WINDOW_MS = 2 * 60 * 1000;
+
+function watchForSolves() {
+  if (window.__leethintSolveWatch) return;   // re-injected content script
+  window.__leethintSolveWatch = true;
+
+  // sawPending: the previous result has gone (or isn't "Accepted") since
+  // Submit was pressed, so an old "Accepted" still on screen isn't counted
+  let armedUntil = 0, armedSlug = '', sawPending = false, checkTimer = null;
+  const arm = () => {
+    armedUntil = Date.now() + SUBMIT_WINDOW_MS;
+    armedSlug = getCurrentSlug();
+    sawPending = false;
+    if (!checkTimer) checkTimer = setTimeout(check, 400);
+  };
+
+  document.addEventListener('click', e => {
+    if (e.target.closest?.('[data-e2e-locator="console-submit-button"]')) arm();
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) arm();
+  }, true);
+
+  // The result panel of THIS submission says "Accepted"
+  function check() {
+    checkTimer = null;
+    if (!armedUntil || Date.now() > armedUntil) { armedUntil = 0; return; }
+    const result = document.querySelector('[data-e2e-locator="submission-result"]');
+    if (!result || result.textContent.trim() !== 'Accepted') { sawPending = true; return; }
+    if (!sawPending) return;
+    if (armedSlug !== getCurrentSlug()) { armedUntil = 0; return; }
+    armedUntil = 0;   // one solve per Submit
+    chrome.runtime.sendMessage({ type: 'PROBLEM_SOLVED', slug: armedSlug }).catch(() => {});
+  }
+
+  // Cheap: only look while a submission is pending, at most every 400ms
+  new MutationObserver(() => {
+    if (armedUntil && !checkTimer) checkTimer = setTimeout(check, 400);
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+}
+
+
+// ─────────────────────────────────────────────
+// 7. KICK OFF ON LOAD
 // ─────────────────────────────────────────────
 lastSlug = getCurrentSlug();
 waitForProblemAndExtract();
+watchForSolves();
 
