@@ -216,13 +216,13 @@ function problemPayload(p) {
 
 // onText(fullTextSoFar) is called as the reply streams in
 async function callBackend(action, problem, opts = {}) {
-  const { code = '', onText, language, snippet, languages, snippets, lowEffort = false } = opts;
+  const { code = '', onText, language, snippet, languages, snippets, interview, lowEffort = false } = opts;
   let res;
   try {
     res = await fetch(`${BACKEND_URL}/v1/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, lowEffort }),
+      body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, lowEffort }),
       signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
     });
   } catch (e) {
@@ -284,6 +284,12 @@ async function readAnswerStream(res, kind, onText) {
     if (changed) onText?.(text);
   }
   return text;
+}
+
+// Mock interview: one interviewer turn or the final scorecard.
+// action: 'interview_turn' | 'interview_score'; returns the raw model text (JSON)
+export function callInterviewer(action, problem, interview) {
+  return callBackend(action, problem, { interview });
 }
 
 // Is the backend up, and which providers does it have? (names only)
