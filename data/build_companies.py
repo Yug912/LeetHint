@@ -7,9 +7,7 @@ Slug extracted from URL: .../problems/<slug>/
 import urllib.request, json, csv, io, ssl, os, re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode    = ssl.CERT_NONE
+ctx = ssl.create_default_context()  # verifies certificates — never disable this
 
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": "LeetHint/1.0"})
