@@ -4,6 +4,7 @@
 
 import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
          translateSolution, translateAll, LANGUAGES } from '../api/ai.js';
+import { initInterview, syncInterview, isInterviewActive, renderInterviewHistory } from './interview.js';
 
 // ─────────────────────────────────────────────
 // COMPANY DATABASE — loaded once from bundled JSON
@@ -175,6 +176,12 @@ async function init() {
   renderServiceStatus();
 
   await loadLanguagePreference();
+  // Mock interview: needs the problem + its verified solution (hidden reference)
+  await initInterview({
+    getProblem:  () => state.problem,
+    getHintsFor: slug => (state.problem?.slug === slug ? state.hints : null),
+    showToast
+  });
   await loadCurrentProblem();
 }
 
@@ -277,6 +284,7 @@ async function loadCurrentProblem(slugHint = '') {
 
   if (!problem) {
     showState('noProblem');
+    syncInterview(null);
     return;
   }
 
@@ -300,6 +308,9 @@ function updateProblemHeader() {
 
   // Render company tags from bundled DB
   renderCompanyTags(slug);
+
+  // Show the interview for this problem, or the "Start" button
+  syncInterview(state.problem);
 }
 
 function renderCompanyTags(slug) {
@@ -782,6 +793,9 @@ function setupUnlockListeners() {
 }
 
 function unlockHint(cardKey) {
+  // The hint ladder is locked during a mock interview on this problem
+  if (isInterviewActive(state.problem?.slug)) return;
+
   // Update state
   if (cardKey === 'solution') {
     state.hintsUnlocked = 'solution';
@@ -1052,6 +1066,7 @@ async function renderStats() {
   });
 
   await renderRevisionQueue();
+  await renderInterviewHistory();
 }
 
 
@@ -1205,6 +1220,7 @@ chrome.runtime.onMessage.addListener((message) => {
       state.score         = 100;
       resetTcScChecker();
       showState('noProblem');
+      syncInterview(null);
     }).catch(() => {});
     return;
   }
