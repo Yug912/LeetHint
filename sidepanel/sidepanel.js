@@ -4,7 +4,12 @@
 
 import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
          translateSolution, translateAll, LANGUAGES } from '../api/ai.js';
-import { initInterview, syncInterview, isInterviewActive, renderInterviewHistory } from './interview.js';
+import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
+         renderInterviewHistory } from './interview.js';
+import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
+         clampLimit, outcomeForScore, outcomeForInterview, interviewHintScore, newQueueItem, applyReview,
+         markMastered, lastScore, lowerJoinScore, syncJoinScores, migrateQueue, planQueue,
+         isDueToday } from '../shared/revision.js';
 
 // ─────────────────────────────────────────────
 // COMPANY DATABASE — loaded once from bundled JSON
@@ -31,7 +36,9 @@ let state = {
   hints: null,            // {hint1..hint5, optimal_tc, optimal_sc, pattern}
   hintsUnlocked: 1,       // how many hints currently visible (1 = only hint1)
   score: 100,             // current score
-  currentTab: 'hints'     // 'hints' or 'stats'
+  review: null,           // { slug, step, done } while this problem is a due revision (fresh attempt);
+                          // done = recorded, but later unlocks still don't touch the first solve
+  currentTab: 'hints'     // 'hints', 'revision' or 'stats'
 };
 
 // Generation nonce — prevents stale concurrent loadHints() calls from
@@ -51,8 +58,7 @@ let pendingSlug = '';
 
 
 // Score values for each level
-const SCORE_MAP = { 1: 100, 2: 80, 3: 60, 4: 40, solution: 20 };
-const LEVEL_NAMES = { 1: 'SOLO', 2: 'SHARP', 3: 'GOOD', 4: 'GUIDE', solution: 'READ' };
+const SCORE_MAP = { 1: 100, 2: 80, 3: 60, 4: 40, solution: 20 };   // names: SCORE_NAMES
 
 // ─────────────────────────────────────────────
 // DOM REFERENCES — grab all elements once
@@ -68,8 +74,10 @@ const DOM = {
   // Tabs
   tabHints:       $('tab-hints'),
   tabStats:       $('tab-stats'),
+  tabRevision:    $('tab-revision'),
   contentHints:   $('content-hints'),
   contentStats:   $('content-stats'),
+  contentRevision: $('content-revision'),
 
   // States
   loadingState:   $('loading-state'),
@@ -153,9 +161,21 @@ const DOM = {
   distGoodCount:  $('dist-good-count'),
   distGuideCount: $('dist-guide-count'),
   distReadCount:  $('dist-read-count'),
-  revisionCount:  $('revision-count'),
-  revisionList:   $('revision-list'),
-  aiStatus:       $('ai-status')
+  aiStatus:       $('ai-status'),
+
+  // Revision (spaced repetition)
+  revisionTabBadge:      $('revision-tab-badge'),
+  revisionBar:           $('revision-bar'),
+  revisionBarText:       $('revision-bar-text'),
+  btnRevisionAdd:        $('btn-revision-add'),
+  btnSolved:             $('btn-solved'),
+  revisionLimit:         $('revision-limit'),
+  revisionDueCount:      $('revision-due-count'),
+  revisionDueList:       $('revision-due-list'),
+  revisionUpcomingCount: $('revision-upcoming-count'),
+  revisionUpcomingList:  $('revision-upcoming-list'),
+  revisionMasteredCount: $('revision-mastered-count'),
+  revisionMasteredList:  $('revision-mastered-list')
 };
 
 
@@ -169,6 +189,7 @@ async function init() {
   setupExplanationAutoSave();
   setupRetryListener();
   setupActiveTabWatcher();
+  setupRevisionListeners();
 
   // Background, non-blocking — the problem loads in parallel
   loadCompaniesDB();
@@ -180,8 +201,11 @@ async function init() {
   await initInterview({
     getProblem:  () => state.problem,
     getHintsFor: slug => (state.problem?.slug === slug ? state.hints : null),
-    showToast
+    showToast,
+    isReviewDue: slug => state.review?.slug === slug && !state.review.done,
+    onScored:    onInterviewScored
   });
+  renderRevision();   // migrates an old-format queue + the tab badge
   await loadCurrentProblem();
 }
 
@@ -195,6 +219,10 @@ function setupTabListeners() {
     switchTab('stats');
     renderStats(); // Refresh stats when tab opens
   });
+  DOM.tabRevision.addEventListener('click', () => {
+    switchTab('revision');
+    renderRevision();
+  });
 }
 
 function switchTab(tab) {
@@ -202,8 +230,10 @@ function switchTab(tab) {
 
   DOM.tabHints.classList.toggle('active', tab === 'hints');
   DOM.tabStats.classList.toggle('active', tab === 'stats');
+  DOM.tabRevision.classList.toggle('active', tab === 'revision');
   DOM.contentHints.classList.toggle('active', tab === 'hints');
   DOM.contentStats.classList.toggle('active', tab === 'stats');
+  DOM.contentRevision.classList.toggle('active', tab === 'revision');
 }
 
 
@@ -253,6 +283,7 @@ async function fetchCurrentProblem() {
 async function loadCurrentProblem(slugHint = '') {
   isInitializing = true;
   state.hints = null;
+  state.review = null;
   resetTcScChecker();
   if (slugHint) DOM.loadingName.textContent = titleFromSlug(slugHint);
   showState('loading');
@@ -285,6 +316,7 @@ async function loadCurrentProblem(slugHint = '') {
   if (!problem) {
     showState('noProblem');
     syncInterview(null);
+    pendingInterviewSlug = '';
     return;
   }
 
@@ -311,6 +343,7 @@ function updateProblemHeader() {
 
   // Show the interview for this problem, or the "Start" button
   syncInterview(state.problem);
+  renderRevisionBar();
 }
 
 function renderCompanyTags(slug) {
@@ -811,6 +844,13 @@ function unlockHint(cardKey) {
   // Save progress
   saveProgress();
 
+  // A review attempt only counts once it's solved — the first solve's stats
+  // and the queue entry stay as they are
+  if (state.review) {
+    if (cardKey === 4 || cardKey === 'solution') prefetchAllTranslations();
+    return;
+  }
+
   // Update stats
   updateStats();
 
@@ -954,6 +994,14 @@ function resetTcScChecker() {
 async function saveProgress() {
   if (!state.problem?.slug) return;
 
+  // A review keeps its own progress, so the first attempt's is never overwritten
+  if (state.review) {
+    await chrome.storage.local.set({
+      [REVIEW_PROGRESS + state.problem.slug]: { date: localDate(), hintsUnlocked: state.hintsUnlocked, score: state.score }
+    });
+    return;
+  }
+
   const progressKey = `progress_${state.problem.slug}`;
   await chrome.storage.local.set({
     [progressKey]: {
@@ -966,12 +1014,24 @@ async function saveProgress() {
 async function loadSavedProgress() {
   if (!state.problem?.slug) return;
 
-  const progressKey   = `progress_${state.problem.slug}`;
-  const explanationKey = `explanation_${state.problem.slug}`;
+  const slug           = state.problem.slug;
+  const progressKey    = `progress_${slug}`;
+  const explanationKey = `explanation_${slug}`;
+  const reviewKey      = REVIEW_PROGRESS + slug;
 
-  const saved = await chrome.storage.local.get([progressKey, explanationKey]);
+  // Due for revision today → a fresh attempt
+  const { queue, limit } = await getRevisionData();
+  state.review = isDueToday(queue, slug, { limit }) ? { slug, step: queue[slug].step } : null;
 
-  if (saved[progressKey]) {
+  const saved = await chrome.storage.local.get([progressKey, explanationKey, reviewKey]);
+
+  if (state.review) {
+    // Hints locked and score 100 — earlier hints and the solution are not
+    // shown. Only today's attempt is restored (e.g. the panel was reopened).
+    const today = saved[reviewKey]?.date === localDate() ? saved[reviewKey] : null;
+    state.hintsUnlocked = today?.hintsUnlocked || 1;
+    state.score         = today?.score || 100;
+  } else if (saved[progressKey]) {
     state.hintsUnlocked = saved[progressKey].hintsUnlocked || 1;
     state.score         = saved[progressKey].score || 100;
   } else {
@@ -983,13 +1043,18 @@ async function loadSavedProgress() {
   // Restore explanation text — clear it when this problem has none, so the
   // previous problem's text isn't shown (and auto-saved) under this one
   DOM.explanationInput.value = saved[explanationKey] || '';
+
+  renderRevisionBar();
+  startPendingInterview();
 }
 
 
 // ─────────────────────────────────────────────
 // 9. STATS — Update & Render
 // ─────────────────────────────────────────────
-async function updateStats() {
+// solved: an Accepted submission (or "✓ I solved it"). Entries from before
+// solve detection have no flag — they were logged as solved, so they count.
+async function updateStats({ solved = false } = {}) {
   if (!state.problem) return;
 
   const { stats = {} } = await chrome.storage.local.get('stats');
@@ -1003,8 +1068,10 @@ async function updateStats() {
   if (!stats.byDifficulty) stats.byDifficulty = { easy: 0, medium: 0, hard: 0 };
 
   // Record this problem's current state
-  const isNewProblem = !stats.problems[slug];
-  stats.problems[slug] = { score: state.score, level, difficulty };
+  const prev = stats.problems[slug];
+  const isNewProblem = !prev;
+  stats.problems[slug] = { score: state.score, level, difficulty,
+                           solved: solved || (prev ? prev.solved !== false : false) };
 
   // Update difficulty count (only for new problems)
   if (isNewProblem && stats.byDifficulty[difficulty] !== undefined) {
@@ -1065,100 +1132,322 @@ async function renderStats() {
     count.textContent   = val;
   });
 
-  await renderRevisionQueue();
   await renderInterviewHistory();
 }
 
 
 // ─────────────────────────────────────────────
-// 9b. REVISION QUEUE
-//     Problems where the user unlocked Hint 4 or the solution.
-//     Stored as revisionQueue: { [slug]: { title, problemNumber, difficulty, level, addedAt } }
+// 9b. REVISION — spaced repetition (logic in shared/revision.js)
+//     revisionQueue: { [slug]: item } — see shared/revision.js for the item.
+//     A problem joins when Hint 4 or the solution is opened, or when it is
+//     solved with a score of 60 or lower — never twice. Due problems are
+//     reviewed as a fresh attempt; the score of that attempt (or the mock
+//     interview's scorecard) picks the next interval: 1 → 3 → 7 → 21 → 60 days.
 // ─────────────────────────────────────────────
-async function addToRevisionQueue() {
-  if (!state.problem?.slug) return;
-  const { slug, title, problemNumber, difficulty } = state.problem;
+const REVIEW_PROGRESS = 'review_progress_';   // + slug: { date, hintsUnlocked, score }
 
-  const { revisionQueue = {} } = await chrome.storage.local.get('revisionQueue');
-  const existing = revisionQueue[slug];
+// "Review as interview" → start the interview once that problem is open
+let pendingInterviewSlug = '';
+// The same Accepted result can be reported twice (button + shortcut, re-render)
+let lastSolve = { slug: '', at: 0 };
 
-  // Keep the original date so the queue stays oldest-first; just update the level
-  revisionQueue[slug] = {
-    title, problemNumber, difficulty,
-    level:   state.hintsUnlocked,
-    addedAt: existing?.addedAt || Date.now()
-  };
-  await chrome.storage.local.set({ revisionQueue });
+// The queue (old-format items migrated) and the daily limit
+async function getRevisionData() {
+  const { revisionQueue = {}, revisionDailyLimit = DEFAULT_DAILY_LIMIT } =
+    await chrome.storage.local.get(['revisionQueue', 'revisionDailyLimit']);
+  const limit = clampLimit(revisionDailyLimit);
+  const migrated = migrateQueue(revisionQueue, limit);
 
-  if (!existing) showToast('📌 Added to your Revision Queue');
+  // Not reviewed yet → the score follows the first attempt's saved progress
+  // (e.g. the solution opened after Hint 4 → READ)
+  const unreviewed = Object.keys(migrated.queue)
+    .filter(slug => !migrated.queue[slug].mastered && !migrated.queue[slug].history?.length);
+  const progress = unreviewed.length
+    ? await chrome.storage.local.get(unreviewed.map(slug => `progress_${slug}`))
+    : {};
+  const scores = Object.fromEntries(unreviewed.map(slug => [slug, progress[`progress_${slug}`]?.score]));
+  const synced = syncJoinScores(migrated.queue, scores);
+
+  const queue = synced.queue;
+  if (migrated.changed || synced.changed) await chrome.storage.local.set({ revisionQueue: queue });
+  return { queue, limit };
 }
 
-async function removeFromRevisionQueue(slug) {
-  const { revisionQueue = {} } = await chrome.storage.local.get('revisionQueue');
-  delete revisionQueue[slug];
-  await chrome.storage.local.set({ revisionQueue });
-  await renderRevisionQueue();
-  showToast('✅ Marked as revised');
+function setupRevisionListeners() {
+  DOM.btnSolved?.addEventListener('click', () => onProblemSolved(state.problem?.slug, { manual: true }));
+  DOM.btnRevisionAdd?.addEventListener('click', () => addToRevisionQueue({ manual: true }));
+  DOM.revisionLimit?.addEventListener('change', () => {
+    const limit = clampLimit(DOM.revisionLimit.value);
+    DOM.revisionLimit.value = limit;
+    chrome.storage.local.set({ revisionDailyLimit: limit }).catch(() => {});
+  });
+  // One place that redraws after any change — this panel's, the service
+  // worker's migration, or a panel in another window
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (changes.revisionQueue || changes.revisionDailyLimit) renderRevision();
+    if (changes.revisionQueue || changes.revisionDailyLimit || changes.stats) renderRevisionBar();
+  });
 }
 
-async function renderRevisionQueue() {
-  if (!DOM.revisionList) return;
-  const { revisionQueue = {} } = await chrome.storage.local.get('revisionQueue');
+// ── Solves ──────────────────────────────────
+// First solve → main stats (each problem counted once) and, at GOOD or
+// lower, the queue. A solve during a due review → the schedule only.
+async function onProblemSolved(slug, { manual = false } = {}) {
+  const problem = state.problem;
+  if (!problem?.slug || problem.slug.toLowerCase() !== String(slug || '').toLowerCase()) return;
+  // During a mock interview the scorecard decides how this attempt counts
+  if (isInterviewActive(problem.slug)) {
+    if (manual) showToast('🎙️ The interview scorecard will record this one');
+    return;
+  }
+  if (lastSolve.slug === problem.slug && Date.now() - lastSolve.at < 10000) return;
+  lastSolve = { slug: problem.slug, at: Date.now() };
 
-  // Oldest first — those are the ones due for revision
-  const entries = Object.entries(revisionQueue).sort(([, a], [, b]) => a.addedAt - b.addedAt);
+  const score = state.score;
+  const name = SCORE_NAMES[score] || '';
 
-  DOM.revisionCount.textContent = entries.length;
-  DOM.revisionList.innerHTML = '';
-
-  if (!entries.length) {
-    const empty = document.createElement('li');
-    empty.className = 'revision-empty';
-    empty.textContent = 'Nothing to revise yet — nice work!';
-    DOM.revisionList.appendChild(empty);
+  if (state.review?.done) {
+    if (manual) showToast('🔁 Today’s review is already recorded');
+    return;
+  }
+  if (state.review) {
+    const outcome = outcomeForScore(score);
+    const item = await recordReview(problem.slug, { score, outcome, via: manual ? 'manual' : 'solve' });
+    if (item) showToast(reviewMessage(item, outcome, `${name} (${score})`));
     return;
   }
 
-  // Built with textContent (not innerHTML) — titles come from the page
-  entries.forEach(([slug, item]) => {
-    const li = document.createElement('li');
-    li.className = 'revision-item';
+  await updateStats({ solved: true });
+  const queued = score <= QUEUE_SCORE_MAX && await addToRevisionQueue();
+  if (!queued) showToast(`✅ Solved — ${name} (${score})`);
+}
 
-    const info = document.createElement('div');
-    info.className = 'revision-info';
-
-    const link = document.createElement('a');
-    link.className = 'revision-title';
-    link.href = `https://leetcode.com/problems/${slug}/`;
-    link.textContent = `${item.problemNumber ? item.problemNumber + '. ' : ''}${item.title || slug}`;
-    link.title = link.textContent;
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      // Open in the current LeetCode tab — the tab watcher then loads it in the panel
-      chrome.tabs.update({ url: link.href });
-      switchTab('hints');
+// Mock interview finished on a due problem → schedule from the scorecard
+async function onInterviewScored(session, card) {
+  if (!session?.review) return;
+  try {
+    const outcome = outcomeForInterview(card.signal, session.hintsGiven);
+    const item = await recordReview(session.slug, {
+      score: interviewHintScore(session.hintsGiven), outcome, via: 'interview', signal: card.signal
     });
+    if (item) showToast(reviewMessage(item, outcome, card.signal));
+  } catch (e) {
+    console.warn('LeetHint: could not schedule the interview review →', e.message);
+  }
+}
 
-    const meta = document.createElement('span');
-    meta.className = 'revision-meta';
-    const diff = document.createElement('span');
-    const diffName = item.difficulty || 'Unknown';
-    diff.className = `${diffName.toLowerCase()}-text`;
-    diff.textContent = diffName;
-    const added = new Date(item.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    meta.append(diff, ` · ${LEVEL_NAMES[item.level] || ''} · added ${added}`);
+async function recordReview(slug, { score, outcome, via, signal }) {
+  const { queue } = await getRevisionData();
+  const item = queue[slug];
+  if (!item || item.mastered) return null;
+  queue[slug] = applyReview(item, { score, outcome, via, signal, today: localDate() });
+  if (state.review?.slug === slug) state.review.done = true;   // done for today
+  await chrome.storage.local.set({ revisionQueue: queue });
+  await chrome.storage.local.remove(REVIEW_PROGRESS + slug);
+  return queue[slug];
+}
 
-    info.append(link, meta);
+function reviewMessage(item, outcome, result) {
+  if (item.mastered) return `🏆 ${result} at the 60-day step — mastered!`;
+  const days = STEPS[item.step];
+  const what = outcome === 'up' ? 'up a step' : outcome === 'repeat' ? 'same step' : 'back to the start';
+  return `🔁 Review: ${result} — ${what}, next in ${days} day${days === 1 ? '' : 's'}`;
+}
 
-    const done = document.createElement('button');
-    done.className = 'btn-revision-done';
-    done.textContent = '✓ Done';
-    done.title = 'Re-solved it — remove from the queue';
-    done.addEventListener('click', () => removeFromRevisionQueue(slug));
+// ── Joining the queue ───────────────────────
+// manual: the "Add to revision" button — also restarts a mastered problem.
+// Returns true when it was added.
+async function addToRevisionQueue({ manual = false } = {}) {
+  if (!state.problem?.slug) return false;
+  const { slug } = state.problem;
+  const { queue } = await getRevisionData();
+  const existing = queue[slug];
+  if (existing && !(manual && existing.mastered)) {
+    // Never added twice — but Hint 4 → solution on the same attempt lowers
+    // its score from GUIDE to READ
+    const lowered = lowerJoinScore(existing, state.score);
+    if (lowered !== existing) await chrome.storage.local.set({ revisionQueue: { ...queue, [slug]: lowered } });
+    return false;
+  }
 
-    li.append(info, done);
-    DOM.revisionList.appendChild(li);
+  const today = localDate();
+  queue[slug] = existing
+    ? { ...newQueueItem(state.problem, state.score, today), addedAt: existing.addedAt, history: existing.history || [] }
+    : newQueueItem(state.problem, state.score, today);
+  await chrome.storage.local.set({ revisionQueue: queue });
+  showToast('📌 Added to your Revision Queue — first review tomorrow');
+  return true;
+}
+
+async function markRevisionDone(slug) {
+  const { queue } = await getRevisionData();
+  if (!queue[slug]) return;
+  queue[slug] = markMastered(queue[slug], localDate());
+  if (state.review?.slug === slug) state.review.done = true;
+  await chrome.storage.local.set({ revisionQueue: queue });
+  await chrome.storage.local.remove(REVIEW_PROGRESS + slug);
+  showToast('🏆 Marked as mastered');
+}
+
+async function reviewAsInterview(slug) {
+  if (hasInterview()) {
+    showToast('🎙️ Finish or end the current mock interview first');
+    return;
+  }
+  switchTab('hints');
+  if (state.problem?.slug === slug && !isInitializing) {
+    startInterview();
+    return;
+  }
+  pendingInterviewSlug = slug;
+  chrome.tabs.update({ url: `https://leetcode.com/problems/${slug}/` });
+}
+
+// Called once a problem's progress (and review state) is loaded
+function startPendingInterview() {
+  if (!pendingInterviewSlug) return;
+  const slug = pendingInterviewSlug;
+  pendingInterviewSlug = '';
+  if (state.problem?.slug === slug) startInterview();
+}
+
+// ── Rendering ───────────────────────────────
+const formatDay = day => {
+  const n = daysBetween(localDate(), day);
+  if (n === 0) return 'today';
+  if (n === 1) return 'tomorrow';
+  return parseLocalDate(day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+// Hints tab: this problem's place in the queue
+async function renderRevisionBar() {
+  if (!DOM.revisionBar) return;
+  const slug = state.problem?.slug;
+  if (!slug) { DOM.revisionBar.hidden = true; return; }
+
+  const [{ queue, limit }, { stats = {} }] = await Promise.all([getRevisionData(), chrome.storage.local.get('stats')]);
+  if (state.problem?.slug !== slug) return;
+  const item = queue[slug];
+  const entry = stats.problems?.[slug];
+  const solved = !!entry && entry.solved !== false;
+
+  let text = '', canAdd = false;
+  const reviewing = !!state.review && !state.review.done;
+  if (reviewing && item) {
+    text = `🔁 Review · step ${item.step + 1} of ${STEPS.length} — solve it again without hints`;
+  } else if (item?.mastered) {
+    text = '🏆 Mastered';
+    canAdd = true;
+  } else if (item) {
+    const planned = planQueue(queue, { limit }).upcoming.find(e => e.slug === slug)?.date || item.nextDue;
+    text = `📌 In revision · next review ${formatDay(planned)}`;
+  } else if (solved) {
+    text = '✅ Solved';
+    canAdd = true;
+  }
+  DOM.revisionBar.hidden = !text;
+  DOM.revisionBar.classList.toggle('is-review', reviewing);
+  DOM.revisionBarText.textContent = text;
+  DOM.btnRevisionAdd.hidden = !canAdd;
+}
+
+// Revision tab + the tab's badge
+async function renderRevision() {
+  if (!DOM.revisionDueList) return;
+  const { queue, limit } = await getRevisionData();
+  const { dueToday, upcoming, mastered } = planQueue(queue, { limit });
+
+  if (document.activeElement !== DOM.revisionLimit) DOM.revisionLimit.value = limit;
+  DOM.revisionTabBadge.textContent = dueToday.length;
+  DOM.revisionTabBadge.hidden = !dueToday.length;
+  DOM.revisionDueCount.textContent = dueToday.length;
+  DOM.revisionUpcomingCount.textContent = upcoming.length;
+  DOM.revisionMasteredCount.textContent = mastered.length;
+
+  fillRevisionList(DOM.revisionDueList, dueToday, 'due', 'Nothing due today — nice work!');
+  fillRevisionList(DOM.revisionUpcomingList, upcoming, 'upcoming',
+    'No upcoming reviews. Problems join when you open Hint 4 or the solution, or solve one with a score of 60 or lower.');
+  fillRevisionList(DOM.revisionMasteredList, mastered, 'mastered', 'Nothing mastered yet.');
+}
+
+function fillRevisionList(listEl, entries, kind, emptyText) {
+  listEl.innerHTML = '';
+  if (!entries.length) {
+    const empty = document.createElement('li');
+    empty.className = 'revision-empty';
+    empty.textContent = emptyText;
+    listEl.appendChild(empty);
+    return;
+  }
+  entries.forEach(e => listEl.appendChild(revisionRow(e, kind)));
+}
+
+// Built with textContent (not innerHTML) — titles come from the page
+function revisionRow({ slug, item, overdueDays, date }, kind) {
+  const li = document.createElement('li');
+  li.className = 'revision-item';
+
+  const info = document.createElement('div');
+  info.className = 'revision-info';
+
+  const link = document.createElement('a');
+  link.className = 'revision-title';
+  link.href = `https://leetcode.com/problems/${slug}/`;
+  link.textContent = `${item.problemNumber ? item.problemNumber + '. ' : ''}${item.title || slug}`;
+  link.title = link.textContent;
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    // Open in the current LeetCode tab — the tab watcher then loads it in the panel
+    chrome.tabs.update({ url: link.href });
+    switchTab('hints');
   });
+
+  const meta = document.createElement('span');
+  meta.className = 'revision-meta';
+  const diff = document.createElement('span');
+  const diffName = item.difficulty || 'Unknown';
+  diff.className = `${diffName.toLowerCase()}-text`;
+  diff.textContent = diffName;
+
+  const step = kind === 'mastered'
+    ? `mastered ${formatDay(item.masteredOn)}`
+    : `step ${item.step + 1}/${STEPS.length} · ${STEPS[item.step]}d`;
+  const last = SCORE_NAMES[lastScore(item)];
+  meta.append(diff, ` · ${step}${last ? ` · last ${last}` : ''}`);
+
+  if (kind === 'due') {
+    const due = document.createElement('span');
+    due.className = overdueDays > 0 ? 'revision-overdue' : '';
+    due.textContent = overdueDays > 0 ? ` · ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue` : ' · due today';
+    meta.append(due);
+  } else if (kind === 'upcoming') {
+    // Rolled over by the daily limit → its original date is earlier
+    meta.append(` · due ${formatDay(date)}${date > item.nextDue ? ' (rolled over)' : ''}`);
+  }
+
+  info.append(link, meta);
+  li.append(info);
+  if (kind === 'mastered') return li;
+
+  const actions = document.createElement('div');
+  actions.className = 'revision-actions';
+  if (kind === 'due') {
+    const iv = document.createElement('button');
+    iv.className = 'btn-revision-done';
+    iv.textContent = '🎙️ Interview';
+    iv.title = 'Review as a mock interview — the scorecard sets the next review';
+    iv.addEventListener('click', () => reviewAsInterview(slug));
+    actions.append(iv);
+  }
+  const done = document.createElement('button');
+  done.className = 'btn-revision-done';
+  done.textContent = '✓ Done';
+  done.title = 'I know this one — mark it as mastered';
+  done.addEventListener('click', () => markRevisionDone(slug));
+  actions.append(done);
+  li.append(actions);
+  return li;
 }
 
 
@@ -1218,9 +1507,11 @@ chrome.runtime.onMessage.addListener((message) => {
       state.hints         = null;
       state.hintsUnlocked = 1;
       state.score         = 100;
+      state.review        = null;
       resetTcScChecker();
       showState('noProblem');
       syncInterview(null);
+      renderRevisionBar();
     }).catch(() => {});
     return;
   }
@@ -1228,6 +1519,9 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'PROBLEM_DETECTED' || message.type === 'PROBLEM_CHANGED') {
     applyProblem(message.payload);
   }
+
+  // Content script saw an Accepted submission
+  if (message.type === 'PROBLEM_SOLVED') onProblemSolved(message.slug);
 });
 
 function applyProblem(newProblem) {
@@ -1248,6 +1542,7 @@ function applyProblem(newProblem) {
   state.hints        = null;
   state.hintsUnlocked = 1;
   state.score        = 100;
+  state.review       = null;
   resetTcScChecker();
 
   if (newProblem?.title) {

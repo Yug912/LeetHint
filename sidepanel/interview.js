@@ -22,7 +22,7 @@ const IDLE_NUDGE_MS = 3 * 60 * 1000;    // "think out loud" after 3 quiet minute
 const MAX_SAVED     = 50;
 const HOLD_MS       = 600;              // held longer than this = push-to-talk
 
-let ctx = null;            // { getProblem(), getHintsFor(slug), showToast(msg) }
+let ctx = null;            // { getProblem(), getHintsFor(slug), showToast(msg), isReviewDue(slug), onScored(session, card) }
 let session = null;        // the saved interview (see startInterview)
 let viewOn = false;
 let tickTimer = null;
@@ -88,6 +88,8 @@ export async function initInterview(context) {
 
 // The hint ladder is locked while this problem has an interview
 export const isInterviewActive = slug => !!session && !!slug && session.slug === slug;
+// Any interview at all (only one runs at a time)
+export const hasInterview = () => !!session;
 
 // Called whenever the panel's problem changes (or there is none)
 export function syncInterview(problem) {
@@ -121,12 +123,14 @@ function setView(on) {
 // ─────────────────────────────────────────────
 // 2. START / RESUME / END
 // ─────────────────────────────────────────────
-async function startInterview() {
+// Also called by the Revision tab's "Review as interview" once the problem is open
+export async function startInterview() {
   const p = ctx.getProblem();
-  if (!p?.slug || session) return;
+  if (!p?.slug || session) return false;
   const now = Date.now();
   session = {
     slug: p.slug, title: p.title, difficulty: p.difficulty, problemNumber: p.problemNumber,
+    review: !!ctx.isReviewDue?.(p.slug),   // a due revision — the scorecard schedules the next one
     startedAt: now, stage: 'intro', history: [], hintsGiven: 0,
     lastActivityAt: now, lastNudgeAt: 0, lastCodeCheckAt: now,
     lastCode: (await readEditorCode(p.slug)) || '',   // starter template = baseline
@@ -134,6 +138,7 @@ async function startInterview() {
   };
   await save();
   syncInterview(p);   // opens the view → resume() asks for the opening line
+  return true;
 }
 
 // Continue a saved session after the panel was closed or reloaded
@@ -192,6 +197,7 @@ async function finishInterview(reason) {
     session.scorecard = card;
     await saveToHistory(session, card);
     await save();
+    await ctx.onScored?.(session, card);
     renderAll();
   } catch (e) {
     const retry = textEl('button', '🔄 Retry scorecard', 'iv-retry');
