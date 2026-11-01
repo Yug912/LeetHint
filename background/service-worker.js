@@ -5,31 +5,53 @@
 // AI generation happens in sidepanel.js (has window access)
 // Service worker only handles storage + tab management
 
-// Open side panel when extension icon is clicked on LeetCode
-chrome.action.onClicked.addListener(async (tab) => {
-  if (tab.url && tab.url.includes('leetcode.com/problems/')) {
-    await chrome.sidePanel.open({ windowId: tab.windowId });
-  }
+// ─────────────────────────────────────────────
+// SIDE PANEL — per tab, only on LeetCode problem pages
+// The panel is DISABLED globally and enabled per tab. A tab-specific panel
+// is hidden automatically when you switch to another tab (e.g. a new tab)
+// and comes back when you return. Opening it with { windowId } instead would
+// make it window-wide — it would then follow you into every tab.
+// ─────────────────────────────────────────────
+const PANEL_PATH = 'sidepanel/sidepanel.html';
+const isProblemUrl = url => /^https:\/\/leetcode\.com\/problems\/[^/?#]+/.test(url || '');
+
+function syncPanelForTab(tabId, url) {
+  return chrome.sidePanel.setOptions(
+    isProblemUrl(url) ? { tabId, path: PANEL_PATH, enabled: true } : { tabId, enabled: false }
+  ).catch(() => {});   // tab may have closed meanwhile
+}
+
+// Global default off, then enable it for LeetCode tabs that are already open
+async function initPanels() {
+  await chrome.sidePanel.setOptions({ enabled: false });
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(tabs.map(t => syncPanelForTab(t.id, t.url)));
+}
+chrome.runtime.onInstalled.addListener(initPanels);
+chrome.runtime.onStartup.addListener(initPanels);
+
+// Open the panel for THIS tab when the icon is clicked on a LeetCode problem.
+// Not awaited before open(): sidePanel.open() must run while the click still
+// counts as a user gesture. Both calls are queued in order.
+chrome.action.onClicked.addListener((tab) => {
+  if (!isProblemUrl(tab.url)) return;
+  chrome.sidePanel.setOptions({ tabId: tab.id, path: PANEL_PATH, enabled: true });
+  chrome.sidePanel.open({ tabId: tab.id }).catch(e => console.warn('LeetHint SW: could not open panel', e.message));
 });
 
-// Auto-enable side panel only on LeetCode problem pages
-// When user navigates AWAY from LeetCode, tell sidepanel to clear stale state
+// Keep each tab's panel in step with its URL — including in-page (SPA)
+// navigation, which changes the URL without a 'complete' load
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status !== 'complete') return;
+  if (!changeInfo.url && changeInfo.status !== 'complete') return;
+  const url = changeInfo.url || tab.url;
 
-  const isLeetCodeProblem = tab.url && tab.url.includes('leetcode.com/problems/');
-
-  await chrome.sidePanel.setOptions({
-    tabId,
-    enabled: isLeetCodeProblem,
-    path: 'sidepanel/sidepanel.html'
-  });
+  await syncPanelForTab(tabId, url);
 
   // Only send NO_PROBLEM if this tab explicitly navigated to a non-LeetCode URL
   // (Don't fire on tab switches — only on actual page navigations)
-  if (!isLeetCodeProblem && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+  if (!isProblemUrl(url) && url && !url.startsWith('chrome://') && !url.startsWith('chrome-extension://')) {
     await chrome.storage.local.remove('currentProblem');
-    chrome.runtime.sendMessage({ type: 'NO_PROBLEM' }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'NO_PROBLEM', tabId }).catch(() => {});
   }
 });
 
@@ -42,6 +64,25 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 // ─────────────────────────────────────────────
 
 let lastDetectedSlug = '';
+
+// Get problem data from the tab's content script, injecting it first if it
+// isn't there (e.g. tab opened before the extension was installed/reloaded).
+// Polls briefly instead of sleeping a fixed second after injecting.
+async function askContentScript(tabId) {
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: 'GET_PROBLEM_DATA' });
+    if (res?.data?.title) return res.data;
+  } catch (e) {
+    console.log('LeetHint SW: content script not ready, injecting...');
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content/content.js'] }).catch(() => {});
+  }
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await chrome.tabs.sendMessage(tabId, { type: 'GET_PROBLEM_DATA' }).catch(() => null);
+    if (res?.data?.title) return res.data;
+    await new Promise(r => setTimeout(r, 150));
+  }
+  return null;
+}
 
 chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
   const url  = details.url || '';
@@ -59,7 +100,7 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
 
   // Brief pause so a rapid second navigation can cancel this one. The content
   // script fetches by slug from the API, so it doesn't need React to re-render.
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 150));
 
   // Verify tab still has the same slug (user didn't navigate again)
   try {
@@ -70,20 +111,7 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
     }
 
     // Ask content script for fresh problem data
-    let data = null;
-    try {
-      const res = await chrome.tabs.sendMessage(details.tabId, { type: 'GET_PROBLEM_DATA' });
-      if (res?.data?.title) data = res.data;
-    } catch (e) {
-      console.log('LeetHint SW: content script not ready, injecting...');
-      await chrome.scripting.executeScript({
-        target: { tabId: details.tabId },
-        files: ['content/content.js']
-      }).catch(() => {});
-      await new Promise(r => setTimeout(r, 800));
-      const res2 = await chrome.tabs.sendMessage(details.tabId, { type: 'GET_PROBLEM_DATA' }).catch(() => null);
-      if (res2?.data?.title) data = res2.data;
-    }
+    const data = await askContentScript(details.tabId);
 
     if (data?.title) {
       console.log('LeetHint SW: New problem →', data.title);
@@ -136,32 +164,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         // ── SLOW PATH: storage empty — ask content script directly ──
-        try {
-          const res = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PROBLEM_DATA' });
-          if (res?.data?.title) {
-            await chrome.storage.local.set({ currentProblem: res.data });
-            sendResponse({ success: true, data: res.data });
-            return;
-          }
-        } catch (e) {
-          // Content script not loaded — inject it
-          console.log('LeetHint SW: injecting content script into tab', tab.id);
-          try {
-            await chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              files: ['content/content.js']
-            });
-            // Give it time to render & extract data
-            await new Promise(r => setTimeout(r, 1000));
-            const res2 = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PROBLEM_DATA' });
-            if (res2?.data?.title) {
-              await chrome.storage.local.set({ currentProblem: res2.data });
-              sendResponse({ success: true, data: res2.data });
-              return;
-            }
-          } catch (injectErr) {
-            console.log('LeetHint SW: inject failed', injectErr.message);
-          }
+        const data = await askContentScript(tab.id);
+        if (data?.title) {
+          await chrome.storage.local.set({ currentProblem: data });
+          sendResponse({ success: true, data });
+          return;
         }
 
       } catch (e) {
@@ -170,35 +177,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       // Final fallback
       sendResponse({ success: true, data: null });
-    }
-
-    // Side panel is asking to generate hints
-    if (message.type === 'GENERATE_HINTS') {
-      try {
-        const { currentProblem } = await chrome.storage.local.get('currentProblem');
-        if (!currentProblem) {
-          sendResponse({ success: false, error: 'No problem data found' });
-          return;
-        }
-
-        // Check cache first — don't call AI again for same problem
-        const cacheKey = `hints_v3_${currentProblem.slug}`;
-        const cached = await chrome.storage.local.get(cacheKey);
-        if (cached[cacheKey]) {
-          sendResponse({ success: true, data: cached[cacheKey] });
-          return;
-        }
-
-        // Generate fresh hints
-        const hints = await generateHints(currentProblem);
-
-        // Cache the result for this problem
-        await chrome.storage.local.set({ [cacheKey]: hints });
-
-        sendResponse({ success: true, data: hints });
-      } catch (e) {
-        sendResponse({ success: false, error: e.message });
-      }
     }
 
   })();

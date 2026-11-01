@@ -6,7 +6,8 @@
 // 1. EXTRACT PROBLEM DATA FROM DOM
 // ─────────────────────────────────────────────
 
-function getProblemData() {
+// needDifficulty: false skips the full-page difficulty scan (when the API already has it)
+function getProblemData(needDifficulty = true) {
   // --- TITLE ---
   const titleEl =
     document.querySelector('.text-title-large a') ||
@@ -21,9 +22,9 @@ function getProblemData() {
     title = pageTitle.replace(' - LeetCode', '').trim();
   }
 
-  // --- DIFFICULTY ---
+  // --- DIFFICULTY --- (walks every element, so only when needed)
   let difficulty = 'Unknown';
-  const allElements = document.querySelectorAll('*');
+  const allElements = needDifficulty ? document.querySelectorAll('*') : [];
   for (const el of allElements) {
     const text = el.textContent.trim();
     if (
@@ -153,12 +154,16 @@ async function getEnrichedProblemData() {
 
   // No API data → we depend on the DOM, so make sure it's the NEW problem's DOM
   if (!q) await waitForDomOf(slug);
-  const data = getProblemData();
+  const data = getProblemData(!q?.difficulty);
   if (!q) return data;
 
   // Premium-locked problems return content: null — keep DOM description then
   const apiDescription = q.content ? htmlToText(q.content) : '';
-  const cpp = (q.codeSnippets || []).find(s => s.langSlug === 'cpp');
+  // LeetCode's exact starter code per language — used to translate the solution
+  const codeSnippets = {};
+  for (const s of q.codeSnippets || []) {
+    if (SNIPPET_LANGS.includes(s.langSlug)) codeSnippets[s.langSlug] = s.code;
+  }
 
   return {
     ...data,
@@ -168,9 +173,13 @@ async function getEnrichedProblemData() {
     description:   apiDescription || data.description,
     topicTags:     (q.topicTags || []).map(t => t.name),
     officialHints: (q.hints || []).map(htmlToText),
-    cppSnippet:    cpp?.code || ''
+    cppSnippet:    codeSnippets.cpp || '',
+    codeSnippets
   };
 }
+
+// Same keys as LANGUAGES in shared/prompts.js (content scripts can't import modules)
+const SNIPPET_LANGS = ['cpp', 'java', 'python3', 'c', 'javascript', 'typescript', 'csharp', 'golang', 'kotlin', 'swift', 'rust'];
 
 
 // ─────────────────────────────────────────────
@@ -309,8 +318,8 @@ function waitForNewProblemAndExtract(expectedSlug) {
 // ── Layer 1: URL poll ────────────────────────────────────────────────────────
 // Patching history.pushState here does NOT work: content scripts run in an
 // isolated JS world, so LeetCode's own pushState calls never hit our patch.
-// A cheap 1s slug check catches every navigation the other layers miss.
-setInterval(onNavigate, 500);
+// A cheap 300ms slug check catches every navigation the other layers miss.
+setInterval(onNavigate, 300);
 
 // ── Layer 2: popstate (browser back/forward buttons) ─────────────────────────
 window.addEventListener('popstate', onNavigate);
