@@ -369,13 +369,135 @@ ${languages.map(l => `---${codeTag(l)}---\n\`\`\`${LANGUAGES[l].fence}\n...\n\`\
 //    extra.language on 'hints' / 'solve': also write the solution in that language
 // ─────────────────────────────────────────────
 
-export const ACTIONS = ['hints', 'solve', 'fix', 'translate', 'translate_all'];
+export const ACTIONS = ['hints', 'solve', 'fix', 'translate', 'translate_all', 'interview_turn', 'interview_score'];
 
 export function buildPrompt(action, problem, code = '', extra = {}) {
+  if (action === 'interview_turn') return buildInterviewTurnPrompt(problem, extra.interview);
+  if (action === 'interview_score') return buildInterviewScorePrompt(problem, extra.interview);
   const also = { alsoLanguage: extra.language, alsoSnippet: extra.snippet };
   if (action === 'hints') return buildSolutionPrompt(problem, { withHints: true, ...also });
   if (action === 'fix' && code) return buildFixPrompt(code, problem);
   if (action === 'translate' && code) return buildTranslatePrompt(code, problem, extra.language, extra.snippet);
   if (action === 'translate_all' && code) return buildTranslateAllPrompt(code, problem, extra.languages, extra.snippets);
   return buildSolutionPrompt(problem, also);
+}
+
+
+// ─────────────────────────────────────────────
+// 7. MOCK INTERVIEW — interviewer turns + final scorecard
+//    The extension sends the conversation, the stage and the editor code;
+//    the prompt is built here like every other one (never sent by the client).
+// ─────────────────────────────────────────────
+
+export const INTERVIEW_STAGES = ['intro', 'clarifying', 'approach', 'coding', 'testing', 'complexity', 'feedback'];
+export const INTERVIEW_EVENTS = ['start', 'answer', 'code', 'nudge', 'timeup'];
+export const INTERVIEW_MINUTES = 45;
+
+// Roughly 4 chars per token: ~3,500 tokens of transcript keeps every turn well
+// inside free-tier per-minute budgets, while the recent conversation stays whole
+const TRANSCRIPT_BUDGET_CHARS = 14000;
+
+const INTERVIEWER_PERSONA = `You are a friendly but rigorous software engineering interviewer at a top tech company, running a ${INTERVIEW_MINUTES}-minute coding interview on the problem below. Speak in short, natural sentences, as if talking out loud (1–3 sentences per turn). Follow the stages in order. Answer clarifying questions using only the problem statement. Push back on brute-force approaches by asking if they can do better. If the approach is wrong, point to an input that breaks it, never the fix. Never give the solution, the pattern name, or code. If the candidate asks for a hint, give a small nudge and record it. In the final stage, ask for time and space complexity and one or two follow-up questions.`;
+
+const STAGE_RULES = `STAGES (in order — only ever move forward):
+- intro: one-sentence greeting, then ask them to read the problem and share any clarifying questions.
+- clarifying: answer only from the statement; if it doesn't say, tell them to state a reasonable assumption. Move to "approach" once they start describing a solution or have no more questions.
+- approach: they explain their idea BEFORE coding. Ask for its time complexity. Brute force → ask if they can do better. Wrong idea → name one concrete input that breaks it. Move to "coding" once the approach is correct and efficient enough for the constraints (or after ~20 minutes, let them code their best idea).
+- coding: mostly stay quiet and let them work; answer questions briefly. Move to "testing" when they say they are done.
+- testing: ask them to walk through an example or an edge case by hand. If the code has a bug, name an input that exposes it — never the fix.
+- complexity: ask for the time and space complexity of THEIR code, then one or two follow-up questions (a harder variant, a constraint change, or memory limits). Then move to "feedback".
+- feedback: thank them in one or two sentences and say the scorecard is ready. No detailed critique here.`;
+
+const EVENT_TASKS = {
+  start:  'The interview starts now. Open the "intro" stage.',
+  answer: "Reply to the candidate's latest message.",
+  code:   `The candidate is coding and hasn't spoken; their editor code changed (see CURRENT EDITOR CODE). If there is a clear bug or a puzzling choice worth ONE short question, ask it in one sentence. Otherwise stay silent by returning "reply": "". Never comment on code that is obviously unfinished.`,
+  nudge:  'The candidate has been silent and idle for 3 minutes. In one sentence, encourage them to think out loud about what they are working on. This is not a hint — do not point toward the solution.',
+  timeup: `Time is up (${INTERVIEW_MINUTES} minutes). Wrap up kindly in one or two sentences and set "stage" to "feedback".`
+};
+
+// Transcript lines. Once the budget is reached the OLDEST turns are dropped
+// first; the opening exchange is always kept for context
+function renderTranscript(history = []) {
+  const lines = history
+    .filter(h => h && h.text && (h.role === 'interviewer' || h.role === 'candidate'))
+    .map(h => `${h.role === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${h.text}`);
+  const head = lines.slice(0, 2);
+  const kept = [];
+  let used = head.join('\n').length;
+  for (let i = lines.length - 1; i >= head.length; i--) {
+    if (used + lines[i].length > TRANSCRIPT_BUDGET_CHARS) break;
+    kept.unshift(lines[i]);
+    used += lines[i].length + 1;
+  }
+  const dropped = lines.length - head.length - kept.length;
+  return [...head, ...(dropped > 0 ? [`[… ${dropped} earlier messages omitted …]`] : []), ...kept].join('\n') || '(nothing said yet)';
+}
+
+// The verified solution, so the interviewer can judge correctness accurately.
+// It is marked secret: the persona already forbids revealing it.
+function renderReference(ref, purpose = 'only to judge the candidate — NEVER reveal, quote or hint at it') {
+  if (!ref || !(ref.code || ref.approach)) return 'REFERENCE SOLUTION: not available — judge from the problem statement and constraints.';
+  return `HIDDEN REFERENCE SOLUTION (${purpose}):
+${ref.approach ? `Approach: ${ref.approach}\n` : ''}${ref.pattern ? `Pattern: ${ref.pattern}\n` : ''}${ref.tc ? `Optimal TC: ${ref.tc}   SC: ${ref.sc || '?'}\n` : ''}${ref.code ? '```\n' + ref.code + '\n```' : ''}`;
+}
+
+const renderCode = (code, label = 'CURRENT EDITOR CODE') => code?.trim()
+  ? `CANDIDATE'S ${label}:\n\`\`\`\n${code.trim()}\n\`\`\``
+  : `CANDIDATE'S ${label}: (empty or only the starter template)`;
+
+export function buildInterviewTurnPrompt(problem, iv = {}) {
+  const minutes = Math.floor((iv.elapsedSec || 0) / 60);
+  return `${INTERVIEWER_PERSONA}
+
+Problem:
+${buildProblemContext({ ...problem, cppSnippet: '' })}
+
+${STAGE_RULES}
+
+INTERVIEW STATE: ${minutes} of ${INTERVIEW_MINUTES} minutes used. Current stage: "${iv.stage || 'intro'}". Hints given so far: ${iv.hintsGiven || 0}.
+Pacing: aim to reach coding by ~15–20 min and finish coding by ~35 min, then testing and complexity. If time is short, move things along.
+
+${renderReference(iv.reference)}
+
+${renderCode(iv.code)}
+
+TRANSCRIPT SO FAR:
+${renderTranscript(iv.history)}
+
+YOUR TASK NOW: ${EVENT_TASKS[iv.event] || EVENT_TASKS.answer}
+
+Return JSON only — no markdown, no text outside the JSON:
+{"reply": "", "stage": "", "hintGiven": false}
+- "reply": what you say out loud: 1–3 short spoken sentences, no markdown, no code, no lists; say math naturally ("n log n").
+- "stage": one of ${INTERVIEW_STAGES.map(s => `"${s}"`).join(', ')} — the stage the interview is in AFTER your reply.
+- "hintGiven": true only if this reply nudges toward the solution (because they asked for help or were stuck).`;
+}
+
+export function buildInterviewScorePrompt(problem, iv = {}) {
+  const minutes = Math.round((iv.elapsedSec || 0) / 60);
+  return `You are on a hiring committee at a top tech company. Grade this mock coding interview from the evidence below. Be calibrated and specific: every comment must point to something that actually happened.
+
+Problem:
+${buildProblemContext({ ...problem, cppSnippet: '' })}
+
+${renderReference(iv.reference, 'use it to check whether the final code is correct and optimal')}
+
+Duration: ${minutes} minutes. Last stage reached: "${iv.stage || 'intro'}". Hints the interviewer gave: ${iv.hintsGiven || 0}.
+
+${renderCode(iv.code, 'FINAL CODE')}
+
+FULL TRANSCRIPT:
+${renderTranscript(iv.history)}
+
+RUBRIC (score 1–4 each: 1 = clear gap, 2 = below the bar, 3 = solid, 4 = exceptional):
+- problemSolving: understood the problem, reached a correct and efficient approach, how much help was needed.
+- communication: clarifying questions, thinking out loud, explaining decisions clearly.
+- coding: is the final code correct for this problem (compare with the reference), clean and idiomatic?
+- testing: walked through examples, found edge cases and bugs on their own.
+Each hint lowers problemSolving. Unfinished or incorrect final code caps coding at 2. If the transcript shows little effort, score low and say so.
+"signal": "Strong Hire" (mostly 4s, working optimal code, no hints), "Hire" (mostly 3+, working solution), otherwise "No Hire".
+
+Return JSON only — no markdown, no text outside the JSON:
+{"problemSolving":{"score":3,"comment":"one sentence"},"communication":{"score":3,"comment":"one sentence"},"coding":{"score":3,"comment":"one sentence"},"testing":{"score":3,"comment":"one sentence"},"signal":"Hire","improvements":["most important thing to improve","second","third"]}`;
 }

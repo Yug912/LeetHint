@@ -8,7 +8,8 @@
 // it is useless as a free general-purpose AI proxy.
 // API keys live only in Worker secrets (wrangler secret put ...).
 
-import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt } from '../../shared/prompts.js';
+import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt,
+         INTERVIEW_STAGES, INTERVIEW_EVENTS } from '../../shared/prompts.js';
 import { configuredProviders, describeModels, openStream } from './providers.js';
 
 // Input limits — real LeetCode problems fit comfortably inside these
@@ -96,6 +97,8 @@ async function handleGenerate(request, env, ctx, cors) {
     const snippets = body.snippets && typeof body.snippets === 'object' ? body.snippets : {};
     extra.snippets = Object.fromEntries(extra.languages.map(l => [l, clip(snippets[l], LIMITS.cppSnippet)]));
   }
+  const interviewing = action === 'interview_turn' || action === 'interview_score';
+  if (interviewing) extra.interview = sanitizeInterview(body.interview);
 
   const prompt = buildPrompt(action, problem, code, extra);
 
@@ -105,24 +108,33 @@ async function handleGenerate(request, env, ctx, cors) {
   const hard = /hard/i.test(problem.difficulty);
   // lowEffort: the extension's retry after a reply whose thinking used up the
   // whole token budget before any answer was written
-  const effort = translating || body.lowEffort === true ? 'low' : hard ? 'high' : 'medium';
+  // Interviewer turns are short spoken replies — low reasoning keeps them
+  // fast enough for a conversation (the hidden reference does the judging);
+  // the scorecard is graded once, so it gets more thought
+  const effort = translating || action === 'interview_turn' || body.lowEffort === true ? 'low'
+               : action === 'interview_score' ? 'medium' : hard ? 'high' : 'medium';
 
   // Ask only for the tokens each job needs (thinking included) — free tiers
   // count the requested maximum against a tokens/minute budget, so smaller
   // requests mean more problems per minute
   const maxTokens = {
     hints: hard ? 6000 : 4500, solve: hard ? 5000 : 3500, fix: 4000,
-    translate: 1500, translate_all: 500 + 650 * (extra.languages?.length || 0)
+    translate: 1500, translate_all: 500 + 650 * (extra.languages?.length || 0),
+    interview_turn: 1200, interview_score: 2500
   }[action] + (extra.language && !translating ? 400 : 0);
 
   // Translations go to a smaller/faster model first, keeping the big model's
   // budget free for the next problem's hints
-  const tier = translating ? 'fast' : 'main';
+  // Interview code checks and "think out loud" nudges are low-stakes, so they
+  // too use the small model and leave the accurate one's daily budget for answers
+  const quickTurn = action === 'interview_turn' && (extra.interview.event === 'code' || extra.interview.event === 'nudge');
+  const tier = translating || quickTurn ? 'fast' : 'main';
 
   // ── Shared cache: same problem + prompt → instant reply for every user ──
   // Keyed by a hash of the FULL prompt, so a client sending a fake statement
   // for a real slug only ever gets (and caches) its own fake result.
-  const cacheable = action !== 'fix' && env.HINTS_CACHE;
+  // Interviews are personal conversations — never cached or shared
+  const cacheable = action !== 'fix' && !interviewing && env.HINTS_CACHE;
   const cacheKey = cacheable
     ? `${PROMPT_VERSION}:${action}${extra.language ? '-' + extra.language : ''}:${problem.slug}:${await sha256(prompt)}`.slice(0, 500)
     : '';
@@ -138,7 +150,8 @@ async function handleGenerate(request, env, ctx, cors) {
   }
 
   // ── Stream from the first provider/model that accepts the request ──
-  const tag = `${action}${extra.language ? '-' + extra.language : ''} ${problem.slug}`;
+  // (logs never include the interview transcript — only the action and slug)
+  const tag = `${action}${extra.language ? '-' + extra.language : ''}${interviewing ? '-' + extra.interview.event : ''} ${problem.slug}`;
   const easy = /easy/i.test(problem.difficulty);
   const { upstream, kind, label } = await openStream(env, prompt, { effort, maxTokens, tier, easy });
   console.log(`${tag} (${effort}, ${maxTokens} tok) → ${label}`);
@@ -199,6 +212,35 @@ function sanitizeProblem(p) {
     cppSnippet:    clip(p.cppSnippet, LIMITS.cppSnippet),
     topicTags:     list(p.topicTags, LIMITS.tags, LIMITS.tag),
     officialHints: list(p.officialHints, LIMITS.hints, LIMITS.hint)
+  };
+}
+
+
+// Mock interview state from the extension — known fields only, all clipped.
+// The transcript is the candidate's own conversation, so it's bounded here
+// and trimmed again (oldest turns first) when the prompt is built.
+const INTERVIEW_LIMITS = { turns: 150, text: 1500, code: 20000, refCode: 8000, refText: 1500 };
+
+function sanitizeInterview(iv) {
+  if (!iv || typeof iv !== 'object') throw clientError(400, 'Missing interview state.');
+  const num = (v, max) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
+  const ref = iv.reference && typeof iv.reference === 'object' ? iv.reference : {};
+  return {
+    event:      INTERVIEW_EVENTS.includes(iv.event) ? iv.event : 'answer',
+    stage:      INTERVIEW_STAGES.includes(iv.stage) ? iv.stage : 'intro',
+    elapsedSec: num(iv.elapsedSec, 4 * 3600),
+    hintsGiven: num(iv.hintsGiven, 50),
+    code:       clip(iv.code, INTERVIEW_LIMITS.code),
+    history:    (Array.isArray(iv.history) ? iv.history : []).slice(-INTERVIEW_LIMITS.turns)
+      .filter(h => h && (h.role === 'interviewer' || h.role === 'candidate'))
+      .map(h => ({ role: h.role, text: clip(h.text, INTERVIEW_LIMITS.text) })),
+    reference: {
+      approach: clip(ref.approach, INTERVIEW_LIMITS.refText),
+      pattern:  clip(ref.pattern, 100),
+      tc:       clip(ref.tc, 100),
+      sc:       clip(ref.sc, 100),
+      code:     clip(ref.code, INTERVIEW_LIMITS.refCode)
+    }
   };
 }
 
