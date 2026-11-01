@@ -5,6 +5,8 @@
 // AI generation happens in sidepanel.js (has window access)
 // Service worker only handles storage + tab management
 
+import { planQueue, migrateQueue, localDate, DEFAULT_DAILY_LIMIT } from '../shared/revision.js';
+
 // ─────────────────────────────────────────────
 // SIDE PANEL — per tab, only on LeetCode problem pages
 // The panel is DISABLED globally and enabled per tab. A tab-specific panel
@@ -182,3 +184,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   })();
   return true; // Keep channel open for async response
 });
+
+
+// ─────────────────────────────────────────────
+// REVISION BADGE — number of problems due today on the extension icon
+// Recounted whenever the queue or the daily limit changes, and just after
+// local midnight (when new reviews fall due). The hourly alarm is a safety
+// net for sleep / time-zone changes.
+// ─────────────────────────────────────────────
+async function updateRevisionBadge() {
+  const { revisionQueue = {}, revisionDailyLimit = DEFAULT_DAILY_LIMIT } =
+    await chrome.storage.local.get(['revisionQueue', 'revisionDailyLimit']);
+  // Old-format items: migrate in place (same result the panel would write)
+  const { queue, changed } = migrateQueue(revisionQueue, revisionDailyLimit);
+  if (changed) await chrome.storage.local.set({ revisionQueue: queue });   // re-runs this via onChanged
+
+  const due = planQueue(queue, { limit: revisionDailyLimit, today: localDate() }).dueToday.length;
+  await chrome.action.setBadgeBackgroundColor({ color: '#00c46a' });
+  await chrome.action.setBadgeText({ text: due ? String(due) : '' });
+  await chrome.action.setTitle({ title: due ? `LeetHint — ${due} problem${due === 1 ? '' : 's'} to revise today` : 'LeetHint' });
+}
+
+function scheduleMidnightAlarm() {
+  const next = new Date();
+  next.setHours(24, 0, 5, 0);   // a few seconds past the coming local midnight
+  chrome.alarms.create('revision-midnight', { when: next.getTime() });
+  chrome.alarms.create('revision-hourly', { periodInMinutes: 60 });
+}
+
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (!alarm.name.startsWith('revision-')) return;
+  if (alarm.name === 'revision-midnight') scheduleMidnightAlarm();
+  updateRevisionBadge().catch(() => {});
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && (changes.revisionQueue || changes.revisionDailyLimit)) {
+    updateRevisionBadge().catch(() => {});
+  }
+});
+
+chrome.runtime.onInstalled.addListener(() => { scheduleMidnightAlarm(); updateRevisionBadge().catch(() => {}); });
+chrome.runtime.onStartup.addListener(() => { scheduleMidnightAlarm(); updateRevisionBadge().catch(() => {}); });
