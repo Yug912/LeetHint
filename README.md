@@ -25,7 +25,7 @@
 ## ✨ Features
 
 ### 🎯 Progressive AI Hints
-LeetHint generates **4 layered hints plus a full solution** with **Gemini** (or any model via **OpenRouter**):
+LeetHint generates **4 layered hints plus a full solution** — no API key or setup needed:
 
 | Hint | Name | What it gives you |
 |------|------|-------------------|
@@ -33,17 +33,21 @@ LeetHint generates **4 layered hints plus a full solution** with **Gemini** (or 
 | 🔑 Hint 2 | **Concrete Technique** | Names the exact data structure with a walkthrough step on a real example |
 | 📋 Hint 3 | **Algorithm Skeleton** | Language-neutral pseudocode for the happy path |
 | ⚠️ Hint 4 | **Edge Cases & Gotchas** | 3–5 valid edge cases with exact expected outputs and the concrete bug each one catches |
-| 💀 Solution | **Accepted C++ Code** | Copy-paste-ready `class Solution` using LeetCode's exact signature |
+| 💀 Solution | **Accepted Code, 11 languages** | Copy-paste-ready code using LeetCode's exact signature — C++, Java, Python, C, JavaScript, TypeScript, C#, Go, Kotlin, Swift, Rust |
 
 ### ✅ Accuracy First
 - **Solve first, then teach** — the model solves the problem and traces its code on every example *before* writing hints, so every hint leads to the same correct approach
 - **Exact problem data** — statement, constraints, topic tags, official hints and the C++ signature come straight from LeetCode's API (constraints like `10^5` are never mangled)
 - **🔧 Fix button** — re-checks the solution against the examples and constraints and repairs it
+- **Signature check** — the code is compared with LeetCode's own starter code; a renamed class or method is fixed automatically (design problems like `LRUCache` keep their own class)
+- **Harder problems, more thinking** — Hard problems get extra reasoning time
+- **Your language, instantly** — pick a language once; from then on its code arrives in the same reply as the hints (no extra wait). All other languages are prepared in one request when you reach Hint 4 or the solution
+- **Translations, not re-solves** — other languages come from the verified C++ solution, so the algorithm and TC/SC stay identical
 
 ### ⚡ Fast & Live
-- **Streaming** — each hint appears the moment it's written; no waiting for the whole answer
-- **One request per problem** — light on free-tier API quota
-- **Cached** — revisiting a problem is instant and costs no API calls
+- **Streaming** — the hints layout opens instantly and Hint 1 appears word by word as it's written
+- **One request per problem**, sent to the fastest available AI provider
+- **Cached** — revisiting a problem is instant, and popular problems are cached on the server for everyone
 - **Follows you** — switch problems (Next, links, back/forward, tabs) and the panel updates automatically
 
 ### 📊 Smart Scoring System
@@ -59,6 +63,9 @@ Show Answer  →  20 pts  (READ)
 
 Each solved problem logs to your **Stats tab** with timestamp, difficulty, and score.
 
+### 📌 Revision Queue
+Needed **Hint 4 or the full solution**? That problem is added to your **Revision Queue** on the Stats tab automatically, oldest first. Click a problem to reopen it on LeetCode, and mark it **✓ Done** once you can solve it on your own.
+
 ### 🏢 Company Tags
 Know which **top tech companies** have asked each problem — pulled from a curated database of **hundreds of problems**, tagged with companies like Google, Meta, Amazon, Apple, and more.
 
@@ -70,8 +77,9 @@ Enter your own complexity and check it against the solution:
 - **Algorithm Pattern** — e.g., Sliding Window, Two Pointers, DP, Backtracking
 
 ### 🔒 Privacy First
-- Your API keys are stored **locally** in Chrome storage and sent only to the AI provider you chose (Google or OpenRouter)
-- Falls back to **Chrome's built-in AI** (`window.ai`) if no key is provided
+- **No API keys in the extension** — they live only on the server, as encrypted secrets
+- Only the problem's public data is sent to the server — no account, no personal data
+- Falls back to **Chrome's built-in AI** (`window.ai`) if the server can't be reached
 - Zero data collection
 
 ---
@@ -84,8 +92,8 @@ Enter your own complexity and check it against the solution:
 
 1. **Clone this repository**
    ```bash
-   git clone https://github.com/Yug912/AlgoMentor.git
-   cd AlgoMentor
+   git clone https://github.com/Yug912/AlgoMentor.git LeetHint
+   cd LeetHint
    ```
 
 2. **Open Chrome Extensions**
@@ -94,58 +102,49 @@ Enter your own complexity and check it against the solution:
 
 3. **Load the extension**
    - Click **"Load unpacked"**
-   - Select the cloned `AlgoMentor` folder
+   - Select the cloned `LeetHint` folder
 
 4. **Pin it** to your toolbar for quick access 📌
 
 ---
 
-## 🔑 Setting Up an API Key
+## 🔑 Zero Setup — No API Key Needed
 
-LeetHint works with either key. If both are set, OpenRouter is tried first and Gemini is the fallback.
+Install the extension, open a problem, and hints start streaming. All AI calls go through the
+**LeetHint server** (a Cloudflare Worker), which holds the API keys — users never see or enter one.
 
-### Option 1 — Google Gemini (free)
-1. Visit [Google AI Studio](https://aistudio.google.com/apikey)
-2. Click **"Create API Key"**
-3. Open LeetHint sidebar → Click **"Add Key"** → Paste and save
+- **Fast** — the server uses the fastest providers first (Cerebras, Groq), then OpenRouter and Gemini
+- **Shared cache** — once anyone has opened a problem, it loads instantly for everyone
+- **Never stuck** — a provider that hits its limit is skipped automatically; if a reply is cut off before the code, the solution is fetched separately
 
-> **Free-tier limits:** Google limits free keys per minute and per day. LeetHint uses one request per problem, waits out short per-minute limits automatically, and tells you when the daily quota is used up (it resets at midnight Pacific). Check usage at [ai.dev/rate-limit](https://ai.dev/rate-limit).
->
-> If Google retires the Gemini model LeetHint uses, the extension switches to the replacement model Google recommends automatically.
+> **Server unreachable?** LeetHint falls back to Chrome's built-in AI for basic hints (no solution code).
 
-### Option 2 — OpenRouter (pay-as-you-go)
-1. Create a key at [openrouter.ai/keys](https://openrouter.ai/keys)
-2. Open LeetHint sidebar → **OpenRouter** → Paste and save
+### Running your own server
 
-Uses **DeepSeek R1** by default — change `OR_MODEL` in `api/gemini.js` to use any OpenRouter model.
-
-> **No key?** LeetHint falls back to Chrome's built-in AI for basic hints (no solution code).
+Forked the project? Deploy your own backend in ~5 minutes — see **[backend/README.md](backend/README.md)** —
+then set `BACKEND_URL` in [`api/config.js`](api/config.js). Your keys stay in Cloudflare's encrypted secrets.
 
 ---
 
 ## 🧩 How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        LeetCode Tab                         │
-│  ┌─────────────────────────┐    ┌─────────────────────────┐ │
-│  │   Problem Page (DOM)    │    │     LeetHint Sidebar     │ │
-│  │                         │    │                          │ │
-│  │  content.js fetches     │───▶│  Problem info + diff.   │ │
-│  │  (LeetCode GraphQL):    │    │  ┌────────────────────┐  │ │
-│  │  • Statement + limits   │    │  │  4 Hints + C++     │  │ │
-│  │  • C++ signature        │    │  │  (streamed live)   │  │ │
-│  │  • Topic tags, hints    │    │  └────────────────────┘  │ │
-│  └─────────────────────────┘    │  • Score tracker         │ │
-│                                 │  • Company tags          │ │
-│  service-worker.js              │  • TC / SC checker       │ │
-│  (message relay)         ◀─────▶│  • Stats history         │ │
-│                                 └─────────────────────────┘ │
-│         ▲                                                    │
-│         │                                                    │
-│  gemini.js  ──────────▶  Gemini API  /  OpenRouter          │
-│  (one streamed request: solve → hints → code)                │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────── Chrome ─────────────────────────────┐
+│  LeetCode tab                         LeetHint side panel       │
+│  content.js ── problem data ───────▶  sidepanel.js + api/ai.js  │
+│  (LeetCode GraphQL: statement,        • hints, score, stats     │
+│   limits, C++ signature, tags)        • revision queue, TC/SC   │
+│        ▲                                     │                  │
+│  service-worker.js (navigation, relay)       │ problem data     │
+└──────────────────────────────────────────────┼──────────────────┘
+                                               ▼  (no keys, no prompts)
+                          ┌──────── LeetHint server (backend/) ────────┐
+                          │ builds prompt (shared/prompts.js)           │
+                          │ rate limit · shared cache · provider order  │
+                          │ API keys = encrypted Worker secrets         │
+                          └──────┬────────────────────────────────────┘
+                                 ▼  streamed reply: solve → hints → code
+                     Cerebras · Groq · OpenRouter · Gemini
 ```
 
 ### File Structure
@@ -154,23 +153,27 @@ Uses **DeepSeek R1** by default — change `OR_MODEL` in `api/gemini.js` to use 
 LeetHint/
 ├── manifest.json          # Extension config (MV3)
 ├── api/
-│   └── gemini.js          # AI providers, prompts, streaming, parsing
+│   ├── ai.js              # Server client, streaming parser, built-in AI fallback, TC/SC matcher
+│   └── config.js          # BACKEND_URL (public — no secrets)
+├── shared/
+│   └── prompts.js         # All prompts — used by the server AND the offline fallback
+├── backend/               # Cloudflare Worker that holds the API keys
+│   ├── src/index.js       # Routes, validation, rate limit, cache, streaming
+│   ├── src/providers.js   # Cerebras / Groq / OpenRouter / Gemini with model fallbacks
+│   └── wrangler.toml      # Worker config (no secrets)
 ├── background/
-│   └── service-worker.js  # Message relay between content & sidepanel
+│   └── service-worker.js  # Navigation detection, message relay
 ├── content/
 │   ├── content.js         # LeetCode problem data (GraphQL + DOM fallback)
 │   └── content.css        # Content-script styles
 ├── sidepanel/
 │   ├── sidepanel.html     # Side panel UI
 │   ├── sidepanel.css      # Styling (dark mode, glassmorphism)
-│   └── sidepanel.js       # Main logic: hints, score, stats, tabs
+│   └── sidepanel.js       # Main logic: hints, score, stats, revision queue
 ├── data/
 │   ├── companies.json     # Problem → company mapping database
 │   └── build_companies.py # Script to build the companies DB
 └── icons/
-    ├── icon16.png
-    ├── icon48.png
-    └── icon128.png
 ```
 
 ---
@@ -229,12 +232,13 @@ LeetHint uses carefully tuned prompts that enforce:
 | Permission | Why it's needed |
 |------------|----------------|
 | `sidePanel` | Show the hint panel alongside LeetCode |
-| `storage` | Save your API key and stats locally |
+| `storage` | Save your hints cache, progress and stats locally |
 | `tabs` | Detect when you navigate to a new problem |
 | `scripting` | Inject content script to read problem data |
 | `webNavigation` | Track problem page transitions |
 | `https://leetcode.com/*` | Access LeetCode pages |
-| `https://generativelanguage.googleapis.com/*` | Call Gemini API |
+| `https://leethint-api.leethint-backend.workers.dev/*` | Call the LeetHint server (change it if you deploy your own) |
+| `http://localhost:8787/*` | Local server during development |
 
 ---
 
@@ -243,7 +247,8 @@ LeetHint uses carefully tuned prompts that enforce:
 | Layer | Technology |
 |-------|-----------|
 | Extension Framework | Chrome Extension Manifest V3 |
-| AI Backend | Google Gemini (Flash, auto-updated) or OpenRouter (DeepSeek R1 by default) |
+| Backend | Cloudflare Worker (rate limiting, KV cache, encrypted secrets) |
+| AI Providers | Cerebras, Groq (GPT-OSS 120B), OpenRouter (DeepSeek R1 + free models), Google Gemini |
 | Problem Data | LeetCode GraphQL API (DOM scraping fallback) |
 | Fallback AI | Chrome Built-in AI (`window.ai`) |
 | Styling | Vanilla CSS with CSS Variables |
