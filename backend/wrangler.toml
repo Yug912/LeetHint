@@ -1,0 +1,36 @@
+# LeetHint API — Cloudflare Worker
+# API keys are NOT configured here. Set them as encrypted secrets:
+#   npx wrangler secret put GROQ_API_KEY
+# (see backend/README.md). For local dev, put them in backend/.dev.vars (gitignored).
+
+name = "leethint-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Keep request logs (provider used, failures) viewable in the Cloudflare dashboard
+[observability]
+enabled = true
+
+[vars]
+# Fastest providers first; only those with a secret set are used
+PROVIDER_ORDER = "cerebras,groq,workersai,openrouter,gemini"
+# After publishing the extension, pin the API to it, e.g.
+# ALLOWED_ORIGINS = "chrome-extension://<your-extension-id>"
+ALLOWED_ORIGINS = ""
+
+# Cloudflare Workers AI — free daily allowance on this account, no API key
+[ai]
+binding = "AI"
+
+# Per-IP rate limit: 20 generate requests per minute
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+# Shared hint cache (created with: npx wrangler kv namespace create HINTS_CACHE).
+# The id is not a secret — it only works with this Cloudflare account.
+# Without this binding everything still works; replies just aren't shared.
+[[kv_namespaces]]
+binding = "HINTS_CACHE"
+id = "4fa83866f21e4338849e16b2db490de7"
