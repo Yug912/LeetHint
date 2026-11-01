@@ -1,5 +1,9 @@
 // sidepanel.js — Main logic for the LeetHint side panel
 // Connects everything: problem data, hints, score, stats
+// Loaded as an ES module (see sidepanel.html)
+
+import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
+         translateSolution, translateAll, LANGUAGES } from '../api/ai.js';
 
 // ─────────────────────────────────────────────
 // COMPANY DATABASE — loaded once from bundled JSON
@@ -35,12 +39,14 @@ let state = {
 // silently discards its result instead of overwriting.
 let hintsGenerationId = 0;
 
-// True while init() → loadCurrentProblem() is still in flight.
-// Prevents PROBLEM_DETECTED message handler from firing a duplicate load.
+// True while loadCurrentProblem() is fetching the problem (not while hints
+// generate). Prevents PROBLEM_DETECTED from firing a duplicate load.
 let isInitializing = false;
 
 // A problem change that arrived while isInitializing — applied right after
 let pendingProblem = null;
+// Same, but only the slug is known (the tab's URL changed mid-fetch)
+let pendingSlug = '';
 
 
 // Score values for each level
@@ -72,15 +78,6 @@ const DOM = {
   btnRetry:       $('btn-retry'),
   hintsLayout:    $('hints-layout'),
   loadingName:    $('loading-problem-name'),
-
-  // API Banner
-  apiBanner:      $('api-banner'),
-  btnAddKey:      $('btn-add-key'),
-  btnDismiss:     $('btn-dismiss'),
-  apiKeySection:  $('api-key-section'),
-  apiKeyInput:    $('api-key-input'),
-  btnSaveKey:     $('btn-save-key'),
-  btnCancelKey:   $('btn-cancel-key'),
 
   // Hint cards
   hintCards: {
@@ -155,15 +152,9 @@ const DOM = {
   distGoodCount:  $('dist-good-count'),
   distGuideCount: $('dist-guide-count'),
   distReadCount:  $('dist-read-count'),
-  keyStatus:    $('key-status'),
-  btnChangeKey: $('btn-change-key'),
-  // OpenRouter key (recommended, highest priority)
-  orKeyStatus:  $('or-key-status'),
-  btnChangeOrKey: $('btn-change-or-key'),
-  orKeySection: $('or-key-section'),
-  orKeyInput:   $('or-key-input'),
-  btnSaveOrKey: $('btn-save-or-key'),
-  btnCancelOrKey: $('btn-cancel-or-key')
+  revisionCount:  $('revision-count'),
+  revisionList:   $('revision-list'),
+  aiStatus:       $('ai-status')
 };
 
 
@@ -172,18 +163,18 @@ const DOM = {
 // ─────────────────────────────────────────────
 async function init() {
   setupTabListeners();
-  setupApiKeyListeners();
-  setupOpenRouterKeyListeners();
   setupUnlockListeners();
   setupTcScListener();
   setupExplanationAutoSave();
   setupRetryListener();
   setupActiveTabWatcher();
 
-  // Load bundled company DB in background (non-blocking)
+  // Background, non-blocking — the problem loads in parallel
   loadCompaniesDB();
+  removeLegacyKeys();
+  renderServiceStatus();
 
-  await checkApiKeyStatus();
+  await loadLanguagePreference();
   await loadCurrentProblem();
 }
 
@@ -210,154 +201,89 @@ function switchTab(tab) {
 
 
 // ─────────────────────────────────────────────
-// 3. API KEY BANNER & SETTINGS
+// 3. AI SERVICE STATUS — zero configuration
+//    All AI calls go through the LeetHint server, which holds the API keys.
+//    The Settings card just shows whether that server is reachable.
 // ─────────────────────────────────────────────
-async function checkApiKeyStatus() {
-  const { geminiApiKey, openRouterApiKey, apiBannerDismissed } = await chrome.storage.local.get([
-    'geminiApiKey', 'openRouterApiKey', 'apiBannerDismissed'
-  ]);
 
-  // Update OpenRouter status
-  if (DOM.orKeyStatus) {
-    DOM.orKeyStatus.textContent = openRouterApiKey
-      ? '✅ OpenRouter active — DeepSeek R1 solves, Gemini 2.5 Flash writes hints'
-      : 'Not set — add for best results';
-    if (DOM.btnChangeOrKey) DOM.btnChangeOrKey.textContent = openRouterApiKey ? 'Change' : 'Set Key';
-  }
+// Keys from the old bring-your-own-key version — no longer used, so don't
+// leave them lying around in local storage
+const LEGACY_KEYS = ['geminiApiKey', 'openRouterApiKey', 'groqApiKey', 'cerebrasApiKey',
+                     'geminiModel', 'providerCooldowns', 'apiBannerDismissed'];
 
-  // Update Gemini status
-  if (geminiApiKey) {
-    DOM.apiBanner.style.display = 'none';
-    DOM.keyStatus.textContent = geminiApiKey ? '✅ Gemini key active (fallback)' : 'Not set';
-  } else if (apiBannerDismissed) {
-    DOM.apiBanner.style.display = 'none';
-  }
-
-  // Hide banner if OpenRouter is set (no need to ask for Gemini)
-  if (openRouterApiKey) DOM.apiBanner.style.display = 'none';
+async function removeLegacyKeys() {
+  await chrome.storage.local.remove(LEGACY_KEYS).catch(() => {});
 }
 
-function setupApiKeyListeners() {
-  // "Add Key" → show input field
-  DOM.btnAddKey.addEventListener('click', () => {
-    DOM.apiBanner.style.display = 'none';
-    DOM.apiKeySection.classList.add('visible');
-    DOM.apiKeyInput.focus();
-  });
-
-  // "Maybe Later" → dismiss banner forever
-  DOM.btnDismiss.addEventListener('click', async () => {
-    DOM.apiBanner.style.display = 'none';
-    await chrome.storage.local.set({ apiBannerDismissed: true });
-  });
-
-  // "Save" → save key
-  DOM.btnSaveKey.addEventListener('click', saveApiKey);
-
-  // "Cancel" → hide input
-  DOM.btnCancelKey.addEventListener('click', () => {
-    DOM.apiKeySection.classList.remove('visible');
-  });
-
-  // Settings tab "Change Key" button
-  DOM.btnChangeKey.addEventListener('click', () => {
-    switchTab('hints');
-    DOM.apiBanner.style.display = 'none';
-    DOM.apiKeySection.classList.add('visible');
-    DOM.apiKeyInput.focus();
-  });
-}
-
-async function saveApiKey() {
-  const key = DOM.apiKeyInput.value.trim();
-  if (!key) return;
-
-  await chrome.storage.local.set({ geminiApiKey: key });
-  DOM.apiKeySection.classList.remove('visible');
-  DOM.keyStatus.textContent = '✅ Gemini key active (fallback)';
-  DOM.apiKeyInput.value = '';
-  if (DOM.btnChangeKey) DOM.btnChangeKey.textContent = 'Change';
-
-  // Show brief confirmation
-  showToast('✅ Gemini key saved!');
-}
-
-// ─────────────────────────────────────────────
-// 3b. OPENROUTER KEY MANAGEMENT
-// ─────────────────────────────────────────────
-function setupOpenRouterKeyListeners() {
-  if (!DOM.btnChangeOrKey) return;
-
-  DOM.btnChangeOrKey.addEventListener('click', () => {
-    switchTab('stats');
-    DOM.orKeySection.classList.add('visible');
-    DOM.orKeyInput.focus();
-  });
-
-  DOM.btnSaveOrKey.addEventListener('click', saveOpenRouterKey);
-
-  DOM.btnCancelOrKey.addEventListener('click', () => {
-    DOM.orKeySection.classList.remove('visible');
-  });
-}
-
-async function saveOpenRouterKey() {
-  const key = DOM.orKeyInput.value.trim();
-  if (!key) return;
-
-  await chrome.storage.local.set({ openRouterApiKey: key });
-  DOM.orKeySection.classList.remove('visible');
-  DOM.orKeyStatus.textContent = '✅ OpenRouter active — DeepSeek R1 solves, Gemini 2.5 Flash writes hints';
-  DOM.btnChangeOrKey.textContent = 'Change';
-  DOM.orKeyInput.value = '';
-  DOM.apiBanner.style.display = 'none'; // hide banner — OR key is better
-
-  // Invalidate all cached hints so they regenerate with the new key/model
-  const all = await chrome.storage.local.get(null);
-  const staleKeys = Object.keys(all).filter(k => k.startsWith('hints_'));
-  if (staleKeys.length) await chrome.storage.local.remove(staleKeys);
-
-  showToast('✅ OpenRouter key saved! Regenerating hints...');
+async function renderServiceStatus() {
+  if (!DOM.aiStatus) return;
+  DOM.aiStatus.textContent = 'Checking…';
+  const health = await checkBackend();
+  DOM.aiStatus.textContent = health.ok
+    ? `✅ Connected — no setup needed${health.providers?.length ? ` (${health.providers.join(', ')})` : ''}`
+    : '⚠️ Can\'t reach the LeetHint server — hints fall back to Chrome\'s built-in AI';
 }
 
 
 // ─────────────────────────────────────────────
 // 4. LOAD PROBLEM + GENERATE HINTS
 // ─────────────────────────────────────────────
-async function loadCurrentProblem() {
+// "two-sum" → "Two Sum" — shown instantly while the real data loads
+const titleFromSlug = slug => slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+// Ask the service worker for the problem; quick short retries in case
+// LeetCode is still rendering (instead of one long fixed wait)
+async function fetchCurrentProblem() {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const response = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_PROBLEM' }).catch(() => null);
+    if (response?.data) return response.data;
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return null;
+}
+
+// slugHint: the slug from the tab URL, if known — names the loading screen at once
+async function loadCurrentProblem(slugHint = '') {
   isInitializing = true;
+  state.hints = null;
+  resetTcScChecker();
+  if (slugHint) DOM.loadingName.textContent = titleFromSlug(slugHint);
   showState('loading');
 
+  let problem = null;
   try {
-    // Ask service worker for current problem
-    let response = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_PROBLEM' });
-
-    // If no data, LeetCode React might still be rendering — wait and retry once
-    if (!response?.data) {
-      await new Promise(r => setTimeout(r, 1500));
-      response = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_PROBLEM' });
-    }
-
-    if (!response?.data) {
-      showState('noProblem');
-      return;
-    }
-
-    state.problem = response.data;
-    updateProblemHeader();
-    await loadSavedProgress();
-    await loadHints();
+    problem = await fetchCurrentProblem();
   } finally {
-    // Always clear the flag so future PROBLEM_DETECTED messages are handled
+    // Cleared as soon as the PROBLEM is known — NOT after hint generation,
+    // which can take a while and would otherwise block switching problems
     isInitializing = false;
   }
 
-  // User switched problems while we were loading — catch up now
+  // User switched problems while we were fetching — the newer one wins
+  const nextSlug = pendingSlug;
+  pendingSlug = '';
   if (pendingProblem) {
     const next = pendingProblem;
     pendingProblem = null;
-    applyProblem(next);
+    if (next?.slug !== problem?.slug) {
+      applyProblem(next);
+      return;
+    }
   }
+  if (nextSlug && nextSlug !== problem?.slug?.toLowerCase()) {
+    loadCurrentProblem(nextSlug);
+    return;
+  }
+
+  if (!problem) {
+    showState('noProblem');
+    return;
+  }
+
+  state.problem = problem;
+  updateProblemHeader();
+  await loadSavedProgress();
+  loadHints();   // not awaited — it guards itself against newer loads
 }
 
 function updateProblemHeader() {
@@ -440,6 +366,9 @@ async function loadHints() {
       state.hints = cachedHints;
       renderHints();
       showState('hints');
+      // Cached from a reply whose code never arrived — fetch just the solution
+      if (!cachedHints.hint5) fillMissingSolution(myId);
+      else if (nearSolution()) prefetchAllTranslations();
       return;
     }
   }
@@ -447,24 +376,29 @@ async function loadHints() {
   // TC/SC comes from the same solve step as the hint 5 code, so it always
   // describes that code — no separate TC/SC cache that could drift from it.
 
-  // Generate fresh hints directly (gemini.js loaded via script tag).
-  // The reply is streamed: each finished hint is shown right away, while the
-  // later hints and the solution are still being written.
-  let partialShown = false;
+  // Show the hints layout straight away instead of a full-screen spinner;
+  // the reply is streamed, so Hint 1 fills in word by word as it's written.
+  state.hints = { hint1: '', hint2: '', hint3: '', hint4: '', hint5: '', generating: true };
+  renderHints();
+  showState('hints');
+
+  let frame = 0;
   try {
     const hints = await generateHints(problem, {
+      language: solutionLanguage,   // your language's code arrives in the same reply
       onPartial: partial => {
         if (myId !== hintsGenerationId) return;
         state.hints = { ...partial, hint5: '', generating: true };
-        if (!partialShown) {
-          partialShown = true;
-          renderHints();
-          showState('hints');
-        } else {
-          renderHintTexts();  // no unlock animation / scroll on every update
+        // Stream updates arrive many times a second — render at most once per frame
+        if (!frame) {
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            if (myId === hintsGenerationId) renderHintTexts();
+          });
         }
       }
     });
+    cancelAnimationFrame(frame);
 
     // Cache under THIS problem's key even if the user moved on — generation is
     // slow, so coming back to this problem should be instant
@@ -477,16 +411,13 @@ async function loadHints() {
     }
 
     state.hints = hints;
-    if (partialShown) {
-      renderHintTexts();  // already on screen — just fill in the rest
-    } else {
-      renderHints();
-      showState('hints');
-    }
+    renderHintTexts();  // already on screen — just fill in the rest
+    if (nearSolution()) prefetchAllTranslations();
   } catch (e) {
+    cancelAnimationFrame(frame);
     if (myId !== hintsGenerationId) return; // Stale error, ignore
     console.error('LeetHint: hint generation failed →', e);
-    if (partialShown && state.hints?.hint1) {
+    if (state.hints?.hint1) {
       // Some hints already arrived — keep them; hint 5 offers "Generate Solution"
       state.hints.generating = false;
       renderHintTexts();
@@ -497,13 +428,35 @@ async function loadHints() {
   }
 }
 
+// Hints are cached but hint 5 is empty — request only the solution (any
+// provider with capacity) and store it, so the problem is complete next time
+async function fillMissingSolution(myId) {
+  const problem = state.problem;
+  state.hints.generating = true;
+  renderHintTexts();
+  try {
+    const solved = await validateSolutionCode('', problem);
+    if (myId !== hintsGenerationId) return;   // user moved on
+    state.hints.generating = false;
+    await saveSolutionToCache(solved);
+    if (nearSolution()) prefetchAllTranslations();
+  } catch (e) {
+    if (myId !== hintsGenerationId) return;
+    state.hints.generating = false;
+    console.warn('LeetHint: could not fill missing solution →', e.message);
+  }
+  renderHintTexts();
+}
+
 function renderHints() {
   if (!state.hints) return;
   renderHintTexts();
   applyUnlockState(state.hintsUnlocked);
 }
 
-const PENDING_HTML = '<span class="hint-pending">⏳ Still being written…</span>';
+const PENDING_HTML  = '<span class="hint-pending">⏳ Thinking…</span>';
+const SOLUTION_PENDING_HTML = '<span class="hint-pending">⏳ Still being written…</span>';
+const CURSOR_HTML   = '<span class="hint-cursor" aria-hidden="true"></span>';
 
 function renderHintTexts() {
   if (!state.hints) return;
@@ -515,10 +468,13 @@ function renderHintTexts() {
     const cardKey = cardKeys[i];
     const text = state.hints[key] || '';
     if (cardKey === 'solution') {
-      if (!text && state.hints.generating) DOM.hintTexts.solution.innerHTML = PENDING_HTML;
+      if (!text && state.hints.generating) DOM.hintTexts.solution.innerHTML = SOLUTION_PENDING_HTML;
       else renderSolutionCard(text);
     } else if (DOM.hintTexts[cardKey]) {
-      DOM.hintTexts[cardKey].innerHTML = (!text && state.hints.generating) ? PENDING_HTML : formatHintText(text);
+      const live = state.hints.generating && state.hints.streaming === key;
+      DOM.hintTexts[cardKey].innerHTML = (!text && state.hints.generating)
+        ? PENDING_HTML
+        : formatHintText(text) + (live ? CURSOR_HTML : '');
     }
   });
 }
@@ -590,6 +546,7 @@ async function saveSolutionToCache({ code, tc, sc, scBreakdown }) {
   if (!state.hints || !state.problem?.slug || !code) return '';
   const note = [tc && `TC ${tc}`, sc && `SC ${sc}`].filter(Boolean).map(x => ' · ' + x).join('');
   state.hints.hint5 = '```cpp\n' + code + '\n```' + (note ? `\nApproach:${note}` : '');
+  state.hints.translations = {};   // they were made from the old code
   if (tc) state.hints.optimal_tc = tc;
   if (sc) {
     state.hints.optimal_sc = sc;
@@ -604,29 +561,152 @@ async function saveSolutionToCache({ code, tc, sc, scBreakdown }) {
   return note;
 }
 
+// ── Solution language ──
+// C++ is the verified solution (its TC/SC is derived from that code); other
+// languages are translations of it, made on demand and cached per problem.
+let solutionLanguage = 'cpp';
+const translationJobs = new Map();   // "slug:lang:codeLength" → Promise<code>
+
+async function loadLanguagePreference() {
+  const { solutionLanguage: saved } = await chrome.storage.local.get('solutionLanguage');
+  if (saved && LANGUAGES[saved]) solutionLanguage = saved;
+}
+
+// Languages LeetCode offers for this problem (all of them if unknown)
+function languagesFor(problem) {
+  const offered = problem?.codeSnippets;
+  return Object.keys(LANGUAGES).filter(l => l === 'cpp' || !offered || Object.keys(offered).length === 0 || offered[l]);
+}
+
+// The verified C++ code inside hint 5
+const cppCodeOf = hints => (hints?.hint5 || '').match(/```cpp\n([\s\S]*?)```/)?.[1]?.trim() || '';
+
+// Hint 4 or the solution unlocked — the code is about to be needed
+const nearSolution = () => state.hintsUnlocked === 4 || state.hintsUnlocked === 'solution';
+
+// Every other language in ONE request, started when the user gets close to
+// the solution — problems solved with Hints 1-3 don't spend AI quota on it.
+// Your own language already came with the hints.
+const translateAllJobs = new Map();   // "slug:codeLength" → Promise
+
+function prefetchAllTranslations() {
+  const hints = state.hints;
+  const problem = state.problem;
+  const cpp = cppCodeOf(hints);
+  if (!cpp || !problem?.slug) return null;
+  const missing = languagesFor(problem).filter(l => l !== 'cpp' && !hints.translations?.[l]);
+  if (!missing.length) return null;
+
+  const key = `${problem.slug}:${cpp.length}`;
+  if (!translateAllJobs.has(key)) {
+    const job = translateAll(cpp, problem, missing)
+      .then(async got => {
+        // Into THIS problem's cached hints, even if the user moved on
+        hints.translations = { ...hints.translations, ...got };
+        await chrome.storage.local.set({ [`hints_v3_${problem.slug}`]: hints });
+        console.log('LeetHint: translations ready →', Object.keys(got).join(', ') || 'none');
+        return got;
+      })
+      .catch(e => { console.warn('LeetHint: translate-all failed →', e.message); return {}; })
+      .finally(() => translateAllJobs.delete(key));
+    translateAllJobs.set(key, job);
+  }
+  return translateAllJobs.get(key);
+}
+
+// Translation of the C++ code, from the problem's cache or the server.
+// Concurrent requests for the same translation share one job.
+async function getTranslation(cppCode, lang) {
+  const hints = state.hints;
+  const problem = state.problem;
+  if (hints?.translations?.[lang]) return hints.translations[lang];
+
+  // The all-languages request is running (or can start) — wait for it first
+  const all = prefetchAllTranslations();
+  if (all) {
+    await all;
+    if (hints?.translations?.[lang]) return hints.translations[lang];
+  }
+
+  const jobKey = `${problem.slug}:${lang}:${cppCode.length}`;
+  if (!translationJobs.has(jobKey)) {
+    const job = translateSolution(cppCode, problem, lang)
+      .then(async code => {
+        // Save into THIS problem's cached hints, even if the user moved on
+        hints.translations = { ...hints.translations, [lang]: code };
+        await chrome.storage.local.set({ [`hints_v3_${problem.slug}`]: hints });
+        return code;
+      })
+      .finally(() => translationJobs.delete(jobKey));
+    translationJobs.set(jobKey, job);
+  }
+  return translationJobs.get(jobKey);
+}
+
 // Builds (or rebuilds) the solution card UI with code + buttons
 function buildSolutionUI(el, code, approachNote) {
   const escape = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const langs = languagesFor(state.problem);
+  if (!langs.includes(solutionLanguage)) solutionLanguage = 'cpp';
 
   el.innerHTML = `
     <div class="solution-code-wrap">
       <div class="solution-code-header">
-        <span class="solution-lang-badge">C++</span>
+        <select class="solution-lang-select" title="Solution language" aria-label="Solution language">
+          ${langs.map(l => `<option value="${l}"${l === solutionLanguage ? ' selected' : ''}>${LANGUAGES[l].name}</option>`).join('')}
+        </select>
         <div class="solution-header-btns">
           <button class="btn-validate-code" title="Validate &amp; fix with AI">🔧 Fix</button>
           <button class="btn-copy-code" title="Copy code">📋 Copy</button>
         </div>
       </div>
-      <pre class="solution-pre"><code class="solution-code">${escape(code)}</code></pre>
+      <pre class="solution-pre"><code class="solution-code"></code></pre>
       ${approachNote ? `<p class="solution-approach">${escape(approachNote)}</p>` : ''}
+      <p class="solution-translated-note" hidden>Translated from the verified C++ solution — same algorithm, same TC/SC.</p>
     </div>
   `;
 
+  const codeEl   = el.querySelector('.solution-code');
+  const select   = el.querySelector('.solution-lang-select');
+  const fixBtn   = el.querySelector('.btn-validate-code');
+  const copyBtn  = el.querySelector('.btn-copy-code');
+  const transNote = el.querySelector('.solution-translated-note');
+  let shownCode = code;   // what Copy copies
+
+  async function showLanguage(lang) {
+    const isCpp = lang === 'cpp';
+    fixBtn.hidden = !isCpp;          // Fix works on the verified C++ version
+    transNote.hidden = isCpp;
+    if (isCpp) {
+      shownCode = code;
+      codeEl.textContent = code;
+      return;
+    }
+    shownCode = '';
+    codeEl.textContent = `⏳ Translating to ${LANGUAGES[lang].name}…`;
+    try {
+      const translated = await getTranslation(code, lang);
+      if (select.value !== lang || !el.contains(codeEl)) return;   // user picked another / card rebuilt
+      shownCode = translated;
+      codeEl.textContent = translated;
+    } catch (e) {
+      if (select.value !== lang) return;
+      codeEl.textContent = `⚠️ Couldn't translate to ${LANGUAGES[lang].name}: ${e.message}`;
+    }
+  }
+
+  select.addEventListener('change', () => {
+    solutionLanguage = select.value;
+    chrome.storage.local.set({ solutionLanguage }).catch(() => {});
+    showLanguage(solutionLanguage);
+  });
+  showLanguage(solutionLanguage);
+
   // Wire Copy button
-  const copyBtn = el.querySelector('.btn-copy-code');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(code).then(() => {
+      if (!shownCode) return showToast('⏳ Still translating…');
+      navigator.clipboard.writeText(shownCode).then(() => {
         copyBtn.textContent = '✅ Copied!';
         setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
       });
@@ -634,7 +714,6 @@ function buildSolutionUI(el, code, approachNote) {
   }
 
   // Wire Fix with AI button
-  const fixBtn = el.querySelector('.btn-validate-code');
   if (fixBtn) {
     fixBtn.addEventListener('click', async () => {
       fixBtn.textContent = '⏳ Fixing...';
@@ -720,6 +799,12 @@ function unlockHint(cardKey) {
 
   // Update stats
   updateStats();
+
+  // Needing Hint 4 or the solution means this one is worth revisiting
+  if (cardKey === 4 || cardKey === 'solution') {
+    addToRevisionQueue();
+    prefetchAllTranslations();   // every language ready by the time you look
+  }
 }
 
 function applyUnlockState(unlockedLevel) {
@@ -881,10 +966,9 @@ async function loadSavedProgress() {
     state.score = 100;
   }
 
-  // Restore explanation text
-  if (saved[explanationKey]) {
-    DOM.explanationInput.value = saved[explanationKey];
-  }
+  // Restore explanation text — clear it when this problem has none, so the
+  // previous problem's text isn't shown (and auto-saved) under this one
+  DOM.explanationInput.value = saved[explanationKey] || '';
 }
 
 
@@ -903,7 +987,6 @@ async function updateStats() {
   // Initialize if first time
   if (!stats.problems) stats.problems = {};
   if (!stats.byDifficulty) stats.byDifficulty = { easy: 0, medium: 0, hard: 0 };
-  if (!stats.byLevel) stats.byLevel = { 1: 0, 2: 0, 3: 0, 4: 0, solution: 0 };
 
   // Record this problem's current state
   const isNewProblem = !stats.problems[slug];
@@ -914,12 +997,14 @@ async function updateStats() {
     stats.byDifficulty[difficulty]++;
   }
 
-  // Update level distribution
-  // Reset old level count for this problem, add new
-  stats.byLevel[level] = (stats.byLevel[level] || 0) + 1;
+  const allProblems = Object.values(stats.problems);
+
+  // Level distribution — rebuilt from each problem's CURRENT level, so
+  // unlocking hint 2 → 3 → 4 on one problem counts it once, not three times
+  stats.byLevel = { 1: 0, 2: 0, 3: 0, 4: 0, solution: 0 };
+  allProblems.forEach(p => { stats.byLevel[p.level] = (stats.byLevel[p.level] || 0) + 1; });
 
   // Recalculate totals
-  const allProblems = Object.values(stats.problems);
   stats.totalProblems = allProblems.length;
   stats.avgScore = Math.round(
     allProblems.reduce((sum, p) => sum + p.score, 0) / allProblems.length
@@ -964,6 +1049,100 @@ async function renderStats() {
     const val = byLevel[key] || 0;
     bar.style.width     = `${(val / maxLevel) * 100}%`;
     count.textContent   = val;
+  });
+
+  await renderRevisionQueue();
+}
+
+
+// ─────────────────────────────────────────────
+// 9b. REVISION QUEUE
+//     Problems where the user unlocked Hint 4 or the solution.
+//     Stored as revisionQueue: { [slug]: { title, problemNumber, difficulty, level, addedAt } }
+// ─────────────────────────────────────────────
+async function addToRevisionQueue() {
+  if (!state.problem?.slug) return;
+  const { slug, title, problemNumber, difficulty } = state.problem;
+
+  const { revisionQueue = {} } = await chrome.storage.local.get('revisionQueue');
+  const existing = revisionQueue[slug];
+
+  // Keep the original date so the queue stays oldest-first; just update the level
+  revisionQueue[slug] = {
+    title, problemNumber, difficulty,
+    level:   state.hintsUnlocked,
+    addedAt: existing?.addedAt || Date.now()
+  };
+  await chrome.storage.local.set({ revisionQueue });
+
+  if (!existing) showToast('📌 Added to your Revision Queue');
+}
+
+async function removeFromRevisionQueue(slug) {
+  const { revisionQueue = {} } = await chrome.storage.local.get('revisionQueue');
+  delete revisionQueue[slug];
+  await chrome.storage.local.set({ revisionQueue });
+  await renderRevisionQueue();
+  showToast('✅ Marked as revised');
+}
+
+async function renderRevisionQueue() {
+  if (!DOM.revisionList) return;
+  const { revisionQueue = {} } = await chrome.storage.local.get('revisionQueue');
+
+  // Oldest first — those are the ones due for revision
+  const entries = Object.entries(revisionQueue).sort(([, a], [, b]) => a.addedAt - b.addedAt);
+
+  DOM.revisionCount.textContent = entries.length;
+  DOM.revisionList.innerHTML = '';
+
+  if (!entries.length) {
+    const empty = document.createElement('li');
+    empty.className = 'revision-empty';
+    empty.textContent = 'Nothing to revise yet — nice work!';
+    DOM.revisionList.appendChild(empty);
+    return;
+  }
+
+  // Built with textContent (not innerHTML) — titles come from the page
+  entries.forEach(([slug, item]) => {
+    const li = document.createElement('li');
+    li.className = 'revision-item';
+
+    const info = document.createElement('div');
+    info.className = 'revision-info';
+
+    const link = document.createElement('a');
+    link.className = 'revision-title';
+    link.href = `https://leetcode.com/problems/${slug}/`;
+    link.textContent = `${item.problemNumber ? item.problemNumber + '. ' : ''}${item.title || slug}`;
+    link.title = link.textContent;
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      // Open in the current LeetCode tab — the tab watcher then loads it in the panel
+      chrome.tabs.update({ url: link.href });
+      switchTab('hints');
+    });
+
+    const meta = document.createElement('span');
+    meta.className = 'revision-meta';
+    const diff = document.createElement('span');
+    const diffName = item.difficulty || 'Unknown';
+    diff.className = `${diffName.toLowerCase()}-text`;
+    diff.textContent = diffName;
+    const added = new Date(item.addedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    meta.append(diff, ` · ${LEVEL_NAMES[item.level] || ''} · added ${added}`);
+
+    info.append(link, meta);
+
+    const done = document.createElement('button');
+    done.className = 'btn-revision-done';
+    done.textContent = '✓ Done';
+    done.title = 'Re-solved it — remove from the queue';
+    done.addEventListener('click', () => removeFromRevisionQueue(slug));
+
+    li.append(info, done);
+    DOM.revisionList.appendChild(li);
   });
 }
 
@@ -1015,13 +1194,18 @@ function showToast(message) {
 // ─────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message) => {
   // ── Non-LeetCode page → clear everything ──────────────────────────
+  // Only when it's the tab this panel is showing — a background tab
+  // loading some other site must not wipe the panel
   if (message.type === 'NO_PROBLEM') {
-    state.problem       = null;
-    state.hints         = null;
-    state.hintsUnlocked = 1;
-    state.score         = 100;
-    resetTcScChecker();
-    showState('noProblem');
+    chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+      if (message.tabId && tab?.id !== message.tabId) return;
+      state.problem       = null;
+      state.hints         = null;
+      state.hintsUnlocked = 1;
+      state.score         = 100;
+      resetTcScChecker();
+      showState('noProblem');
+    }).catch(() => {});
     return;
   }
 
@@ -1054,11 +1238,6 @@ function applyProblem(newProblem) {
     // We already have the data from the message — use it directly
     state.problem = newProblem;
 
-    // Clear stale hints immediately so the UI never shows the wrong problem
-    if (DOM.hintsContainer) DOM.hintsContainer.innerHTML = '';
-    if (DOM.tcValue) DOM.tcValue.textContent = '—';
-    if (DOM.scValue) DOM.scValue.textContent = '—';
-
     updateProblemHeader();
     loadSavedProgress().then(() => loadHints());
   } else {
@@ -1085,9 +1264,12 @@ function syncWithTab(tab) {
   if (!tab?.active || (panelWindowId !== null && tab.windowId !== panelWindowId)) return;
   const slug = slugFromUrl(tab.url);
   if (!slug || slug === state.problem?.slug?.toLowerCase()) return;
-  if (isInitializing) return; // the in-flight load (or its queued follow-up) handles it
+  if (isInitializing) {
+    pendingSlug = slug;   // checked again once the in-flight fetch finishes
+    return;
+  }
   console.log('LeetHint: active tab now on', slug, '— reloading panel');
-  loadCurrentProblem();
+  loadCurrentProblem(slug);
 }
 
 function setupActiveTabWatcher() {
