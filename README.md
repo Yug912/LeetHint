@@ -14,7 +14,8 @@
 <br/>
 
 > 🧠 Get 4 progressive hints — from pattern nudges to pseudocode — without spoiling the solution.  
-> Every hint is grounded on a verified C++ solution, so hints, code and complexity always agree.
+> Every hint is grounded on a verified C++ solution, so hints, code and complexity always agree.  
+> 🎙️ Practise out loud with a voice mock interview, and 🧠 lock problems in with spaced-repetition revision.
 
 <br/>
 
@@ -63,8 +64,33 @@ Show Answer  →  20 pts  (READ)
 
 Each solved problem logs to your **Stats tab** with timestamp, difficulty, and score.
 
-### 📌 Revision Queue
-Needed **Hint 4 or the full solution**? That problem is added to your **Revision Queue** on the Stats tab automatically, oldest first. Click a problem to reopen it on LeetCode, and mark it **✓ Done** once you can solve it on your own.
+### ✅ Automatic Solve Detection
+Press **Submit** (or `Ctrl/Cmd + Enter`) and LeetHint notices when that submission comes back **Accepted** — no need to log the solve yourself. Detection is **read-only**: it only watches the page and never adds or changes anything on LeetCode. Old accepted submissions opened from the Submissions tab don't count.
+
+### 🧠 Spaced-Repetition Revision
+Problems you struggled with come back on a schedule until you can solve them cold:
+
+- **Joins the queue** when you use **Hint 4 or the solution**, or solve at **GOOD or lower** — never twice. You can also add any problem with **Add to revision**
+- **Review steps:** `1 → 3 → 7 → 21 → 60` days, counted in local calendar days (due from midnight)
+- **Each review moves it:** SOLO → next step · SHARP / GOOD → same step again · GUIDE / READ → back to 1 day
+- **Mastered** after a SOLO at the 60-day step, or whenever you press **✓ Done**
+- **Fresh attempts** — a due problem reopens with hints locked and the score back at 100; a review never counts as a new solve in Stats
+- **Daily limit** — set how many reviews you want per day; extra due problems roll over to the next days
+
+The **Revision tab** shows **Due today** (with how many days overdue), **Upcoming** (with due dates) and **Mastered**. The number due today also appears as a 🔔 **badge on the extension icon**.
+
+### 🎙️ Voice Mock Interview
+A **45-minute mock interview** with an AI interviewer on the problem you have open:
+
+- The interviewer **speaks** to you; answer **by voice** (tap or hold to talk) or by typing
+- Moves through real interview stages: **Intro → Clarify → Approach → Coding → Testing → Complexity → Feedback**
+- **Reads your editor** every minute and reacts to meaningful code changes; nudges you to think out loud after 3 quiet minutes
+- Timer, stage tracker, hint counter and mute — the normal hint ladder is locked while it runs
+- Survives a panel reload — the session is saved and resumed
+- Ends with a **scorecard** (problem solving, communication, coding, testing) and a **Strong Hire / Hire / No Hire** signal; past interviews are listed on the Stats tab
+- **Review as interview** — take a due revision as a mock interview; the signal sets the next review, capped by the hints you needed (a Strong Hire after 3 hints still resets)
+
+> The first time, LeetHint opens a small page to ask for microphone access, since Chrome can't show the permission prompt inside the side panel.
 
 ### 🏢 Company Tags
 Know which **top tech companies** have asked each problem — pulled from a curated database of **hundreds of problems**, tagged with companies like Google, Meta, Amazon, Apple, and more.
@@ -79,8 +105,11 @@ Enter your own complexity and check it against the solution:
 ### 🔒 Privacy First
 - **No API keys in the extension** — they live only on the server, as encrypted secrets
 - Only the problem's public data is sent to the server — no account, no personal data
+- Mock interview conversations are **never cached or logged** on the server
 - Falls back to **Chrome's built-in AI** (`window.ai`) if the server can't be reached
-- Zero data collection
+- Zero data collection — your stats, revision queue and interview history stay in Chrome's local storage
+
+> **Note on voice:** spoken answers are transcribed by Chrome's built-in speech recognition, which sends the audio to Google's servers. Type your answers instead if you'd rather not.
 
 ---
 
@@ -133,9 +162,11 @@ then set `BACKEND_URL` in [`api/config.js`](api/config.js). Your keys stay in Cl
 │  LeetCode tab                         LeetHint side panel       │
 │  content.js ── problem data ───────▶  sidepanel.js + api/ai.js  │
 │  (LeetCode GraphQL: statement,        • hints, score, stats     │
-│   limits, C++ signature, tags)        • revision queue, TC/SC   │
+│   limits, C++ signature, tags;        • revision tab, TC/SC     │
+│   "Accepted" solve detection)         • mock interview (voice)  │
 │        ▲                                     │                  │
-│  service-worker.js (navigation, relay)       │ problem data     │
+│  service-worker.js (navigation, relay,       │ problem data /   │
+│   due-revisions badge)                       │ interview state  │
 └──────────────────────────────────────────────┼──────────────────┘
                                                ▼  (no keys, no prompts)
                           ┌──────── LeetHint server (backend/) ────────┐
@@ -144,6 +175,7 @@ then set `BACKEND_URL` in [`api/config.js`](api/config.js). Your keys stay in Cl
                           │ API keys = encrypted Worker secrets         │
                           └──────┬────────────────────────────────────┘
                                  ▼  streamed reply: solve → hints → code
+                                    (or the interviewer's next turn)
                      Cerebras · Groq · OpenRouter · Gemini
 ```
 
@@ -154,25 +186,32 @@ LeetHint/
 ├── manifest.json          # Extension config (MV3)
 ├── api/
 │   ├── ai.js              # Server client, streaming parser, built-in AI fallback, TC/SC matcher
+│   ├── interview.js       # Mock interview: reply/scorecard parsing, stage rules, code-change check
 │   └── config.js          # BACKEND_URL (public — no secrets)
 ├── shared/
-│   └── prompts.js         # All prompts — used by the server AND the offline fallback
+│   ├── prompts.js         # All prompts — used by the server AND the offline fallback
+│   └── revision.js        # Spaced-repetition schedule (pure logic, shared by panel + worker)
 ├── backend/               # Cloudflare Worker that holds the API keys
 │   ├── src/index.js       # Routes, validation, rate limit, cache, streaming
 │   ├── src/providers.js   # Cerebras / Groq / OpenRouter / Gemini with model fallbacks
 │   └── wrangler.toml      # Worker config (no secrets)
 ├── background/
-│   └── service-worker.js  # Navigation detection, message relay
+│   └── service-worker.js  # Navigation detection, message relay, due-revisions badge
 ├── content/
-│   ├── content.js         # LeetCode problem data (GraphQL + DOM fallback)
+│   ├── content.js         # LeetCode problem data (GraphQL + DOM fallback), solve detection
 │   └── content.css        # Content-script styles
 ├── sidepanel/
-│   ├── sidepanel.html     # Side panel UI
+│   ├── sidepanel.html     # Side panel UI (Hints · Revision · Stats tabs)
 │   ├── sidepanel.css      # Styling (dark mode, glassmorphism)
-│   └── sidepanel.js       # Main logic: hints, score, stats, revision queue
+│   ├── sidepanel.js       # Main logic: hints, score, stats, revision tab
+│   ├── interview.js       # Mock interview UI and session flow
+│   ├── voice.js           # Speech synthesis + speech recognition
+│   └── mic-permission.*   # One-time microphone permission page
 ├── data/
 │   ├── companies.json     # Problem → company mapping database
 │   └── build_companies.py # Script to build the companies DB
+├── tests/
+│   └── revision.test.mjs  # Spaced-repetition tests (node --test tests/*.test.mjs)
 └── icons/
 ```
 
@@ -236,6 +275,7 @@ LeetHint uses carefully tuned prompts that enforce:
 | `tabs` | Detect when you navigate to a new problem |
 | `scripting` | Inject content script to read problem data |
 | `webNavigation` | Track problem page transitions |
+| `alarms` | Refresh the due-revisions badge just after local midnight |
 | `https://leetcode.com/*` | Access LeetCode pages |
 | `https://leethint-api.leethint-backend.workers.dev/*` | Call the LeetHint server (change it if you deploy your own) |
 | `http://localhost:8787/*` | Local server during development |
@@ -251,6 +291,8 @@ LeetHint uses carefully tuned prompts that enforce:
 | AI Providers | Cerebras, Groq (GPT-OSS 120B), OpenRouter (DeepSeek R1 + free models), Google Gemini |
 | Problem Data | LeetCode GraphQL API (DOM scraping fallback) |
 | Fallback AI | Chrome Built-in AI (`window.ai`) |
+| Voice | Web Speech API (`speechSynthesis`, `webkitSpeechRecognition`) |
+| Tests | Node's built-in test runner (`node --test`) |
 | Styling | Vanilla CSS with CSS Variables |
 | Fonts | Inter, JetBrains Mono (Google Fonts) |
 | Data | Bundled JSON company database |
@@ -266,6 +308,12 @@ Contributions are welcome! Here's how to get started:
 3. Commit your changes: `git commit -m 'Add some amazing feature'`
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
+
+Run the tests before opening a PR (Node 18+, no install needed):
+
+```bash
+node --test tests/*.test.mjs
+```
 
 ### Ideas for contributions
 - [ ] Support for more coding platforms (HackerRank, Codeforces)
