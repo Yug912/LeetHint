@@ -24,7 +24,8 @@ const NOT_CHAT = /whisper|tts|guard|playai|orpheus|compound|embed|vision|audio|t
 
 // prefer.main: solving + hints (accuracy first). prefer.fast: translation of
 // verified code (a smaller model is enough — and it keeps the big model's
-// token budget free for the next problem).
+// token budget free for the next problem). prefer.interview: mock interview
+// turns and scorecards — large models only (small ones leak the solution).
 const PROVIDERS = {
   cerebras: {
     name: 'Cerebras',
@@ -34,7 +35,8 @@ const PROVIDERS = {
     modelsUrl: 'https://api.cerebras.ai/v1/models',
     prefer: {
       main: [/gpt-oss-120b/, /qwen-3-235b.*thinking/, /qwen-3-235b/, /qwen-3-coder/, /llama-4-maverick/, /llama-3\.3-70b/],
-      fast: [/llama-4-scout/, /llama-3\.3-70b/, /qwen-3-coder/, /gpt-oss-120b/, /qwen-3/]
+      fast: [/llama-4-scout/, /llama-3\.3-70b/, /qwen-3-coder/, /gpt-oss-120b/, /qwen-3/],
+      interview: [/gpt-oss-120b/, /qwen-3-235b/]
     },
     fallback: ['gpt-oss-120b']
   },
@@ -46,7 +48,8 @@ const PROVIDERS = {
     modelsUrl: 'https://api.groq.com/openai/v1/models',
     prefer: {
       main: [/gpt-oss-120b/, /gpt-oss-20b/, /kimi-k2/, /qwen3/, /deepseek-r1/, /llama-4-maverick/, /llama-3\.3-70b/, /llama-4-scout/],
-      fast: [/gpt-oss-20b/, /llama-4-scout/, /llama-4-maverick/, /llama-3\.3-70b/, /kimi-k2/, /gpt-oss-120b/, /qwen3/]
+      fast: [/gpt-oss-20b/, /llama-4-scout/, /llama-4-maverick/, /llama-3\.3-70b/, /kimi-k2/, /gpt-oss-120b/, /qwen3/],
+      interview: [/gpt-oss-120b/, /kimi-k2/]
     },
     fallback: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'],
     tokensPerMinute: 8000   // free tier, per model; refined from response headers
@@ -72,7 +75,8 @@ const PROVIDERS = {
     // (~10-20 s), so it's the overflow when Groq is busy, not the first choice.
     tiers: {
       main: ['@cf/openai/gpt-oss-120b', '@cf/openai/gpt-oss-20b'],
-      fast: ['@cf/openai/gpt-oss-20b', '@cf/openai/gpt-oss-120b']
+      fast: ['@cf/openai/gpt-oss-20b', '@cf/openai/gpt-oss-120b'],
+      interview: ['@cf/openai/gpt-oss-120b']
     }
   },
   gemini: {
@@ -288,7 +292,7 @@ function buildRequest(cfg, apiKey, model, prompt, { effort, maxTokens, easy }, p
 // request. Returns { upstream: Response, kind, label }. Nothing has been sent
 // to the client yet, so falling through to the next model is invisible.
 //
-// opts: { effort, maxTokens, tier: 'main' | 'fast' }
+// opts: { effort, maxTokens, tier: 'main' | 'fast' | 'interview' }
 export async function openStream(env, prompt, opts = {}) {
   const { tier = 'main', maxTokens = 6000 } = opts;
   const providers = configuredProviders(env);
@@ -296,22 +300,32 @@ export async function openStream(env, prompt, opts = {}) {
 
   // Every (provider, model) pair, in preference order — minus models whose
   // daily limit is used up
-  const candidates = [];
-  for (const cfg of providers) {
-    for (const model of await modelsFor(cfg, env[cfg.secret], tier)) {
-      if (!(modelPausedUntil.get(`${cfg.name}/${model}`) > Date.now())) candidates.push({ cfg, model });
+  const candidatesFor = async t => {
+    const out = [];
+    for (const cfg of providers) {
+      for (const model of await modelsFor(cfg, env[cfg.secret], t)) {
+        if (!(modelPausedUntil.get(`${cfg.name}/${model}`) > Date.now())) out.push({ cfg, model });
+      }
     }
-  }
+    return out;
+  };
+  const candidates = await candidatesFor(tier);
+  // Interview: every strong model is tried (even one that looks busy) before
+  // the smaller main-tier models, which are only a last resort
+  const backup = tier === 'interview'
+    ? (await candidatesFor('main')).filter(b => !candidates.some(c => c.cfg === b.cfg && c.model === b.model))
+    : [];
 
   // Models with enough tokens left this minute go first — no wasted 429s
   const need = c => estimateTokens(prompt) + maxTokensFor(c.cfg, prompt, maxTokens);
   const hasRoom = c => availableTokens(`${c.cfg.name}/${c.model}`, c.cfg) >= need(c);
-  let ordered = [...candidates.filter(hasRoom), ...candidates.filter(c => !hasRoom(c))];
+  const byRoom = list => [...list.filter(hasRoom), ...list.filter(c => !hasRoom(c))];
+  let ordered = [...byRoom(candidates), ...byRoom(backup)];
 
   // Accuracy: for solving, the best model is worth a short wait — if its
   // budget refills within ~5 s, wait for it instead of using a smaller model
   const best = candidates[0];
-  if (tier === 'main' && best && !hasRoom(best)) {
+  if ((tier === 'main' || tier === 'interview') && best && !hasRoom(best)) {
     const waitMs = refillWaitMs(`${best.cfg.name}/${best.model}`, best.cfg, need(best));
     if (waitMs <= 5000) {
       await new Promise(r => setTimeout(r, waitMs + 100));

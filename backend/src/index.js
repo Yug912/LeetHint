@@ -128,7 +128,9 @@ async function handleGenerate(request, env, ctx, cors) {
   // Interview code checks and "think out loud" nudges are low-stakes, so they
   // too use the small model and leave the accurate one's daily budget for answers
   const quickTurn = action === 'interview_turn' && (extra.interview.event === 'code' || extra.interview.event === 'nudge');
-  const tier = translating || quickTurn ? 'fast' : 'main';
+  // Real interviewer turns and the scorecard need the strongest models: small
+  // ones leak the solution and lose track of the conversation
+  const tier = translating || quickTurn ? 'fast' : interviewing ? 'interview' : 'main';
 
   // ── Shared cache: same problem + prompt → instant reply for every user ──
   // Keyed by a hash of the FULL prompt, so a client sending a fake statement
@@ -234,6 +236,8 @@ function sanitizeInterview(iv) {
     history:    (Array.isArray(iv.history) ? iv.history : []).slice(-INTERVIEW_LIMITS.turns)
       .filter(h => h && (h.role === 'interviewer' || h.role === 'candidate'))
       .map(h => ({ role: h.role, text: clip(h.text, INTERVIEW_LIMITS.text) })),
+    rejected: ['leak', 'repeat'].includes(iv.rejected?.reason)
+      ? { reason: iv.rejected.reason, draft: clip(iv.rejected.draft, 600) } : null,
     reference: {
       approach: clip(ref.approach, INTERVIEW_LIMITS.refText),
       pattern:  clip(ref.pattern, 100),

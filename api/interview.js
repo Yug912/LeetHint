@@ -130,7 +130,56 @@ export function referenceFromHints(hints) {
 
 
 // ─────────────────────────────────────────────
-// 4. SERVER CALLS
+// 4. GUARDS — models sometimes name the technique when pushed for a hint, or
+//    repeat an earlier question. Such a reply is asked for again once.
+// ─────────────────────────────────────────────
+
+// Words that give a technique away — only checked before coding, and only if
+// the candidate (or the problem statement) hasn't used the word already
+const TECHNIQUE_TERMS = [
+  /sliding[- ]window/i, /\bwindow\b/i, /two[- ]pointers?/i, /both ends/i,
+  /hash ?(map|table|set)/i, /\bhash(ing)?\b/i, /dictionar(y|ies)/i, /\bmap\b/i, /complement/i,
+  /dynamic programming/i, /\bdp\b/i, /memoi[sz]/i, /\bmemo\b/i, /tabulation/i, /bottom[- ]up/i, /top[- ]down/i,
+  /binary search/i, /\bheap\b/i, /priority queue/i, /monotonic/i, /\bstack\b/i,
+  /prefix (sums?|max(imum)?|min(imum)?)/i, /suffix (sums?|max(imum)?|min(imum)?)/i,
+  /\bbfs\b/i, /breadth[- ]first/i, /\bdfs\b/i, /depth[- ]first/i, /backtrack/i,
+  /union[- ]find/i, /disjoint set/i, /\btrie\b/i, /topological/i, /greedy/i
+];
+// Pattern names too generic to count as a giveaway on their own
+const PLAIN_TOPICS = /^(array|arrays|string|strings|math|matrix|simulation|unknown|design|other)$/i;
+const PRE_CODING = ['intro', 'clarifying', 'approach'];
+const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export function leakedTerms(reply, { problem = {}, history = [], reference } = {}) {
+  const said = [problem.title, problem.description,
+                ...history.filter(h => h.role === 'candidate').map(h => h.text)].join('\n');
+  const terms = [...TECHNIQUE_TERMS];
+  for (const part of String(reference?.pattern || '').split(/[,/&+]|\band\b/)) {
+    const p = part.trim();
+    if (p.length > 2 && !PLAIN_TOPICS.test(p)) terms.push(new RegExp(escapeRe(p), 'i'));
+  }
+  return terms.filter(re => re.test(reply) && !re.test(said)).map(re => reply.match(re)[0]);
+}
+
+// Nearly the same words as one of the interviewer's recent lines
+const wordSet = s => new Set(String(s).toLowerCase().match(/[a-z0-9']+/g) || []);
+export function repeatsEarlier(reply, history = []) {
+  const w = wordSet(reply);
+  if (w.size < 4) return false;
+  return history.filter(h => h.role === 'interviewer').slice(-6).some(h => {
+    const o = wordSet(h.text);
+    let common = 0;
+    for (const x of w) if (o.has(x)) common++;
+    return common / Math.max(w.size, o.size) >= 0.8;
+  });
+}
+
+// Spoken when a second draft still names the technique
+const SAFE_HINT = "I can't give the technique away, but look at what work your current approach keeps repeating. How could you avoid doing that work twice?";
+
+
+// ─────────────────────────────────────────────
+// 5. SERVER CALLS
 // ─────────────────────────────────────────────
 
 // Only what the server reads, and only the recent transcript (it trims
@@ -151,8 +200,24 @@ function interviewPayload(session, event, code, reference) {
 }
 
 export async function interviewerTurn(problem, session, event, { code, reference } = {}) {
-  const raw = await callInterviewer('interview_turn', problem, interviewPayload(session, event, code, reference));
-  return parseInterviewerReply(raw, session.stage);
+  const payload = interviewPayload(session, event, code, reference);
+  const ask = async extra => parseInterviewerReply(
+    await callInterviewer('interview_turn', problem, { ...payload, ...extra }), session.stage);
+  const problemOf = r => !r.reply ? null
+    : PRE_CODING.includes(session.stage) && leakedTerms(r.reply, { problem, history: session.history, reference }).length ? 'leak'
+    : repeatsEarlier(r.reply, session.history) ? 'repeat' : null;
+
+  const first = await ask();
+  const reason = problemOf(first);
+  if (!reason) return first;
+  console.warn(`LeetHint: interviewer reply rejected (${reason}) — asking again`);
+  let second = null;
+  try { second = await ask({ rejected: { reason, draft: first.reply } }); } catch { /* keep the first draft below */ }
+  const again = second && problemOf(second);
+  if (second && !again) return second;
+  // Still leaking → a safe nudge instead; a repeat is better than silence
+  if ((again || reason) === 'leak') return { ...first, reply: SAFE_HINT, hintGiven: true };
+  return second || first;
 }
 
 export async function scoreInterview(problem, session, { code, reference } = {}) {
