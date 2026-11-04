@@ -48,6 +48,14 @@ test('stage only moves forward', () => {
   assert.equal(r.stage, 'testing');
 });
 
+test('prompt: 30-minute interview, pacing follows the length', () => {
+  const p = buildInterviewTurnPrompt({ title: 'T', description: 'x' }, { event: 'answer', elapsedSec: 600 });
+  assert.match(p, /30-minute coding interview/);
+  assert.match(p, /10 of 30 minutes used/);
+  assert.match(p, /reach coding by ~11 min and finish coding by ~23 min/);
+  assert.match(p, /after ~14 minutes, let them code/);
+});
+
 test('prompt: hint ladder and rejected draft are included', () => {
   const p = buildInterviewTurnPrompt({ title: 'Two Sum', description: 'x' },
     { event: 'answer', stage: 'approach', hintsGiven: 1, rejected: { reason: 'leak', draft: 'use a hash map' } });

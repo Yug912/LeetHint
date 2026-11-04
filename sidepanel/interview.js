@@ -1,6 +1,6 @@
 // sidepanel/interview.js — Mock Interview Mode (UI + session flow)
 //
-// A 45-minute voice interview with an AI interviewer on the open problem.
+// A 30-minute voice interview with an AI interviewer on the open problem.
 // While it runs the normal hint ladder is locked. The session is saved in
 // chrome.storage.local after every change, so closing or reloading the panel
 // resumes it (the timer runs from the saved start time).

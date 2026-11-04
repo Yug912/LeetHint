@@ -391,7 +391,14 @@ export function buildPrompt(action, problem, code = '', extra = {}) {
 
 export const INTERVIEW_STAGES = ['intro', 'clarifying', 'approach', 'coding', 'testing', 'complexity', 'feedback'];
 export const INTERVIEW_EVENTS = ['start', 'answer', 'code', 'nudge', 'timeup'];
-export const INTERVIEW_MINUTES = 45;
+export const INTERVIEW_MINUTES = 30;
+
+// Pacing points, as minutes into the interview — they follow its length
+const PACE = {
+  coding:     Math.round(INTERVIEW_MINUTES * 0.35),   // start coding by about here…
+  codingLate: Math.round(INTERVIEW_MINUTES * 0.45),   // …and code the best idea so far after this
+  codingDone: Math.round(INTERVIEW_MINUTES * 0.78)    // finish coding, leaving time to test
+};
 
 // Roughly 4 chars per token: ~3,500 tokens of transcript keeps every turn well
 // inside free-tier per-minute budgets, while the recent conversation stays whole
@@ -410,7 +417,7 @@ At every rung, NEVER name a technique, pattern, data structure or algorithm (e.g
 const STAGE_RULES = `STAGES (in order — only ever move forward):
 - intro: one-sentence greeting, then ask them to read the problem and share any clarifying questions.
 - clarifying: answer only from the statement; if it doesn't say, tell them to state a reasonable assumption. Move to "approach" once they start describing a solution or have no more questions.
-- approach: they explain their idea BEFORE coding. Ask for its time complexity unless they already gave it. Brute force → ask if they can do better. Wrong idea → name one concrete input that breaks it. Move to "coding" once the approach is correct and efficient enough for the constraints (or after ~20 minutes, let them code their best idea).
+- approach: they explain their idea BEFORE coding. Ask for its time complexity unless they already gave it. Brute force → ask if they can do better. Wrong idea → name one concrete input that breaks it. Move to "coding" once the approach is correct and efficient enough for the constraints (or after ~${PACE.codingLate} minutes, let them code their best idea).
 - coding: mostly stay quiet and let them work; answer questions briefly. Move to "testing" when they say they are done.
 - Whenever they say they are done and the editor holds complete code, move straight to "testing", from any earlier stage — never ask them to start coding then.
 - testing: compare THEIR code with the hidden reference. If it gives a wrong result for some input, name ONE specific input with exact values that it fails on and ask them to trace it step by step — never say which line is wrong, why it fails, or what to change. If they insist it's correct, ask them to trace that same input. If the code is correct, ask for one example or edge case trace, then move to "complexity".
@@ -478,7 +485,7 @@ ${STAGE_RULES}
 ${HINT_LADDER}
 
 INTERVIEW STATE: ${minutes} of ${INTERVIEW_MINUTES} minutes used. Current stage: "${iv.stage || 'intro'}". Hints given so far: ${iv.hintsGiven || 0} (a new hint now would be hint ${(iv.hintsGiven || 0) + 1}).
-Pacing: aim to reach coding by ~15–20 min and finish coding by ~35 min, then testing and complexity. If time is short, move things along.
+Pacing: aim to reach coding by ~${PACE.coding} min and finish coding by ~${PACE.codingDone} min, then testing and complexity. If time is short, move things along.
 
 ${renderReference(iv.reference)}
 
