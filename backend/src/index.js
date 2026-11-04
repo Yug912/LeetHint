@@ -129,25 +129,34 @@ async function handleGenerate(request, env, ctx, cors) {
   // too use the small model and leave the accurate one's daily budget for answers
   const quickTurn = action === 'interview_turn' && (extra.interview.event === 'code' || extra.interview.event === 'nudge');
   // Real interviewer turns and the scorecard need the strongest models: small
-  // ones leak the solution and lose track of the conversation
-  const tier = translating || quickTurn ? 'fast' : interviewing ? 'interview' : 'main';
+  // ones leak the solution and lose track of the conversation. Each starts on
+  // a different model than hints do, so they don't share a per-minute budget
+  const tier = translating || quickTurn ? 'fast'
+             : action === 'interview_score' ? 'judge'
+             : interviewing ? 'interview' : 'main';
 
   // ── Shared cache: same problem + prompt → instant reply for every user ──
   // Keyed by a hash of the FULL prompt, so a client sending a fake statement
   // for a real slug only ever gets (and caches) its own fake result.
   // Interviews are personal conversations — never cached or shared
   const cacheable = action !== 'fix' && !interviewing && env.HINTS_CACHE;
-  const cacheKey = cacheable
-    ? `${PROMPT_VERSION}:${action}${extra.language ? '-' + extra.language : ''}:${problem.slug}:${await sha256(prompt)}`.slice(0, 500)
-    : '';
-  if (cacheable) {
-    const fromMemory = memoryCache.get(cacheKey);
+  const keyFor = async (act, lang, p) => `${PROMPT_VERSION}:${act}${lang ? '-' + lang : ''}:${problem.slug}:${await sha256(p)}`.slice(0, 500);
+  const cacheKey = cacheable ? await keyFor(action, extra.language, prompt) : '';
+  // Hints/solution in a user's language also count as the problem's SHARED
+  // copy (the plain C++ reply): a later user in any other language gets these
+  // hints instantly and only needs a small translation, not a full re-solve.
+  // The extra language section is simply ignored by everyone else.
+  const sharedKey = cacheable && extra.language && (action === 'hints' || action === 'solve')
+    ? await keyFor(action, '', buildPrompt(action, problem, '', {})) : '';
+  const cacheKeys = [cacheKey, sharedKey].filter(Boolean);
+  for (const key of cacheKeys) {
+    const fromMemory = memoryCache.get(key);
     if (fromMemory) return sseResponse(fromMemory.raw, fromMemory.kind, cors, { 'X-LeetHint-Cache': 'HIT', 'X-LeetHint-Cache-Layer': 'memory' });
-    const { value, metadata } = await env.HINTS_CACHE.getWithMetadata(cacheKey);
+    const { value, metadata } = await env.HINTS_CACHE.getWithMetadata(key);
     if (value) {
       const kind = metadata?.kind || 'openai';
-      rememberReply(cacheKey, { raw: value, kind });
-      return sseResponse(value, kind, cors, { 'X-LeetHint-Cache': 'HIT', 'X-LeetHint-Cache-Layer': 'kv' });
+      rememberReply(key, { raw: value, kind });
+      return sseResponse(value, kind, cors, { 'X-LeetHint-Cache': 'HIT', 'X-LeetHint-Cache-Layer': key === cacheKey ? 'kv' : 'kv-shared' });
     }
   }
 
@@ -165,7 +174,7 @@ async function handleGenerate(request, env, ctx, cors) {
   if (cacheable) {
     const [toClient, toCache] = upstream.body.tee();
     stream = toClient;
-    ctx.waitUntil(cacheWhenComplete(env, cacheKey, toCache, kind));
+    ctx.waitUntil(cacheWhenComplete(env, cacheKeys, toCache, kind));
   }
 
   // Which provider/model answered (names only) — for diagnosing slow replies
@@ -175,7 +184,7 @@ async function handleGenerate(request, env, ctx, cors) {
 // Reads the copy of the stream natively (no per-chunk JS) and caches it only
 // if the model finished normally and actually wrote an answer — a cut-off
 // reply would otherwise be served forever.
-async function cacheWhenComplete(env, cacheKey, stream, kind) {
+async function cacheWhenComplete(env, cacheKeys, stream, kind) {
   try {
     const raw = await new Response(stream).text();
     const cut = /"finish_reason"\s*:\s*"length"|"finishReason"\s*:\s*"MAX_TOKENS"/.test(raw);
@@ -185,8 +194,10 @@ async function cacheWhenComplete(env, cacheKey, stream, kind) {
     const answered = kind === 'gemini' ? /"text"\s*:\s*"[^"]/.test(raw)
                    : /"(content|response)"\s*:\s*"[^"]/.test(raw);
     if (!finished || !answered) return;
-    rememberReply(cacheKey, { raw, kind });
-    await env.HINTS_CACHE.put(cacheKey, raw, { expirationTtl: CACHE_TTL_SECONDS, metadata: { kind } });
+    for (const key of cacheKeys) {
+      rememberReply(key, { raw, kind });
+      await env.HINTS_CACHE.put(key, raw, { expirationTtl: CACHE_TTL_SECONDS, metadata: { kind } });
+    }
   } catch (e) {
     console.warn('cache write skipped:', e.message);
   }

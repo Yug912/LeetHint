@@ -3,7 +3,7 @@
 // Loaded as an ES module (see sidepanel.html)
 
 import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
-         translateSolution, translateAll, LANGUAGES } from '../api/ai.js';
+         translateSolution, LANGUAGES } from '../api/ai.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory } from './interview.js';
 import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
@@ -412,7 +412,7 @@ async function loadHints() {
       showState('hints');
       // Cached from a reply whose code never arrived — fetch just the solution
       if (!cachedHints.hint5) fillMissingSolution(myId);
-      else if (nearSolution()) prefetchAllTranslations();
+      else if (nearSolution()) prefetchMyTranslation();
       return;
     }
   }
@@ -456,7 +456,7 @@ async function loadHints() {
 
     state.hints = hints;
     renderHintTexts();  // already on screen — just fill in the rest
-    if (nearSolution()) prefetchAllTranslations();
+    if (nearSolution()) prefetchMyTranslation();
   } catch (e) {
     cancelAnimationFrame(frame);
     if (myId !== hintsGenerationId) return; // Stale error, ignore
@@ -483,7 +483,7 @@ async function fillMissingSolution(myId) {
     if (myId !== hintsGenerationId) return;   // user moved on
     state.hints.generating = false;
     await saveSolutionToCache(solved);
-    if (nearSolution()) prefetchAllTranslations();
+    if (nearSolution()) prefetchMyTranslation();
   } catch (e) {
     if (myId !== hintsGenerationId) return;
     state.hints.generating = false;
@@ -628,34 +628,16 @@ const cppCodeOf = hints => (hints?.hint5 || '').match(/```cpp\n([\s\S]*?)```/)?.
 // Hint 4 or the solution unlocked — the code is about to be needed
 const nearSolution = () => state.hintsUnlocked === 4 || state.hintsUnlocked === 'solution';
 
-// Every other language in ONE request, started when the user gets close to
-// the solution — problems solved with Hints 1-3 don't spend AI quota on it.
-// Your own language already came with the hints.
-const translateAllJobs = new Map();   // "slug:codeLength" → Promise
-
-function prefetchAllTranslations() {
-  const hints = state.hints;
-  const problem = state.problem;
-  const cpp = cppCodeOf(hints);
-  if (!cpp || !problem?.slug) return null;
-  const missing = languagesFor(problem).filter(l => l !== 'cpp' && !hints.translations?.[l]);
-  if (!missing.length) return null;
-
-  const key = `${problem.slug}:${cpp.length}`;
-  if (!translateAllJobs.has(key)) {
-    const job = translateAll(cpp, problem, missing)
-      .then(async got => {
-        // Into THIS problem's cached hints, even if the user moved on
-        hints.translations = { ...hints.translations, ...got };
-        await chrome.storage.local.set({ [`hints_v3_${problem.slug}`]: hints });
-        console.log('LeetHint: translations ready →', Object.keys(got).join(', ') || 'none');
-        return got;
-      })
-      .catch(e => { console.warn('LeetHint: translate-all failed →', e.message); return {}; })
-      .finally(() => translateAllJobs.delete(key));
-    translateAllJobs.set(key, job);
-  }
-  return translateAllJobs.get(key);
+// Your language normally arrives with the hints. When the server shared hints
+// another user generated in a different language, yours is translated here —
+// only near the solution, so problems solved with Hints 1-3 spend nothing.
+// Any other language is translated only if you switch to it.
+function prefetchMyTranslation() {
+  const cpp = cppCodeOf(state.hints);
+  if (!cpp || !state.problem?.slug || solutionLanguage === 'cpp') return;
+  if (!languagesFor(state.problem).includes(solutionLanguage)) return;
+  getTranslation(cpp, solutionLanguage)
+    .catch(e => console.warn('LeetHint: translation prefetch failed →', e.message));
 }
 
 // Translation of the C++ code, from the problem's cache or the server.
@@ -664,13 +646,6 @@ async function getTranslation(cppCode, lang) {
   const hints = state.hints;
   const problem = state.problem;
   if (hints?.translations?.[lang]) return hints.translations[lang];
-
-  // The all-languages request is running (or can start) — wait for it first
-  const all = prefetchAllTranslations();
-  if (all) {
-    await all;
-    if (hints?.translations?.[lang]) return hints.translations[lang];
-  }
 
   const jobKey = `${problem.slug}:${lang}:${cppCode.length}`;
   if (!translationJobs.has(jobKey)) {
@@ -847,7 +822,7 @@ function unlockHint(cardKey) {
   // A review attempt only counts once it's solved — the first solve's stats
   // and the queue entry stay as they are
   if (state.review) {
-    if (cardKey === 4 || cardKey === 'solution') prefetchAllTranslations();
+    if (cardKey === 4 || cardKey === 'solution') prefetchMyTranslation();
     return;
   }
 
@@ -857,7 +832,7 @@ function unlockHint(cardKey) {
   // Needing Hint 4 or the solution means this one is worth revisiting
   if (cardKey === 4 || cardKey === 'solution') {
     addToRevisionQueue();
-    prefetchAllTranslations();   // every language ready by the time you look
+    prefetchMyTranslation();   // your language ready by the time you look
   }
 }
 

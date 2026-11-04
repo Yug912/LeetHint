@@ -345,8 +345,9 @@ function applyReference(result, reference) {
 // ─────────────────────────────────────────────
 
 // onPartial(partialHints) is called each time the visible hint text changes.
-// language: the user's solution language — when it isn't C++, the same reply
-// also contains the solution in that language (no second request needed).
+// language: the user's own solution language — when it isn't C++, the same
+// reply also contains the solution in that language (no second request).
+// Any other language is translated from the C++ only when it's picked.
 export async function generateHints(problemData, { onPartial, language = 'cpp' } = {}) {
   console.log('LeetHint: generateHints() called for:', problemData.title);
 
@@ -377,7 +378,9 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
       }
     }
     if (reference.code) reference = await ensureSignature(reference, problemData);
-    // The user's language, written in the same reply as the C++
+    // The user's language, written in the same reply as the C++. A reply the
+    // server shared from another user may not have it — then it's translated
+    // when the solution card opens.
     if (also.language) {
       const translated = extractLanguageSection(codeRaw, also.language);
       // Wrong function name → leave it out; it's re-translated when the card opens
@@ -485,39 +488,9 @@ function extractLanguageSection(raw, language) {
   return (m ? m[1] : '').trim();
 }
 
-// Every language → { python3: code, java: code, ... }, in a few small requests
-// that run IN PARALLEL (each finishes fast, and each can use a different
-// model's budget). Whatever is still missing gets ONE more combined request;
-// anything left after that is translated on demand when it's picked.
-const BATCH_SIZE = 4;
-
-async function translateBatch(cppCode, problem, batch, out) {
-  const snippets = Object.fromEntries(batch.map(l => [l, problem.codeSnippets?.[l] || '']));
-  try {
-    const raw = await callBackend('translate_all', problem, { code: cppCode, languages: batch, snippets });
-    for (const l of batch) {
-      const code = extractLanguageSection(raw, l);
-      // A renamed function compiles but fails on LeetCode — leave it for the retry
-      if (code && keepsSignature(code, snippets[l])) out[l] = code;
-      else if (code) console.warn(`LeetHint: ${l} translation renamed LeetCode's function — retrying`);
-    }
-  } catch (e) {
-    console.warn('LeetHint: translation batch failed →', batch.join(','), e.message);
-  }
-}
-
-export async function translateAll(cppCode, problem, languages) {
-  if (!languages.length) return {};
-  const out = {};
-  const batches = [];
-  for (let i = 0; i < languages.length; i += BATCH_SIZE) batches.push(languages.slice(i, i + BATCH_SIZE));
-  await Promise.all(batches.map(batch => translateBatch(cppCode, problem, batch, out)));
-
-  const missing = languages.filter(l => !out[l]);
-  if (missing.length) await translateBatch(cppCode, problem, missing, out);
-  return out;
-}
-
+// One language at a time, only when it's needed. The C++ it starts from is
+// the same for every user (it comes from the shared hints cache), so each
+// translation is generated once and then served from the server cache too.
 export async function translateSolution(cppCode, problem, language) {
   const snippet = problem.codeSnippets?.[language] || '';
   const raw = await callBackend('translate', problem, { code: cppCode, language, snippet });

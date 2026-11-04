@@ -42,13 +42,13 @@ LeetHint generates **4 layered hints plus a full solution** — no API key or se
 - **🔧 Fix button** — re-checks the solution against the examples and constraints and repairs it
 - **Signature check** — the code is compared with LeetCode's own starter code; a renamed class or method is fixed automatically (design problems like `LRUCache` keep their own class)
 - **Harder problems, more thinking** — Hard problems get extra reasoning time
-- **Your language, instantly** — pick a language once; from then on its code arrives in the same reply as the hints (no extra wait). All other languages are prepared in one request when you reach Hint 4 or the solution
+- **Your language, instantly** — pick a language once; from then on its code arrives in the same reply as the hints (no extra wait). Switch to another language and only that one is translated, on demand
 - **Translations, not re-solves** — other languages come from the verified C++ solution, so the algorithm and TC/SC stay identical
 
 ### ⚡ Fast & Live
 - **Streaming** — the hints layout opens instantly and Hint 1 appears word by word as it's written
 - **One request per problem**, sent to the fastest available AI provider
-- **Cached** — revisiting a problem is instant, and popular problems are cached on the server for everyone
+- **Cached** — revisiting a problem is instant, and every problem is cached on the server for everyone: once anyone has opened it, in any language, it loads instantly for all users without spending AI tokens
 - **Follows you** — switch problems (Next, links, back/forward, tabs) and the panel updates automatically
 
 ### 📊 Smart Scoring System
@@ -80,7 +80,7 @@ Problems you struggled with come back on a schedule until you can solve them col
 The **Revision tab** shows **Due today** (with how many days overdue), **Upcoming** (with due dates) and **Mastered**. The number due today also appears as a 🔔 **badge on the extension icon**.
 
 ### 🎙️ Voice Mock Interview
-A **45-minute mock interview** with an AI interviewer on the problem you have open:
+A **30-minute mock interview** with an AI interviewer on the problem you have open:
 
 - The interviewer **speaks** to you; answer **by voice** (tap or hold to talk) or by typing
 - Moves through real interview stages: **Intro → Clarify → Approach → Coding → Testing → Complexity → Feedback**
