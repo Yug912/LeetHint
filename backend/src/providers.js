@@ -28,6 +28,8 @@ const NOT_CHAT = /whisper|tts|guard|playai|orpheus|compound|embed|vision|audio|t
 // turns, prefer.judge: the scorecard — large models only (small ones leak the
 // solution). Each feature starts on a DIFFERENT model where it can, so a busy
 // interview never takes the per-minute budget that hints need, and vice versa.
+// prefer.hard: Hard problems' hints/solutions/fixes — large models only, and
+// ones that can use the full thinking budget come first.
 const PROVIDERS = {
   cerebras: {
     name: 'Cerebras',
@@ -39,7 +41,8 @@ const PROVIDERS = {
       main: [/gpt-oss-120b/, /qwen-3-235b.*thinking/, /qwen-3-235b/, /qwen-3-coder/, /llama-4-maverick/, /llama-3\.3-70b/],
       fast: [/llama-4-scout/, /llama-3\.3-70b/, /qwen-3-coder/, /gpt-oss-120b/, /qwen-3/],
       interview: [/qwen-3-235b/, /gpt-oss-120b/],
-      judge: [/gpt-oss-120b/, /qwen-3-235b/]
+      judge: [/gpt-oss-120b/, /qwen-3-235b/],
+      hard: [/gpt-oss-120b/, /qwen-3-235b.*thinking/, /qwen-3-235b/]
     },
     fallback: ['gpt-oss-120b']
   },
@@ -53,7 +56,8 @@ const PROVIDERS = {
       main: [/gpt-oss-120b/, /gpt-oss-20b/, /kimi-k2/, /qwen3/, /deepseek-r1/, /llama-4-maverick/, /llama-3\.3-70b/, /llama-4-scout/],
       fast: [/gpt-oss-20b/, /llama-4-scout/, /llama-4-maverick/, /llama-3\.3-70b/, /kimi-k2/, /gpt-oss-120b/, /qwen3/],
       interview: [/qwen3/, /kimi-k2/, /gpt-oss-120b/],
-      judge: [/gpt-oss-120b/, /kimi-k2/, /qwen3/]
+      judge: [/gpt-oss-120b/, /kimi-k2/, /qwen3/],
+      hard: [/gpt-oss-120b/, /kimi-k2/]
     },
     fallback: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'],
     tokensPerMinute: 8000   // free tier, per model; refined from response headers
@@ -81,7 +85,8 @@ const PROVIDERS = {
       main: ['@cf/openai/gpt-oss-120b', '@cf/openai/gpt-oss-20b'],
       fast: ['@cf/openai/gpt-oss-20b', '@cf/openai/gpt-oss-120b'],
       interview: ['@cf/openai/gpt-oss-120b'],
-      judge: ['@cf/openai/gpt-oss-120b']
+      judge: ['@cf/openai/gpt-oss-120b'],
+      hard: ['@cf/openai/gpt-oss-120b']
     }
   },
   gemini: {
@@ -93,8 +98,14 @@ const PROVIDERS = {
   }
 };
 
-// Errors that only concern ONE model — the provider's next model may still work
-const MODEL_SPECIFIC_STATUS = [402, 404, 413, 429];
+// Errors that only concern ONE model — the provider's next model may still work.
+// Server errors count too: Gemini's models each fail (and time out) on their own
+const MODEL_SPECIFIC_STATUS = [402, 404, 413, 429, 500, 502, 503, 504, 524];
+
+// A model that hasn't started answering by now is given up on (it was seen
+// hanging ~2 minutes before a 524). Only the wait for the FIRST byte is
+// limited — once a reply streams, it may take as long as it needs.
+const FIRST_BYTE_MS = 45000;
 
 // Longest wait for a rate limit before giving up — beats showing an error
 const MAX_WAIT_MS = 8000;
@@ -297,7 +308,7 @@ function buildRequest(cfg, apiKey, model, prompt, { effort, maxTokens, easy }, p
 // request. Returns { upstream: Response, kind, label }. Nothing has been sent
 // to the client yet, so falling through to the next model is invisible.
 //
-// opts: { effort, maxTokens, tier: 'main' | 'fast' | 'interview' | 'judge' }
+// opts: { effort, maxTokens, tier: 'main' | 'fast' | 'interview' | 'judge' | 'hard' }
 export async function openStream(env, prompt, opts = {}) {
   const { tier = 'main', maxTokens = 6000 } = opts;
   const providers = configuredProviders(env);
@@ -317,7 +328,7 @@ export async function openStream(env, prompt, opts = {}) {
   const candidates = await candidatesFor(tier);
   // Interview: every strong model is tried (even one that looks busy) before
   // the smaller main-tier models, which are only a last resort
-  const backup = tier === 'interview' || tier === 'judge'
+  const backup = tier === 'interview' || tier === 'judge' || tier === 'hard'
     ? (await candidatesFor('main')).filter(b => !candidates.some(c => c.cfg === b.cfg && c.model === b.model))
     : [];
 
@@ -325,7 +336,11 @@ export async function openStream(env, prompt, opts = {}) {
   const need = c => estimateTokens(prompt) + maxTokensFor(c.cfg, prompt, maxTokens);
   const hasRoom = c => availableTokens(`${c.cfg.name}/${c.model}`, c.cfg) >= need(c);
   const byRoom = list => [...list.filter(hasRoom), ...list.filter(c => !hasRoom(c))];
-  let ordered = [...byRoom(candidates), ...byRoom(backup)];
+  // Hard: a model that must cut the reply short to fit its tokens/minute cap
+  // (Groq's free tier) goes after the ones that can think as long as asked
+  const fullBudget = c => maxTokensFor(c.cfg, prompt, maxTokens) >= maxTokens;
+  const byBudget = list => tier === 'hard' ? [...list.filter(fullBudget), ...list.filter(c => !fullBudget(c))] : list;
+  let ordered = [...byBudget(byRoom(candidates)), ...byRoom(backup)];
 
   // Accuracy: for solving and grading, the best model is worth a short wait —
   // if its budget refills within ~5 s, wait for it instead of using a smaller
@@ -350,12 +365,22 @@ export async function openStream(env, prompt, opts = {}) {
     if (c.cfg.kind === 'workersai') return attemptWorkersAI(c, label);
     const { url, init } = buildRequest(c.cfg, env[c.cfg.secret], c.model, prompt, opts, plain);
     let res;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), FIRST_BYTE_MS);
     try {
-      res = await fetch(url, init);
+      res = await fetch(url, { ...init, signal: ctrl.signal });
     } catch (e) {
-      deadProviders.add(c.cfg.name);   // network failure → skip the rest of this provider
-      errors.push(apiError(label, 0, e.message));
+      if (ctrl.signal.aborted) {
+        // Too slow to start — this model only; the provider's next one may be fine
+        errors.push(apiError(label, 504, `no response in ${FIRST_BYTE_MS / 1000} s`));
+        console.log(`refused: ${label} no response in ${FIRST_BYTE_MS / 1000} s`);
+      } else {
+        deadProviders.add(c.cfg.name);   // network failure → skip the rest of this provider
+        errors.push(apiError(label, 0, e.message));
+      }
       return null;
+    } finally {
+      clearTimeout(timer);   // headers arrived (or failed): the stream itself is never cut
     }
     // Only a refusal tells the truth about a model's budget: on success Groq's
     // "remaining" header still counts this request's FULL max_tokens

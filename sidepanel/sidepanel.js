@@ -682,6 +682,11 @@ function buildSolutionUI(el, code, approachNote) {
       <pre class="solution-pre"><code class="solution-code"></code></pre>
       ${approachNote ? `<p class="solution-approach">${escape(approachNote)}</p>` : ''}
       <p class="solution-translated-note" hidden>Translated from the verified C++ solution — same algorithm, same TC/SC.</p>
+      ${/hard/i.test(state.problem?.difficulty || '') ? `<p class="solution-hard-note">⚠️ Hard problem — AI solutions are sometimes wrong here even when every example passes. If LeetCode rejects it, paste what it shows below and press 🔧 Fix.</p>` : ''}
+      <details class="solution-failure">
+        <summary>Got Wrong Answer or Compile Error on LeetCode?</summary>
+        <textarea class="solution-failure-input" rows="4" placeholder="Paste the failing Input, Output and Expected (or the compile error), then press 🔧 Fix"></textarea>
+      </details>
     </div>
   `;
 
@@ -690,11 +695,14 @@ function buildSolutionUI(el, code, approachNote) {
   const fixBtn   = el.querySelector('.btn-validate-code');
   const copyBtn  = el.querySelector('.btn-copy-code');
   const transNote = el.querySelector('.solution-translated-note');
+  const failureBox = el.querySelector('.solution-failure');
+  const failureInput = el.querySelector('.solution-failure-input');
   let shownCode = code;   // what Copy copies
 
   async function showLanguage(lang) {
     const isCpp = lang === 'cpp';
     fixBtn.hidden = !isCpp;          // Fix works on the verified C++ version
+    failureBox.hidden = !isCpp;
     transNote.hidden = isCpp;
     if (isCpp) {
       shownCode = code;
@@ -738,10 +746,12 @@ function buildSolutionUI(el, code, approachNote) {
       fixBtn.textContent = '⏳ Fixing...';
       fixBtn.disabled = true;
       try {
-        const fixed = await validateSolutionCode(code, state.problem);
+        // LeetCode's failing test (if pasted) is the strongest clue for the fix
+        const failure = failureInput.value.trim();
+        const fixed = await validateSolutionCode(code, state.problem, failure);
         const note = await saveSolutionToCache(fixed);
         // Rebuild the card with the fixed code
-        buildSolutionUI(el, fixed.code, '✅ Validated & fixed by AI — ready to submit' + note);
+        buildSolutionUI(el, fixed.code, (failure ? '✅ Fixed using the failing test — try submitting again' : '✅ Validated & fixed by AI — ready to submit') + note);
         showToast('✅ Solution validated and fixed!');
       } catch (e) {
         console.error('LeetHint: Validation failed →', e);

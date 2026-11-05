@@ -16,7 +16,7 @@ import { configuredProviders, describeModels, openStream } from './providers.js'
 const LIMITS = {
   slug: 200, title: 300, problemNumber: 10, difficulty: 10,
   description: 30000, cppSnippet: 6000, code: 30000,   // cppSnippet limit also applies to translate snippets
-  tags: 30, tag: 60, hints: 10, hint: 1500
+  tags: 30, tag: 60, hints: 10, hint: 1500, failure: 3000
 };
 
 const CACHE_TTL_SECONDS = 60 * 60 * 24 * 30;   // 30 days
@@ -91,6 +91,8 @@ async function handleGenerate(request, env, ctx, cors) {
     extra.language = body.language;
     extra.snippet = clip(body.snippet, LIMITS.cppSnippet);
   }
+  // Fix: what LeetCode reported for this code (failing test or compile error)
+  if (action === 'fix') extra.failure = clip(body.failure, LIMITS.failure);
   if (action === 'translate_all') {
     extra.languages = [...new Set(Array.isArray(body.languages) ? body.languages : [])].filter(isLanguage).sort();
     if (!extra.languages.length) throw clientError(400, 'No languages given.');
@@ -117,8 +119,10 @@ async function handleGenerate(request, env, ctx, cors) {
   // Ask only for the tokens each job needs (thinking included) — free tiers
   // count the requested maximum against a tokens/minute budget, so smaller
   // requests mean more problems per minute
+  // Hard problems also cross-check against a brute force in their reasoning,
+  // which needs room — a reply cut off mid-thought is worse than a slow one
   const maxTokens = {
-    hints: hard ? 6000 : 4500, solve: hard ? 5000 : 3500, fix: 4000,
+    hints: hard ? 8000 : 4500, solve: hard ? 7000 : 3500, fix: hard ? 6000 : 4000,
     translate: 1500, translate_all: 500 + 650 * (extra.languages?.length || 0),
     interview_turn: 1200, interview_score: 2500
   }[action] + (extra.language && !translating ? 400 : 0);
@@ -131,9 +135,12 @@ async function handleGenerate(request, env, ctx, cors) {
   // Real interviewer turns and the scorecard need the strongest models: small
   // ones leak the solution and lose track of the conversation. Each starts on
   // a different model than hints do, so they don't share a per-minute budget
+  // Hard hints/solutions/fixes: strong models only, with their full thinking
+  // budget (small models and cut-off replies produced the wrong Hard solutions)
   const tier = translating || quickTurn ? 'fast'
              : action === 'interview_score' ? 'judge'
-             : interviewing ? 'interview' : 'main';
+             : interviewing ? 'interview'
+             : hard ? 'hard' : 'main';
 
   // ── Shared cache: same problem + prompt → instant reply for every user ──
   // Keyed by a hash of the FULL prompt, so a client sending a fake statement

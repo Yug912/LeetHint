@@ -7,7 +7,7 @@
 
 // Bump when prompts change — part of the server cache key, so old cached
 // replies are never served for a new prompt
-export const PROMPT_VERSION = 'p5';
+export const PROMPT_VERSION = 'p6';
 
 // Languages the solution can be translated into, keyed by LeetCode's langSlug.
 // fence = the markdown code-fence tag the model is asked to use.
@@ -139,6 +139,14 @@ exactly the code you then output:
 ${HINT_RULES}` : '';
   const hintsFormat = withHints ? '\n---HINT1---\n...\n---HINT2---\n...\n---HINT3---\n...\n---HINT4---\n...' : '';
   const cls = classNameOf(problem);
+  // Hard problems are where subtle bugs pass every example — cross-check
+  // against a brute force on inputs the examples don't cover
+  const hardCheck = /hard/i.test(problem.difficulty || '') ? `
+   HARD PROBLEM — the examples are NOT enough, subtle bugs pass them. In your reasoning, write the
+   simplest possible brute force (any complexity) and run BOTH it and your solution by hand on 3 small
+   tricky inputs you construct yourself (not the examples): ties, repeated values, boundary positions,
+   the smallest and the largest k / n allowed. If they ever differ, your fast solution is wrong — find
+   the bug, fix it, and check again.` : '';
 
   return `You are a world-class competitive programmer. Your C++ solution WILL be submitted to LeetCode and MUST pass every test case, including the largest inputs allowed by the constraints.
 
@@ -152,8 +160,11 @@ PROCESS (do this in your reasoning before answering):
    - No #include, no std::, no main(), no I/O.
    - Do NOT define ListNode / TreeNode / Node etc. — LeetCode already provides them (they appear only as comments in the signature).
    - Put any helper functions or structs INSIDE class Solution. No placeholders, no "..." — every line must be real code.
+   - COMPILE CHECK: every helper is a member function at class scope (never a function defined inside
+     another function, never a lambda that calls itself without std::function); every variable, struct
+     field and method you use is declared, with the right type; braces and semicolons match.
 4. Trace the code BY HAND on every example in the statement and confirm it prints the expected output. If any example fails, fix the code and trace again.
-5. Check edge cases: minimum sizes, duplicates, negatives, all-equal values, overflow (use long long), empty results.
+5. Check edge cases: minimum sizes, duplicates, negatives, all-equal values, overflow (use long long), empty results.${hardCheck}
 6. ${COMPLEXITY_RULES}${extraStep}${hintsStep}
 
 Respond ONLY in this exact format:
@@ -181,10 +192,15 @@ export const codeTag = language => `CODE_${language.toUpperCase()}`;
 
 const HINT_RULES = `Generate EXACTLY 4 progressive hints. Follow these rules STRICTLY:
 
-HINT 1 — Pattern Recognition (MAX 2 sentences, NO algorithm name):
+HINT 1 — Pattern Recognition (MAX 2 sentences, NO technique named):
 - Ask ONE pointed question about the constraint or property that reveals the approach
-- Follow with a nudge toward the key insight (e.g. a space-vs-time trade-off)
+- Follow with a nudge toward the key insight (e.g. what work is repeated, or a space-vs-time trade-off)
 - Quote the real constraint values from the statement (e.g. "n ≤ 10^5"), never invent them
+- NEVER name an algorithm, technique or data structure — not even to say what NOT to use. Banned in
+  Hint 1: DP / dynamic programming, memoization, prefix / suffix (sums, products, max), two pointers,
+  sliding window, hash map / set, heap, stack, queue, BFS / DFS, binary search, greedy, sorting,
+  segment tree, union-find, trie, and the pattern name you give in PATTERN
+- No "instead of X, use Y" contrasts — they give the technique away
 
 HINT 2 — Concrete Technique (SHORT, name the data structure NOW):
 - Name the exact data structure/algorithm in 1 sentence
@@ -258,7 +274,16 @@ short pattern name
 // 4. FIX PROMPT — "🔧 Fix" button: debug the given code
 // ─────────────────────────────────────────────
 
-export function buildFixPrompt(code, problem) {
+// failure: what LeetCode reported for this code (a failing input with its
+// expected output, or a compile error) — the strongest clue there is
+export function buildFixPrompt(code, problem, failure = '') {
+  const failed = failure.trim() ? `
+
+LEETCODE REJECTED THIS CODE. The failing test or error it reported:
+\`\`\`
+${failure.trim()}
+\`\`\`
+Your fixed code MUST pass this exact test (or compile without this error).` : '';
   return `You are an expert LeetCode C++ debugger.
 
 ${buildProblemContext(problem)}
@@ -266,9 +291,11 @@ ${buildProblemContext(problem)}
 CODE TO VALIDATE AND FIX:
 \`\`\`cpp
 ${code}
-\`\`\`
+\`\`\`${failed}
 
-PROCESS (in your reasoning):
+PROCESS (in your reasoning):${failed ? `
+0. Trace the code on the failing input above and find the EXACT line that makes it go wrong (or the
+   exact cause of the compile error). Fix the cause, not just this one case.` : ''}
 1. Check the signature matches the EXACT LeetCode signature (if given above).
 2. Trace the code by hand on every example in the statement; compare with the expected outputs.
 3. Check the complexity fits the constraints; if it would TLE, replace it with the optimal algorithm.
@@ -376,7 +403,7 @@ export function buildPrompt(action, problem, code = '', extra = {}) {
   if (action === 'interview_score') return buildInterviewScorePrompt(problem, extra.interview);
   const also = { alsoLanguage: extra.language, alsoSnippet: extra.snippet };
   if (action === 'hints') return buildSolutionPrompt(problem, { withHints: true, ...also });
-  if (action === 'fix' && code) return buildFixPrompt(code, problem);
+  if (action === 'fix' && code) return buildFixPrompt(code, problem, extra.failure);
   if (action === 'translate' && code) return buildTranslatePrompt(code, problem, extra.language, extra.snippet);
   if (action === 'translate_all' && code) return buildTranslateAllPrompt(code, problem, extra.languages, extra.snippets);
   return buildSolutionPrompt(problem, also);

@@ -44,6 +44,27 @@ test('scorecard: busy 120b → qwen', async () => {
   assert.equal(await pick('judge'), 'Groq (qwen/qwen3.8-27b)');
 });
 
+test('a server error on one Gemini model moves on to its next model, not to another provider', async () => {
+  const { openStream } = await import(`../backend/src/providers.js?run=${++run}`);
+  globalThis.fetch = async (url) => /gemini-3\.8-flash/.test(String(url))
+    ? new Response('', { status: 524 })                       // the first model times out
+    : new Response('data: {}\n\n');
+  const env = { GEMINI_API_KEY: 'test', PROVIDER_ORDER: 'gemini,workersai', AI: { run: async () => new ReadableStream() } };
+  const { label } = await openStream(env, 'prompt', { tier: 'main', maxTokens: 1000 });
+  assert.equal(label, 'Gemini (gemini-flash-latest)');
+});
+
+test('Hard: a model that would cut the reply short goes after one with the full budget', async () => {
+  const pick = await setup();
+  // Groq's 8k tokens/minute can't fit a 7,000-token Hard reply → Workers AI first
+  const { openStream } = await import(`../backend/src/providers.js?run=${++run}`);
+  const env = { GROQ_API_KEY: 'test', PROVIDER_ORDER: 'groq,workersai', AI: { run: async () => new ReadableStream({ start: c => c.close() }) } };
+  const realisticPrompt = 'x'.repeat(10000);   // ~2,900 tokens, like a real Hard problem
+  assert.equal((await openStream(env, realisticPrompt, { tier: 'hard', maxTokens: 7000 })).label, 'Workers AI (@cf/openai/gpt-oss-120b)');
+  // A small Hard request that fits → Groq's 120b, never the 20b
+  assert.equal(await pick('hard'), 'Groq (openai/gpt-oss-120b)');
+});
+
 test('hints: busy 120b → another model still answers', async () => {
   const pick = await setup(['openai/gpt-oss-120b']);
   assert.notEqual(await pick('main'), 'Groq (openai/gpt-oss-120b)');

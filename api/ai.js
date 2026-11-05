@@ -216,13 +216,13 @@ function problemPayload(p) {
 
 // onText(fullTextSoFar) is called as the reply streams in
 async function callBackend(action, problem, opts = {}) {
-  const { code = '', onText, language, snippet, languages, snippets, interview, lowEffort = false } = opts;
+  const { code = '', onText, language, snippet, languages, snippets, interview, failure, lowEffort = false } = opts;
   let res;
   try {
     res = await fetch(`${BACKEND_URL}/v1/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, lowEffort }),
+      body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, failure, lowEffort }),
       signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
     });
   } catch (e) {
@@ -362,8 +362,17 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
   const also = withLanguage(problemData, language);
 
   try {
-    const raw = await callBackend('hints', problemData, { onText, ...also });
-    const result = parseHintsJSON(raw);
+    let raw = await callBackend('hints', problemData, { onText, ...also });
+    let result;
+    try {
+      result = parseHintsJSON(raw);
+    } catch {
+      // The model thought so long the reply was cut off before the hints were
+      // complete (seen on Hard problems) — ask once more with less thinking
+      console.warn('LeetHint: hints reply incomplete — retrying with low reasoning');
+      raw = await callBackend('hints', problemData, { onText, ...also, lowEffort: true });
+      result = parseHintsJSON(raw);
+    }
     let reference = parseSolutionResponse(raw);
     let codeRaw = raw;
     if (!reference.code) {
@@ -407,9 +416,10 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
 // ─────────────────────────────────────────────
 
 // Returns { code, tc, sc, scBreakdown, ... } — complexity describes the RETURNED code
-export async function validateSolutionCode(code, problem) {
+// failure: optional — the failing test or compile error LeetCode reported
+export async function validateSolutionCode(code, problem, failure = '') {
   // (no language option here — Fix/Generate produce the C++ reference only)
-  const solved = parseSolutionResponse(await callBackend(code ? 'fix' : 'solve', problem, { code }));
+  const solved = parseSolutionResponse(await callBackend(code ? 'fix' : 'solve', problem, { code, failure: failure || undefined }));
   if (!solved.code) throw new Error('The AI returned no code — please retry.');
   return code ? solved : ensureSignature(solved, problem);
 }
