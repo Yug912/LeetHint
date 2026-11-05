@@ -7,7 +7,7 @@
 
 // Bump when prompts change — part of the server cache key, so old cached
 // replies are never served for a new prompt
-export const PROMPT_VERSION = 'p6';
+export const PROMPT_VERSION = 'p7';
 
 // Languages the solution can be translated into, keyed by LeetCode's langSlug.
 // fence = the markdown code-fence tag the model is asked to use.
@@ -136,8 +136,11 @@ lead to YOUR solution's exact approach (any complexity mentioned must match your
 by tracing your code, never guess). In the reply the hints come before the code, but they must describe
 exactly the code you then output:
 
-${HINT_RULES}` : '';
-  const hintsFormat = withHints ? '\n---HINT1---\n...\n---HINT2---\n...\n---HINT3---\n...\n---HINT4---\n...' : '';
+${HINT_RULES}
+
+${FOLLOWUP_RULES}` : '';
+  const hintsFormat = withHints
+    ? `\n---HINT1---\n...\n---HINT2---\n...\n---HINT3---\n...\n---HINT4---\n...\n${FOLLOWUPS_FORMAT}` : '';
   const cls = classNameOf(problem);
   // Hard problems are where subtle bugs pass every example — cross-check
   // against a brute force on inputs the examples don't cover
@@ -242,6 +245,29 @@ RULES:
 - Be concise — no fluff, no "Great question!", no generic advice
 - Hints 1 and 2 must be SHORT (2-4 lines max each)
 - If you are not certain a specific number is right, re-derive it; never state an unchecked value`;
+
+// Interview follow-ups — written with the hints, after the solution is final,
+// so every model answer matches the code that follows. Shape is fixed by the
+// shared contract (item 2): ---FOLLOWUPS--- then exactly 3 Q:/A: pairs.
+const FOLLOWUP_RULES = `FOLLOW-UPS — 3 classic interview follow-up questions for THIS problem:
+- The questions an interviewer really asks after this problem is solved: a changed constraint (sorted
+  input, a stream, input too large for memory, many queries), a lower-space or lower-time version, or a
+  common variant of this exact problem
+- Each answer is 2-3 plain sentences (never just one): what changes in YOUR solution, why it still works,
+  and the new time/space complexity
+- Answers must agree with your solution above: same algorithm as the starting point, same names, a
+  complexity that follows from your TC/SC — never contradict your own approach
+- Check every complexity you state: count any copy, sort or extra structure the change adds (a sorted
+  copy of the input is O(n) extra space, not O(1)), and anything the change loses (e.g. original indices)
+- No code in follow-ups; each Q: and A: on a single line`;
+
+const FOLLOWUPS_FORMAT = `---FOLLOWUPS---
+Q: ...
+A: ...
+Q: ...
+A: ...
+Q: ...
+A: ...`;
 
 // Hints-only prompt — used only by the no-server fallback (Chrome Built-in AI)
 export function buildHintsPrompt(problem) {
