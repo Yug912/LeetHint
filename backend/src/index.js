@@ -1,6 +1,7 @@
 // backend/src/index.js — LeetHint API (Cloudflare Worker)
 //
 //   POST /v1/generate   { action, problem, code? }  →  the provider's SSE stream, passed through
+//                       (fix + reason: "signature", no failure → cached and shared)
 //   GET  /health                                     →  { ok, providers }
 //
 // The extension sends PROBLEM DATA, never a prompt: prompts are built here
@@ -93,6 +94,10 @@ async function handleGenerate(request, env, ctx, cors) {
   }
   // Fix: what LeetCode reported for this code (failing test or compile error)
   if (action === 'fix') extra.failure = clip(body.failure, LIMITS.failure);
+  // Automatic signature repair of a CACHED solution (contract item 8): every
+  // user sends the same code, so the fix is shared. A user's own failing test
+  // (failure field) is personal and never counts, whatever reason says.
+  const signatureFix = action === 'fix' && body.reason === 'signature' && !extra.failure;
   if (action === 'translate_all') {
     extra.languages = [...new Set(Array.isArray(body.languages) ? body.languages : [])].filter(isLanguage).sort();
     if (!extra.languages.length) throw clientError(400, 'No languages given.');
@@ -145,10 +150,15 @@ async function handleGenerate(request, env, ctx, cors) {
   // ── Shared cache: same problem + prompt → instant reply for every user ──
   // Keyed by a hash of the FULL prompt, so a client sending a fake statement
   // for a real slug only ever gets (and caches) its own fake result.
-  // Interviews are personal conversations — never cached or shared
-  const cacheable = action !== 'fix' && !interviewing && env.HINTS_CACHE;
+  // Interviews are personal conversations — never cached or shared.
+  // Fixes are cached only for the signature repair: its key hashes the full
+  // prompt (code included), so a client sending other code only fills its
+  // own key and can't poison the shared fix
+  const cacheable = (action !== 'fix' || signatureFix) && !interviewing && env.HINTS_CACHE;
   const keyFor = async (act, lang, p) => `${PROMPT_VERSION}:${act}${lang ? '-' + lang : ''}:${problem.slug}:${await sha256(p)}`.slice(0, 500);
-  const cacheKey = cacheable ? await keyFor(action, extra.language, prompt) : '';
+  const cacheKey = !cacheable ? ''
+    : signatureFix ? await keyFor('fix-signature', '', prompt)   // p7:fix-signature:<slug>:<sha256>
+    : await keyFor(action, extra.language, prompt);
   // Hints/solution in a user's language also count as the problem's SHARED
   // copy (the plain C++ reply): a later user in any other language gets these
   // hints instantly and only needs a small translation, not a full re-solve.
@@ -169,7 +179,7 @@ async function handleGenerate(request, env, ctx, cors) {
 
   // ── Stream from the first provider/model that accepts the request ──
   // (logs never include the interview transcript — only the action and slug)
-  const tag = `${action}${extra.language ? '-' + extra.language : ''}${interviewing ? '-' + extra.interview.event : ''} ${problem.slug}`;
+  const tag = `${action}${signatureFix ? '-signature' : ''}${extra.language ? '-' + extra.language : ''}${interviewing ? '-' + extra.interview.event : ''} ${problem.slug}`;
   const easy = /easy/i.test(problem.difficulty);
   const { upstream, kind, label } = await openStream(env, prompt, { effort, maxTokens, tier, easy });
   console.log(`${tag} (${effort}, ${maxTokens} tok) → ${label}`);
