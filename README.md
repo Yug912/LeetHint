@@ -277,7 +277,7 @@ LeetHint uses carefully tuned prompts that enforce:
 | `webNavigation` | Track problem page transitions |
 | `alarms` | Refresh the due-revisions badge just after local midnight |
 | `https://leetcode.com/*` | Access LeetCode pages |
-| `https://leethint-api.leethint-backend.workers.dev/*` | Call the LeetHint server (change it if you deploy your own) |
+| `https://leethint-api.yugthakral07.workers.dev/*` | Call the LeetHint server (change it if you deploy your own) |
 | `http://localhost:8787/*` | Local server during development |
 
 ---

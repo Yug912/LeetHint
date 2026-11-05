@@ -5,4 +5,4 @@
 // After `npm run deploy` in backend/, paste your Worker URL here. While
 // developing locally with `npm run dev`, use 'http://localhost:8787'.
 // The URL must also match a host_permissions entry in manifest.json.
-export const BACKEND_URL = 'https://leethint-api.leethint-backend.workers.dev';
+export const BACKEND_URL = 'https://leethint-api.yugthakral07.workers.dev';
