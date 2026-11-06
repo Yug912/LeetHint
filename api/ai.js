@@ -464,6 +464,11 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
     onPartial?.({ ...fromFile, streaming: '' });
     return fromFile;
   }
+  // No problem text (LeetCode changed its page) and no file: an AI would
+  // only guess from the title, so say what happened instead
+  if (!String(problemData.description || '').trim()) {
+    throw new Error('LeetCode changed its page; an update is coming. This problem has no saved hints yet.');
+  }
 
   // Report every change to the visible hint text, so hints appear as they're written
   let lastShown = '';

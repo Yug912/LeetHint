@@ -338,6 +338,8 @@ titleObserver.observe(titleEl, { childList: true, subtree: true, characterData: 
 //    opened from the Submissions tab don't count — no Submit was pressed.
 // ─────────────────────────────────────────────
 const SUBMIT_WINDOW_MS = 2 * 60 * 1000;
+// Results reported as PROBLEM_FAILED (for the tilt detector)
+const FAIL_VERDICTS = ['Wrong Answer', 'Time Limit Exceeded', 'Runtime Error'];
 
 function watchForSolves() {
   if (window.__leethintSolveWatch) return;   // re-injected content script
@@ -345,31 +347,45 @@ function watchForSolves() {
 
   // sawPending: the previous result has gone (or isn't "Accepted") since
   // Submit was pressed, so an old "Accepted" still on screen isn't counted
-  let armedUntil = 0, armedSlug = '', sawPending = false, checkTimer = null;
+  // armedText: the result already on screen when Submit was pressed — that
+  // one is old; a different final result (or any after a pending state) is new
+  let armedUntil = 0, armedSlug = '', armedText = '', sawPending = false, checkTimer = null;
+  const resultEl = () => document.querySelector('[data-e2e-locator="submission-result"]');
+  const verdictOf = text => (text === 'Accepted' ? 'Accepted' : FAIL_VERDICTS.find(v => text.startsWith(v)) || '');
   const arm = () => {
     armedUntil = Date.now() + SUBMIT_WINDOW_MS;
     armedSlug = getCurrentSlug();
+    armedText = resultEl()?.textContent.trim() || '';
     sawPending = false;
     if (!checkTimer) checkTimer = setTimeout(check, 400);
   };
+  // Run / Submit pressed → the side panel may check the code's speed (TLE warning)
+  const reportRun = kind => chrome.runtime.sendMessage({ type: 'CODE_RUN', slug: getCurrentSlug(), kind }).catch(() => {});
 
   document.addEventListener('click', e => {
-    if (e.target.closest?.('[data-e2e-locator="console-submit-button"]')) arm();
+    if (e.target.closest?.('[data-e2e-locator="console-submit-button"]')) { arm(); reportRun('submit'); }
+    else if (e.target.closest?.('[data-e2e-locator="console-run-button"]')) reportRun('run');
   }, true);
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) arm();
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.key === 'Enter') { arm(); reportRun('submit'); }
+    else if (e.key === "'") reportRun('run');
   }, true);
 
-  // The result panel of THIS submission says "Accepted"
+  // The result panel of THIS submission: "Accepted" → solved; Wrong Answer,
+  // Time Limit Exceeded or Runtime Error → failed
   function check() {
     checkTimer = null;
     if (!armedUntil || Date.now() > armedUntil) { armedUntil = 0; return; }
-    const result = document.querySelector('[data-e2e-locator="submission-result"]');
-    if (!result || result.textContent.trim() !== 'Accepted') { sawPending = true; return; }
-    if (!sawPending) return;
+    const text = resultEl()?.textContent.trim() || '';
+    const verdict = verdictOf(text);
+    if (!verdict) { sawPending = true; return; }
+    if (!sawPending && text === armedText) return;   // still the old result
     if (armedSlug !== getCurrentSlug()) { armedUntil = 0; return; }
-    armedUntil = 0;   // one solve per Submit
-    chrome.runtime.sendMessage({ type: 'PROBLEM_SOLVED', slug: armedSlug }).catch(() => {});
+    armedUntil = 0;   // one result per Submit
+    chrome.runtime.sendMessage(verdict === 'Accepted'
+      ? { type: 'PROBLEM_SOLVED', slug: armedSlug }
+      : { type: 'PROBLEM_FAILED', slug: armedSlug, verdict }).catch(() => {});
   }
 
   // Cheap: only look while a submission is pending, at most every 400ms

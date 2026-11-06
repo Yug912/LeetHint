@@ -69,3 +69,23 @@ test('report: unknown reason → other; note clipped to 500 chars', async () => 
   assert.equal(body.reason, 'other');
   assert.equal(body.note.length, 500);
 });
+
+// ── LeetCode changed its page (plan 5.3): only the slug is known ──
+const { generateHints } = await import('../api/ai.js');
+const { readFile } = await import('node:fs/promises');
+const sample = JSON.parse(await readFile(new URL('./fixtures/cache/two-sum.json', import.meta.url), 'utf8'));
+
+test('empty problem data: static hints still load by slug', async () => {
+  const asked = [];
+  globalThis.fetch = async url => { asked.push(String(url)); return Response.json(sample); };
+  const h = await generateHints({ slug: 'two-sum', title: 'Two Sum', description: '' });
+  assert.equal(h.source, 'static');
+  assert.equal(asked.some(u => u.includes('/v1/generate')), false);
+});
+
+test('empty problem data and no file: a clear message, no AI call', async () => {
+  const asked = [];
+  globalThis.fetch = async url => { asked.push(String(url)); return new Response('Not found', { status: 404 }); };
+  await assert.rejects(generateHints({ slug: 'new-problem', title: 'New Problem', description: '' }), /LeetCode changed its page/);
+  assert.equal(asked.some(u => u.includes('/v1/generate')), false);
+});
