@@ -13,6 +13,7 @@
 
 import { BACKEND_URL } from './config.js';
 import { getInstallId, serverHeaders } from './install.js';
+import { fetchStaticHints } from './static.js';
 import { buildHintsPrompt, LANGUAGES, snippetNames } from '../shared/prompts.js';
 
 export { LANGUAGES, getInstallId };
@@ -217,13 +218,13 @@ function problemPayload(p) {
 
 // onText(fullTextSoFar) is called as the reply streams in
 async function callBackend(action, problem, opts = {}) {
-  const { code = '', onText, language, snippet, languages, snippets, interview, failure, lowEffort = false } = opts;
+  const { code = '', onText, language, snippet, languages, snippets, interview, failure, reason, lowEffort = false } = opts;
   let res;
   try {
     res = await fetch(`${BACKEND_URL}/v1/generate`, {
       method: 'POST',
       headers: await serverHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, failure, lowEffort }),
+      body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, failure, reason, lowEffort }),
       signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
     });
   } catch (e) {
@@ -352,6 +353,15 @@ function applyReference(result, reference) {
 export async function generateHints(problemData, { onPartial, language = 'cpp' } = {}) {
   console.log('LeetHint: generateHints() called for:', problemData.title);
 
+  // Pre-generated file on the static cache site → no AI call at all.
+  // Already compiled and signature-checked, and it carries the main languages.
+  const fromFile = await fetchStaticHints(problemData.slug);
+  if (fromFile) {
+    console.log('LeetHint: hints from the static cache', fromFile.promptVersion || '');
+    onPartial?.({ ...fromFile, streaming: '' });
+    return fromFile;
+  }
+
   // Report every change to the visible hint text, so hints appear as they're written
   let lastShown = '';
   const onText = onPartial && (soFar => {
@@ -458,7 +468,9 @@ async function ensureSignature(reference, problem) {
 
   console.warn('LeetHint: solution does not match LeetCode signature (missing', missing.join(', '), ') — fixing');
   try {
-    const fixed = parseSolutionResponse(await callBackend('fix', problem, { code: reference.code }));
+    // reason: 'signature' — the server caches this automatic fix (contract item 8);
+    // a user's own Fix never sends it
+    const fixed = parseSolutionResponse(await callBackend('fix', problem, { code: reference.code, reason: 'signature' }));
     if (fixed.code && missingSignatureParts(fixed.code, problem.cppSnippet).length < missing.length) {
       return { ...reference, ...fixed, approach: reference.approach, pattern: reference.pattern };
     }
