@@ -12,9 +12,10 @@
 // Fallback when the backend can't be reached: Chrome Built-in AI (hints only).
 
 import { BACKEND_URL } from './config.js';
+import { getInstallId, serverHeaders } from './install.js';
 import { buildHintsPrompt, LANGUAGES, snippetNames } from '../shared/prompts.js';
 
-export { LANGUAGES };
+export { LANGUAGES, getInstallId };
 
 // ─────────────────────────────────────────────
 // 0. SHARED UTILITY — paren-counting O() extractor
@@ -221,7 +222,7 @@ async function callBackend(action, problem, opts = {}) {
   try {
     res = await fetch(`${BACKEND_URL}/v1/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await serverHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, failure, lowEffort }),
       signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
     });
@@ -295,7 +296,7 @@ export function callInterviewer(action, problem, interview) {
 // Is the backend up, and which providers does it have? (names only)
 export async function checkBackend() {
   try {
-    const res = await fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/health`, { headers: await serverHeaders(), signal: AbortSignal.timeout(5000) });
     return res.ok ? await res.json() : { ok: false };
   } catch {
     return { ok: false };

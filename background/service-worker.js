@@ -6,6 +6,10 @@
 // Service worker only handles storage + tab management
 
 import { planQueue, migrateQueue, localDate, DEFAULT_DAILY_LIMIT } from '../shared/revision.js';
+import { getInstallId } from '../api/install.js';
+
+// Anonymous install ID for per-install limits on the server (api/install.js)
+chrome.runtime.onInstalled.addListener(() => { getInstallId(); });
 
 // ─────────────────────────────────────────────
 // SIDE PANEL — per tab, only on LeetCode problem pages
