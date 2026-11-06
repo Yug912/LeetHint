@@ -45,3 +45,27 @@ test('storage failure → no header, no error', async () => {
   assert.deepEqual(await serverHeaders({ a: '1' }), { a: '1' });
   globalThis.chrome.storage.local.get = saved;
 });
+
+test('concurrent calls on a fresh install share ONE id', async () => {
+  store.clear();
+  const { getInstallId } = await fresh();
+  const ids = await Promise.all([getInstallId(), getInstallId(), getInstallId()]);
+  assert.equal(new Set(ids).size, 1);
+  assert.equal(ids[0], store.get('installId'));
+});
+
+test('side panel and service worker racing on a fresh install settle on the stored id', async () => {
+  store.clear();
+  const panel = await fresh(), worker = await fresh();   // two contexts = two module instances
+  await Promise.all([panel.getInstallId(), worker.getInstallId()]);
+  const stored = store.get('installId');
+  assert.equal(await panel.getInstallId(), stored);
+  assert.equal(await worker.getInstallId(), stored);
+});
+
+test('the static cache request never carries the install header', async () => {
+  const { fetchStaticHints } = await import('../api/static.js');
+  let headers;
+  await fetchStaticHints('two-sum', { baseUrl: 'https://c.test', fetchImpl: async (url, init) => { headers = init.headers; return new Response('', { status: 404 }); } });
+  assert.equal(headers, undefined);
+});

@@ -9,25 +9,32 @@
 
 export const INSTALL_HEADER = 'X-LeetHint-Install';
 
-let pending = null;
+// Concurrent callers in THIS context share one read/create (no two ids from
+// one page). The side panel and the service worker are separate contexts: on
+// a fresh install both may create one at the same moment. The id is
+// therefore re-read from storage after creating it and never kept in memory
+// for later calls, so every context settles on the one that was stored.
+let creating = null;
 
-export function getInstallId() {
-  if (!pending) {
-    pending = (async () => {
-      try {
-        const { installId } = await chrome.storage.local.get('installId');
-        if (installId) return installId;
-        const id = crypto.randomUUID();
-        await chrome.storage.local.set({ installId: id });
-        return id;
-      } catch {
-        return '';   // storage unavailable → requests simply go without the header
-      }
-    })();
-    // A failed lookup is retried next time instead of being remembered
-    pending.then(id => { if (!id) pending = null; });
+async function readId() {
+  const { installId } = await chrome.storage.local.get('installId');
+  return typeof installId === 'string' && installId ? installId : '';
+}
+
+export async function getInstallId() {
+  try {
+    const existing = await readId();
+    if (existing) return existing;
+    if (!creating) {
+      creating = (async () => {
+        await chrome.storage.local.set({ installId: crypto.randomUUID() });
+        return readId();   // whichever write landed last is THE id
+      })().finally(() => { creating = null; });
+    }
+    return await creating;
+  } catch {
+    return '';   // storage unavailable → requests simply go without the header
   }
-  return pending;
 }
 
 // Headers for a request to OUR server (never to an AI provider)

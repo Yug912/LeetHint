@@ -8,9 +8,6 @@
 import { planQueue, migrateQueue, localDate, DEFAULT_DAILY_LIMIT } from '../shared/revision.js';
 import { getInstallId } from '../api/install.js';
 
-// Anonymous install ID for per-install limits on the server (api/install.js)
-chrome.runtime.onInstalled.addListener(() => { getInstallId(); });
-
 // ─────────────────────────────────────────────
 // SIDE PANEL — per tab, only on LeetCode problem pages
 // The panel is DISABLED globally and enabled per tab. A tab-specific panel
@@ -228,5 +225,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-chrome.runtime.onInstalled.addListener(() => { scheduleMidnightAlarm(); updateRevisionBadge().catch(() => {}); });
+chrome.runtime.onInstalled.addListener(() => {
+  // Anonymous install ID (api/install.js) — created only if missing, so an
+  // update or reload keeps the same one
+  getInstallId();
+  scheduleMidnightAlarm();
+  updateRevisionBadge().catch(() => {});
+});
 chrome.runtime.onStartup.addListener(() => { scheduleMidnightAlarm(); updateRevisionBadge().catch(() => {}); });
