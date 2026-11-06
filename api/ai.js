@@ -13,9 +13,9 @@
 
 import { BACKEND_URL } from './config.js';
 import { getInstallId, serverHeaders } from './install.js';
-import { fetchStaticHints } from './static.js';
+import { fetchStaticHints, cleanFollowUps } from './static.js';
 import { classifyServerError, withBusyRetry, busyMessage } from './server-errors.js';
-import { buildHintsPrompt, LANGUAGES, snippetNames } from '../shared/prompts.js';
+import { buildHintsPrompt, LANGUAGES, snippetNames, PROMPT_VERSION } from '../shared/prompts.js';
 
 export { LANGUAGES, getInstallId };
 
@@ -167,6 +167,26 @@ function parsePartialHints(raw) {
     Object.assign(partial, { optimal_tc: ref.tc, optimal_sc: ref.sc, sc_breakdown: ref.scBreakdown, pattern: ref.pattern });
   }
   return partial;
+}
+
+// ---FOLLOWUPS--- (contract item 2): exactly 3 "Q: … / A: …" pairs between
+// Hint 4 and the code. Missing or malformed → [] (older prompts have none).
+export function parseFollowUps(rawText) {
+  const section = extractUntilNext(cleanModelText(rawText), 'FOLLOWUPS');
+  if (!section) return [];
+  const pairs = [];
+  let current = null;
+  for (const line of section.split(/\r?\n/)) {
+    const q = line.match(/^\s*(?:\d+[.)]\s*)?\**Q\**\s*\d*\s*[:.]\**\s*(.*)$/i);
+    const a = line.match(/^\s*\**A\**\s*\d*\s*[:.]\**\s*(.*)$/i);
+    if (q) { current = { q: q[1].trim(), a: '' }; pairs.push(current); }
+    else if (a && current) current.a = (current.a ? current.a + ' ' : '') + a[1].trim();
+    else if (current && line.trim()) {
+      // A question or answer that wraps onto the next line
+      if (current.a) current.a += ' ' + line.trim(); else current.q += ' ' + line.trim();
+    }
+  }
+  return cleanFollowUps(pairs);
 }
 
 function parseHintsJSON(rawText) {
@@ -327,6 +347,26 @@ export function callInterviewer(action, problem, interview) {
   return callBackend(action, problem, { interview });
 }
 
+// "Report wrong hint" (contract item 7) → true when the server took it.
+// An older Worker without /v1/report answers 404 → false, nothing else happens.
+export async function reportHint({ slug, promptVersion, reason, note = '' }) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/v1/report`, {
+      method: 'POST',
+      headers: await serverHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        slug, promptVersion: promptVersion || PROMPT_VERSION,
+        reason: ['wrong_solution', 'wrong_hint', 'other'].includes(reason) ? reason : 'other',
+        ...(note.trim() ? { note: note.trim().slice(0, 500) } : {})
+      }),
+      signal: AbortSignal.timeout(8000)
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Is the backend up, and which providers does it have? (names only)
 export async function checkBackend() {
   try {
@@ -439,6 +479,8 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
       // Wrong function name → leave it out; it's re-translated when the card opens
       if (translated && keepsSignature(translated, also.snippet)) result.translations = { [also.language]: translated };
     }
+    result.followUps = parseFollowUps(raw);
+    result.promptVersion = PROMPT_VERSION;
     console.log('LeetHint: FINAL TC =', reference.tc || result.optimal_tc, '| SC =', reference.sc || result.optimal_sc);
     return reference.code ? applyReference(result, reference) : result;
   } catch (e) {
