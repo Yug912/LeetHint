@@ -3,7 +3,8 @@
 // Loaded as an ES module (see sidepanel.html)
 
 import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
-         translateSolution, LANGUAGES, onServerNotice } from '../api/ai.js';
+         translateSolution, LANGUAGES, onServerNotice, reportHint } from '../api/ai.js';
+import { CACHE_URL } from '../api/config.js';
 import { getRemoteConfig, REMOTE_DEFAULTS } from '../api/remote.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory } from './interview.js';
@@ -16,17 +17,50 @@ import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, pa
 // COMPANY DATABASE — loaded once from bundled JSON
 // ─────────────────────────────────────────────
 let companiesDB = null;
+const COMPANIES_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+const isCompaniesData = d => !!d && typeof d === 'object' && !Array.isArray(d) && Object.keys(d).length > 0;
 
 async function loadCompaniesDB() {
+  // 1. Fetched in the last 7 days → use it
+  let saved = {};
   try {
-    const url = chrome.runtime.getURL('data/companies.json');
-    const res  = await fetch(url);
+    saved = await chrome.storage.local.get(['companiesData', 'companiesFetchedAt']);
+    if (isCompaniesData(saved.companiesData) && Date.now() - (saved.companiesFetchedAt || 0) < COMPANIES_MAX_AGE_MS) {
+      companiesDB = saved.companiesData;
+      return finishCompaniesLoad('weekly copy');
+    }
+  } catch { /* storage unavailable — fetch below */ }
+
+  // 2. Fresh copy from the cache site
+  try {
+    const res = await fetch(`${CACHE_URL}/companies.json`, { signal: AbortSignal.timeout(5000) });
+    const data = res.ok ? await res.json() : null;
+    if (isCompaniesData(data)) {
+      companiesDB = data;
+      chrome.storage.local.set({ companiesData: data, companiesFetchedAt: Date.now() }).catch(() => {});
+      return finishCompaniesLoad('cache site');
+    }
+  } catch { /* offline or not published yet */ }
+
+  // 3. An older fetched copy beats the bundled one; the bundled one always works offline
+  if (isCompaniesData(saved.companiesData)) {
+    companiesDB = saved.companiesData;
+    return finishCompaniesLoad('older copy');
+  }
+  try {
+    const res = await fetch(chrome.runtime.getURL('data/companies.json'));
     companiesDB = await res.json();
-    console.log('LeetHint: companiesDB loaded,', Object.keys(companiesDB).length, 'problems');
   } catch (e) {
     console.log('LeetHint: could not load companies.json', e.message);
     companiesDB = {};
   }
+  finishCompaniesLoad('bundled');
+}
+
+function finishCompaniesLoad(from) {
+  console.log('LeetHint: companiesDB loaded from', from + ',', Object.keys(companiesDB).length, 'problems');
+  if (state.problem?.slug) renderCompanyTags(state.problem.slug);
 }
 
 // ─────────────────────────────────────────────
@@ -37,6 +71,7 @@ let state = {
   hints: null,            // {hint1..hint5, optimal_tc, optimal_sc, pattern}
   hintsUnlocked: 1,       // how many hints currently visible (1 = only hint1)
   score: 100,             // current score
+  solved: false,          // this problem has been solved (shows the follow-up questions)
   review: null,           // { slug, step, done } while this problem is a due revision (fresh attempt);
                           // done = recorded, but later unlocks still don't touch the first solve
   currentTab: 'hints'     // 'hints', 'revision' or 'stats'
@@ -164,6 +199,14 @@ const DOM = {
   distReadCount:  $('dist-read-count'),
   aiStatus:       $('ai-status'),
 
+  // Report + follow-ups
+  reportRow:        $('report-row'),
+  reportLink:       $('report-link'),
+  reportPicker:     $('report-picker'),
+  reportThanks:     $('report-thanks'),
+  followupsSection: $('followups-section'),
+  followupsList:    $('followups-list'),
+
   // Server banners
   remoteMessage:     $('remote-message'),
   serverNotice:      $('server-notice'),
@@ -204,6 +247,7 @@ async function init() {
   removeLegacyKeys();
   setupServiceStatusOnView();   // /health only once Settings is actually seen
   setupServerNotices();
+  setupReportListeners();
   loadRemoteConfig();
 
   await loadLanguagePreference();
@@ -377,6 +421,7 @@ async function loadCurrentProblem(slugHint = '') {
   isInitializing = true;
   state.hints = null;
   state.review = null;
+  state.solved = false;
   resetTcScChecker();
   if (slugHint) DOM.loadingName.textContent = titleFromSlug(slugHint);
   showState('loading');
@@ -614,6 +659,73 @@ function renderHintTexts() {
         : formatHintText(text) + (live ? CURSOR_HTML : '');
     }
   });
+  renderReportRow();
+  renderFollowUps();
+}
+
+
+// ── Report wrong hint (contract item 7) ──
+// Hidden while hints stream; hidden for the rest of the panel's life if the
+// server has no /v1/report yet (older Worker)
+let reportsAvailable = true;
+const reportedSlugs = new Set();
+
+function renderReportRow() {
+  if (!DOM.reportRow) return;
+  const show = reportsAvailable && !!state.hints?.hint1 && !state.hints.generating && !!state.problem?.slug;
+  DOM.reportRow.hidden = !show;
+  if (!show) return;
+  const done = reportedSlugs.has(state.problem.slug);
+  DOM.reportLink.hidden = done;
+  DOM.reportPicker.hidden = true;
+  DOM.reportThanks.hidden = !done;
+  DOM.reportThanks.textContent = done ? 'Thanks, we\'ll check it' : '';
+}
+
+function setupReportListeners() {
+  DOM.reportLink?.addEventListener('click', () => {
+    DOM.reportPicker.hidden = !DOM.reportPicker.hidden;
+  });
+  DOM.reportPicker?.addEventListener('click', async e => {
+    const reason = e.target.closest('[data-reason]')?.dataset.reason;
+    const slug = state.problem?.slug;
+    if (!reason || !slug) return;
+    DOM.reportPicker.hidden = true;
+    DOM.reportLink.hidden = true;
+    DOM.reportThanks.hidden = false;
+    DOM.reportThanks.textContent = 'Sending…';
+    const ok = await reportHint({ slug, promptVersion: state.hints?.promptVersion, reason });
+    if (ok) {
+      reportedSlugs.add(slug);
+    } else {
+      reportsAvailable = false;   // the server doesn't take reports yet
+      showToast('Reporting isn\'t available yet — thanks for trying');
+    }
+    renderReportRow();
+  });
+}
+
+
+// ── Interview follow-ups — 3 questions after a solve, answers hidden ──
+function renderFollowUps() {
+  if (!DOM.followupsSection) return;
+  const list = Array.isArray(state.hints?.followUps) ? state.hints.followUps : [];
+  const show = state.solved && list.length > 0 && !state.hints?.generating;
+  DOM.followupsSection.hidden = !show;
+  if (!show) return;
+  const key = list.map(f => f.q).join('\u0000');
+  if (DOM.followupsList.dataset.key === key) return;   // keep opened answers open
+  DOM.followupsList.dataset.key = key;
+  DOM.followupsList.replaceChildren(...list.map(({ q, a }) => {
+    const item = document.createElement('details');
+    item.className = 'followup';
+    const summary = document.createElement('summary');
+    summary.textContent = q;
+    const answer = document.createElement('p');
+    answer.textContent = a;
+    item.append(summary, answer);
+    return item;
+  }));
 }
 
 // Renders the solution card with a syntax-highlighted code block + Copy button
@@ -1102,7 +1214,10 @@ async function loadSavedProgress() {
   const { queue, limit } = await getRevisionData();
   state.review = isDueToday(queue, slug, { limit }) ? { slug, step: queue[slug].step } : null;
 
-  const saved = await chrome.storage.local.get([progressKey, explanationKey, reviewKey]);
+  const saved = await chrome.storage.local.get([progressKey, explanationKey, reviewKey, 'stats']);
+  // Entries from before solve detection have no flag — they were logged as solved
+  const statEntry = saved.stats?.problems?.[slug];
+  state.solved = !!statEntry && statEntry.solved !== false;
 
   if (state.review) {
     // Hints locked and score 100 — earlier hints and the solution are not
@@ -1298,8 +1413,18 @@ async function onProblemSolved(slug, { manual = false } = {}) {
   }
 
   await updateStats({ solved: true });
+  markSolvedHere();
   const queued = score <= QUEUE_SCORE_MAX && await addToRevisionQueue();
   if (!queued) showToast(`✅ Solved — ${name} (${score})`);
+}
+
+// The follow-up questions appear once the problem is solved
+function markSolvedHere() {
+  state.solved = true;
+  renderFollowUps();
+  if (state.hints?.followUps?.length) {
+    setTimeout(() => DOM.followupsSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 300);
+  }
 }
 
 // Mock interview finished on a due problem → schedule from the scorecard
@@ -1587,6 +1712,7 @@ chrome.runtime.onMessage.addListener((message) => {
       state.hintsUnlocked = 1;
       state.score         = 100;
       state.review        = null;
+      state.solved        = false;
       resetTcScChecker();
       showState('noProblem');
       syncInterview(null);
@@ -1622,6 +1748,7 @@ function applyProblem(newProblem) {
   state.hintsUnlocked = 1;
   state.score        = 100;
   state.review       = null;
+  state.solved       = false;
   resetTcScChecker();
 
   if (newProblem?.title) {

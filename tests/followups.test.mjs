@@ -1,0 +1,71 @@
+// Tests for interview follow-ups in live replies (contract item 2) and the
+// "Report wrong hint" request (contract item 7) — run with: node --test tests/*.test.mjs
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+const store = new Map([['installId', 'test-install']]);
+globalThis.chrome = { storage: { local: {
+  get: async k => (store.has(k) ? { [k]: store.get(k) } : {}),
+  set: async o => { for (const [k, v] of Object.entries(o)) store.set(k, v); }
+} } };
+
+const { parseFollowUps, reportHint } = await import('../api/ai.js');
+
+const reply = `---HINT1---
+Think about complements.
+---HINT4---
+Watch out for [3,3].
+---FOLLOWUPS---
+Q: What if the array is sorted?
+A: Use two pointers from both ends for O(1) extra space.
+Q: What if there can be many answers?
+A: Collect every pair; keep counts in the map.
+Q: What if the numbers don't fit in memory?
+A: Sort externally, then sweep
+with two pointers.
+---CODE---
+\`\`\`cpp
+class Solution {};
+\`\`\``;
+
+test('three Q/A pairs between Hint 4 and the code', () => {
+  const f = parseFollowUps(reply);
+  assert.equal(f.length, 3);
+  assert.deepEqual(f[0], { q: 'What if the array is sorted?', a: 'Use two pointers from both ends for O(1) extra space.' });
+  assert.equal(f[2].a, 'Sort externally, then sweep with two pointers.');   // wrapped line joined
+});
+
+test('numbered / bold variants still parse', () => {
+  const f = parseFollowUps('---FOLLOWUPS---\n1. **Q:** Sorted input?\n**A:** Two pointers.\nQ2: Streams?\nA2: Hash set.\n---CODE---');
+  assert.deepEqual(f, [{ q: 'Sorted input?', a: 'Two pointers.' }, { q: 'Streams?', a: 'Hash set.' }]);
+});
+
+test('older replies (no section) and questions without answers → nothing shown', () => {
+  assert.deepEqual(parseFollowUps('---HINT1---\nx\n---CODE---\ncode'), []);
+  assert.deepEqual(parseFollowUps('---FOLLOWUPS---\nQ: Only a question\n---CODE---'), []);
+});
+
+test('report: POST /v1/report with the contract body and install header', async () => {
+  let req;
+  globalThis.fetch = async (url, init) => { req = { url, init }; return new Response(null, { status: 204 }); };
+  assert.equal(await reportHint({ slug: 'two-sum', promptVersion: 'p7', reason: 'wrong_hint' }), true);
+  assert.match(req.url, /\/v1\/report$/);
+  assert.equal(req.init.method, 'POST');
+  assert.equal(req.init.headers['X-LeetHint-Install'], 'test-install');
+  assert.deepEqual(JSON.parse(req.init.body), { slug: 'two-sum', promptVersion: 'p7', reason: 'wrong_hint' });
+});
+
+test('report: older Worker (404) or offline → false, no throw', async () => {
+  globalThis.fetch = async () => new Response('Not found', { status: 404 });
+  assert.equal(await reportHint({ slug: 'two-sum', reason: 'other' }), false);
+  globalThis.fetch = async () => { throw new TypeError('offline'); };
+  assert.equal(await reportHint({ slug: 'two-sum', reason: 'other' }), false);
+});
+
+test('report: unknown reason → other; note clipped to 500 chars', async () => {
+  let body;
+  globalThis.fetch = async (url, init) => { body = JSON.parse(init.body); return new Response(null, { status: 204 }); };
+  await reportHint({ slug: 'two-sum', reason: 'spam', note: 'x'.repeat(900) });
+  assert.equal(body.reason, 'other');
+  assert.equal(body.note.length, 500);
+});
