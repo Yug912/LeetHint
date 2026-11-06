@@ -6,6 +6,7 @@ import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
          translateSolution, LANGUAGES, onServerNotice, reportHint } from '../api/ai.js';
 import { CACHE_URL } from '../api/config.js';
 import { getRemoteConfig, REMOTE_DEFAULTS } from '../api/remote.js';
+import { OWN_KEY_PROVIDERS, getOwnKey, saveOwnKey, removeOwnKey, testOwnKey } from '../api/direct.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory } from './interview.js';
 import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
@@ -248,6 +249,7 @@ async function init() {
   setupServiceStatusOnView();   // /health only once Settings is actually seen
   setupServerNotices();
   setupReportListeners();
+  setupOwnKeySettings();
   loadRemoteConfig();
 
   await loadLanguagePreference();
@@ -387,7 +389,67 @@ function setupServerNotices() {
   });
 }
 
-// Settings → own API key card (B7)
+// ── Own API key (Settings) ──
+// Stored only in chrome.storage.local and sent only to that provider
+// (api/direct.js). Testing a key saves it when it works.
+async function setupOwnKeySettings() {
+  const provider = document.getElementById('own-key-provider');
+  const input = document.getElementById('own-key-input');
+  const testBtn = document.getElementById('own-key-test');
+  const removeBtn = document.getElementById('own-key-remove');
+  const note = document.getElementById('own-key-note');
+  const status = document.getElementById('own-key-status');
+  const active = document.getElementById('own-key-active');
+  if (!provider || !input || !testBtn) return;
+
+  const showNote = () => { note.textContent = `Your key is stored on this computer and sent only to ${OWN_KEY_PROVIDERS[provider.value].name}.`; };
+  const showSaved = own => {
+    active.hidden = !own;
+    removeBtn.hidden = !own;
+    if (own) {
+      provider.value = own.provider;
+      input.value = '';
+      input.placeholder = `${OWN_KEY_PROVIDERS[own.provider].name} key saved (••••${own.key.slice(-4)})`;
+    } else {
+      input.placeholder = 'Paste your API key';
+    }
+    showNote();
+  };
+
+  showSaved(await getOwnKey());
+  provider.addEventListener('change', () => { showNote(); status.textContent = ''; });
+
+  testBtn.addEventListener('click', async () => {
+    const key = input.value.trim();
+    const saved = await getOwnKey();
+    // Nothing typed → re-test the saved key
+    const toTest = key || (saved?.provider === provider.value ? saved.key : '');
+    if (!toTest) { status.textContent = 'Paste a key first.'; return; }
+    testBtn.disabled = true;
+    status.textContent = '⏳ Testing…';
+    const result = await testOwnKey(provider.value, toTest);
+    testBtn.disabled = false;
+    if (!result.ok) { status.textContent = `❌ ${result.message}`; return; }
+    try {
+      await saveOwnKey(provider.value, toTest);
+      status.textContent = '✅ Key works — LeetHint now uses it for new requests.';
+      showSaved(await getOwnKey());
+      showNotice('');
+      syncInterview(state.problem);
+    } catch (e) {
+      status.textContent = `❌ ${e.message}`;
+    }
+  });
+
+  removeBtn.addEventListener('click', async () => {
+    await removeOwnKey();
+    status.textContent = 'Key removed — LeetHint uses its free server again.';
+    showSaved(null);
+    syncInterview(state.problem);
+  });
+}
+
+// Settings → own API key card
 function openOwnKeySettings() {
   switchTab('stats');
   renderStats();

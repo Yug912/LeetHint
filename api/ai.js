@@ -15,6 +15,7 @@ import { BACKEND_URL } from './config.js';
 import { getInstallId, serverHeaders } from './install.js';
 import { fetchStaticHints, cleanFollowUps } from './static.js';
 import { classifyServerError, withBusyRetry, busyMessage } from './server-errors.js';
+import { getOwnKey, callDirect, OWN_KEY_PROVIDERS } from './direct.js';
 import { buildHintsPrompt, LANGUAGES, snippetNames, PROMPT_VERSION } from '../shared/prompts.js';
 
 export { LANGUAGES, getInstallId };
@@ -249,9 +250,38 @@ function notify(notice) {
   for (const fn of serverListeners) { try { fn(notice); } catch { /* a listener's bug isn't ours */ } }
 }
 
+// THE ROUTER — every AI call goes through here (the local cache and the
+// static file are checked before, in the side panel and generateHints()):
+//   own key set → straight to that provider (nothing reaches our Worker)
+//   otherwise   → the LeetHint Worker
+// With an own key, only requests that carry nothing made with that key
+// (the problem itself: hints / solve) may fall back to the Worker when the
+// provider fails. Fix, translations and interviews carry code or a
+// conversation made with the key, so they never do.
+const WORKER_FALLBACK_OK = new Set(['hints', 'solve']);
+
+export async function usingOwnKey() {
+  return !!(await getOwnKey());
+}
+
+async function callBackend(action, problem, opts = {}) {
+  const own = await getOwnKey();
+  if (own) {
+    try {
+      const text = await callDirect(action, problemPayload(problem), { ...opts, own });
+      console.log(`LeetHint: ${action} reply (own key, ${OWN_KEY_PROVIDERS[own.provider].name})`);
+      return text;
+    } catch (e) {
+      if (e.auth || !WORKER_FALLBACK_OK.has(action)) throw e;
+      console.warn(`LeetHint: own key failed (${e.message}) — using the LeetHint server`);
+    }
+  }
+  return callWorker(action, problem, opts);
+}
+
 // Waits in line while the server says it's busy (up to 3 minutes), then
 // gives up — callers fall back as they do when the server is unreachable
-async function callBackend(action, problem, opts = {}) {
+async function callWorker(action, problem, opts = {}) {
   let waited = false;
   try {
     return await withBusyRetry(() => callWorkerOnce(action, problem, opts), {
@@ -310,7 +340,7 @@ async function callWorkerOnce(action, problem, opts = {}) {
 // The server passes the provider's Server-Sent Events through untouched;
 // pull the answer text out of them. kind: 'openai' (OpenAI-style chat
 // chunks: Groq, Cerebras, OpenRouter), 'workersai' or 'gemini'. Reasoning is ignored.
-async function readAnswerStream(res, kind, onText) {
+export async function readAnswerStream(res, kind, onText) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = '', text = '';
