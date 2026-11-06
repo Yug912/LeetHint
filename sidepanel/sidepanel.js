@@ -194,7 +194,7 @@ async function init() {
   // Background, non-blocking — the problem loads in parallel
   loadCompaniesDB();
   removeLegacyKeys();
-  renderServiceStatus();
+  setupServiceStatusOnView();   // /health only once Settings is actually seen
 
   await loadLanguagePreference();
   // Mock interview: needs the problem + its verified solution (hidden reference)
@@ -250,6 +250,23 @@ const LEGACY_KEYS = ['geminiApiKey', 'openRouterApiKey', 'groqApiKey', 'cerebras
 
 async function removeLegacyKeys() {
   await chrome.storage.local.remove(LEGACY_KEYS).catch(() => {});
+}
+
+// Checking /health on every panel open costs a request per user per problem.
+// Check only when the Settings section scrolls into view, once per panel open.
+function setupServiceStatusOnView() {
+  const section = DOM.aiStatus?.closest('.settings-section');
+  if (!section) return;
+  if (typeof IntersectionObserver !== 'function') {
+    DOM.tabStats.addEventListener('click', () => renderServiceStatus(), { once: true });
+    return;
+  }
+  const observer = new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    observer.disconnect();
+    renderServiceStatus();
+  });
+  observer.observe(section);
 }
 
 async function renderServiceStatus() {
