@@ -3,7 +3,8 @@
 // Loaded as an ES module (see sidepanel.html)
 
 import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
-         translateSolution, LANGUAGES } from '../api/ai.js';
+         translateSolution, LANGUAGES, onServerNotice } from '../api/ai.js';
+import { getRemoteConfig, REMOTE_DEFAULTS } from '../api/remote.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory } from './interview.js';
 import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
@@ -163,6 +164,13 @@ const DOM = {
   distReadCount:  $('dist-read-count'),
   aiStatus:       $('ai-status'),
 
+  // Server banners
+  remoteMessage:     $('remote-message'),
+  serverNotice:      $('server-notice'),
+  serverNoticeText:  $('server-notice-text'),
+  serverNoticeBtn:   $('server-notice-btn'),
+  serverNoticeClose: $('server-notice-close'),
+
   // Revision (spaced repetition)
   revisionTabBadge:      $('revision-tab-badge'),
   revisionBar:           $('revision-bar'),
@@ -195,6 +203,8 @@ async function init() {
   loadCompaniesDB();
   removeLegacyKeys();
   setupServiceStatusOnView();   // /health only once Settings is actually seen
+  setupServerNotices();
+  loadRemoteConfig();
 
   await loadLanguagePreference();
   // Mock interview: needs the problem + its verified solution (hidden reference)
@@ -203,7 +213,8 @@ async function init() {
     getHintsFor: slug => (state.problem?.slug === slug ? state.hints : null),
     showToast,
     isReviewDue: slug => state.review?.slug === slug && !state.review.done,
-    onScored:    onInterviewScored
+    onScored:    onInterviewScored,
+    getRemote:   () => remote
   });
   renderRevision();   // migrates an old-format queue + the tab badge
   await loadCurrentProblem();
@@ -276,6 +287,71 @@ async function renderServiceStatus() {
   DOM.aiStatus.textContent = health.ok
     ? `✅ Connected — no setup needed${health.providers?.length ? ` (${health.providers.join(', ')})` : ''}`
     : '⚠️ Can\'t reach the LeetHint server — hints fall back to Chrome\'s built-in AI';
+}
+
+
+// ─────────────────────────────────────────────
+// 3b. REMOTE SWITCH + SERVER NOTICES
+//     /config can turn the interview or Fix off and show a one-line message.
+//     Until it answers (or if it never does) everything stays on.
+// ─────────────────────────────────────────────
+let remote = { ...REMOTE_DEFAULTS };
+
+async function loadRemoteConfig() {
+  try {
+    remote = await getRemoteConfig();
+  } catch {
+    remote = { ...REMOTE_DEFAULTS };
+  }
+  if (DOM.remoteMessage) {
+    DOM.remoteMessage.textContent = remote.message;
+    DOM.remoteMessage.hidden = !remote.message;
+  }
+  syncInterview(state.problem);
+  if (state.hints?.hint5) renderHintTexts();   // Fix button follows remote.fix
+}
+
+let noticeTimer = 0;
+function showNotice(text, { keyButton = false, closable = false } = {}) {
+  if (!DOM.serverNotice) return;
+  clearInterval(noticeTimer);
+  DOM.serverNoticeText.textContent = text;
+  DOM.serverNoticeBtn.hidden = !keyButton;
+  DOM.serverNoticeClose.hidden = !closable;
+  DOM.serverNotice.hidden = !text;
+}
+
+function setupServerNotices() {
+  DOM.serverNoticeClose?.addEventListener('click', () => showNotice(''));
+  DOM.serverNoticeBtn?.addEventListener('click', () => { showNotice(''); openOwnKeySettings(); });
+  onServerNotice(n => {
+    if (n.type === 'clear') {
+      // A trial message stays until dismissed; the waiting line goes away
+      if (DOM.serverNoticeBtn?.hidden) showNotice('');
+      return;
+    }
+    if (n.type === 'trial_used') return showNotice(n.message, { keyButton: true, closable: true });
+    if (n.type === 'wait') {
+      // Count down until the next try
+      let left = n.seconds;
+      showNotice(`⏳ High demand — you're in line (~${left} s)`);
+      noticeTimer = setInterval(() => {
+        left = Math.max(1, left - 1);
+        DOM.serverNoticeText.textContent = `⏳ High demand — you're in line (~${left} s)`;
+      }, 1000);
+    }
+  });
+}
+
+// Settings → own API key card (B7)
+function openOwnKeySettings() {
+  switchTab('stats');
+  renderStats();
+  const card = document.getElementById('own-key-section');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('own-key-input')?.focus({ preventScroll: true });
+  }
 }
 
 
@@ -718,8 +794,9 @@ function buildSolutionUI(el, code, approachNote) {
 
   async function showLanguage(lang) {
     const isCpp = lang === 'cpp';
-    fixBtn.hidden = !isCpp;          // Fix works on the verified C++ version
-    failureBox.hidden = !isCpp;
+    const canFix = isCpp && remote.fix !== false;   // the server can switch Fix off
+    fixBtn.hidden = !canFix;          // Fix works on the verified C++ version
+    failureBox.hidden = !canFix;
     transNote.hidden = isCpp;
     if (isCpp) {
       shownCode = code;

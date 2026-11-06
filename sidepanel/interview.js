@@ -96,7 +96,9 @@ export function syncInterview(problem) {
   if (!el.view) return;
   const slug = problem?.slug || '';
   const here = isInterviewActive(slug);
-  el.bar.hidden = !slug || here;
+  // The server can switch new interviews off (/config) — a running one finishes
+  const enabled = ctx?.getRemote?.()?.interview !== false;
+  el.bar.hidden = !slug || here || (!enabled && !session);
   el.start.disabled = !!session && !here;
   el.elsewhere.hidden = !(session && !here);
   if (session && !here) el.elsewhere.textContent = `Interview in progress on “${session.title}” — open that problem to continue or end it.`;
