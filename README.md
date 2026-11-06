@@ -93,7 +93,16 @@ A **30-minute mock interview** with an AI interviewer on the problem you have op
 > The first time, LeetHint opens a small page to ask for microphone access, since Chrome can't show the permission prompt inside the side panel.
 
 ### 🏢 Company Tags
-Know which **top tech companies** have asked each problem — pulled from a curated database of **hundreds of problems**, tagged with companies like Google, Meta, Amazon, Apple, and more.
+Know which **top tech companies** have asked each problem — pulled from a curated database of **hundreds of problems**, tagged with companies like Google, Meta, Amazon, Apple, and more. A fresh copy is fetched once a week; the bundled list works offline.
+
+### 🧠 Learn How You Think (all local)
+- **Pattern guess** — pick the technique before Hint 1 opens; Stats show how often you recognise each pattern, and weak ones show up in Revision
+- **Confidence check** — "Will you solve this without hints?" After 10 answers, Stats tell you whether you're over- or under-confident, per difficulty
+- **TLE warning** — on Run/Submit (or ⚡ Check speed), your loops are compared with the input size: *"Your nested loops look like O(n²). With n up to 10^5 this may time out"*. A heuristic, clearly labelled
+- **Tough-moment card** — after 3 failed submissions in 10 minutes, or a long stall, one gentle card: take a break, the next hint, or an easier problem on the same pattern
+- **Déjà vu** — *"This looks like #146 LRU Cache, which you solved 3 weeks ago with Hint 3"*
+- **Interview follow-ups** — 3 questions an interviewer might ask next, shown after you solve, answers hidden until clicked
+- **Streaks and CSV export** of your stats, revision and interview history
 
 ### 📐 TC / SC Checker
 Enter your own complexity and check it against the solution:
@@ -104,7 +113,8 @@ Enter your own complexity and check it against the solution:
 
 ### 🔒 Privacy First
 - **No API keys in the extension** — they live only on the server, as encrypted secrets
-- Only the problem's public data is sent to the server — no account, no personal data
+- Only the problem's public data is sent to the server — no account, no personal data. An anonymous random install ID is sent with each request so fair-use limits work without accounts
+- **Optional own key** (Settings) — your free Gemini, Groq or OpenRouter key is stored only in this browser and sent only to that provider; answers made with it never go to the LeetHint server
 - Mock interview conversations are **never cached or logged** on the server
 - Falls back to **Chrome's built-in AI** (`window.ai`) if the server can't be reached
 - Zero data collection — your stats, revision queue and interview history stay in Chrome's local storage
@@ -145,8 +155,15 @@ Install the extension, open a problem, and hints start streaming. All AI calls g
 - **Fast** — the server uses the fastest providers first (Cerebras, Groq), then OpenRouter and Gemini
 - **Shared cache** — once anyone has opened a problem, it loads instantly for everyone
 - **Never stuck** — a provider that hits its limit is skipped automatically; if a reply is cut off before the code, the solution is fetched separately
+- **Pre-generated hints** — popular problems come from verified static files (`leethint-cache.pages.dev`), so they cost no AI call at all
+- **Busy?** You'll see "you're in line" and LeetHint retries on its own (up to 3 minutes)
 
 > **Server unreachable?** LeetHint falls back to Chrome's built-in AI for basic hints (no solution code).
+
+### Your own free key (optional)
+Settings → **Your own free key**: pick Gemini, Groq or OpenRouter, paste a free key
+([Gemini](https://aistudio.google.com/apikey) · [Groq](https://console.groq.com/keys) · [OpenRouter](https://openrouter.ai/keys) — no card needed) and press **Test key**.
+With a key, new requests go straight to that provider: no trial limits, and 30-minute interviews.
 
 ### Running your own server
 
@@ -186,11 +203,19 @@ LeetHint/
 ├── manifest.json          # Extension config (MV3)
 ├── api/
 │   ├── ai.js              # Server client, streaming parser, built-in AI fallback, TC/SC matcher
-│   ├── interview.js       # Mock interview: reply/scorecard parsing, stage rules, code-change check
-│   └── config.js          # BACKEND_URL (public — no secrets)
+│   ├── interview.js       # Mock interview: reply/scorecard parsing, stage rules, summaries
+│   ├── static.js          # Pre-generated hint files from the cache site
+│   ├── direct.js          # Optional own API key: straight to Gemini / Groq / OpenRouter
+│   ├── remote.js          # /config remote switch (cached hourly)
+│   ├── server-errors.js   # Waiting line, rate limit and trial messages
+│   ├── install.js         # Anonymous install ID header
+│   └── config.js          # BACKEND_URL + CACHE_URL (public — no secrets)
 ├── shared/
 │   ├── prompts.js         # All prompts — used by the server AND the offline fallback
-│   └── revision.js        # Spaced-repetition schedule (pure logic, shared by panel + worker)
+│   ├── revision.js        # Spaced-repetition schedule (pure logic, shared by panel + worker)
+│   ├── patterns.js        # Pattern names → one table (pattern guess)
+│   ├── complexity.js      # TLE heuristic: constraints + loop nesting
+│   └── insights.js        # Confidence, tilt rules, déjà vu, streaks, CSV
 ├── backend/               # Cloudflare Worker that holds the API keys
 │   ├── src/index.js       # Routes, validation, rate limit, cache, streaming
 │   ├── src/providers.js   # Cerebras / Groq / OpenRouter / Gemini with model fallbacks
@@ -205,13 +230,17 @@ LeetHint/
 │   ├── sidepanel.css      # Styling (dark mode, glassmorphism)
 │   ├── sidepanel.js       # Main logic: hints, score, stats, revision tab
 │   ├── interview.js       # Mock interview UI and session flow
+│   ├── learning.js        # Pattern guess, confidence, tilt, TLE warning, déjà vu, streaks
+│   ├── editor.js          # Reads the LeetCode editor's code (read-only)
 │   ├── voice.js           # Speech synthesis + speech recognition
 │   └── mic-permission.*   # One-time microphone permission page
 ├── data/
 │   ├── companies.json     # Problem → company mapping database
 │   └── build_companies.py # Script to build the companies DB
-├── tests/
-│   └── revision.test.mjs  # Spaced-repetition tests (node --test tests/*.test.mjs)
+├── store/
+│   ├── build.sh           # Store zip (no localhost, no dev files): bash store/build.sh
+│   └── listing.md         # Store listing text and permission justifications
+├── tests/                 # node --test tests/*.test.mjs  (LEETHINT_LIVE=1 adds a live GraphQL check)
 └── icons/
 ```
 
@@ -272,13 +301,15 @@ LeetHint uses carefully tuned prompts that enforce:
 |------------|----------------|
 | `sidePanel` | Show the hint panel alongside LeetCode |
 | `storage` | Save your hints cache, progress and stats locally |
-| `tabs` | Detect when you navigate to a new problem |
-| `scripting` | Inject content script to read problem data |
+| `tabs` | Detect when you navigate to a new problem; open a suggested problem |
+| `scripting` | Inject the content script; read the editor's code (read-only) for the interview, TLE warning and tilt card |
 | `webNavigation` | Track problem page transitions |
 | `alarms` | Refresh the due-revisions badge just after local midnight |
 | `https://leetcode.com/*` | Access LeetCode pages |
 | `https://leethint-api.yugthakral07.workers.dev/*` | Call the LeetHint server (change it if you deploy your own) |
-| `http://localhost:8787/*` | Local server during development |
+| `https://leethint-cache.pages.dev/*` | Pre-generated hint files and the weekly company list |
+| `https://api.groq.com/*`, `https://openrouter.ai/*`, `https://generativelanguage.googleapis.com/*` | Only with your own key: requests go straight to that provider |
+| `http://localhost:8787/*` | Local server during development — removed by `store/build.sh` |
 
 ---
 
@@ -317,8 +348,8 @@ node --test tests/*.test.mjs
 
 ### Ideas for contributions
 - [ ] Support for more coding platforms (HackerRank, Codeforces)
-- [ ] Export stats to CSV
-- [ ] Streaks and achievement badges
+- [x] Export stats to CSV
+- [x] Streaks (achievement badges still open)
 - [ ] Dark/light theme toggle
 - [ ] More company data entries
 
