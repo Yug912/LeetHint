@@ -182,25 +182,81 @@ const SAFE_HINT = "I can't give the technique away, but look at what work your c
 // 5. SERVER CALLS
 // ─────────────────────────────────────────────
 
+// Cheaper turns (contract item 9): every SUMMARY_EVERY interviewer turns the
+// server writes a short summary of the conversation so far; later turns send
+// that summary + only the last RECENT_TURNS turns, and the editor code only
+// when it changed meaningfully. Until the server has answered one
+// interview_summary (older Worker: no such action), turns send the full
+// transcript and the code every time, exactly as before.
+export const SUMMARY_EVERY = 6;
+export const RECENT_TURNS = 4;
+export const SUMMARY_MAX_CHARS = 1500;
+
+const transcript = session => session.history
+  .filter(h => h.role === 'interviewer' || h.role === 'candidate')
+  .map(h => ({ role: h.role, text: h.text }));
+
 // Only what the server reads, and only the recent transcript (it trims
-// again, oldest first) — keeps every request small
-function interviewPayload(session, event, code, reference) {
-  const history = session.history
-    .filter(h => h.role === 'interviewer' || h.role === 'candidate')
-    .map(h => ({ role: h.role, text: h.text }));
-  return {
+// again, oldest first) — keeps every request small.
+// full: the whole transcript even in summary mode (the scorecard)
+export function interviewPayload(session, event, code, reference, { full = false } = {}) {
+  const history = transcript(session);
+  const base = {
     event,
     stage: session.stage,
     elapsedSec: Math.floor((Date.now() - session.startedAt) / 1000),
     hintsGiven: session.hintsGiven,
     code: code || '',
-    history: history.length > 80 ? [...history.slice(0, 2), ...history.slice(-78)] : history,
-    reference: reference || undefined
+    reference: reference || undefined,
+    ...(session.interviewId ? { interviewId: session.interviewId } : {}),
+    ...(session.durationMin ? { durationMin: session.durationMin } : {})
   };
+  if (!full && session.summary) {
+    return { ...base, summary: session.summary.slice(0, SUMMARY_MAX_CHARS), history: history.slice(-RECENT_TURNS) };
+  }
+  return { ...base, history: history.length > 80 ? [...history.slice(0, 2), ...history.slice(-78)] : history };
+}
+
+// Time for a new summary? (after every 6th interviewer turn, once each)
+export function needsSummary(session) {
+  if (!session || session.summaryUnsupported) return false;
+  const turns = session.history.filter(h => h.role === 'interviewer').length;
+  return turns > 0 && turns % SUMMARY_EVERY === 0 && session.summaryAtTurn !== turns;
+}
+
+// Asks for the summary and keeps it in the session. An older server (or an
+// own-key prompt set without this action) → never asked again this interview.
+export async function summarizeInterview(problem, session) {
+  const turns = session.history.filter(h => h.role === 'interviewer').length;
+  session.summaryAtTurn = turns;
+  try {
+    const raw = await callInterviewer('interview_summary', problem, {
+      ...(session.interviewId ? { interviewId: session.interviewId } : {}),
+      history: transcript(session)
+    });
+    const text = String(raw || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim().slice(0, SUMMARY_MAX_CHARS);
+    if (text) session.summary = text;
+    return !!text;
+  } catch (e) {
+    if (e.status === 400 || e.status === 404 || e.code === 'unsupported') session.summaryUnsupported = true;
+    console.warn('LeetHint: interview summary skipped →', e.message);
+    return false;
+  }
+}
+
+// The editor code for this turn: in summary mode, only when it changed
+// meaningfully since it was last sent ('' otherwise)
+export function codeForTurn(session, code) {
+  const current = code || '';
+  if (!session.summary) return current;
+  if (session.lastSentCode != null && !codeChangedMeaningfully(session.lastSentCode, current)) return '';
+  return current;
 }
 
 export async function interviewerTurn(problem, session, event, { code, reference } = {}) {
-  const payload = interviewPayload(session, event, code, reference);
+  const sentCode = codeForTurn(session, code);
+  const payload = interviewPayload(session, event, sentCode, reference);
+  if (sentCode) session.lastSentCode = sentCode;
   const ask = async extra => parseInterviewerReply(
     await callInterviewer('interview_turn', problem, { ...payload, ...extra }), session.stage);
   const problemOf = r => !r.reply ? null
@@ -221,7 +277,8 @@ export async function interviewerTurn(problem, session, event, { code, reference
 }
 
 export async function scoreInterview(problem, session, { code, reference } = {}) {
-  const payload = interviewPayload(session, 'answer', code, reference);
+  // The scorecard is graded once — it gets the whole conversation and the code
+  const payload = interviewPayload(session, 'answer', code, reference, { full: true });
   payload.elapsedSec = Math.floor(((session.endedAt || Date.now()) - session.startedAt) / 1000);
   let card = parseScorecard(await callInterviewer('interview_score', problem, payload));
   if (!card) card = parseScorecard(await callInterviewer('interview_score', problem, payload));   // one retry

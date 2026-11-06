@@ -7,7 +7,7 @@
 //
 // One fixed, tested model per provider — users don't pick models.
 
-import { buildPrompt } from '../shared/prompts.js';
+import { buildPrompt, ACTIONS } from '../shared/prompts.js';
 import { readAnswerStream } from './ai.js';
 
 export const OWN_KEY_PROVIDERS = {
@@ -133,6 +133,11 @@ export async function callDirect(action, problem, opts = {}) {
   const { own, onText, code = '', lowEffort = false, fetchImpl = globalThis.fetch } = opts;
   const cfg = OWN_KEY_PROVIDERS[own?.provider];
   if (!cfg) throw new Error('No own key set');
+  // An action this version's prompts don't know (e.g. interview_summary
+  // before Person A ships it) would silently get the solution prompt instead
+  if (!ACTIONS.includes(action)) {
+    throw Object.assign(new Error(`"${action}" isn't available with an own key yet`), { code: 'unsupported' });
+  }
   const extra = { language: opts.language, snippet: opts.snippet, languages: opts.languages,
                   snippets: opts.snippets, failure: opts.failure, interview: opts.interview };
   const prompt = buildPrompt(action, problem, code, extra);
