@@ -14,6 +14,7 @@
 import { BACKEND_URL } from './config.js';
 import { getInstallId, serverHeaders } from './install.js';
 import { fetchStaticHints } from './static.js';
+import { classifyServerError, withBusyRetry, busyMessage } from './server-errors.js';
 import { buildHintsPrompt, LANGUAGES, snippetNames } from '../shared/prompts.js';
 
 export { LANGUAGES, getInstallId };
@@ -216,8 +217,39 @@ function problemPayload(p) {
   };
 }
 
-// onText(fullTextSoFar) is called as the reply streams in
+// The side panel listens for server notices: { type: 'wait', seconds, position,
+// message } while waiting in line, { type: 'trial_used', ... } when a trial
+// is used up, and { type: 'clear' } once the request is over.
+const serverListeners = new Set();
+export function onServerNotice(fn) {
+  serverListeners.add(fn);
+  return () => serverListeners.delete(fn);
+}
+function notify(notice) {
+  for (const fn of serverListeners) { try { fn(notice); } catch { /* a listener's bug isn't ours */ } }
+}
+
+// Waits in line while the server says it's busy (up to 3 minutes), then
+// gives up — callers fall back as they do when the server is unreachable
 async function callBackend(action, problem, opts = {}) {
+  let waited = false;
+  try {
+    return await withBusyRetry(() => callWorkerOnce(action, problem, opts), {
+      onWait: (seconds, position) => {
+        waited = true;
+        notify({ type: 'wait', action, seconds, position, message: busyMessage(seconds) });
+      }
+    });
+  } catch (e) {
+    if (e.code === 'trial_used') notify({ type: 'trial_used', action: e.action, resetsAt: e.resetsAt, message: e.message });
+    throw e;
+  } finally {
+    if (waited) notify({ type: 'clear' });
+  }
+}
+
+// onText(fullTextSoFar) is called as the reply streams in
+async function callWorkerOnce(action, problem, opts = {}) {
   const { code = '', onText, language, snippet, languages, snippets, interview, failure, reason, lowEffort = false } = opts;
   let res;
   try {
@@ -235,8 +267,9 @@ async function callBackend(action, problem, opts = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const err = new Error(body.error || `LeetHint server error (${res.status})`);
-    err.status = res.status;
+    const info = classifyServerError(res.status, body, res.headers);
+    const err = new Error(info.message);
+    Object.assign(err, info, { status: res.status });
     throw err;
   }
 
@@ -247,7 +280,7 @@ async function callBackend(action, problem, opts = {}) {
     // The model spent its whole token budget thinking — ask again with less thinking
     if (!lowEffort) {
       console.warn(`LeetHint: ${action} reply had no answer text — retrying with low reasoning`);
-      return callBackend(action, problem, { ...opts, lowEffort: true });
+      return callWorkerOnce(action, problem, { ...opts, lowEffort: true });
     }
     throw new Error('The AI returned an empty reply — please retry.');
   }
