@@ -9,20 +9,23 @@
 //         → scorecard → saved to interviewHistory (shown on the Stats tab)
 
 import { INTERVIEW_STAGES, INTERVIEW_MINUTES, STAGE_LABELS, SCORE_KEYS, SCORE_LABELS,
-         interviewerTurn, scoreInterview, codeChangedMeaningfully, referenceFromHints } from '../api/interview.js';
+         interviewerTurn, scoreInterview, codeChangedMeaningfully, referenceFromHints,
+         needsSummary, summarizeInterview } from '../api/interview.js';
 import { speak, stopSpeaking, isSpeaking, onSpeakingChange, setMuted, isMuted,
          Listener, speechSupported, micPermission, openMicPermissionPage } from './voice.js';
 
 const SESSION_KEY   = 'activeInterview';
 const HISTORY_KEY   = 'interviewHistory';
 const MUTE_KEY      = 'interviewMuted';
-const DURATION_MS   = INTERVIEW_MINUTES * 60 * 1000;
+// A session's own length: 30 minutes, or the free trial's length (from /config)
+const durationMs = s => (s?.durationMin || INTERVIEW_MINUTES) * 60 * 1000;
 const CODE_CHECK_MS = 60 * 1000;        // read the editor every minute
 const IDLE_NUDGE_MS = 3 * 60 * 1000;    // "think out loud" after 3 quiet minutes
 const MAX_SAVED     = 50;
 const HOLD_MS       = 600;              // held longer than this = push-to-talk
 
-let ctx = null;            // { getProblem(), getHintsFor(slug), showToast(msg), isReviewDue(slug), onScored(session, card) }
+let ctx = null;            // { getProblem(), getHintsFor(slug), showToast(msg), isReviewDue(slug), onScored(session, card),
+                           //   interviewPlan() → { minutes, trial } }
 let session = null;        // the saved interview (see startInterview)
 let viewOn = false;
 let tickTimer = null;
@@ -99,6 +102,9 @@ export function syncInterview(problem) {
   // The server can switch new interviews off (/config) — a running one finishes
   const enabled = ctx?.getRemote?.()?.interview !== false;
   el.bar.hidden = !slug || here || (!enabled && !session);
+  const sub = el.start.querySelector('.interview-bar-sub');
+  const plan = ctx?.interviewPlan?.() || { minutes: INTERVIEW_MINUTES, trial: false };
+  if (sub) sub.textContent = `${plan.minutes} min${plan.trial ? ' free trial' : ''} · voice`;
   el.start.disabled = !!session && !here;
   el.elsewhere.hidden = !(session && !here);
   if (session && !here) el.elsewhere.textContent = `Interview in progress on “${session.title}” — open that problem to continue or end it.`;
@@ -130,7 +136,12 @@ export async function startInterview() {
   const p = ctx.getProblem();
   if (!p?.slug || session) return false;
   const now = Date.now();
+  // Own key: 30 minutes. Free server: the trial length from /config (30 until the server has trials)
+  const plan = ctx.interviewPlan?.() || { minutes: INTERVIEW_MINUTES, trial: false };
   session = {
+    interviewId: crypto.randomUUID(),
+    durationMin: plan.minutes,
+    trial: plan.trial,          // trials send no code check-ins
     slug: p.slug, title: p.title, difficulty: p.difficulty, problemNumber: p.problemNumber,
     review: !!ctx.isReviewDue?.(p.slug),   // a due revision — the scorecard schedules the next one
     startedAt: now, stage: 'intro', history: [], hintsGiven: 0,
@@ -149,7 +160,7 @@ function resume() {
   if (session.scorecard) return;                                    // just show it
   if (session.ended) return void finishInterview(session.endReason || 'ended');
   const elapsed = Date.now() - session.startedAt;
-  if (elapsed > DURATION_MS + 5 * 60 * 1000 || (elapsed >= DURATION_MS && session.timeupSent)) {
+  if (elapsed > durationMs(session) + 5 * 60 * 1000 || (elapsed >= durationMs(session) && session.timeupSent)) {
     return void finishInterview('timeup');                          // time ran out while away
   }
   const last = session.history.at(-1);
@@ -262,6 +273,11 @@ async function runTurn(event, codeOverride) {
     markActivity();   // the idle clock restarts after the interviewer speaks
     await save();
     setStatus('');
+    // Every 6 interviewer turns: a short summary replaces the old transcript
+    if (needsSummary(session)) {
+      const s = session;
+      summarizeInterview(problem, s).then(ok => { if (ok && session === s) save(); });
+    }
   } catch (e) {
     if (quiet(event)) { console.warn('LeetHint: interviewer check-in skipped →', e.message); return; }
     setStatus(`⚠️ ${e.message}`, () => queueTurn(event));
@@ -315,7 +331,7 @@ function stopTicking() {
 function tick() {
   if (!session || session.ended) return stopTicking();
   const now = Date.now();
-  const left = Math.max(0, DURATION_MS - (now - session.startedAt));
+  const left = Math.max(0, durationMs(session) - (now - session.startedAt));
   renderTimer(left);
 
   if (left === 0) {
@@ -345,7 +361,7 @@ async function checkCode() {
   session.lastCode = code;
   markActivity();
   save();
-  if (session.stage === 'coding' && !busy && !queued.size && !isSpeaking() && !listener.active) {
+  if (session.stage === 'coding' && !session.trial && !busy && !queued.size && !isSpeaking() && !listener.active) {
     queueTurn('code', code);
   }
 }
@@ -469,8 +485,8 @@ function renderAll() {
   el.log.replaceChildren(...session.history.map(messageEl));
   el.log.scrollTop = el.log.scrollHeight;
   renderMeta();
-  renderTimer(session.ended ? Math.max(0, DURATION_MS - ((session.endedAt || Date.now()) - session.startedAt))
-                            : Math.max(0, DURATION_MS - (Date.now() - session.startedAt)));
+  renderTimer(session.ended ? Math.max(0, durationMs(session) - ((session.endedAt || Date.now()) - session.startedAt))
+                            : Math.max(0, durationMs(session) - (Date.now() - session.startedAt)));
   if (session.scorecard) renderScorecard(session.scorecard);
   else if (!scoring) el.scorecard.hidden = true;
   updateControls();

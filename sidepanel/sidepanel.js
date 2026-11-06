@@ -7,6 +7,7 @@ import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
 import { CACHE_URL } from '../api/config.js';
 import { getRemoteConfig, REMOTE_DEFAULTS } from '../api/remote.js';
 import { OWN_KEY_PROVIDERS, getOwnKey, saveOwnKey, removeOwnKey, testOwnKey } from '../api/direct.js';
+import { INTERVIEW_MINUTES } from '../api/interview.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory } from './interview.js';
 import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
@@ -260,7 +261,12 @@ async function init() {
     showToast,
     isReviewDue: slug => state.review?.slug === slug && !state.review.done,
     onScored:    onInterviewScored,
-    getRemote:   () => remote
+    getRemote:   () => remote,
+    // Own key: the full 30 minutes. Free server: the trial length from /config
+    // (until the server has trials it sends none → 30 minutes, as before)
+    interviewPlan: () => (!ownKeySet && remote.trialInterviewMinutes)
+      ? { minutes: remote.trialInterviewMinutes, trial: true }
+      : { minutes: INTERVIEW_MINUTES, trial: false }
   });
   renderRevision();   // migrates an old-format queue + the tab badge
   await loadCurrentProblem();
@@ -342,6 +348,7 @@ async function renderServiceStatus() {
 //     Until it answers (or if it never does) everything stays on.
 // ─────────────────────────────────────────────
 let remote = { ...REMOTE_DEFAULTS };
+let ownKeySet = false;   // an own API key is saved (Settings)
 
 async function loadRemoteConfig() {
   try {
@@ -416,7 +423,10 @@ async function setupOwnKeySettings() {
     showNote();
   };
 
-  showSaved(await getOwnKey());
+  const initial = await getOwnKey();
+  ownKeySet = !!initial;
+  showSaved(initial);
+  syncInterview(state.problem);
   provider.addEventListener('change', () => { showNote(); status.textContent = ''; });
 
   testBtn.addEventListener('click', async () => {
@@ -434,6 +444,7 @@ async function setupOwnKeySettings() {
       await saveOwnKey(provider.value, toTest);
       status.textContent = '✅ Key works — LeetHint now uses it for new requests.';
       showSaved(await getOwnKey());
+      ownKeySet = true;
       showNotice('');
       syncInterview(state.problem);
     } catch (e) {
@@ -445,6 +456,7 @@ async function setupOwnKeySettings() {
     await removeOwnKey();
     status.textContent = 'Key removed — LeetHint uses its free server again.';
     showSaved(null);
+    ownKeySet = false;
     syncInterview(state.problem);
   });
 }
