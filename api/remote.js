@@ -10,6 +10,8 @@ import { serverHeaders } from './install.js';
 
 export const CONFIG_MAX_AGE_MS = 60 * 60 * 1000;
 const STORAGE_KEY = 'remoteConfig';
+const OVERRIDE_KEY = 'remoteConfigOverride';   // testing only — set by hand in DevTools
+const CONFIG_TIMEOUT_MS = 4000;
 
 export const REMOTE_DEFAULTS = Object.freeze({
   interview: true,
@@ -42,7 +44,10 @@ export async function getRemoteConfig({
   fetchImpl = globalThis.fetch, now = Date.now(), storage = globalThis.chrome?.storage?.local, baseUrl = BACKEND_URL
 } = {}) {
   try {
-    const saved = (await storage?.get(STORAGE_KEY))?.[STORAGE_KEY];
+    const stored = await storage?.get([STORAGE_KEY, OVERRIDE_KEY]);
+    // Testing aid: a hand-set override wins, with no network call (see README)
+    if (stored?.[OVERRIDE_KEY] && typeof stored[OVERRIDE_KEY] === 'object') return normalizeConfig(stored[OVERRIDE_KEY]);
+    const saved = stored?.[STORAGE_KEY];
     if (saved && typeof saved.at === 'number' && now - saved.at < CONFIG_MAX_AGE_MS && now >= saved.at) {
       return normalizeConfig(saved.value);
     }
@@ -51,15 +56,23 @@ export async function getRemoteConfig({
   // One request even if several parts of the panel ask at once
   if (!inFlight) {
     inFlight = (async () => {
-      try {
-        const res = await fetchImpl(`${baseUrl}/config`, { headers: await serverHeaders(), signal: AbortSignal.timeout(5000) });
-        if (!res.ok) return { ...REMOTE_DEFAULTS };   // older Worker: no /config yet
-        const value = normalizeConfig(await res.json());
+      const remember = async value => {
         try { await storage?.set({ [STORAGE_KEY]: { at: now, value } }); } catch { /* fine */ }
         return value;
-      } catch {
-        return { ...REMOTE_DEFAULTS };
+      };
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), CONFIG_TIMEOUT_MS);
+      try {
+        const res = await fetchImpl(`${baseUrl}/config`, { headers: await serverHeaders(), signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);   // older Worker: no /config yet
+        return remember(normalizeConfig(await res.json()));
+      } catch (e) {
+        // Any failure → defaults, remembered too, so a missing endpoint is
+        // asked at most once an hour instead of on every panel open
+        console.debug('LeetHint: /config unavailable (' + (e?.name === 'AbortError' ? 'timeout' : e?.message) + ') — everything stays on');
+        return remember({ ...REMOTE_DEFAULTS });
       } finally {
+        clearTimeout(timer);
         inFlight = null;
       }
     })();
