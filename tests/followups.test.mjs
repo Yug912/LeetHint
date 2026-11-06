@@ -89,3 +89,19 @@ test('empty problem data and no file: a clear message, no AI call', async () => 
   await assert.rejects(generateHints({ slug: 'new-problem', title: 'New Problem', description: '' }), /LeetCode changed its page/);
   assert.equal(asked.some(u => u.includes('/v1/generate')), false);
 });
+
+// ── B1 lookup order: local cache → static file → Worker ──
+test('a static result is saved under hints_v3_<slug>, and the next visit fetches nothing', async () => {
+  store.delete('hints_v3_two-sum');
+  let asked = 0;
+  globalThis.fetch = async () => { asked++; return Response.json(sample); };
+  const problem = { slug: 'two-sum', title: 'Two Sum', description: 'Find two numbers.' };
+  const first = await generateHints(problem);
+  assert.equal(asked, 1);
+  assert.deepEqual(store.get('hints_v3_two-sum'), first);
+  let partials = 0;
+  const again = await generateHints(problem, { onPartial: () => partials++ });
+  assert.equal(asked, 1, 'no request at all on a repeat visit');
+  assert.equal(again.hint1, first.hint1);
+  assert.equal(partials, 1);
+});
