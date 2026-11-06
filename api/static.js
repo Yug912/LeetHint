@@ -52,14 +52,22 @@ export function mapStaticFile(file) {
 // → hints object, or null when there is no usable file
 export async function fetchStaticHints(slug, { fetchImpl = globalThis.fetch, timeoutMs = STATIC_TIMEOUT_MS, baseUrl = CACHE_URL } = {}) {
   if (!slug || !baseUrl) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetchImpl(`${baseUrl}/cache/${encodeURIComponent(slug.toLowerCase())}.json`, {
-      signal: AbortSignal.timeout(timeoutMs)
-    });
-    if (!res.ok) return null;
+    const res = await fetchImpl(`${baseUrl}/cache/${encodeURIComponent(slug.toLowerCase())}.json`, { signal: controller.signal });
+    if (!res.ok) return miss(slug, `HTTP ${res.status}`);
     const file = await res.json();
-    return isValidStaticFile(file, slug) ? mapStaticFile(file) : null;
-  } catch {
-    return null;   // offline, timeout, not JSON — the Worker path takes over
+    return isValidStaticFile(file, slug) ? mapStaticFile(file) : miss(slug, 'malformed file');
+  } catch (e) {
+    return miss(slug, e?.name === 'AbortError' ? 'timeout' : e?.message);   // offline, timeout, not JSON
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+// No usable file → the Worker path takes over, as before
+function miss(slug, why) {
+  console.debug(`LeetHint: no static hints for ${slug} (${why}) — using the server`);
+  return null;
 }
