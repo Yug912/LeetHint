@@ -449,6 +449,17 @@ function applyReference(result, reference) {
 // 5. MAIN EXPORT — generateHints()
 // ─────────────────────────────────────────────
 
+// Saved hints for this problem — complete ones only (the side panel treats
+// hints without TC/SC as stale too). Storage errors → treated as a miss.
+async function readLocalHints(cacheKey) {
+  try {
+    const hints = (await chrome.storage.local.get(cacheKey))[cacheKey];
+    return hints?.hint1 && hints.optimal_tc && hints.optimal_sc ? hints : null;
+  } catch {
+    return null;
+  }
+}
+
 // onPartial(partialHints) is called each time the visible hint text changes.
 // language: the user's own solution language — when it isn't C++, the same
 // reply also contains the solution in that language (no second request).
@@ -456,12 +467,23 @@ function applyReference(result, reference) {
 export async function generateHints(problemData, { onPartial, language = 'cpp' } = {}) {
   console.log('LeetHint: generateHints() called for:', problemData.title);
 
+  // Lookup order: 1) this browser's cache — a repeat visit never fetches the
+  // file; 2) the pre-generated static file; 3) the Worker, as before.
+  const cacheKey = `hints_v3_${problemData.slug}`;
+  const local = await readLocalHints(cacheKey);
+  if (local) {
+    onPartial?.({ ...local, streaming: '' });
+    return local;
+  }
+
   // Pre-generated file on the static cache site → no AI call at all.
-  // Already compiled and signature-checked, and it carries the main languages.
+  // Already compiled and signature-checked (so no ensureSignature()), and it
+  // carries the main languages as translations.
   const fromFile = await fetchStaticHints(problemData.slug);
   if (fromFile) {
     console.log('LeetHint: hints from the static cache', fromFile.promptVersion || '');
     onPartial?.({ ...fromFile, streaming: '' });
+    await chrome.storage.local.set({ [cacheKey]: fromFile }).catch(() => {});   // same key as Worker results
     return fromFile;
   }
   // No problem text (LeetCode changed its page) and no file: an AI would
