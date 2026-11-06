@@ -253,7 +253,14 @@ async function init() {
   setupServerNotices();
   setupReportListeners();
   setupOwnKeySettings();
-  loadRemoteConfig();
+  loadRemoteConfig();   // not awaited — the panel starts as if everything is on
+  // A panel left open picks up a change within the hour; clearing remoteConfig
+  // (or setting remoteConfigOverride) in DevTools applies at once
+  setInterval(loadRemoteConfig, 60 * 60 * 1000);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (changes.remoteConfigOverride || (changes.remoteConfig && !changes.remoteConfig.newValue)) loadRemoteConfig();
+  });
 
   await loadLanguagePreference();
   // Mock interview: needs the problem + its verified solution (hidden reference)
@@ -324,24 +331,35 @@ async function removeLegacyKeys() {
 }
 
 // Checking /health on every panel open costs a request per user per problem.
-// Check only when the Settings section scrolls into view, once per panel open.
+// Settings is an always-open section at the bottom of the (scrollable) Stats
+// tab, so: once the Stats tab is opened, watch for Settings to scroll into
+// view, then check once. A new panel = a new page, so the flag resets.
+let serviceStatusChecked = false;
+let serviceStatusWatching = false;
+
 function setupServiceStatusOnView() {
+  DOM.tabStats.addEventListener('click', watchServiceStatus);
+}
+
+function watchServiceStatus() {
+  if (serviceStatusChecked || serviceStatusWatching) return;
   const section = DOM.aiStatus?.closest('.settings-section');
   if (!section) return;
-  if (typeof IntersectionObserver !== 'function') {
-    DOM.tabStats.addEventListener('click', () => renderServiceStatus(), { once: true });
-    return;
-  }
+  if (typeof IntersectionObserver !== 'function') return void renderServiceStatus();
+  serviceStatusWatching = true;
   const observer = new IntersectionObserver(entries => {
-    if (!entries.some(e => e.isIntersecting)) return;
+    // Only while the Stats tab is the one showing
+    if (state.currentTab !== 'stats' || !entries.some(e => e.isIntersecting)) return;
     observer.disconnect();
+    serviceStatusWatching = false;
     renderServiceStatus();
   });
   observer.observe(section);
 }
 
 async function renderServiceStatus() {
-  if (!DOM.aiStatus) return;
+  if (!DOM.aiStatus || serviceStatusChecked) return;
+  serviceStatusChecked = true;   // set BEFORE the request: a second trigger sends nothing
   DOM.aiStatus.textContent = 'Checking…';
   const health = await checkBackend();
   DOM.aiStatus.textContent = health.ok
@@ -365,7 +383,9 @@ async function loadRemoteConfig() {
     remote = { ...REMOTE_DEFAULTS };
   }
   if (DOM.remoteMessage) {
+    // From the server → textContent only, never HTML; one line, full text on hover
     DOM.remoteMessage.textContent = remote.message;
+    DOM.remoteMessage.title = remote.message;
     DOM.remoteMessage.hidden = !remote.message;
   }
   syncInterview(state.problem);
@@ -473,6 +493,7 @@ async function setupOwnKeySettings() {
 function openOwnKeySettings() {
   switchTab('stats');
   renderStats();
+  watchServiceStatus();
   const card = document.getElementById('own-key-section');
   if (card) {
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });

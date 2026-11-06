@@ -160,6 +160,17 @@ Install the extension, open a problem, and hints start streaming. All AI calls g
 
 > **Server unreachable?** LeetHint falls back to Chrome's built-in AI for basic hints (no solution code).
 
+### Remote switch (`/config`)
+The server can hide **Start Mock Interview** or **Fix**, or show a one-line message. The extension asks at most once an hour
+(also after a failure), and anything missing or broken means "everything on, no message".
+To try it without a server, open the side panel's DevTools (right-click the panel → **Inspect**) and run:
+
+```js
+chrome.storage.local.set({ remoteConfigOverride: { interview: false, fix: false, message: 'Server maintenance tonight' } })
+chrome.storage.local.remove('remoteConfigOverride')   // back to normal
+chrome.storage.local.remove('remoteConfig')           // forget the cached answer → asks /config again now
+```
+
 ### Your own free key (optional)
 Settings → **Your own free key**: pick Gemini, Groq or OpenRouter, paste a free key
 ([Gemini](https://aistudio.google.com/apikey) · [Groq](https://console.groq.com/keys) · [OpenRouter](https://openrouter.ai/keys) — no card needed) and press **Test key**.
