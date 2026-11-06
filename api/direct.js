@@ -145,8 +145,10 @@ export async function callDirect(action, problem, opts = {}) {
 
   let res;
   try {
-    res = await fetchImpl(url, { ...init, signal: AbortSignal.timeout(180000) });
+    const timeout = AbortSignal.timeout(180000);
+    res = await fetchImpl(url, { ...init, signal: opts.signal && AbortSignal.any ? AbortSignal.any([opts.signal, timeout]) : timeout });
   } catch {
+    if (opts.signal?.aborted) throw Object.assign(new Error('Cancelled'), { name: 'AbortError' });
     const err = new Error(`Could not reach ${cfg.name} — check your connection.`);
     err.offline = true;
     throw err;

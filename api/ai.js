@@ -14,7 +14,9 @@
 import { BACKEND_URL } from './config.js';
 import { getInstallId, serverHeaders } from './install.js';
 import { fetchStaticHints, cleanFollowUps } from './static.js';
-import { classifyServerError, withBusyRetry, busyMessage } from './server-errors.js';
+import { classifyServerResponse, messageFor, runWithBusyRetry, busyMessage } from './server-errors.js';
+
+export { classifyServerResponse, messageFor };
 import { getOwnKey, callDirect, OWN_KEY_PROVIDERS } from './direct.js';
 import { buildHintsPrompt, LANGUAGES, snippetNames, PROMPT_VERSION } from '../shared/prompts.js';
 
@@ -279,24 +281,36 @@ async function callBackend(action, problem, opts = {}) {
   return callWorker(action, problem, opts);
 }
 
-// Waits in line while the server says it's busy (up to 3 minutes), then
-// gives up — callers fall back as they do when the server is unreachable
+// Waits in line while the server says it's busy (3 minutes from the first
+// busy reply), then gives up — callers fall back as they do when the server
+// is unreachable. opts.signal cancels the wait (new problem, new request).
+// Every retry is a full callWorkerOnce(), so the install header goes along.
 async function callWorker(action, problem, opts = {}) {
   let waited = false;
   try {
-    return await withBusyRetry(() => callWorkerOnce(action, problem, opts), {
-      onWait: (seconds, position) => {
+    return await runWithBusyRetry({
+      request: () => callWorkerOnce(action, problem, opts),
+      signal: opts.signal,
+      onWaiting: (seconds, position) => {
         waited = true;
         notify({ type: 'wait', action, seconds, position, message: busyMessage(seconds) });
       }
     });
   } catch (e) {
-    if (e.code === 'trial_used') notify({ type: 'trial_used', action: e.action, resetsAt: e.resetsAt, message: e.message });
+    if (e.kind === 'busy') e.message = 'LeetHint is very busy right now — please try again in a few minutes.';
+    if (e.kind === 'trial_used') notify({ type: 'trial_used', action: e.action, resetsAt: e.resetsAt, message: e.message });
     throw e;
   } finally {
-    if (waited) notify({ type: 'clear' });
+    if (waited) notify({ type: 'clear', action });
   }
 }
+
+// A request's own cancel signal + the long reply timeout
+function requestSignal(signal, ms) {
+  const timeout = AbortSignal.timeout(ms);
+  return signal && AbortSignal.any ? AbortSignal.any([signal, timeout]) : timeout;
+}
+const cancelled = () => Object.assign(new Error('Cancelled'), { name: 'AbortError' });
 
 // onText(fullTextSoFar) is called as the reply streams in
 async function callWorkerOnce(action, problem, opts = {}) {
@@ -307,19 +321,20 @@ async function callWorkerOnce(action, problem, opts = {}) {
       method: 'POST',
       headers: await serverHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, failure, reason, lowEffort }),
-      signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
+      signal: requestSignal(opts.signal, 180000)   // reasoning models can think for a while
     });
   } catch (e) {
+    if (opts.signal?.aborted) throw cancelled();
     const err = new Error('Could not reach the LeetHint server — check your connection.');
     err.offline = true;
     throw err;
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const info = classifyServerError(res.status, body, res.headers);
-    const err = new Error(info.message);
-    Object.assign(err, info, { status: res.status });
+    const body = await res.json().catch(() => null);
+    const info = classifyServerResponse(res, body);
+    const err = new Error(messageFor(info));
+    Object.assign(err, info, { code: info.kind, status: res.status });
     throw err;
   }
 
@@ -460,11 +475,15 @@ async function readLocalHints(cacheKey) {
   }
 }
 
+// Refusals shown as they are — Chrome's built-in AI is not a way around them
+const NO_FALLBACK = new Set(['rate_limited', 'trial_used', 'blocked']);
+
 // onPartial(partialHints) is called each time the visible hint text changes.
 // language: the user's own solution language — when it isn't C++, the same
 // reply also contains the solution in that language (no second request).
 // Any other language is translated from the C++ only when it's picked.
-export async function generateHints(problemData, { onPartial, language = 'cpp' } = {}) {
+// signal: cancels a wait in line (the user moved to another problem / asked again)
+export async function generateHints(problemData, { onPartial, language = 'cpp', signal } = {}) {
   console.log('LeetHint: generateHints() called for:', problemData.title);
 
   // Lookup order: 1) this browser's cache — a repeat visit never fetches the
@@ -500,7 +519,7 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
     if (shown !== lastShown) { lastShown = shown; onPartial(partial); }
   });
 
-  const also = withLanguage(problemData, language);
+  const also = { ...withLanguage(problemData, language), signal };
 
   try {
     let raw = await callBackend('hints', problemData, { onText, ...also });
@@ -527,7 +546,7 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
         console.warn('LeetHint: separate solution request failed →', e.message);
       }
     }
-    if (reference.code) reference = await ensureSignature(reference, problemData);
+    if (reference.code) reference = await ensureSignature(reference, problemData, signal);
     // The user's language, written in the same reply as the C++. A reply the
     // server shared from another user may not have it — then it's translated
     // when the solution card opens.
@@ -541,8 +560,10 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
     console.log('LeetHint: FINAL TC =', reference.tc || result.optimal_tc, '| SC =', reference.sc || result.optimal_sc);
     return reference.code ? applyReference(result, reference) : result;
   } catch (e) {
+    // Cancelled, or a message the user must see (no fallback for these)
+    if (e.name === 'AbortError' || NO_FALLBACK.has(e.kind)) throw e;
     console.warn('LeetHint: server generation failed →', e.message);
-    // Server unreachable or failing → Chrome Built-in AI can still give hints
+    // Server unreachable, failing or still busy after 3 minutes → Chrome Built-in AI can still give hints
     try {
       return await generateWithBuiltinAI(buildHintsPrompt(problemData));
     } catch (builtinErr) {
@@ -593,7 +614,7 @@ export function missingSignatureParts(code, snippet) {
   return missing;
 }
 
-async function ensureSignature(reference, problem) {
+async function ensureSignature(reference, problem, signal) {
   if (!problem.cppSnippet) return reference;
   const missing = missingSignatureParts(reference.code, problem.cppSnippet);
   if (!missing.length) return reference;
@@ -602,7 +623,7 @@ async function ensureSignature(reference, problem) {
   try {
     // reason: 'signature' — the server caches this automatic fix (contract item 8);
     // a user's own Fix never sends it
-    const fixed = parseSolutionResponse(await callBackend('fix', problem, { code: reference.code, reason: 'signature' }));
+    const fixed = parseSolutionResponse(await callBackend('fix', problem, { code: reference.code, reason: 'signature', signal }));
     if (fixed.code && missingSignatureParts(fixed.code, problem.cppSnippet).length < missing.length) {
       return { ...reference, ...fixed, approach: reference.approach, pattern: reference.pattern };
     }
