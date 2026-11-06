@@ -8,6 +8,7 @@
 //   start → interviewer turns (one at a time) → feedback / time up / End
 //         → scorecard → saved to interviewHistory (shown on the Stats tab)
 
+import { onServerNotice } from '../api/ai.js';
 import { INTERVIEW_STAGES, INTERVIEW_MINUTES, STAGE_LABELS, SCORE_KEYS, SCORE_LABELS,
          interviewerTurn, scoreInterview, codeChangedMeaningfully, referenceFromHints,
          needsSummary, summarizeInterview } from '../api/interview.js';
@@ -76,6 +77,14 @@ export async function initInterview(context) {
   el.mic.addEventListener('pointerdown', onMicDown);
   el.mic.addEventListener('pointerup', onMicUp);
   el.mic.addEventListener('pointerleave', onMicUp);
+
+  // Server busy mid-interview: the same waiting line (3 minutes, live
+  // countdown), shown here. A built-in-AI interviewer would be worse than
+  // waiting, so when the wait runs out the turn shows its error + Retry.
+  onServerNotice(n => {
+    if (!viewOn || !session || (n.action !== 'interview_turn' && n.action !== 'interview_score')) return;
+    if (n.type === 'wait') setStatus(`⏳ ${n.message} — the interviewer will answer as soon as it can`);
+  });
 
   chrome.runtime.onMessage.addListener(msg => {
     if (msg?.type === 'MIC_GRANTED') ctx.showToast('🎙️ Microphone ready — tap the mic to answer');

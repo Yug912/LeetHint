@@ -392,11 +392,9 @@ async function loadRemoteConfig() {
   if (state.hints?.hint5) renderHintTexts();   // Fix button follows remote.fix
 }
 
-let noticeTimer = 0;
 function showNotice(text, { keyButton = false, closable = false } = {}) {
   if (!DOM.serverNotice) return;
-  clearInterval(noticeTimer);
-  DOM.serverNoticeText.textContent = text;
+  DOM.serverNoticeText.textContent = text;   // server data → text only
   DOM.serverNoticeBtn.hidden = !keyButton;
   DOM.serverNoticeClose.hidden = !closable;
   DOM.serverNotice.hidden = !text;
@@ -406,21 +404,16 @@ function setupServerNotices() {
   DOM.serverNoticeClose?.addEventListener('click', () => showNotice(''));
   DOM.serverNoticeBtn?.addEventListener('click', () => { showNotice(''); openOwnKeySettings(); });
   onServerNotice(n => {
+    // The interview shows its own waiting line, inside the interview view
+    const interview = String(n.action || '').startsWith('interview');
     if (n.type === 'clear') {
       // A trial message stays until dismissed; the waiting line goes away
-      if (DOM.serverNoticeBtn?.hidden) showNotice('');
+      if (!interview && DOM.serverNoticeBtn?.hidden) showNotice('');
       return;
     }
     if (n.type === 'trial_used') return showNotice(n.message, { keyButton: true, closable: true });
-    if (n.type === 'wait') {
-      // Count down until the next try
-      let left = n.seconds;
-      showNotice(`⏳ High demand — you're in line (~${left} s)`);
-      noticeTimer = setInterval(() => {
-        left = Math.max(1, left - 1);
-        DOM.serverNoticeText.textContent = `⏳ High demand — you're in line (~${left} s)`;
-      }, 1000);
-    }
+    // The wait loop reports every second, so this counts down live
+    if (n.type === 'wait' && !interview) showNotice(`⏳ ${n.message}`);
   });
 }
 
@@ -626,9 +619,18 @@ function renderCompanyTags(slug) {
   }
 }
 
+// Cancels the previous load's wait in line when a newer load starts
+let hintsAbort = new AbortController();
+function cancelHintsLoad() {
+  hintsAbort.abort();
+  hintsAbort = new AbortController();
+  if (DOM.serverNoticeBtn?.hidden) showNotice('');   // a waiting line, not a trial message
+}
+
 async function loadHints() {
   // Claim this generation slot — any older concurrent call will be a lower ID
   const myId = ++hintsGenerationId;
+  cancelHintsLoad();
 
   // Capture the problem now — state.problem may change during the awaits below
   const problem = state.problem;
@@ -682,6 +684,7 @@ async function loadHints() {
   let frame = 0;
   try {
     const hints = await generateHints(problem, {
+      signal: hintsAbort.signal,    // a newer load cancels this one's wait in line
       language: solutionLanguage,   // your language's code arrives in the same reply
       onPartial: partial => {
         if (myId !== hintsGenerationId) return;
@@ -713,7 +716,7 @@ async function loadHints() {
     if (nearSolution()) prefetchMyTranslation();
   } catch (e) {
     cancelAnimationFrame(frame);
-    if (myId !== hintsGenerationId) return; // Stale error, ignore
+    if (myId !== hintsGenerationId || e.name === 'AbortError') return; // Stale or cancelled, ignore
     console.error('LeetHint: hint generation failed →', e);
     if (state.hints?.hint1) {
       // Some hints already arrived — keep them; hint 5 offers "Generate Solution"
@@ -1868,6 +1871,7 @@ chrome.runtime.onMessage.addListener((message) => {
       state.score         = 100;
       state.review        = null;
       state.solved        = false;
+      cancelHintsLoad();   // no orphaned wait in line for a problem that's gone
       resetTcScChecker();
       showState('noProblem');
       syncInterview(null);
