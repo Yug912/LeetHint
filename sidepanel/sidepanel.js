@@ -8,6 +8,8 @@ import { CACHE_URL } from '../api/config.js';
 import { getRemoteConfig, REMOTE_DEFAULTS } from '../api/remote.js';
 import { OWN_KEY_PROVIDERS, getOwnKey, saveOwnKey, removeOwnKey, testOwnKey } from '../api/direct.js';
 import { INTERVIEW_MINUTES } from '../api/interview.js';
+import { initLearning, onProblemShown, onNoProblem, onHintsReady, onHintUnlocked, onSolved, onReviewed,
+         onFailed, onCodeRun, renderLearningStats, renderWeakPatterns } from './learning.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory } from './interview.js';
 import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
@@ -268,6 +270,12 @@ async function init() {
       ? { minutes: remote.trialInterviewMinutes, trial: true }
       : { minutes: INTERVIEW_MINUTES, trial: false }
   });
+  initLearning({
+    getState: () => state,
+    unlockNext: unlockNextHint,
+    showToast,
+    isInterviewActive
+  });
   renderRevision();   // migrates an old-format queue + the tab badge
   await loadCurrentProblem();
 }
@@ -525,14 +533,24 @@ async function loadCurrentProblem(slugHint = '') {
     return;
   }
 
+  // On a problem page, but LeetCode's page couldn't be read (its layout or
+  // API changed): carry on with what the URL says — the static hint file
+  // and the local cache are found by slug alone
+  if (!problem) {
+    const slug = slugHint || await activeTabSlug();
+    if (slug) problem = { slug, title: titleFromSlug(slug), difficulty: 'Unknown', problemNumber: '', description: '' };
+  }
+
   if (!problem) {
     showState('noProblem');
     syncInterview(null);
     pendingInterviewSlug = '';
+    onNoProblem();
     return;
   }
 
   state.problem = problem;
+  showPageChanged(problem);
   updateProblemHeader();
   await loadSavedProgress();
   loadHints();   // not awaited — it guards itself against newer loads
@@ -594,6 +612,7 @@ async function loadHints() {
   // Capture the problem now — state.problem may change during the awaits below
   const problem = state.problem;
   DOM.loadingName.textContent = problem.title;
+  showPageChanged(problem);
   showState('loading');
 
   // Check cache first
@@ -622,6 +641,7 @@ async function loadHints() {
       state.hints = cachedHints;
       renderHints();
       showState('hints');
+      onHintsReady();
       // Cached from a reply whose code never arrived — fetch just the solution
       if (!cachedHints.hint5) fillMissingSolution(myId);
       else if (nearSolution()) prefetchMyTranslation();
@@ -668,6 +688,7 @@ async function loadHints() {
 
     state.hints = hints;
     renderHintTexts();  // already on screen — just fill in the rest
+    onHintsReady();
     if (nearSolution()) prefetchMyTranslation();
   } catch (e) {
     cancelAnimationFrame(frame);
@@ -1116,6 +1137,8 @@ function unlockHint(cardKey) {
     return;
   }
 
+  onHintUnlocked();
+
   // Update stats
   updateStats();
 
@@ -1314,6 +1337,7 @@ async function loadSavedProgress() {
 
   renderRevisionBar();
   startPendingInterview();
+  onProblemShown();
 }
 
 
@@ -1338,8 +1362,16 @@ async function updateStats({ solved = false } = {}) {
   // Record this problem's current state
   const prev = stats.problems[slug];
   const isNewProblem = !prev;
+  const wasSolved = prev ? prev.solved !== false : false;
   stats.problems[slug] = { score: state.score, level, difficulty,
-                           solved: solved || (prev ? prev.solved !== false : false) };
+                           solved: solved || wasSolved,
+                           // For déjà vu, the tilt card's easier problem and the CSV
+                           title: state.problem.title || prev?.title || '',
+                           number: state.problem.problemNumber || prev?.number || '',
+                           pattern: (state.hints?.pattern && state.hints.pattern !== 'Unknown' ? state.hints.pattern : prev?.pattern) || '',
+                           topicTags: state.problem.topicTags?.length ? state.problem.topicTags : (prev?.topicTags || []),
+                           solvedDate: solved && !wasSolved ? localDate() : (prev?.solvedDate || ''),
+                           solvedAt: solved && !wasSolved ? Date.now() : (prev?.solvedAt || 0) };
 
   // Update difficulty count (only for new problems)
   if (isNewProblem && stats.byDifficulty[difficulty] !== undefined) {
@@ -1401,6 +1433,7 @@ async function renderStats() {
   });
 
   await renderInterviewHistory();
+  await renderLearningStats();
 }
 
 
@@ -1471,6 +1504,7 @@ async function onProblemSolved(slug, { manual = false } = {}) {
   }
   if (lastSolve.slug === problem.slug && Date.now() - lastSolve.at < 10000) return;
   lastSolve = { slug: problem.slug, at: Date.now() };
+  onSolved(problem.slug, state.score);
 
   const score = state.score;
   const name = SCORE_NAMES[score] || '';
@@ -1523,6 +1557,7 @@ async function recordReview(slug, { score, outcome, via, signal }) {
   if (state.review?.slug === slug) state.review.done = true;   // done for today
   await chrome.storage.local.set({ revisionQueue: queue });
   await chrome.storage.local.remove(REVIEW_PROGRESS + slug);
+  onReviewed();
   return queue[slug];
 }
 
@@ -1633,6 +1668,7 @@ async function renderRevisionBar() {
 // Revision tab + the tab's badge
 async function renderRevision() {
   if (!DOM.revisionDueList) return;
+  renderWeakPatterns();
   const { queue, limit } = await getRevisionData();
   const { dueToday, upcoming, mastered } = planQueue(queue, { limit });
 
@@ -1744,6 +1780,30 @@ function showState(which, errorMsg = '') {
   }
 }
 
+// "LeetCode changed its page" — the problem text couldn't be read
+function showPageChanged(problem) {
+  const banner = document.getElementById('page-changed');
+  if (banner) banner.hidden = !problem || !!String(problem.description || '').trim();
+}
+
+async function activeTabSlug() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return slugFromUrl(tab?.url);
+  } catch {
+    return '';
+  }
+}
+
+// The tilt card's "Unlock the next hint" → false when everything is open
+function unlockNextHint() {
+  const order = [1, 2, 3, 4, 'solution'];
+  const next = order[order.indexOf(state.hintsUnlocked) + 1];
+  if (!next || isInterviewActive(state.problem?.slug)) return false;
+  unlockHint(next);
+  return true;
+}
+
 function setupRetryListener() {
   DOM.btnRetry.addEventListener('click', () => loadHints());
 }
@@ -1791,6 +1851,7 @@ chrome.runtime.onMessage.addListener((message) => {
       showState('noProblem');
       syncInterview(null);
       renderRevisionBar();
+      onNoProblem();
     }).catch(() => {});
     return;
   }
@@ -1801,6 +1862,9 @@ chrome.runtime.onMessage.addListener((message) => {
 
   // Content script saw an Accepted submission
   if (message.type === 'PROBLEM_SOLVED') onProblemSolved(message.slug);
+  // Wrong Answer / TLE / Runtime Error, and Run/Submit presses (read-only)
+  if (message.type === 'PROBLEM_FAILED' && message.slug === state.problem?.slug) onFailed(message.slug, message.verdict);
+  if (message.type === 'CODE_RUN' && message.slug === state.problem?.slug) onCodeRun(message.slug);
 });
 
 function applyProblem(newProblem) {
@@ -1812,8 +1876,17 @@ function applyProblem(newProblem) {
     return;
   }
 
-  // Ignore if it's the same problem we already have
-  if (newProblem?.slug && newProblem.slug === state.problem?.slug) return;
+  // Same problem: only replace a stand-in made from the URL (LeetCode's
+  // page couldn't be read at first) once the real data arrives
+  if (newProblem?.slug && newProblem.slug === state.problem?.slug) {
+    if (!state.problem.description && newProblem.description) {
+      state.problem = newProblem;
+      showPageChanged(newProblem);
+      updateProblemHeader();
+      if (!state.hints?.hint1) loadHints();
+    }
+    return;
+  }
 
   console.log('LeetHint: Problem changed →', newProblem?.title);
 
