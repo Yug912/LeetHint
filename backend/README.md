@@ -5,9 +5,20 @@ provider with **server-side keys**, and streams the reply back. Users never
 need — or see — an API key.
 
 ```
-Extension ──POST /v1/generate {action, problem}──▶ Worker ──▶ Cerebras / Groq / OpenRouter / Gemini
+Extension ──POST /v1/generate {action, problem}──▶ Worker ──▶ Groq / Workers AI / Gemini / OpenRouter / Cerebras
           ◀──────── streamed text ─────────────── (keys = Worker secrets)
 ```
+
+| Endpoint | What it does |
+|---|---|
+| `POST /v1/generate` | Hints, solution, fix, translation, interview turn / score / summary — streamed |
+| `POST /v1/report` | "This hint is wrong" → stored for review (one per problem, install and day) |
+| `GET /config` | Remote switch: feature flags and free-trial sizes from `[vars]`, cached 1 hour |
+| `GET /health` | Providers configured (`?models` adds model names) |
+| `GET /stats?token=…` | Private: today's counters and trial use (404 without `STATS_TOKEN`) |
+
+Requests carry `X-LeetHint-Install`, a random ID made once per install (no account,
+no personal data), used only for per-install rate limits and free-trial counts.
 
 ## Security model
 
@@ -15,7 +26,7 @@ Extension ──POST /v1/generate {action, problem}──▶ Worker ──▶ Ce
 |---|---|
 | API keys | Stored only as encrypted Worker secrets. Never in the repo, the extension, or any response. `.dev.vars` is gitignored. |
 | Misuse as a free AI proxy | The client can't send a prompt — only problem fields. Prompts are built server-side from [`shared/prompts.js`](../shared/prompts.js), so the endpoint only ever produces LeetHint output. |
-| Abuse / cost | Per-IP rate limit (20 req/min, `wrangler.toml`), input size limits, action whitelist. |
+| Abuse / cost | Per-install limit (20 req/min) + per-IP backstop (120 req/min), input size limits, action whitelist, D1 blocklist, free trials for personal AI (Fix 3/day, 1 interview/week). |
 | Who can call it | `ALLOWED_ORIGINS` pins the API to your extension ID once published. |
 | Error leaks | Upstream errors are logged server-side; clients only get generic messages. |
 | Cache poisoning | Cache key = hash of the full prompt, so a fake statement can't overwrite a real problem's cached hints. |
@@ -76,7 +87,10 @@ curl http://localhost:8787/health -H "Origin: chrome-extension://test"
 | `PROVIDER_ORDER` | `wrangler.toml` `[vars]` | `cerebras,groq,workersai,openrouter,gemini` (fastest first) |
 | `WORKERSAI_MODELS` | `wrangler.toml` `[vars]` | unset = `gpt-oss-120b`, then `gpt-oss-20b` |
 | `ALLOWED_ORIGINS` | `wrangler.toml` `[vars]` | empty = any `chrome-extension://` origin |
-| Rate limit | `wrangler.toml` `[[ratelimits]]` | 20 requests / 60 s per IP |
+| Rate limits | `wrangler.toml` `[[ratelimits]]` | 20 / 60 s per install, 120 / 60 s per IP |
+| Remote switch | `CONFIG_INTERVIEW`, `CONFIG_FIX`, `TRIAL_*`, `CONFIG_MESSAGE` in `[vars]` | everything on, 1 interview/week (15 min), 3 fixes/day |
+| Shared quota | `DAILY_TOKENS`, `TRIAL_DAILY_TOKENS`, `MAX_TRIAL_INTERVIEWS` in `[vars]` | 1.5M tokens, 25% for trials, 3 interviews at once |
+| New problems cron | `[triggers] crons` | Mondays 06:00–09:40 UTC, 2 problems per run |
 | Models per provider | `src/providers.js` | see `PROVIDERS` |
 
 Free-tier limits change often — check each provider's dashboard.
@@ -94,3 +108,28 @@ Free-tier limits change often — check each provider's dashboard.
 - **Cloudflare Workers AI as free overflow** — the `[ai]` binding in `wrangler.toml` gives the Worker the account's free daily Workers AI allowance with **no API key**. On the free plan only `gpt-oss-120b` / `gpt-oss-20b` are available (others answer `5035: not available on the Workers Free plan`), and they're slower (~10–20 s), so they are used only when Groq is busy. When the daily allowance runs out, Workers AI is paused until midnight UTC. `WORKERSAI_MODELS` in `[vars]` overrides its model order.
 
 Each extra provider key (`GEMINI_API_KEY`, `CEREBRAS_API_KEY`, ...) adds its own budgets — the easiest way to stay fast with many users.
+
+## Scaling features (switch on one at a time)
+
+All are free-plan features and are **off until their block in `wrangler.toml` is
+uncommented**; without them the Worker behaves exactly as before.
+
+1. **D1 database** — the shared cache (≈100,000 writes/day instead of KV's ≈1,000),
+   free-trial counters, reports, the blocklist and `/stats` counters:
+   ```bash
+   npx wrangler d1 create leethint                      # paste database_id into wrangler.toml
+   npx wrangler d1 migrations apply leethint --remote   # creates the tables
+   ```
+   Uncomment `[[d1_databases]]` and deploy. KV is still read as a fallback, so
+   existing cached replies keep working while D1 fills up.
+2. **ProblemGate** (`src/gate.js`) — when many users open the same brand-new
+   problem at once, one AI call serves them all. Uncomment its Durable Object blocks.
+3. **QuotaKeeper** (`src/quota.js`) — one shared quota counter for every Worker copy,
+   with a daily share kept for free trials. Uncomment its blocks.
+4. **Stats page** — `npx wrangler secret put STATS_TOKEN` (any long random string), then
+   open `https://<worker>/stats?token=<it>`.
+5. **Block an install** — `npx wrangler d1 execute leethint --remote --command
+   "INSERT INTO blocked (install_id, reason, created) VALUES ('<id>', 'abuse', unixepoch())"`.
+
+Static hint files come from `tools/prefill.mjs` (see `tools/README.md`) and are served
+from the `leethint-cache` Pages site, so most users never reach this Worker for hints.
