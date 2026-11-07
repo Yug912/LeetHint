@@ -45,7 +45,7 @@ LeetHint repo → Settings → Secrets and variables → Actions → add:
 
 - `CF_ACCOUNT_ID` — Cloudflare account ID (dashboard sidebar)
 - `CF_API_TOKEN` — a token with only **Account → D1 → Read**
-- `D1_DATABASE_ID` — from `npx wrangler d1 create leethint`
+- `D1_DATABASE_ID` — `f811f082-7749-4111-b771-31bcb4eb800b` (the `database_id` in `backend/wrangler.toml`)
 
 Then check `https://leethint-cache.pages.dev/cache/two-sum.json` returns the
 file. If the name was taken, put the real host in `api/config.js`
