@@ -85,4 +85,6 @@ test('CSV: one header, escaped cells, every kind of row', () => {
   assert.match(lines[2], /^revision,lru-cache,LRU Cache,Medium,2026-11-02,40,step 2; next 2026-11-06$/);
   assert.match(lines[3], /^review,lru-cache,LRU Cache,Medium,2026-11-03,60,solve$/);
   assert.match(lines[4], /^interview,two-sum,Two Sum,Easy,2026-11-04,Hire,25 min; 1 hints; reached feedback$/);
+  // a problem without a saved level: no "level undefined"
+  assert.match(buildCsv({ stats: { problems: { x: { title: 'X', difficulty: 'Hard', score: 0, solved: false } } } }), /,not solved\r\n$/);
 });
