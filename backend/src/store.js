@@ -34,11 +34,24 @@ export async function readCache(env, key, now = Date.now()) {
       console.warn('D1 cache read failed:', e.message);
     }
   }
-  if (env.HINTS_CACHE) {
-    const { value, metadata } = await env.HINTS_CACHE.getWithMetadata(key);
-    if (value) return { raw: value, kind: metadata?.kind || 'openai', layer: 'kv' };
+  if (env.HINTS_CACHE && kvFallbackOpen(env, now)) {
+    try {
+      const { value, metadata } = await env.HINTS_CACHE.getWithMetadata(key);
+      if (value) return { raw: value, kind: metadata?.kind || 'openai', layer: 'kv' };
+    } catch (e) {
+      console.warn('KV cache read failed:', e.message);
+    }
   }
   return null;
+}
+
+// With D1 in place, KV is read only until KV_FALLBACK_UNTIL (YYYY-MM-DD, UTC,
+// a month after the D1 switch); after that day it is skipped, and the
+// HINTS_CACHE binding can be deleted from wrangler.toml. Empty → no end date.
+export function kvFallbackOpen(env, now = Date.now()) {
+  if (!env.DB) return true;   // KV is still the only store
+  const until = Date.parse(`${env.KV_FALLBACK_UNTIL || ''}T23:59:59Z`);
+  return Number.isNaN(until) || now <= until;
 }
 
 export async function writeCache(env, key, raw, kind, now = Date.now()) {

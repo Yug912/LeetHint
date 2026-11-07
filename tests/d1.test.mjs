@@ -47,3 +47,18 @@ test('rows older than 30 days count as a miss', async () => {
   await writeCache(env, 'old', 'x', 'openai', Date.now() - 31 * 24 * 3600 * 1000);
   assert.equal(await readCache(env, 'old'), null);
 });
+
+test('the KV fallback ends after KV_FALLBACK_UNTIL, and a KV failure is a miss', async () => {
+  const { kvFallbackOpen } = await import('../backend/src/store.js');
+  const DB = { prepare: () => ({ bind: () => ({ first: async () => null }) }) };
+  const HINTS_CACHE = { getWithMetadata: async () => ({ value: 'old', metadata: { kind: 'openai' } }) };
+  const env = { DB, HINTS_CACHE, KV_FALLBACK_UNTIL: '2026-12-15' };
+  assert.equal(kvFallbackOpen(env, Date.parse('2026-12-15T23:00:00Z')), true);
+  assert.equal(kvFallbackOpen(env, Date.parse('2026-12-16T00:00:01Z')), false);
+  assert.equal(kvFallbackOpen({ DB }), true);                       // no date → open
+  assert.equal(kvFallbackOpen({ HINTS_CACHE, KV_FALLBACK_UNTIL: '2000-01-01' }), true);   // no D1 → KV is the store
+  assert.equal((await readCache(env, 'k', Date.parse('2026-12-01T00:00:00Z')))?.layer, 'kv');
+  assert.equal(await readCache(env, 'k', Date.parse('2026-12-20T00:00:00Z')), null);
+  const broken = { DB, HINTS_CACHE: { getWithMetadata: async () => { throw new Error('KV down'); } } };
+  assert.equal(await readCache(broken, 'k'), null);
+});
