@@ -23,7 +23,7 @@ export const OWN_KEY_PROVIDERS = {
     keyUrl: 'https://console.groq.com/keys', host: 'https://api.groq.com/*'
   },
   openrouter: {
-    name: 'OpenRouter', kind: 'openai', model: 'openai/gpt-oss-120b:free',
+    name: 'OpenRouter', kind: 'openai', model: 'nvidia/nemotron-3-ultra-550b-a55b:free',   // a :free model (checked 2026-11-07)
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
     keyUrl: 'https://openrouter.ai/keys', host: 'https://openrouter.ai/*',
     headers: { 'HTTP-Referer': 'https://github.com/Yug912/LeetHint', 'X-Title': 'LeetHint' }
