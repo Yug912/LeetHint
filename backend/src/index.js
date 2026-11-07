@@ -13,6 +13,7 @@
 import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt,
          INTERVIEW_STAGES, INTERVIEW_EVENTS, INTERVIEW_MINUTES } from '../../shared/prompts.js';
 import { configuredProviders, describeModels, openStream } from './providers.js';
+import { quotaClient } from './quota.js';
 import { hasCache, readCache, writeCache, saveReport, takeTrial, refundTrial, admitInterview,
          isBlocked, utcDay, isoWeek, nextUtcMidnightIso, nextMondayIso } from './store.js';
 
@@ -134,15 +135,30 @@ async function rateLimit(request, env) {
   }
 }
 
+// Contract: HTTP 403 { error: "trial_used", action, resetsAt }
+function trialUsed(action) {
+  return replyError(403, { error: 'trial_used', action, resetsAt: action === 'fix' ? nextUtcMidnightIso() : nextMondayIso() });
+}
+
 // → null (not a trial) or { refund() }; throws trial_used when none are left
 async function checkTrial(env, installId, action, signatureFix, interview) {
-  if (!env.DB || !installId) return null;
+  if (!installId) return null;
+  // Trial interviews: a new one only while fewer than 3 run and today's trial
+  // budget still holds a whole interview (QuotaKeeper)
+  if (action.startsWith('interview_') && interview?.interviewId) {
+    const quota = quotaClient(env);
+    const id = interview.interviewId;
+    if (action === 'interview_turn' && interview.event === 'start') {
+      const r = await quota.admitInterview({ id });
+      if (!r.ok) throw r.reason === 'busy' ? busyError(60000) : trialUsed('interview');
+    } else if (action === 'interview_score') await quota.endInterview({ id });
+    else await quota.touchInterview({ id });
+  }
+  if (!env.DB) return null;
   const cfg = remoteConfig(env);
   if (action === 'fix' && !signatureFix) {
     const period = utcDay();
-    if (!(await takeTrial(env, installId, 'fix', period, cfg.trialFixesPerDay))) {
-      throw replyError(403, { error: 'trial_used', action: 'fix', resetsAt: nextUtcMidnightIso() });
-    }
+    if (!(await takeTrial(env, installId, 'fix', period, cfg.trialFixesPerDay))) throw trialUsed('fix');
     return { refund: () => refundTrial(env, installId, 'fix', period) };
   }
   // Trial interviews have no separate code-check turns (the editor code still
@@ -152,7 +168,7 @@ async function checkTrial(env, installId, action, signatureFix, interview) {
   }
   if (action === 'interview_turn' && interview?.event === 'start' && interview.interviewId) {
     const verdict = await admitInterview(env, installId, interview.interviewId, cfg.trialInterviewsPerWeek);
-    if (verdict === 'refused') throw replyError(403, { error: 'trial_used', action: 'interview', resetsAt: nextMondayIso() });
+    if (verdict === 'refused') throw trialUsed('interview');
   }
   return null;   // later turns of an admitted interview are never refused
 }
@@ -301,8 +317,12 @@ async function handleGenerate(request, env, ctx, cors) {
   // (logs never include the interview transcript — only the action and slug)
   const tag = `${action}${extra.language ? '-' + extra.language : ''}${interviewing ? '-' + extra.interview.event : ''} ${problem.slug}`;
   const easy = /easy/i.test(problem.difficulty);
-  const { upstream, kind, label } = await openStream(env, prompt, { effort, maxTokens, tier, easy }).catch(async e => {
+  // Which part of the day's budget pays: Fix (a user's own code) and mock
+  // interviews are trials (25%); everything shared by all users is hints (70%)
+  const share = (action === 'fix' && !signatureFix) || interviewing ? 'trial' : 'hints';
+  const { upstream, kind, label } = await openStream(env, prompt, { effort, maxTokens, tier, easy, share }).catch(async e => {
     await trial?.refund();   // nothing was generated — the trial isn't used up
+    if (e.dailyShare === 'trial') throw trialUsed(action === 'fix' ? 'fix' : 'interview');
     throw e.busy ? busyError(e.retryAfterMs) : e;
   });
   console.log(`${tag} (${effort}, ${maxTokens} tok) → ${label}`);
@@ -466,3 +486,6 @@ async function sha256(text) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+// Durable Object classes must be exported by the Worker's main module
+export { QuotaKeeper } from './quota.js';

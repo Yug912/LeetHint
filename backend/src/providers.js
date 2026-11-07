@@ -12,6 +12,10 @@
 //  • Right-sized requests — each action asks only for the tokens it needs, so
 //    more requests fit in a minute.
 //  • A short limit (a few seconds) is waited out instead of failing.
+//  • All of this bookkeeping is shared by every Worker copy through the
+//    QuotaKeeper Durable Object (quota.js), along with the daily budget split.
+
+import { quotaClient } from './quota.js';
 
 const TEMPERATURE = 0.1;
 
@@ -110,20 +114,19 @@ const FIRST_BYTE_MS = 45000;
 // Longest wait for a rate limit before giving up — beats showing an error
 const MAX_WAIT_MS = 8000;
 
-export function configuredProviders(env) {
+// paused: { "Provider" | "Provider/model": until } from the quota snapshot.
+// A provider whose DAILY allowance is used up is skipped until it resets
+// (Workers AI: midnight UTC); the same for one model ("Provider/model") —
+// e.g. Groq's 200,000 tokens/day per model
+export function configuredProviders(env, paused = {}) {
   workersAiOverride = (env.WORKERSAI_MODELS || '').split(',').map(s => s.trim()).filter(Boolean);
   const order = (env.PROVIDER_ORDER || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   return (order.length ? order : DEFAULT_ORDER)
     .map(id => PROVIDERS[id])
     .filter(cfg => cfg && (cfg.binding ? env[cfg.binding] : env[cfg.secret]))
-    .filter(cfg => !(pausedUntil.get(cfg.name) > Date.now()));
+    .filter(cfg => !(paused[cfg.name] > Date.now()));
 }
 
-// A provider whose DAILY allowance is used up is skipped until it resets
-// (Workers AI: midnight UTC) — no point asking it on every request
-const pausedUntil = new Map();
-// Same for one model ("Provider/model") — e.g. Groq's 200,000 tokens/day per model
-const modelPausedUntil = new Map();
 const nextUtcMidnight = () => { const d = new Date(); d.setUTCHours(24, 0, 0, 0); return d.getTime(); };
 
 function apiError(label, status, msg, retryAfterMs) {
@@ -134,7 +137,7 @@ function apiError(label, status, msg, retryAfterMs) {
 }
 
 // Rough count (~3.5 chars per token) — only used to plan around tokens/minute caps
-const estimateTokens = text => Math.ceil(String(text).length / 3.5);
+export const estimateTokens = text => Math.ceil(String(text).length / 3.5);
 
 // "7.66s", "1m2.5s", "450ms" → milliseconds
 function parseDuration(s) {
@@ -199,30 +202,23 @@ export async function describeModels(env) {
 
 
 // ─────────────────────────────────────────────
-// TOKEN BUCKETS — tokens/minute left per model, from rate-limit headers
+// TOKEN BUCKETS — tokens/minute left per model, read from the quota
+// snapshot taken at the start of each request (the bucket data itself lives
+// in QuotaKeeper; see quota.js)
 // ─────────────────────────────────────────────
-const buckets = new Map();   // "Provider/model" → { remaining, limit, at }
 
-function recordBucket(key, remaining, limit) {
-  if (!Number.isFinite(remaining)) return;
-  const prev = buckets.get(key);
-  buckets.set(key, { remaining, limit: Number.isFinite(limit) ? limit : prev?.limit, at: Date.now() });
+// Reply headers / the 429 text ("Limit 8000, Used 3990") say where a bucket stands
+function bucketFromHeaders(headers) {
+  return { remaining: parseFloat(headers.get('x-ratelimit-remaining-tokens')), limit: parseFloat(headers.get('x-ratelimit-limit-tokens')) };
 }
-
-function recordFromHeaders(key, headers) {
-  recordBucket(key, parseFloat(headers.get('x-ratelimit-remaining-tokens')),
-                    parseFloat(headers.get('x-ratelimit-limit-tokens')));
-}
-
-// The 429 text says exactly where the bucket stands: "Limit 8000, Used 3990"
-function recordFromMessage(key, msg) {
+function bucketFromMessage(msg) {
   const m = msg.match(/Limit\s+(\d+),\s*Used\s+(\d+)/i);
-  if (m) recordBucket(key, Number(m[1]) - Number(m[2]), Number(m[1]));
+  return m ? { remaining: Number(m[1]) - Number(m[2]), limit: Number(m[1]) } : null;
 }
 
 // Tokens available now, assuming the bucket refills evenly over a minute
-function availableTokens(key, cfg) {
-  const b = buckets.get(key);
+function availableTokens(snap, key, cfg) {
+  const b = snap.buckets?.[key];
   if (!b) return Infinity;
   const limit = b.limit || cfg.tokensPerMinute;
   if (!limit) return b.remaining;
@@ -230,11 +226,11 @@ function availableTokens(key, cfg) {
 }
 
 // How long until a model's bucket holds `need` tokens again (Infinity if unknown)
-function refillWaitMs(key, cfg, need) {
-  const b = buckets.get(key);
+function refillWaitMs(snap, key, cfg, need) {
+  const b = snap.buckets?.[key];
   const limit = b?.limit || cfg.tokensPerMinute;
   if (!b || !limit || need > limit) return Infinity;
-  return Math.max(0, (need - availableTokens(key, cfg)) / limit * 60000);
+  return Math.max(0, (need - availableTokens(snap, key, cfg)) / limit * 60000);
 }
 
 function maxTokensFor(cfg, prompt, wanted) {
@@ -308,10 +304,14 @@ function buildRequest(cfg, apiKey, model, prompt, { effort, maxTokens, easy }, p
 // request. Returns { upstream: Response, kind, label }. Nothing has been sent
 // to the client yet, so falling through to the next model is invisible.
 //
-// opts: { effort, maxTokens, tier: 'main' | 'fast' | 'interview' | 'judge' | 'hard' }
+// opts: { effort, maxTokens, tier: 'main' | 'fast' | 'interview' | 'judge' | 'hard',
+//         share: 'hints' | 'trial' — which part of the day's budget pays for it }
 export async function openStream(env, prompt, opts = {}) {
-  const { tier = 'main', maxTokens = 6000 } = opts;
-  const providers = configuredProviders(env);
+  const { tier = 'main', maxTokens = 6000, share = 'hints' } = opts;
+  const quota = quotaClient(env);
+  const snap = await quota.snapshot();
+  const paused = snap.paused || {};
+  const providers = configuredProviders(env, paused);
   if (!providers.length) throw apiError('LeetHint server', 503, 'no AI provider is configured');
 
   // Every (provider, model) pair, in preference order — minus models whose
@@ -320,7 +320,7 @@ export async function openStream(env, prompt, opts = {}) {
     const out = [];
     for (const cfg of providers) {
       for (const model of await modelsFor(cfg, env[cfg.secret], t)) {
-        if (!(modelPausedUntil.get(`${cfg.name}/${model}`) > Date.now())) out.push({ cfg, model });
+        if (!(paused[`${cfg.name}/${model}`] > Date.now())) out.push({ cfg, model });
       }
     }
     return out;
@@ -334,7 +334,7 @@ export async function openStream(env, prompt, opts = {}) {
 
   // Models with enough tokens left this minute go first — no wasted 429s
   const need = c => estimateTokens(prompt) + maxTokensFor(c.cfg, prompt, maxTokens);
-  const hasRoom = c => availableTokens(`${c.cfg.name}/${c.model}`, c.cfg) >= need(c);
+  const hasRoom = c => availableTokens(snap, `${c.cfg.name}/${c.model}`, c.cfg) >= need(c);
   const byRoom = list => [...list.filter(hasRoom), ...list.filter(c => !hasRoom(c))];
   // Hard: a model that must cut the reply short to fit its tokens/minute cap
   // (Groq's free tier) goes after the ones that can think as long as asked
@@ -348,7 +348,7 @@ export async function openStream(env, prompt, opts = {}) {
   // the next free model instead.
   const best = candidates[0];
   if ((tier === 'main' || tier === 'judge') && best && !hasRoom(best)) {
-    const waitMs = refillWaitMs(`${best.cfg.name}/${best.model}`, best.cfg, need(best));
+    const waitMs = refillWaitMs(snap, `${best.cfg.name}/${best.model}`, best.cfg, need(best));
     if (waitMs <= 5000) {
       await new Promise(r => setTimeout(r, waitMs + 100));
       ordered = [best, ...ordered.filter(c => c !== best)];
@@ -358,10 +358,20 @@ export async function openStream(env, prompt, opts = {}) {
   const errors = [];
   const limited = [];   // { c, waitMs } — rate-limited, may be worth waiting for
   const deadProviders = new Set();
+  let dailyShareUsed = false;
 
-  const attempt = async (c, plain = false) => {
+  const attempt = async (c, plain = false, reserved = false) => {
     const key = `${c.cfg.name}/${c.model}`;
     const label = `${c.cfg.name} (${c.model})`;
+    // Reserve this request's tokens in the global book first; refused → next model
+    if (!reserved) {
+      const r = await quota.reserve({ key, provider: c.cfg.name, tokens: need(c), share });
+      if (!r.ok) {
+        if (r.reason === 'daily_share') dailyShareUsed = true;
+        errors.push(apiError(label, 429, `quota: ${r.reason}`));
+        return null;
+      }
+    }
     if (c.cfg.kind === 'workersai') return attemptWorkersAI(c, label);
     const { url, init } = buildRequest(c.cfg, env[c.cfg.secret], c.model, prompt, opts, plain);
     let res;
@@ -387,14 +397,14 @@ export async function openStream(env, prompt, opts = {}) {
     // reservation (refunded later), which made the best model look busy for
     // ~35 s after every question. A refused attempt costs only ~0.3 s.
     if (res.ok) return { upstream: res, kind: c.cfg.kind, label };
-    recordFromHeaders(key, res.headers);
+    await quota.record({ key, ...bucketFromHeaders(res.headers) });
 
     const body = await res.json().catch(() => ({}));
     const msg = body.error?.message || `HTTP ${res.status}`;
     // An optional parameter (reasoning_effort, include_reasoning...) was rejected → once without
-    if (res.status === 400 && !plain && /reasoning|include_|parameter/i.test(msg)) return attempt(c, true);
+    if (res.status === 400 && !plain && /reasoning|include_|parameter/i.test(msg)) return attempt(c, true, true);
     const perDay = /per day|\bTPD\b|\bRPD\b/i.test(msg);
-    if (res.status === 429 && !perDay) recordFromMessage(key, msg);
+    if (res.status === 429 && !perDay && bucketFromMessage(msg)) await quota.record({ key, ...bucketFromMessage(msg) });
     const waitMs = parseFloat(res.headers.get('retry-after')) * 1000 ||
                    parseDuration(msg.match(/try again in ([\dhms.]+)/i)?.[1]);
     const err = apiError(label, res.status, msg, perDay ? NaN : waitMs);
@@ -403,7 +413,7 @@ export async function openStream(env, prompt, opts = {}) {
 
     // DAILY limit (Groq: "tokens per day (TPD)") — don't ask again until it resets
     if (res.status === 429 && /per day|\bTPD\b|\bRPD\b/i.test(msg)) {
-      modelPausedUntil.set(key, Date.now() + (waitMs > 0 ? waitMs : 3600000));
+      await quota.pause({ key, until: Date.now() + (waitMs > 0 ? waitMs : 3600000) });
       console.warn(`${label}: daily limit reached — skipped for ${Math.round((waitMs > 0 ? waitMs : 3600000) / 60000)} min`);
       return null;
     }
@@ -432,7 +442,7 @@ export async function openStream(env, prompt, opts = {}) {
       const daily = /4006|daily free allocation|neurons/i.test(msg);
       errors.push(apiError(label, daily || /429|rate limit|capacity/i.test(msg) ? 429 : 500, msg));
       if (daily) {
-        pausedUntil.set(c.cfg.name, nextUtcMidnight());
+        await quota.pause({ key: c.cfg.name, until: nextUtcMidnight() });
         deadProviders.add(c.cfg.name);
         console.warn('Workers AI daily allowance used up — paused until midnight UTC');
       }
@@ -458,6 +468,12 @@ export async function openStream(env, prompt, opts = {}) {
 
   // Log the details server-side; the client only gets a generic message
   console.warn('All providers failed:', errors.map(e => e.message).join(' | '));
+  // This kind of request has used its share of today's budget (trials: 25%)
+  if (dailyShareUsed && errors.every(e => e.status === 429 || e.status === 402)) {
+    const e = apiError('LeetHint server', 429, `today's ${share} budget is used up`);
+    e.dailyShare = share;
+    throw e;
+  }
   const allLimited = errors.length && errors.every(e => e.status === 429 || e.status === 402);
   // When every model is busy, say how long until the first one frees up, so
   // the extension can wait in line instead of showing an error
