@@ -10,9 +10,14 @@
 // and hints are shown as soon as each one finishes streaming.
 //
 // Fallback when the backend can't be reached: Chrome Built-in AI (hints only).
+//
+// Where an answer comes from — route(), in this order:
+//   the panel's local cache (sidepanel.js) → the static hint file (hints only,
+//   CACHE_URL) → the user's own API key if set (api/direct.js) → the Worker.
 
-import { BACKEND_URL } from './config.js';
+import { BACKEND_URL, CACHE_URL } from './config.js';
 import { buildHintsPrompt, LANGUAGES, snippetNames } from '../shared/prompts.js';
+import { getOwnKey, callDirect } from './direct.js';
 
 export { LANGUAGES };
 
@@ -226,28 +231,114 @@ function problemPayload(p) {
   };
 }
 
+// ── Anonymous install ID (X-LeetHint-Install) ──
+// One random UUID per install, kept in chrome.storage.local as installId. The
+// service worker creates it on install; this creates it too when the side
+// panel happens to run first. Outside the extension (tools/prefill.mjs) there
+// is no ID, and the server then treats the request like an old version's.
+let installIdPromise = null;
+export function getInstallId() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return Promise.resolve('');
+  installIdPromise ||= (async () => {
+    try {
+      const { installId } = await chrome.storage.local.get('installId');
+      if (installId) return installId;
+      const id = crypto.randomUUID();
+      await chrome.storage.local.set({ installId: id });
+      return id;
+    } catch {
+      return '';
+    }
+  })();
+  return installIdPromise;
+}
+
+export async function backendHeaders(extra = {}) {
+  const id = await getInstallId();
+  return { ...extra, ...(id ? { 'X-LeetHint-Install': id } : {}) };
+}
+
+// ── Waiting line ──
+// "busy" (every AI provider at its limit): wait the server's Retry-After, then
+// 10 s, 20 s, 40 s, 60 s between tries — up to 3 minutes in all, after which
+// the caller falls back (hints: Chrome's built-in AI, as before).
+export const WAIT = { maxMs: 3 * 60 * 1000, sleep: ms => new Promise(r => setTimeout(r, ms)), now: () => Date.now() };
+
+export function nextWaitMs(tries, retryAfterSec) {
+  const steps = [10, 20, 40, 60];
+  const sec = tries === 0 ? (retryAfterSec > 0 ? retryAfterSec : 10) : steps[Math.min(tries - 1, steps.length - 1)];
+  return Math.min(60, Math.max(1, sec)) * 1000;
+}
+
+// A server reply that isn't the answer → an Error with a message for the user.
+// code: busy | rate_limited | trial_used | blocked | (none)
+export function serverError(status, body = {}) {
+  const err = new Error(body.message || body.error || `LeetHint server error (${status})`);
+  err.status = status;
+  err.code = typeof body.error === 'string' && /^[a-z_]+$/.test(body.error) ? body.error : '';
+  if (err.code === 'busy') {
+    err.message = 'High demand — every free AI model is busy right now.';
+    err.retryAfter = Number(body.retryAfter) || 20;
+    err.position = Number(body.position) || 0;
+  } else if (err.code === 'rate_limited') {
+    err.message = 'Too many requests — try again in a minute.';
+  } else if (err.code === 'trial_used') {
+    err.action = body.action;
+    err.resetsAt = body.resetsAt;
+    const when = body.resetsAt ? new Date(body.resetsAt) : null;
+    const back = when && !isNaN(when)
+      ? (body.action === 'interview'
+          ? when.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+          : `at ${when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`)
+      : 'later';
+    err.message = body.action === 'interview'
+      ? `This week's free mock interview is used up. Add a free key in 2 minutes, or come back ${back}.`
+      : `Free trials are used up for today. Add a free key in 2 minutes, or come back ${back}.`;
+  } else if (err.code === 'blocked') {
+    err.message = 'LeetHint can’t answer requests from this browser right now.';
+  }
+  return err;
+}
+
+// One answer for an action, from the user's own key or the Worker.
+// Every caller in the extension goes through here.
+// opts.onWait({ position, waitSec }) is told while it waits in line.
+export async function route(action, problem, opts = {}) {
+  const ownKey = await getOwnKey();
+  if (!ownKey) return callBackend(action, problem, opts);
+  const text = await callDirect(action, problemPayload(problem), opts, ownKey);
+  if (text.trim()) return text;
+  if (!opts.lowEffort) return route(action, problem, { ...opts, lowEffort: true });   // all thinking, no answer
+  throw new Error('The AI returned an empty reply — please retry.');
+}
+
 // onText(fullTextSoFar) is called as the reply streams in
 async function callBackend(action, problem, opts = {}) {
-  const { code = '', onText, language, snippet, languages, snippets, interview, failure, lowEffort = false } = opts;
+  const { code = '', onText, onWait, language, snippet, languages, snippets, interview, failure, reason, lowEffort = false } = opts;
+  const body = JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets,
+                                interview, failure, reason, lowEffort });
+  const headers = await backendHeaders({ 'Content-Type': 'application/json' });
+  const startedAt = WAIT.now();
   let res;
-  try {
-    res = await fetch(`${BACKEND_URL}/v1/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, problem: problemPayload(problem), code, language, snippet, languages, snippets, interview, failure, lowEffort }),
-      signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
-    });
-  } catch (e) {
-    const err = new Error('Could not reach the LeetHint server — check your connection.');
-    err.offline = true;
-    throw err;
-  }
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const err = new Error(body.error || `LeetHint server error (${res.status})`);
-    err.status = res.status;
-    throw err;
+  for (let tries = 0; ; tries++) {
+    try {
+      res = await fetch(`${BACKEND_URL}/v1/generate`, {
+        method: 'POST', headers, body,
+        signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
+      });
+    } catch (e) {
+      const err = new Error('Could not reach the LeetHint server — check your connection.');
+      err.offline = true;
+      throw err;
+    }
+    if (res.ok) break;
+    const err = serverError(res.status, await res.json().catch(() => ({})));
+    // Busy → wait in line, then try again (never for rate_limited/trial_used)
+    if (err.code !== 'busy') throw err;
+    const waitMs = nextWaitMs(tries, err.retryAfter);
+    if (WAIT.now() - startedAt + waitMs > WAIT.maxMs) throw err;
+    onWait?.({ position: err.position, waitSec: Math.round(waitMs / 1000) });
+    await WAIT.sleep(waitMs);
   }
 
   console.log(`LeetHint: ${action} reply (${res.headers.get('X-LeetHint-Cache') || '?'}, ${res.headers.get('X-LeetHint-Model') || 'cache'})`);
@@ -298,16 +389,16 @@ export async function readAnswerStream(res, kind, onText) {
   return text;
 }
 
-// Mock interview: one interviewer turn or the final scorecard.
-// action: 'interview_turn' | 'interview_score'; returns the raw model text (JSON)
+// Mock interview: one interviewer turn, the final scorecard or a summary.
+// action: 'interview_turn' | 'interview_score' | 'interview_summary'; returns the raw model text
 export function callInterviewer(action, problem, interview) {
-  return callBackend(action, problem, { interview });
+  return route(action, problem, { interview });
 }
 
 // Is the backend up, and which providers does it have? (names only)
 export async function checkBackend() {
   try {
-    const res = await fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/health`, { headers: await backendHeaders(), signal: AbortSignal.timeout(5000) });
     return res.ok ? await res.json() : { ok: false };
   } catch {
     return { ok: false };
@@ -364,6 +455,44 @@ export function parseHintsReply(raw) {
 
 
 // ─────────────────────────────────────────────
+// 4b. STATIC HINT FILES — https://leethint-cache.pages.dev/cache/<slug>.json
+//     Generated once per problem by tools/prefill.mjs (compile-checked, with
+//     the exact LeetCode signature), so reading one costs no AI call at all.
+// ─────────────────────────────────────────────
+
+// The file (shared contract item 1) → the object the side panel already shows
+export function mapStaticFile(file) {
+  if (!file || !Array.isArray(file.hints) || file.hints.length < 4 || !file.code?.cpp) return null;
+  const { cpp, ...others } = file.code;
+  const note = [file.approach, file.tc && `TC ${file.tc}`, file.sc && `SC ${file.sc}`].filter(Boolean).join(' · ');
+  return {
+    hint1: file.hints[0], hint2: file.hints[1], hint3: file.hints[2], hint4: file.hints[3],
+    hint5: '```cpp\n' + cpp + '\n```\n' + (note ? `Approach: ${note}` : ''),
+    optimal_tc: file.tc || '', optimal_sc: file.sc || '', sc_breakdown: file.spaceBreakdown || '',
+    pattern: file.pattern || '',
+    translations: Object.fromEntries(Object.entries(others).filter(([l, c]) => LANGUAGES[l] && c)),
+    followUps: Array.isArray(file.followUps) ? file.followUps.filter(f => f?.q && f?.a).slice(0, 3) : [],
+    solution: { code: cpp, approach: file.approach || '', tc: file.tc || '', sc: file.sc || '' },
+    source: 'static',
+    promptVersion: file.promptVersion || ''
+  };
+}
+
+// → the mapped file, or null on any error / 404 / 4 s timeout (then the Worker
+// is asked exactly as before). An older promptVersion is still used.
+export async function fetchStaticHints(slug) {
+  if (!slug || !/^[a-z0-9-]+$/.test(slug)) return null;
+  try {
+    const res = await fetch(`${CACHE_URL}/cache/${slug}.json`, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return null;
+    return mapStaticFile(await res.json());
+  } catch {
+    return null;
+  }
+}
+
+
+// ─────────────────────────────────────────────
 // 5. MAIN EXPORT — generateHints()
 // ─────────────────────────────────────────────
 
@@ -371,8 +500,17 @@ export function parseHintsReply(raw) {
 // language: the user's own solution language — when it isn't C++, the same
 // reply also contains the solution in that language (no second request).
 // Any other language is translated from the C++ only when it's picked.
-export async function generateHints(problemData, { onPartial, language = 'cpp' } = {}) {
+// onWait({ position, waitSec }): the request is waiting in line (server busy)
+export async function generateHints(problemData, { onPartial, onWait, language = 'cpp' } = {}) {
   console.log('LeetHint: generateHints() called for:', problemData.title);
+
+  // A static file → instant, and already signature-checked
+  const fromFile = await fetchStaticHints(problemData.slug);
+  if (fromFile) {
+    console.log(`LeetHint: hints from the static file (${fromFile.promptVersion || '?'})`);
+    onPartial?.({ ...fromFile, streaming: '' });
+    return fromFile;
+  }
 
   // Report every change to the visible hint text, so hints appear as they're written
   let lastShown = '';
@@ -385,7 +523,7 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
   const also = withLanguage(problemData, language);
 
   try {
-    let raw = await callBackend('hints', problemData, { onText, ...also });
+    let raw = await route('hints', problemData, { onText, onWait, ...also });
     let result;
     try {
       result = parseHintsJSON(raw);
@@ -393,7 +531,7 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
       // The model thought so long the reply was cut off before the hints were
       // complete (seen on Hard problems) — ask once more with less thinking
       console.warn('LeetHint: hints reply incomplete — retrying with low reasoning');
-      raw = await callBackend('hints', problemData, { onText, ...also, lowEffort: true });
+      raw = await route('hints', problemData, { onText, onWait, ...also, lowEffort: true });
       result = parseHintsJSON(raw);
     }
     let reference = parseSolutionResponse(raw);
@@ -403,7 +541,7 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
       // comes last). A solution-only reply is much shorter, so ask for just that.
       console.warn('LeetHint: reply had no code — requesting solution separately');
       try {
-        codeRaw = await callBackend('solve', problemData, also);
+        codeRaw = await route('solve', problemData, { ...also, onWait });
         reference = parseSolutionResponse(codeRaw);
       } catch (e) {
         console.warn('LeetHint: separate solution request failed →', e.message);
@@ -422,6 +560,8 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
     return reference.code ? applyReference(result, reference) : result;
   } catch (e) {
     console.warn('LeetHint: server generation failed →', e.message);
+    // These are answers, not outages: show them instead of the offline AI
+    if (e.code === 'rate_limited' || e.code === 'trial_used' || e.code === 'blocked' || e.ownKey) throw e;
     // Server unreachable or failing → Chrome Built-in AI can still give hints
     try {
       return await generateWithBuiltinAI(buildHintsPrompt(problemData));
@@ -442,7 +582,7 @@ export async function generateHints(problemData, { onPartial, language = 'cpp' }
 // failure: optional — the failing test or compile error LeetCode reported
 export async function validateSolutionCode(code, problem, failure = '') {
   // (no language option here — Fix/Generate produce the C++ reference only)
-  const solved = parseSolutionResponse(await callBackend(code ? 'fix' : 'solve', problem, { code, failure: failure || undefined }));
+  const solved = parseSolutionResponse(await route(code ? 'fix' : 'solve', problem, { code, failure: failure || undefined }));
   if (!solved.code) throw new Error('The AI returned no code — please retry.');
   return code ? solved : ensureSignature(solved, problem);
 }
@@ -480,7 +620,9 @@ async function ensureSignature(reference, problem) {
 
   console.warn('LeetHint: solution does not match LeetCode signature (missing', missing.join(', '), ') — fixing');
   try {
-    const fixed = parseSolutionResponse(await callBackend('fix', problem, { code: reference.code }));
+    // reason: 'signature' → the server caches this fix for everyone (the code
+    // came from the shared cache, so every user would send the same request)
+    const fixed = parseSolutionResponse(await route('fix', problem, { code: reference.code, reason: 'signature' }));
     if (fixed.code && missingSignatureParts(fixed.code, problem.cppSnippet).length < missing.length) {
       return { ...reference, ...fixed, approach: reference.approach, pattern: reference.pattern };
     }
@@ -526,7 +668,7 @@ function extractLanguageSection(raw, language) {
 // translation is generated once and then served from the server cache too.
 export async function translateSolution(cppCode, problem, language) {
   const snippet = problem.codeSnippets?.[language] || '';
-  const raw = await callBackend('translate', problem, { code: cppCode, language, snippet });
+  const raw = await route('translate', problem, { code: cppCode, language, snippet });
   const code = extractAnyFence(raw);
   if (!code) throw new Error('The AI returned no translated code — please retry.');
   return code;
