@@ -47,7 +47,7 @@ Remote code: none. All code is in the package.
 ## Data use (Chrome form)
 - Collected: none of the listed categories. Problem text (public LeetCode content) and an anonymous random install ID are sent to LeetHint's server to generate hints and enforce fair-use limits. Mock interview conversations are sent to generate the interviewer's replies and are not stored on the server.
 - Not sold, not used for anything unrelated to the extension, not used for credit decisions.
-- Privacy policy URL: **TODO — from Person A (handoff A16)**
+- Privacy policy URL: https://leethint.pages.dev/privacy
 
 ## Screenshots (1280×800 or 640×400, 3–5)
 1. Hints tab: Hint 1 with the score bar (`screenshots/hints-tab.jpeg`, re-shoot at 1280×800)
