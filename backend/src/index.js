@@ -145,10 +145,14 @@ async function handleGenerate(request, env, ctx, cors) {
   // ── Shared cache: same problem + prompt → instant reply for every user ──
   // Keyed by a hash of the FULL prompt, so a client sending a fake statement
   // for a real slug only ever gets (and caches) its own fake result.
-  // Interviews are personal conversations — never cached or shared
-  const cacheable = action !== 'fix' && !interviewing && env.HINTS_CACHE;
+  // Interviews are personal conversations — never cached or shared.
+  // Fix is personal too, EXCEPT the automatic signature fix: the code being
+  // fixed came from the shared cache, so every user sends the same prompt and
+  // gets the same stored fix. Other code only ever fills its own key.
+  const signatureFix = action === 'fix' && body.reason === 'signature' && !extra.failure;
+  const cacheable = (action !== 'fix' || signatureFix) && !interviewing && env.HINTS_CACHE;
   const keyFor = async (act, lang, p) => `${PROMPT_VERSION}:${act}${lang ? '-' + lang : ''}:${problem.slug}:${await sha256(p)}`.slice(0, 500);
-  const cacheKey = cacheable ? await keyFor(action, extra.language, prompt) : '';
+  const cacheKey = cacheable ? await keyFor(action, signatureFix ? 'signature' : extra.language, prompt) : '';
   // Hints/solution in a user's language also count as the problem's SHARED
   // copy (the plain C++ reply): a later user in any other language gets these
   // hints instantly and only needs a small translation, not a full re-solve.
