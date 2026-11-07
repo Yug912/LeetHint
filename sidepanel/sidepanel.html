@@ -38,6 +38,38 @@
   <!-- ============ HINTS TAB ============ -->
   <main class="tab-content active" id="content-hints">
 
+    <!-- Server message (GET /config "message"), e.g. planned maintenance -->
+    <div class="remote-banner" id="remote-banner" role="status" hidden></div>
+
+    <!-- LeetCode's page couldn't be read (they changed it) -->
+    <div class="remote-banner site-changed" id="site-changed-banner" role="status" hidden>
+      LeetCode changed its page; an update is coming. Saved hints still work.
+    </div>
+
+    <!-- Confidence check — one skippable line before you start -->
+    <div class="confidence-row" id="confidence-row" hidden>
+      <span class="confidence-q">Will you solve this without hints?</span>
+      <span class="confidence-btns">
+        <button class="chip-btn" data-answer="yes">Yes</button>
+        <button class="chip-btn" data-answer="maybe">Maybe</button>
+        <button class="chip-btn" data-answer="no">No</button>
+        <button class="link-btn" data-answer="skip">Skip</button>
+      </span>
+    </div>
+
+    <!-- Déjà vu: a similar problem you solved before -->
+    <div class="dejavu-row" id="dejavu-row" hidden>
+      <span class="dejavu-icon">🔗</span>
+      <a class="dejavu-link" id="dejavu-link" href="#"></a>
+      <button class="link-btn dejavu-close" id="dejavu-close" title="Hide" aria-label="Hide">✕</button>
+    </div>
+
+    <!-- Tilt: gentle help when it's going badly (once per problem) -->
+    <div class="tilt-card" id="tilt-card" role="status" hidden>
+      <p class="tilt-title" id="tilt-title"></p>
+      <div class="tilt-actions" id="tilt-actions"></div>
+    </div>
+
     <!-- Revision status of this problem: due review / in queue / solved -->
     <div class="revision-bar" id="revision-bar" hidden>
       <span class="revision-bar-text" id="revision-bar-text"></span>
@@ -92,6 +124,7 @@
       <span class="no-problem-icon">⚠️</span>
       <p id="error-message">Failed to generate hints.</p>
       <button class="btn-retry" id="btn-retry">🔄 Retry</button>
+      <button class="btn-check btn-add-key" id="btn-add-key-error" hidden>Add a free key</button>
     </div>
 
     <!-- Main hints layout: hint cards + score bar side by side -->
@@ -106,6 +139,13 @@
             <span class="hint-label">HINT 1</span>
             <span class="hint-status-icon">✓</span>
           </div>
+          <!-- Pattern guess: before Hint 1 is shown (skippable) -->
+          <div class="pattern-guess" id="pattern-guess" hidden>
+            <p class="pattern-guess-q">Which pattern is it? Guess before reading Hint 1.</p>
+            <div class="pattern-chips" id="pattern-chips"></div>
+            <button class="link-btn" id="pattern-skip">Skip</button>
+          </div>
+          <p class="pattern-result" id="pattern-result" hidden></p>
           <div class="hint-content" id="hint-content-1">
             <!-- AI generated hint text will go here -->
             <p class="hint-text" id="hint-text-1">Loading hint...</p>
@@ -228,6 +268,26 @@
     </div>
     <!-- END hints-layout -->
 
+    <!-- Report a wrong hint (sent with the problem and prompt version only) -->
+    <div class="hint-tools" id="hint-tools" hidden>
+      <button class="link-btn" id="btn-report">Report wrong hint</button>
+      <span class="report-picker" id="report-picker" hidden>
+        <button class="chip-btn" data-reason="wrong_solution">Wrong solution</button>
+        <button class="chip-btn" data-reason="wrong_hint">Wrong hint</button>
+        <button class="chip-btn" data-reason="other">Other</button>
+      </span>
+      <span class="report-thanks" id="report-thanks" hidden>Thanks, we'll check it</span>
+    </div>
+
+    <!-- Interview follow-ups — shown after a solve, answers hidden until clicked -->
+    <section class="followups-section" id="followups-section" hidden>
+      <div class="section-header">
+        <span class="section-icon">🎯</span>
+        <span class="section-title">Interview follow-ups</span>
+      </div>
+      <div class="followups-list" id="followups-list"></div>
+    </section>
+
     <!-- ============ EXPLANATION SECTION ============ -->
     <section class="explanation-section">
       <div class="section-header">
@@ -267,6 +327,16 @@
           </div>
         </div>
         <button class="btn-check" id="btn-check-tcsc">Check</button>
+      </div>
+
+      <!-- TLE warning: a heuristic from your editor code and the constraints -->
+      <div class="speed-row">
+        <button class="link-btn" id="btn-check-speed" title="Estimate whether your editor code fits the constraints">⏱ Check speed</button>
+      </div>
+      <div class="tle-warning" id="tle-warning" role="status" hidden>
+        <span class="tle-text" id="tle-text"></span>
+        <span class="tle-note">Heuristic — counts loops, not exact.</span>
+        <button class="link-btn tle-close" id="tle-close" title="Dismiss" aria-label="Dismiss">✕</button>
       </div>
 
       <!-- Result shown after clicking Check -->
@@ -319,6 +389,18 @@
         <div class="stat-card">
           <span class="stat-value" id="stat-best">—</span>
           <span class="stat-label">Best</span>
+        </div>
+      </div>
+
+      <!-- Streaks: days with a solve or a revision -->
+      <div class="stats-cards streak-cards">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-streak">0</span>
+          <span class="stat-label">Day streak</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-best-streak">0</span>
+          <span class="stat-label">Best streak</span>
         </div>
       </div>
 
@@ -390,6 +472,19 @@
         </div>
       </div>
 
+      <!-- Pattern recognition (from the guesses before Hint 1) -->
+      <div class="stats-breakdown" id="pattern-stats" hidden>
+        <h3 class="breakdown-title">Pattern Recognition</h3>
+        <div id="pattern-bars"></div>
+      </div>
+
+      <!-- Confidence calibration (after 10 answers) -->
+      <div class="stats-breakdown" id="confidence-card" hidden>
+        <h3 class="breakdown-title">Confidence</h3>
+        <p class="confidence-summary" id="confidence-summary"></p>
+        <div id="confidence-by-difficulty"></div>
+      </div>
+
       <!-- Mock interview scorecards -->
       <div class="stats-breakdown">
         <h3 class="breakdown-title">Mock Interviews <span class="revision-count" id="interview-count">0</span></h3>
@@ -406,7 +501,39 @@
             <span class="key-badge key-badge-recommended">ZERO SETUP</span>
           </span>
         </div>
-        <p class="settings-hint" id="ai-status">Checking…</p>
+        <p class="settings-hint" id="ai-status">Opens when you scroll here…</p>
+        <p class="settings-hint" id="trial-info"></p>
+
+        <!-- Own free API key: unlimited Fix and interviews, straight to the provider -->
+        <div class="settings-row own-key-head" id="own-key-settings">
+          <span class="settings-label">
+            Your own AI key
+            <span class="key-badge">OPTIONAL · FREE</span>
+          </span>
+        </div>
+        <p class="settings-hint">Unlimited Fix and full 30-minute interviews. Get a free key in 2 minutes, no card:
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a> ·
+          <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a>.</p>
+        <div class="own-key-form">
+          <select class="own-key-provider" id="own-key-provider" aria-label="Provider">
+            <option value="gemini">Google Gemini</option>
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+          <input class="own-key-input" id="own-key-input" type="password" placeholder="Paste your key" autocomplete="off" spellcheck="false" aria-label="API key" />
+        </div>
+        <div class="own-key-actions">
+          <button class="btn-check" id="btn-test-key">Test key</button>
+          <button class="link-btn" id="btn-remove-key" hidden>Remove key</button>
+        </div>
+        <p class="settings-hint" id="own-key-note">Your key is stored on this computer and sent only to Google Gemini.</p>
+        <p class="settings-hint own-key-status" id="own-key-status" role="status"></p>
+
+        <div class="settings-row export-row">
+          <span class="settings-label">Your data</span>
+          <button class="btn-check" id="btn-export-csv">Download CSV</button>
+        </div>
+        <p class="settings-hint">Stats, revision and interview history. Install ID (anonymous): <code id="install-id">…</code></p>
       </div>
 
 
@@ -433,6 +560,12 @@
       <div class="stats-breakdown">
         <h3 class="breakdown-title">Upcoming <span class="revision-count" id="revision-upcoming-count">0</span></h3>
         <ul class="revision-list" id="revision-upcoming-list"></ul>
+      </div>
+
+      <!-- Patterns you recognise less than half the time -->
+      <div class="stats-breakdown" id="weak-patterns" hidden>
+        <h3 class="breakdown-title">Patterns to practise</h3>
+        <p class="settings-hint" id="weak-patterns-text"></p>
       </div>
 
       <details class="stats-breakdown revision-mastered">

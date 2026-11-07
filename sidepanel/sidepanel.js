@@ -3,9 +3,11 @@
 // Loaded as an ES module (see sidepanel.html)
 
 import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
-         translateSolution, LANGUAGES } from '../api/ai.js';
+         translateSolution, fetchStaticHints, LANGUAGES } from '../api/ai.js';
+import { CACHE_URL } from '../api/config.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
-         renderInterviewHistory } from './interview.js';
+         renderInterviewHistory, setInterviewOptions } from './interview.js';
+import * as extras from './extras.js';
 import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
          clampLimit, outcomeForScore, outcomeForInterview, interviewHintScore, newQueueItem, applyReview,
          markMastered, lastScore, lowerJoinScore, syncJoinScores, migrateQueue, planQueue,
@@ -16,16 +18,36 @@ import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, pa
 // ─────────────────────────────────────────────
 let companiesDB = null;
 
+// Fresher tags from the cache site once a week; the copy bundled with the
+// extension is the fallback (first run offline, site down)
+const COMPANIES_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+
 async function loadCompaniesDB() {
   try {
-    const url = chrome.runtime.getURL('data/companies.json');
-    const res  = await fetch(url);
-    companiesDB = await res.json();
-    console.log('LeetHint: companiesDB loaded,', Object.keys(companiesDB).length, 'problems');
+    const { companiesData, companiesFetchedAt = 0 } = await chrome.storage.local.get(['companiesData', 'companiesFetchedAt']);
+    if (companiesData && Date.now() - companiesFetchedAt < COMPANIES_MAX_AGE_MS) {
+      companiesDB = companiesData;
+      return;
+    }
+    const res = await fetch(`${CACHE_URL}/companies.json`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const fresh = await res.json();
+    if (!fresh || typeof fresh !== 'object' || Array.isArray(fresh)) throw new Error('bad file');
+    companiesDB = fresh;
+    await chrome.storage.local.set({ companiesData: fresh, companiesFetchedAt: Date.now() }).catch(() => {});
   } catch (e) {
-    console.log('LeetHint: could not load companies.json', e.message);
-    companiesDB = {};
+    try {
+      const { companiesData } = await chrome.storage.local.get('companiesData');
+      if (companiesData) { companiesDB = companiesData; return; }
+      const res = await fetch(chrome.runtime.getURL('data/companies.json'));
+      companiesDB = await res.json();
+    } catch (err) {
+      console.log('LeetHint: could not load companies.json', err.message);
+      companiesDB = {};
+    }
   }
+  console.log('LeetHint: companiesDB loaded,', Object.keys(companiesDB).length, 'problems');
+  if (state.problem?.slug) renderCompanyTags(state.problem.slug);
 }
 
 // ─────────────────────────────────────────────
@@ -59,6 +81,7 @@ let pendingSlug = '';
 
 // Score values for each level
 const SCORE_MAP = { 1: 100, 2: 80, 3: 60, 4: 40, solution: 20 };   // names: SCORE_NAMES
+const NEXT_CARD = { 1: 2, 2: 3, 3: 4, 4: 'solution' };
 
 // ─────────────────────────────────────────────
 // DOM REFERENCES — grab all elements once
@@ -85,6 +108,8 @@ const DOM = {
   errorState:     $('error-state'),
   errorMessage:   $('error-message'),
   btnRetry:       $('btn-retry'),
+  btnAddKeyError: $('btn-add-key-error'),
+  siteChanged:    $('site-changed-banner'),
   hintsLayout:    $('hints-layout'),
   loadingName:    $('loading-problem-name'),
 
@@ -194,7 +219,19 @@ async function init() {
   // Background, non-blocking — the problem loads in parallel
   loadCompaniesDB();
   removeLegacyKeys();
-  renderServiceStatus();
+  // (the server status is checked only when Settings comes into view — extras.js)
+  extras.initExtras({
+    getProblem:  () => state.problem,
+    getHints:    () => state.hints,
+    getProgress: () => ({ hintsUnlocked: state.hintsUnlocked, score: state.score, review: !!state.review && !state.review.done }),
+    unlockNext:  () => unlockHint(NEXT_CARD[state.hintsUnlocked]),
+    isInterviewing: slug => isInterviewActive(slug),
+    showToast, switchTab,
+    openProblem: slug => { chrome.tabs.update({ url: `https://leetcode.com/problems/${slug}/` }); switchTab('hints'); },
+    renderServiceStatus,
+    onConfig: cfg => setInterviewOptions({ allowed: cfg.interview, trialMinutes: extras.hasOwnKey() ? 0 : cfg.trialInterviewMinutes })
+  });
+  DOM.btnAddKeyError?.addEventListener('click', () => extras.openOwnKeySettings());
 
   await loadLanguagePreference();
   // Mock interview: needs the problem + its verified solution (hidden reference)
@@ -203,7 +240,8 @@ async function init() {
     getHintsFor: slug => (state.problem?.slug === slug ? state.hints : null),
     showToast,
     isReviewDue: slug => state.review?.slug === slug && !state.review.done,
-    onScored:    onInterviewScored
+    onScored:    onInterviewScored,
+    openKeySettings: () => extras.openOwnKeySettings()
   });
   renderRevision();   // migrates an old-format queue + the tab badge
   await loadCurrentProblem();
@@ -313,6 +351,15 @@ async function loadCurrentProblem(slugHint = '') {
     return;
   }
 
+  // Nothing could be read from the page, but the tab IS a problem (LeetCode
+  // changed its page): carry on with the slug from the URL — the static
+  // hint file is found by slug alone
+  if (!problem) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []);
+    const slug = slugFromUrl(tab?.url);
+    if (slug) problem = { slug, title: titleFromSlug(slug), difficulty: '', problemNumber: '', description: '', topicTags: [], codeSnippets: {} };
+  }
+
   if (!problem) {
     showState('noProblem');
     syncInterview(null);
@@ -410,11 +457,30 @@ async function loadHints() {
       state.hints = cachedHints;
       renderHints();
       showState('hints');
+      extras.onHintsReady(state.hints);
       // Cached from a reply whose code never arrived — fetch just the solution
       if (!cachedHints.hint5) fillMissingSolution(myId);
       else if (nearSolution()) prefetchMyTranslation();
       return;
     }
+  }
+
+  // LeetCode's page couldn't be read (no statement): only the static file,
+  // found by the slug in the URL, can still give correct hints
+  if (!problem.description) {
+    DOM.siteChanged.hidden = false;
+    const fromFile = await fetchStaticHints(problem.slug);
+    if (myId !== hintsGenerationId) return;
+    if (fromFile) {
+      state.hints = fromFile;
+      await chrome.storage.local.set({ [cacheKey]: fromFile });
+      renderHints();
+      showState('hints');
+      extras.onHintsReady(state.hints);
+    } else {
+      showState('error', 'LeetCode changed its page, so this problem can\'t be read right now. An update is coming.');
+    }
+    return;
   }
 
   // TC/SC comes from the same solve step as the hint 5 code, so it always
@@ -430,6 +496,11 @@ async function loadHints() {
   try {
     const hints = await generateHints(problem, {
       language: solutionLanguage,   // your language's code arrives in the same reply
+      // Every free AI model busy → the server puts us in line; say so in Hint 1
+      onWait: ({ position, waitSec }) => {
+        if (myId !== hintsGenerationId || state.hints?.hint1) return;
+        DOM.hintTexts[1].innerHTML = `<span class="hint-pending hint-waiting">⏳ High demand — you're in line${position > 1 ? ` (#${position})` : ''}, trying again in ~${waitSec} s…</span>`;
+      },
       onPartial: partial => {
         if (myId !== hintsGenerationId) return;
         state.hints = { ...partial, hint5: '', generating: true };
@@ -456,6 +527,7 @@ async function loadHints() {
 
     state.hints = hints;
     renderHintTexts();  // already on screen — just fill in the rest
+    extras.onHintsReady(state.hints);
     if (nearSolution()) prefetchMyTranslation();
   } catch (e) {
     cancelAnimationFrame(frame);
@@ -468,6 +540,8 @@ async function loadHints() {
       showToast('❌ ' + e.message);
     } else {
       showState('error', e.message);
+      // Out of free trials → the fix is a free key of their own
+      DOM.btnAddKeyError.hidden = e.code !== 'trial_used';
     }
   }
 }
@@ -701,7 +775,7 @@ function buildSolutionUI(el, code, approachNote) {
 
   async function showLanguage(lang) {
     const isCpp = lang === 'cpp';
-    fixBtn.hidden = !isCpp;          // Fix works on the verified C++ version
+    fixBtn.hidden = !isCpp || !extras.remote().fix;   // Fix works on the verified C++ version (and can be switched off remotely)
     failureBox.hidden = !isCpp;
     transNote.hidden = isCpp;
     if (isCpp) {
@@ -757,7 +831,14 @@ function buildSolutionUI(el, code, approachNote) {
         console.error('LeetHint: Validation failed →', e);
         fixBtn.textContent = '🔧 Fix';
         fixBtn.disabled = false;
-        showToast('❌ Validation failed: ' + e.message);
+        showToast(e.code === 'trial_used' ? '⏳ ' + e.message : '❌ Validation failed: ' + e.message);
+        if (e.code === 'trial_used' && !el.querySelector('.btn-add-key')) {
+          const add = document.createElement('button');
+          add.className = 'btn-check btn-add-key';
+          add.textContent = 'Add a free key';
+          add.addEventListener('click', () => extras.openOwnKeySettings());
+          failureBox.after(add);
+        }
       }
     });
   }
@@ -960,6 +1041,7 @@ function checkTcSc() {
 }
 
 function resetTcScChecker() {
+  if (DOM.siteChanged) DOM.siteChanged.hidden = true;
   if (DOM.tcInput)  DOM.tcInput.value  = '';
   if (DOM.scInput)  DOM.scInput.value  = '';
   if (DOM.tcscResult) DOM.tcscResult.style.display = 'none';
@@ -1031,6 +1113,7 @@ async function loadSavedProgress() {
 
   renderRevisionBar();
   startPendingInterview();
+  extras.onProblemShown(state.problem);
 }
 
 
@@ -1055,8 +1138,12 @@ async function updateStats({ solved = false } = {}) {
   // Record this problem's current state
   const prev = stats.problems[slug];
   const isNewProblem = !prev;
-  stats.problems[slug] = { score: state.score, level, difficulty,
-                           solved: solved || (prev ? prev.solved !== false : false) };
+  const isSolved = solved || (prev ? prev.solved !== false : false);
+  // title / pattern / tags / solvedOn: for déjà-vu links, the CSV and streaks
+  stats.problems[slug] = { score: state.score, level, difficulty, solved: isSolved,
+                           title: state.problem.title || prev?.title || '', problemNumber: state.problem.problemNumber || prev?.problemNumber || '',
+                           pattern: state.hints?.pattern || prev?.pattern || '', topicTags: state.problem.topicTags || prev?.topicTags || [],
+                           solvedOn: prev?.solvedOn || (solved ? localDate() : undefined) };
 
   // Update difficulty count (only for new problems)
   if (isNewProblem && stats.byDifficulty[difficulty] !== undefined) {
@@ -1118,6 +1205,7 @@ async function renderStats() {
   });
 
   await renderInterviewHistory();
+  await extras.renderStatsExtras();
 }
 
 
@@ -1200,10 +1288,12 @@ async function onProblemSolved(slug, { manual = false } = {}) {
     const outcome = outcomeForScore(score);
     const item = await recordReview(problem.slug, { score, outcome, via: manual ? 'manual' : 'solve' });
     if (item) showToast(reviewMessage(item, outcome, `${name} (${score})`));
+    await extras.onSolved(problem, { score });
     return;
   }
 
   await updateStats({ solved: true });
+  await extras.onSolved(problem, { score });
   const queued = score <= QUEUE_SCORE_MAX && await addToRevisionQueue();
   if (!queued) showToast(`✅ Solved — ${name} (${score})`);
 }
@@ -1354,6 +1444,7 @@ async function renderRevision() {
   fillRevisionList(DOM.revisionUpcomingList, upcoming, 'upcoming',
     'No upcoming reviews. Problems join when you open Hint 4 or the solution, or solve one with a score of 60 or lower.');
   fillRevisionList(DOM.revisionMasteredList, mastered, 'mastered', 'Nothing mastered yet.');
+  extras.renderRevisionExtras();
 }
 
 function fillRevisionList(listEl, entries, kind, emptyText) {
@@ -1442,6 +1533,7 @@ function revisionRow({ slug, item, overdueDays, date }, kind) {
 
 // Show one of four states: 'loading' | 'noProblem' | 'error' | 'hints'
 function showState(which, errorMsg = '') {
+  if (which !== 'error' && DOM.btnAddKeyError) DOM.btnAddKeyError.hidden = true;
   DOM.loadingState.classList.toggle('visible',   which === 'loading');
   DOM.noProblemState.classList.toggle('visible', which === 'noProblem');
   DOM.errorState.style.display  = which === 'error' ? 'flex' : 'none';
@@ -1497,6 +1589,7 @@ chrome.runtime.onMessage.addListener((message) => {
       showState('noProblem');
       syncInterview(null);
       renderRevisionBar();
+      extras.onProblemShown(null);
     }).catch(() => {});
     return;
   }
@@ -1507,6 +1600,10 @@ chrome.runtime.onMessage.addListener((message) => {
 
   // Content script saw an Accepted submission
   if (message.type === 'PROBLEM_SOLVED') onProblemSolved(message.slug);
+  // …a Wrong Answer / Time Limit Exceeded / Runtime Error (tilt detector)
+  if (message.type === 'PROBLEM_FAILED' && message.slug === state.problem?.slug) extras.onFailed(message.slug, message.verdict);
+  // Run or Submit pressed → a quick look for time-limit risks
+  if (message.type === 'CODE_SUBMITTED' && message.slug === state.problem?.slug) extras.checkSpeed();
 });
 
 function applyProblem(newProblem) {

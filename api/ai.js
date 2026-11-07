@@ -395,6 +395,23 @@ export function callInterviewer(action, problem, interview) {
   return route(action, problem, { interview });
 }
 
+// "Report wrong hint" → POST /v1/report (contract item 7). → true when the
+// server took it; false when it couldn't (an older Worker without /v1/report,
+// offline) — the panel then just hides the link, never shows an error.
+export async function reportHint({ slug, promptVersion, reason, note = '' }) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/v1/report`, {
+      method: 'POST',
+      headers: await backendHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ slug, promptVersion, reason, note: String(note).slice(0, 500) }),
+      signal: AbortSignal.timeout(8000)
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Is the backend up, and which providers does it have? (names only)
 export async function checkBackend() {
   try {

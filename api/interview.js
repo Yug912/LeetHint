@@ -182,21 +182,58 @@ const SAFE_HINT = "I can't give the technique away, but look at what work your c
 // 5. SERVER CALLS
 // ─────────────────────────────────────────────
 
-// Only what the server reads, and only the recent transcript (it trims
-// again, oldest first) — keeps every request small
-function interviewPayload(session, event, code, reference) {
-  const history = session.history
-    .filter(h => h.role === 'interviewer' || h.role === 'candidate')
-    .map(h => ({ role: h.role, text: h.text }));
+const spoken = session => session.history
+  .filter(h => h.role === 'interviewer' || h.role === 'candidate')
+  .map(h => ({ role: h.role, text: h.text }));
+
+// The editor code is worth sending once it differs from the starter template,
+// or when the interviewer is judging code (coding → feedback). Before that
+// it's only the template — leaving it out keeps early turns small.
+const CODE_STAGES = ['coding', 'testing', 'complexity', 'feedback'];
+export function codeWorthSending(session, code) {
+  if (!code) return false;
+  return CODE_STAGES.includes(session.stage) || codeChangedMeaningfully(session.starterCode || '', code);
+}
+
+// Only what the server reads. Once there is a running summary, only it and
+// the last 4 turns go (contract item 9) — every request stays small.
+export const RECENT_TURNS = 4;
+export function interviewPayload(session, event, code, reference, { full = false } = {}) {
+  const history = spoken(session);
+  const summarised = !full && session.summary;
   return {
+    interviewId: session.interviewId || undefined,
+    durationMin: session.durationMin || INTERVIEW_MINUTES,
     event,
     stage: session.stage,
     elapsedSec: Math.floor((Date.now() - session.startedAt) / 1000),
     hintsGiven: session.hintsGiven,
-    code: code || '',
-    history: history.length > 80 ? [...history.slice(0, 2), ...history.slice(-78)] : history,
+    code: full || codeWorthSending(session, code) ? code || '' : '',
+    ...(summarised ? { summary: session.summary.slice(0, 1500) } : {}),
+    history: summarised ? history.slice(-RECENT_TURNS)
+           : history.length > 80 ? [...history.slice(0, 2), ...history.slice(-78)] : history,
     reference: reference || undefined
   };
+}
+
+// Every 6 interviewer turns, the transcript so far is folded into a 5-line
+// summary (interview_summary). → the new summary, or null if not due / failed
+export const SUMMARY_EVERY = 6;
+export function summaryDue(session) {
+  const asked = session.history.filter(h => h.role === 'interviewer').length;
+  return asked > 0 && asked % SUMMARY_EVERY === 0 && asked !== session.summaryAt;
+}
+
+// Only the turns since the last summary are sent, with that summary
+export async function summarise(problem, session) {
+  const asked = session.history.filter(h => h.role === 'interviewer').length;
+  const turns = spoken(session);
+  const text = await callInterviewer('interview_summary', problem, {
+    interviewId: session.interviewId || undefined, durationMin: session.durationMin,
+    stage: session.stage, summary: session.summary || '', history: turns.slice(session.summaryUpTo || 0)
+  });
+  const summary = String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim().slice(0, 1500);
+  return summary ? { summary, summaryAt: asked, summaryUpTo: turns.length } : null;
 }
 
 export async function interviewerTurn(problem, session, event, { code, reference } = {}) {
@@ -221,7 +258,8 @@ export async function interviewerTurn(problem, session, event, { code, reference
 }
 
 export async function scoreInterview(problem, session, { code, reference } = {}) {
-  const payload = interviewPayload(session, 'answer', code, reference);
+  // The scorecard is graded once — it gets the whole transcript and the code
+  const payload = interviewPayload(session, 'answer', code, reference, { full: true });
   payload.elapsedSec = Math.floor(((session.endedAt || Date.now()) - session.startedAt) / 1000);
   let card = parseScorecard(await callInterviewer('interview_score', problem, payload));
   if (!card) card = parseScorecard(await callInterviewer('interview_score', problem, payload));   // one retry
