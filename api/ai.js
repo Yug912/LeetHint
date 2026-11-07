@@ -166,6 +166,18 @@ function parsePartialHints(raw) {
   return partial;
 }
 
+// ---FOLLOWUPS--- → [{ q, a }] (up to 3). Missing section (older prompt, or
+// the Chrome Built-in AI fallback) → []
+export function parseFollowUps(raw) {
+  const section = extractUntilNext(cleanModelText(raw), 'FOLLOWUPS');
+  const pairs = [];
+  for (const m of section.matchAll(/(?:^|\n)\s*\**Q\d*\**\s*[:.)]\s*([\s\S]*?)\n\s*\**A\d*\**\s*[:.)]\s*([\s\S]*?)(?=\n\s*\**Q\d*\**\s*[:.)]|$)/gi)) {
+    const q = m[1].trim(), a = m[2].trim();
+    if (q && a) pairs.push({ q, a });
+  }
+  return pairs.slice(0, 3);
+}
+
 function parseHintsJSON(rawText) {
   const text = cleanModelText(rawText);
   const extract = (a, b) => extractSection(text, a, b);
@@ -193,9 +205,9 @@ function parseHintsJSON(rawText) {
     if (!optimal_sc) optimal_sc = unique[unique.length - 1] || '';
   }
 
-  const pattern = extract('PATTERN', 'END') || 'Unknown';
+  const pattern = extractUntilNext(text, 'PATTERN') || 'Unknown';
 
-  return { hint1, hint2, hint3, hint4, hint5: '', optimal_tc, optimal_sc, pattern };
+  return { hint1, hint2, hint3, hint4, hint5: '', optimal_tc, optimal_sc, pattern, followUps: parseFollowUps(text) };
 }
 
 
@@ -336,6 +348,8 @@ function applyReference(result, reference) {
   const note = [reference.approach, reference.tc && `TC ${reference.tc}`, reference.sc && `SC ${reference.sc}`]
     .filter(Boolean).join(' · ');
   result.hint5 = '```cpp\n' + reference.code + '\n```\n' + (note ? `Approach: ${note}` : '');
+  // The parts on their own (the pre-fill script writes them to static files)
+  result.solution = { code: reference.code, approach: reference.approach, tc: reference.tc, sc: reference.sc };
   return result;
 }
 
