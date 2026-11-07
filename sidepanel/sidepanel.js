@@ -5,6 +5,7 @@
 import { generateHints, validateSolutionCode, compareComplexity, checkBackend,
          translateSolution, fetchStaticHints, LANGUAGES } from '../api/ai.js';
 import { CACHE_URL } from '../api/config.js';
+import { loadCompanies } from '../api/companies.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory, setInterviewOptions } from './interview.js';
 import * as extras from './extras.js';
@@ -14,39 +15,19 @@ import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, pa
          isDueToday } from '../shared/revision.js';
 
 // ─────────────────────────────────────────────
-// COMPANY DATABASE — loaded once from bundled JSON
+// COMPANY DATABASE — from the cache site weekly, bundled copy as fallback
 // ─────────────────────────────────────────────
 let companiesDB = null;
 
-// Fresher tags from the cache site once a week; the copy bundled with the
-// extension is the fallback (first run offline, site down)
-const COMPANIES_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
-
+// Fresher tags from the cache site once a week; the bundled copy is the
+// fallback (first run offline, site down) — see api/companies.js
 async function loadCompaniesDB() {
-  try {
-    const { companiesData, companiesFetchedAt = 0 } = await chrome.storage.local.get(['companiesData', 'companiesFetchedAt']);
-    if (companiesData && Date.now() - companiesFetchedAt < COMPANIES_MAX_AGE_MS) {
-      companiesDB = companiesData;
-      return;
-    }
-    const res = await fetch(`${CACHE_URL}/companies.json`, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const fresh = await res.json();
-    if (!fresh || typeof fresh !== 'object' || Array.isArray(fresh)) throw new Error('bad file');
-    companiesDB = fresh;
-    await chrome.storage.local.set({ companiesData: fresh, companiesFetchedAt: Date.now() }).catch(() => {});
-  } catch (e) {
-    try {
-      const { companiesData } = await chrome.storage.local.get('companiesData');
-      if (companiesData) { companiesDB = companiesData; return; }
-      const res = await fetch(chrome.runtime.getURL('data/companies.json'));
-      companiesDB = await res.json();
-    } catch (err) {
-      console.log('LeetHint: could not load companies.json', err.message);
-      companiesDB = {};
-    }
-  }
-  console.log('LeetHint: companiesDB loaded,', Object.keys(companiesDB).length, 'problems');
+  const { data, source } = await loadCompanies({
+    storage: chrome.storage.local, cacheUrl: CACHE_URL,
+    bundledUrl: chrome.runtime.getURL('data/companies.json')
+  });
+  companiesDB = data;
+  console.log('LeetHint: companiesDB loaded,', Object.keys(companiesDB).length, 'problems from', source);
   if (state.problem?.slug) renderCompanyTags(state.problem.slug);
 }
 
