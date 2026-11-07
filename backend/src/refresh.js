@@ -40,7 +40,10 @@ export async function newestProblems(n = NEWEST) {
 
 // Slugs of problems in a contest that is running now
 // (topTwoContests gives start times; contestQuestionList the problems —
-// whether the latter answers during a live contest is still to be confirmed)
+// both checked 2026-11-07 for upcoming/finished contests; whether the latter
+// answers DURING a contest is unconfirmed, so an error or an empty list for a
+// live contest skips the whole run. The Monday 06:00 UTC cron never overlaps
+// LeetCode's Saturday/Sunday contests anyway.)
 export async function liveContestSlugs(now = Date.now()) {
   const contests = (await leetcode('{ topTwoContests { titleSlug startTime duration } }')).topTwoContests || [];
   const live = contests.filter(c => c.startTime * 1000 <= now && now < (c.startTime + c.duration) * 1000);
@@ -48,6 +51,7 @@ export async function liveContestSlugs(now = Date.now()) {
   for (const c of live) {
     try {
       const qs = (await leetcode('query q($s: String!) { contestQuestionList(contestSlug: $s) { titleSlug } }', { s: c.titleSlug })).contestQuestionList || [];
+      if (!qs.length) throw new Error('no problem list');   // hidden while live → unknown
       for (const q of qs) slugs.add(q.titleSlug);
     } catch (e) {
       console.warn(`refresh: questions of live ${c.titleSlug} unknown (${e.message}) — skipping this run`);

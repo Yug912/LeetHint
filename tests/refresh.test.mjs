@@ -11,6 +11,7 @@ const NOW = Date.UTC(2026, 10, 23, 6);
 const problems = ['new-a', 'new-b', 'premium-c', 'contest-d', 'cached-e'];
 const question = slug => ({ questionFrontendId: '4000', title: slug, difficulty: 'Medium', content: `<p>Solve ${slug}.</p>`, hints: [], topicTags: [{ name: 'Array' }], codeSnippets: [{ langSlug: 'cpp', code: 'class Solution {};' }] });
 let generatedFor = [];
+let contestList = [{ titleSlug: 'contest-d' }];
 
 globalThis.fetch = async (url, init) => {
   const u = String(url);
@@ -19,7 +20,7 @@ globalThis.fetch = async (url, init) => {
     if (query.includes('topTwoContests')) return Response.json({ data: { topTwoContests: [
       { titleSlug: 'weekly-contest-530', startTime: NOW / 1000 - 600, duration: 5400 },        // running
       { titleSlug: 'biweekly-contest-196', startTime: NOW / 1000 + 86400, duration: 5400 }] } });
-    if (query.includes('contestQuestionList')) return Response.json({ data: { contestQuestionList: [{ titleSlug: 'contest-d' }] } });
+    if (query.includes('contestQuestionList')) return Response.json({ data: { contestQuestionList: contestList } });
     if (query.includes('questionList')) return Response.json({ data: { questionList: { totalNum: 3900,
       data: problems.map(s => ({ titleSlug: s, isPaidOnly: s.startsWith('premium') })) } } });
     return Response.json({ data: { question: question(variables.titleSlug) } });
@@ -42,4 +43,12 @@ test('generates only uncached problems outside a live contest, under the user ca
   assert.deepEqual(out.skipped, ['contest-d']);            // premium ones never make the list
   assert.deepEqual(generatedFor, ['new-a', 'new-b']);
   assert.equal(env.DB.db.prepare("SELECT COUNT(*) AS n FROM cache WHERE key LIKE ?").get(`${PROMPT_VERSION}:hints:new-a:%`).n, 1);
+});
+
+test('a live contest whose problem list comes back empty skips the whole run', async () => {
+  contestList = [];
+  generatedFor = [];
+  await assert.rejects(refreshNewProblems({ GROQ_API_KEY: 't', PROVIDER_ORDER: 'groq', DB: fakeD1() }, { now: NOW }), /contest is live/);
+  assert.deepEqual(generatedFor, []);
+  contestList = [{ titleSlug: 'contest-d' }];
 });
