@@ -1,0 +1,41 @@
+{
+  "slug": "3sum",
+  "title": "3Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p7",
+  "generatedAt": "2026-11-07",
+  "pattern": "Two‑Pointer after Sorting",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> nums (sorted in‑place): O(1) extra  \n- indices i, left, right: O(1)  \n- temporary sum variable (long long): O(1)  \n- recursion depth: none  \n- not counted: input array, returned vector of triplets",
+  "approach": "Sort the array and then, for each element, look for a pair of numbers after it that sum to the opposite value using a left‑right scan.  \nSkipping duplicates at every step guarantees each triplet appears only once.  \nThe two‑pointer scan runs in linear time for each fixed element, giving an overall O(n²) algorithm that is correct because any zero‑sum triple must consist of a smallest element and a complementary pair.",
+  "hints": [
+    "What is the cost of checking every possible triple when n can be as large as 3000?  \nIf you fix one number, can you avoid scanning the whole remainder for each remaining pair?  \n(“n ≤ 3000” from the statement)",
+    "Sort the array and then use the two‑pointer technique on the sub‑array to the right of the fixed element.  \nExample: after sorting [-4,-1,-1,0,1,2], fixing -1 at index 1 leads to left=2 (‑1) and right=5 (2).",
+    "for i from 0 to n‑3\n    if i>0 and nums[i]==nums[i‑1] continue\n    left = i+1, right = n‑1\n    while left < right\n        sum = nums[i] + nums[left] + nums[right]\n        if sum == 0 add triplet and move left/right skipping duplicates\n        else if sum < 0 left++\n        else right--",
+    "**All zeros** - the whole array consists of 0s.  \n`Input: [0,0,0,0]` → `Expected: [[0,0,0]]`  \n⚠️ Bug: not skipping duplicate left/right after finding a valid triplet → returns multiple identical `[0,0,0]` entries.\n\n**No solution** - array contains only positive numbers.  \n`Input: [1,2,3]` → `Expected: []`  \n⚠️ Bug: forgetting the early break when nums[i] > 0 → continues scanning and may produce out‑of‑range accesses.\n\n**Duplicate start element** - first element repeats many times.  \n`Input: [-2,-2,0,0,2,2]` → `Expected: [[-2,0,2]]`  \n⚠️ Bug: not checking `i>0 && nums[i]==nums[i-1]` → adds the same triplet twice.\n\n**Mixed large values** - values near ±10⁵.  \n`Input: [-100000,0,100000]` → `Expected: [[-100000,0,100000]]`  \n⚠️ Bug: using 32‑bit int for the sum without casting → overflow could produce a non‑zero sum."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the algorithm to return all unique quadruplets that sum to a target value?",
+      "a": "Extend the idea by fixing two numbers and applying the two‑pointer scan on the remaining sub‑array, yielding O(n³) time and O(1) extra space."
+    },
+    {
+      "q": "What changes are needed if the input array is read as a stream and cannot be stored entirely in memory?",
+      "a": "You would need a hash‑based approach that stores only a limited window of numbers, but guaranteeing uniqueness without full storage is non‑trivial; the time complexity would increase and O(n) additional memory would be required for the hash table."
+    },
+    {
+      "q": "Suppose the array size can be up to 10⁵ and you must run in O(n log n) time. Is it possible to solve the 3‑sum problem under these constraints?",
+      "a": "No; the known lower bound for reporting all zero‑sum triples is Ω(n²) in the worst case because the output size itself can be Θ(n²). Any algorithm faster than O(n²) would miss possible solutions."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> threeSum(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        vector<vector<int>> res;\n        for (int i = 0; i < n - 2; ++i) {\n            if (i > 0 && nums[i] == nums[i - 1]) continue;\n            int left = i + 1, right = n - 1;\n            while (left < right) {\n                long long sum = (long long)nums[i] + nums[left] + nums[right];\n                if (sum == 0) {\n                    res.push_back({nums[i], nums[left], nums[right]});\n                    ++left;\n                    --right;\n                    while (left < right && nums[left] == nums[left - 1]) ++left;\n                    while (left < right && nums[right] == nums[right + 1]) --right;\n                } else if (sum < 0) {\n                    ++left;\n                } else {\n                    --right;\n                }\n            }\n        }\n        return res;\n    }\n};",
+    "java": "import java.util.*;\n\nclass Solution {\n    public List<List<Integer>> threeSum(int[] nums) {\n        Arrays.sort(nums);\n        int n = nums.length;\n        List<List<Integer>> res = new ArrayList<>();\n        for (int i = 0; i < n - 2; ++i) {\n            if (i > 0 && nums[i] == nums[i - 1]) continue;\n            int left = i + 1, right = n - 1;\n            while (left < right) {\n                long sum = (long) nums[i] + nums[left] + nums[right];\n                if (sum == 0) {\n                    res.add(Arrays.asList(nums[i], nums[left], nums[right]));\n                    ++left;\n                    --right;\n                    while (left < right && nums[left] == nums[left - 1]) ++left;\n                    while (left < right && nums[right] == nums[right + 1]) --right;\n                } else if (sum < 0) {\n                    ++left;\n                } else {\n                    --right;\n                }\n            }\n        }\n        return res;\n    }\n}",
+    "python3": "class Solution:\n    def threeSum(self, nums: list[int]) -> list[list[int]]:\n        nums.sort()\n        n = len(nums)\n        res: list[list[int]] = []\n        for i in range(n - 2):\n            if i > 0 and nums[i] == nums[i - 1]:\n                continue\n            left, right = i + 1, n - 1\n            while left < right:\n                total = nums[i] + nums[left] + nums[right]\n                if total == 0:\n                    res.append([nums[i], nums[left], nums[right]])\n                    left += 1\n                    right -= 1\n                    while left < right and nums[left] == nums[left - 1]:\n                        left += 1\n                    while left < right and nums[right] == nums[right + 1]:\n                        right -= 1\n                elif total < 0:\n                    left += 1\n                else:\n                    right -= 1\n        return res",
+    "javascript": "/**\n * @param {number[]} nums\n * @return {number[][]}\n */\nvar threeSum = function(nums) {\n    nums.sort((a, b) => a - b);\n    const n = nums.length;\n    const res = [];\n    for (let i = 0; i < n - 2; ++i) {\n        if (i > 0 && nums[i] === nums[i - 1]) continue;\n        let left = i + 1;\n        let right = n - 1;\n        while (left < right) {\n            const sum = nums[i] + nums[left] + nums[right];\n            if (sum === 0) {\n                res.push([nums[i], nums[left], nums[right]]);\n                ++left;\n                --right;\n                while (left < right && nums[left] === nums[left - 1]) ++left;\n                while (left < right && nums[right] === nums[right + 1]) --right;\n            } else if (sum < 0) {\n                ++left;\n            } else {\n                --right;\n            }\n        }\n    }\n    return res;\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}
