@@ -14,7 +14,8 @@ import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt,
          INTERVIEW_STAGES, INTERVIEW_EVENTS, INTERVIEW_MINUTES } from '../../shared/prompts.js';
 import { configuredProviders, describeModels, openStream } from './providers.js';
 import { quotaClient } from './quota.js';
-import { hasCache, readCache, writeCache, saveReport, takeTrial, refundTrial, admitInterview,
+import { openThroughGate } from './gate.js';
+import { hasCache, readCache, writeCache, isCompleteReply, saveReport, takeTrial, refundTrial, admitInterview,
          isBlocked, utcDay, isoWeek, nextUtcMidnightIso, nextMondayIso } from './store.js';
 
 // Input limits — real LeetCode problems fit comfortably inside these
@@ -320,7 +321,11 @@ async function handleGenerate(request, env, ctx, cors) {
   // Which part of the day's budget pays: Fix (a user's own code) and mock
   // interviews are trials (25%); everything shared by all users is hints (70%)
   const share = (action === 'fix' && !signatureFix) || interviewing ? 'trial' : 'hints';
-  const { upstream, kind, label } = await openStream(env, prompt, { effort, maxTokens, tier, easy, share }).catch(async e => {
+  // A cache miss goes through its ProblemGate when bound: identical misses
+  // arriving together share one AI call (and the gate writes the cache)
+  const opts = { effort, maxTokens, tier, easy, share };
+  const open = cacheable && env.GATE ? openThroughGate(env, cacheKey, prompt, opts, cacheKeys) : openStream(env, prompt, opts);
+  const { upstream, kind, label, gated } = await open.catch(async e => {
     await trial?.refund();   // nothing was generated — the trial isn't used up
     if (e.dailyShare === 'trial') throw trialUsed(action === 'fix' ? 'fix' : 'interview');
     throw e.busy ? busyError(e.retryAfterMs) : e;
@@ -331,7 +336,7 @@ async function handleGenerate(request, env, ctx, cors) {
   // the stream. (Parsing every chunk used to exceed the free plan's 10 ms CPU
   // limit, and Cloudflare then cut replies off mid-way.) The extension parses it.
   let stream = upstream.body;
-  if (cacheable) {
+  if (cacheable && !gated) {
     const [toClient, toCache] = upstream.body.tee();
     stream = toClient;
     ctx.waitUntil(cacheWhenComplete(env, cacheKeys, toCache, kind));
@@ -347,13 +352,7 @@ async function handleGenerate(request, env, ctx, cors) {
 async function cacheWhenComplete(env, cacheKeys, stream, kind) {
   try {
     const raw = await new Response(stream).text();
-    const cut = /"finish_reason"\s*:\s*"length"|"finishReason"\s*:\s*"MAX_TOKENS"/.test(raw);
-    const finished = !cut && (kind === 'gemini' ? /"finishReason"\s*:\s*"STOP"/.test(raw)
-                   : kind === 'workersai' ? raw.includes('[DONE]')
-                   : /"finish_reason"\s*:\s*"stop"/.test(raw));
-    const answered = kind === 'gemini' ? /"text"\s*:\s*"[^"]/.test(raw)
-                   : /"(content|response)"\s*:\s*"[^"]/.test(raw);
-    if (!finished || !answered) return;
+    if (!isCompleteReply(raw, kind)) return;
     for (const key of cacheKeys) {
       rememberReply(key, { raw, kind });
       await writeCache(env, key, raw, kind);
@@ -489,3 +488,4 @@ async function sha256(text) {
 
 // Durable Object classes must be exported by the Worker's main module
 export { QuotaKeeper } from './quota.js';
+export { ProblemGate } from './gate.js';
