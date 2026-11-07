@@ -126,7 +126,7 @@ async function fetchProblem(slug) {
 }
 
 const rows = [];
-for (const spec of P) {
+for (const spec of P.filter(s => !process.env.ONLY || process.env.ONLY.split(",").includes(s.slug))) {
   const p = await fetchProblem(spec.slug);
   out(`\n=== ${p.title} (${p.difficulty})${spec.lang ? ' — in Python' : ''} ===`);
   const t0 = Date.now();
