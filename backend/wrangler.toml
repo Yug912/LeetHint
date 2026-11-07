@@ -19,17 +19,36 @@ PROVIDER_ORDER = "cerebras,groq,workersai,gemini,openrouter"
 # After publishing the extension, pin the API to it, e.g.
 # ALLOWED_ORIGINS = "chrome-extension://<your-extension-id>"
 ALLOWED_ORIGINS = ""
+# Remote switch (GET /config) — change these in the dashboard to turn a
+# feature off or resize the free trials, with no extension update
+CONFIG_INTERVIEW = "true"
+CONFIG_FIX = "true"
+TRIAL_INTERVIEWS_PER_WEEK = "1"
+TRIAL_INTERVIEW_MINUTES = "15"
+TRIAL_FIXES_PER_DAY = "3"
+CONFIG_MESSAGE = ""
+# QuotaKeeper (task A11): the day's AI token budget across free providers
+# (approximate), 25% of it for trials unless TRIAL_DAILY_TOKENS is set
+DAILY_TOKENS = "1500000"
+MAX_TRIAL_INTERVIEWS = "3"
 
 # Cloudflare Workers AI — free daily allowance on this account, no API key
 [ai]
 binding = "AI"
 
-# Per-IP rate limit: 60 generate requests per minute (testers often share
-# one Wi-Fi, i.e. one IP)
+# Per-install rate limit: 20 requests per minute per X-LeetHint-Install ID —
+# fair even when many students share one college network
+[[ratelimits]]
+name = "INSTALL_LIMITER"
+namespace_id = "1002"
+simple = { limit = 20, period = 60 }
+
+# Per-IP backstop: 120 requests per minute (one IP can be a whole campus);
+# extensions too old to send an install ID are limited by this alone
 [[ratelimits]]
 name = "RATE_LIMITER"
 namespace_id = "1001"
-simple = { limit = 60, period = 60 }
+simple = { limit = 120, period = 60 }
 
 # Shared hint cache (created with: npx wrangler kv namespace create HINTS_CACHE).
 # The id is not a secret — it only works with this Cloudflare account.
@@ -37,3 +56,41 @@ simple = { limit = 60, period = 60 }
 [[kv_namespaces]]
 binding = "HINTS_CACHE"
 id = "c944b3f551cc4cfab1d5bf292ffd9206"
+
+# New problems are generated before anyone asks: Mondays 06:00–09:40 UTC,
+# every 20 minutes (after the weekend contests), a couple of problems per run
+[triggers]
+crons = ["*/20 6-9 * * 1"]
+
+# ── D1: the shared cache, trials, reports and blocklist (task A8) ──
+# 1. npx wrangler d1 create leethint            → paste the printed database_id below
+# 2. npx wrangler d1 migrations apply leethint --remote
+# 3. uncomment the block and deploy. Until then KV above keeps working.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "leethint"
+# database_id = "<paste here>"
+# migrations_dir = "migrations"
+
+# ── Merge identical requests: one AI call per new problem (task A10) ──
+# Durable Objects (SQLite-backed) are on the free plan — check its current
+# limits first. Uncomment both blocks and deploy; remove them to switch it off.
+# [[durable_objects.bindings]]
+# name = "GATE"
+# class_name = "ProblemGate"
+#
+# [[migrations]]
+# tag = "v1"
+# new_sqlite_classes = ["ProblemGate"]
+
+# ── One shared quota counter for every Worker copy (task A11) ──
+# Shares the per-minute budgets and daily pauses, keeps 25% of the day for
+# free trials (Fix, interviews) and admits at most 3 trial interviews at once.
+# Uncomment together with the gate blocks above (one [[migrations]] list):
+# [[durable_objects.bindings]]
+# name = "QUOTA"
+# class_name = "QuotaKeeper"
+#
+# [[migrations]]
+# tag = "v2"
+# new_sqlite_classes = ["QuotaKeeper"]

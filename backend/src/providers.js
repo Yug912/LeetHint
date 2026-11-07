@@ -13,6 +13,8 @@
 //    more requests fit in a minute.
 //  • A short limit (a few seconds) is waited out instead of failing.
 
+import { quotaClient } from './quota.js';
+
 const TEMPERATURE = 0.1;
 
 // Fastest first: Cerebras and Groq run these models at hundreds-to-thousands
@@ -310,8 +312,12 @@ function buildRequest(cfg, apiKey, model, prompt, { effort, maxTokens, easy }, p
 //
 // opts: { effort, maxTokens, tier: 'main' | 'fast' | 'interview' | 'judge' | 'hard' }
 export async function openStream(env, prompt, opts = {}) {
-  const { tier = 'main', maxTokens = 6000 } = opts;
-  const providers = configuredProviders(env);
+  const { tier = 'main', maxTokens = 6000, trial = false } = opts;
+  // The shared QuotaKeeper (when bound): budgets and daily pauses seen by
+  // every Worker copy, and the cap on personal (trial) AI use
+  const quota = quotaClient(env);
+  const sharedPauses = quota ? await quota.paused().catch(() => new Set()) : new Set();
+  const providers = configuredProviders(env).filter(cfg => !sharedPauses.has(cfg.name));
   if (!providers.length) throw apiError('LeetHint server', 503, 'no AI provider is configured');
 
   // Every (provider, model) pair, in preference order — minus models whose
@@ -320,7 +326,8 @@ export async function openStream(env, prompt, opts = {}) {
     const out = [];
     for (const cfg of providers) {
       for (const model of await modelsFor(cfg, env[cfg.secret], t)) {
-        if (!(modelPausedUntil.get(`${cfg.name}/${model}`) > Date.now())) out.push({ cfg, model });
+        const key = `${cfg.name}/${model}`;
+        if (!(modelPausedUntil.get(key) > Date.now()) && !sharedPauses.has(key)) out.push({ cfg, model });
       }
     }
     return out;
@@ -362,6 +369,16 @@ export async function openStream(env, prompt, opts = {}) {
   const attempt = async (c, plain = false) => {
     const key = `${c.cfg.name}/${c.model}`;
     const label = `${c.cfg.name} (${c.model})`;
+    // Ask the QuotaKeeper first: no request it says would break a shared budget
+    if (quota) {
+      const r = await quota.reserve(key, need(c), c.cfg.tokensPerMinute || 0, trial).catch(() => ({ ok: true }));
+      if (r.trialFull) throw Object.assign(apiError('LeetHint server', 403, 'the free trial share for today is used up'), { trialFull: true });
+      if (!r.ok) {
+        errors.push(apiError(label, 429, 'shared per-minute budget used', r.waitMs));
+        limited.push({ c, waitMs: r.waitMs });
+        return null;
+      }
+    }
     if (c.cfg.kind === 'workersai') return attemptWorkersAI(c, label);
     const { url, init } = buildRequest(c.cfg, env[c.cfg.secret], c.model, prompt, opts, plain);
     let res;
@@ -404,6 +421,7 @@ export async function openStream(env, prompt, opts = {}) {
     // DAILY limit (Groq: "tokens per day (TPD)") — don't ask again until it resets
     if (res.status === 429 && /per day|\bTPD\b|\bRPD\b/i.test(msg)) {
       modelPausedUntil.set(key, Date.now() + (waitMs > 0 ? waitMs : 3600000));
+      quota?.pause(key, modelPausedUntil.get(key)).catch(() => {});
       console.warn(`${label}: daily limit reached — skipped for ${Math.round((waitMs > 0 ? waitMs : 3600000) / 60000)} min`);
       return null;
     }
@@ -433,6 +451,7 @@ export async function openStream(env, prompt, opts = {}) {
       errors.push(apiError(label, daily || /429|rate limit|capacity/i.test(msg) ? 429 : 500, msg));
       if (daily) {
         pausedUntil.set(c.cfg.name, nextUtcMidnight());
+        quota?.pause(c.cfg.name, nextUtcMidnight()).catch(() => {});
         deadProviders.add(c.cfg.name);
         console.warn('Workers AI daily allowance used up — paused until midnight UTC');
       }
@@ -459,6 +478,9 @@ export async function openStream(env, prompt, opts = {}) {
   // Log the details server-side; the client only gets a generic message
   console.warn('All providers failed:', errors.map(e => e.message).join(' | '));
   const allLimited = errors.length && errors.every(e => e.status === 429 || e.status === 402);
+  // When busy, how long until the first model frees up (the client's Retry-After)
+  const freeInMs = limited.map(l => l.waitMs).filter(w => w > 0).sort((a, b) => a - b)[0];
   throw apiError('LeetHint server', allLimited ? 429 : 502,
-    allLimited ? 'all AI providers are at their limit right now' : 'no AI provider could answer');
+    allLimited ? 'all AI providers are at their limit right now' : 'no AI provider could answer',
+    allLimited ? freeInMs : NaN);
 }
