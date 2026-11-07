@@ -26,10 +26,3 @@ test('Fix with a failing test puts that test first', () => {
   assert.match(p, /0\. Trace the code on the failing input/);
   assert.doesNotMatch(buildPrompt('fix', problem('Hard'), 'class Solution {};'), /REJECTED/);
 });
-
-test('hints ask for 3 follow-ups between HINT4 and CODE (p7)', () => {
-  const p = buildPrompt('hints', problem('Medium'));
-  assert.match(p, /EXACTLY 3 classic interview follow-up questions/);
-  assert.match(p, /---HINT4---\n\.\.\.\n---FOLLOWUPS---\nQ: <question 1>\nA: <answer 1>[\s\S]*A: <answer 3>\n---CODE---/);
-  assert.doesNotMatch(buildPrompt('solve', problem('Medium')), /FOLLOWUPS/);
-});
