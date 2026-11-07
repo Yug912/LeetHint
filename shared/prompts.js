@@ -7,7 +7,7 @@
 
 // Bump when prompts change — part of the server cache key, so old cached
 // replies are never served for a new prompt
-export const PROMPT_VERSION = 'p6';
+export const PROMPT_VERSION = 'p7';
 
 // Languages the solution can be translated into, keyed by LeetCode's langSlug.
 // fence = the markdown code-fence tag the model is asked to use.
@@ -136,8 +136,10 @@ lead to YOUR solution's exact approach (any complexity mentioned must match your
 by tracing your code, never guess). In the reply the hints come before the code, but they must describe
 exactly the code you then output:
 
-${HINT_RULES}` : '';
-  const hintsFormat = withHints ? '\n---HINT1---\n...\n---HINT2---\n...\n---HINT3---\n...\n---HINT4---\n...' : '';
+${HINT_RULES}
+
+${FOLLOWUP_RULES}` : '';
+  const hintsFormat = withHints ? `\n---HINT1---\n...\n---HINT2---\n...\n---HINT3---\n...\n---HINT4---\n...\n${FOLLOWUP_FORMAT}` : '';
   const cls = classNameOf(problem);
   // Hard problems are where subtle bugs pass every example — cross-check
   // against a brute force on inputs the examples don't cover
@@ -242,6 +244,20 @@ RULES:
 - Be concise — no fluff, no "Great question!", no generic advice
 - Hints 1 and 2 must be SHORT (2-4 lines max each)
 - If you are not certain a specific number is right, re-derive it; never state an unchecked value`;
+
+// Interview follow-ups, shown after a solve. Answers must match the solution
+// in the CODE section, so they're written after it in the reasoning.
+const FOLLOWUP_RULES = `FOLLOW-UPS — then write EXACTLY 3 classic interview follow-up questions for THIS problem (a harder
+variant, a changed constraint, a memory or streaming limit). Each answer is 2-3 plain sentences that build
+on YOUR solution above (same pattern, adjusted), with its new time/space complexity when it changes.`;
+
+const FOLLOWUP_FORMAT = `---FOLLOWUPS---
+Q: <question 1>
+A: <answer 1>
+Q: <question 2>
+A: <answer 2>
+Q: <question 3>
+A: <answer 3>`;
 
 // Hints-only prompt — used only by the no-server fallback (Chrome Built-in AI)
 export function buildHintsPrompt(problem) {
