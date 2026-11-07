@@ -1,6 +1,9 @@
-# Weekly: export hints the LeetHint Worker generated for new problems (its
-# Monday cron, and live cache misses) from D1 into cache/<slug>.json, and
-# refresh companies.json. Pages redeploys on the push.
+# Weekly: export hints the Worker generated for new problems (its Monday cron,
+# and live cache misses) from D1 into cache-site/cache/<slug>.json, refresh
+# cache-site/companies.json, and push. Cloudflare Pages (project
+# leethint-cache, root directory cache-site) redeploys on the push.
+# Repo secrets: CF_ACCOUNT_ID, CF_API_TOKEN (only Account → D1 → Read),
+# D1_DATABASE_ID.
 name: sync-cache
 
 on:
@@ -16,9 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { path: site }
-      - uses: actions/checkout@v4
-        with: { repository: Yug912/LeetHint, path: leethint }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Export new D1 rows
@@ -26,13 +26,12 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
-        run: node leethint/tools/export-d1.mjs --out site --days 8
+        run: node tools/export-d1.mjs --out cache-site --days 8
       - name: Copy company tags
-        run: cp leethint/data/companies.json site/companies.json
+        run: cp data/companies.json cache-site/companies.json
       - name: Commit
-        working-directory: site
         run: |
           git config user.name "leethint-bot"
           git config user.email "leethint-bot@users.noreply.github.com"
-          git add -A
+          git add cache-site
           git diff --cached --quiet || (git commit -m "Weekly sync: new problems and company tags" && git push)

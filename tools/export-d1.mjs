@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // tools/export-d1.mjs — turn hints the Worker cached in D1 (the Monday cron,
-// and live cache misses) into static files for the leethint-cache site.
-// Run weekly by .github/workflows/sync-cache.yml in the leethint-cache repo.
+// and live cache misses) into static files for the cache site (cache-site/).
+// Run weekly by .github/workflows/sync-cache.yml.
 //
 //   CF_ACCOUNT_ID=... CF_API_TOKEN=... D1_DATABASE_ID=... \
-//     node tools/export-d1.mjs --out ../leethint-cache [--days 8]
+//     node tools/export-d1.mjs [--out cache-site] [--days 8]
 //
 // The API token needs only "D1: Read" on the account. Problems that already
 // have a file with the current prompt version are left alone (the pre-fill's
@@ -18,7 +18,7 @@ import { readAnswerStream, parseHintsReply, missingSignatureParts } from '../api
 import { problemData } from './prefill.mjs';
 
 function args(argv) {
-  const a = { out: resolve('../leethint-cache'), days: 8 };
+  const a = { out: resolve('cache-site'), days: 8 };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--out') a.out = resolve(argv[++i]);
     else if (argv[i] === '--days') a.days = Number(argv[++i]);

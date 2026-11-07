@@ -5,8 +5,8 @@ Scripts that run on a developer's computer, never in the extension or the Worker
 ## prefill.mjs — static hint files
 
 Solves every free LeetCode problem once and writes `cache/<slug>.json` (plus
-`index.json`) into a checkout of the **leethint-cache** repo, which Cloudflare
-Pages serves at `https://leethint-cache.pages.dev`. The extension reads these
+`index.json`) into this repo's `cache-site/` folder, which Cloudflare Pages (project
+`leethint-cache`) serves at `https://leethint-cache.pages.dev`. The extension reads these
 files before asking the Worker, so a pre-filled problem costs no AI call.
 
 ```sh
@@ -23,7 +23,7 @@ node tools/prefill.mjs --limit 20       # terminal 2
 | `--only <slug>` | just this problem (repeatable), e.g. a reported one |
 | `--force` | regenerate even if the file already has the current prompt version |
 | `--limit <n>` | stop after n new files |
-| `--out <dir>` | the leethint-cache checkout (default `../leethint-cache`) |
+| `--out <dir>` | where to write (default `cache-site/`) |
 | `--worker <url>` | default `http://localhost:8787` |
 | `--pace <s>` | seconds between problems (default 20–30) |
 | `--no-compile` | skip the compile check |
@@ -48,9 +48,10 @@ decide it), so a few weeks for all ~3,800 free problems.
 
 Weekly refresh: run it again (new problems are added); regenerate a reported
 problem with `node tools/prefill.mjs --only <slug> --force`. Then commit and
-push the leethint-cache repo; Pages redeploys by itself.
+push `cache-site/`; Pages redeploys by itself. Every Monday the `sync-cache` Action
+also exports new hints from D1 (`tools/export-d1.mjs`) into `cache-site/`.
 
 ## accuracy/
 
-The accuracy scripts (10 standard + 5 very hard problems) go here — ask Yug to
-copy them in. Run them after any change to `shared/prompts.js` or model routing.
+10 standard problems (`standard.mjs`, `ONLY=<slug,...>` for a few) and 5 very
+hard ones (`hard/run.mjs`), against `BACKEND` (default the local Worker). Run them after any change to `shared/prompts.js` or model routing.
