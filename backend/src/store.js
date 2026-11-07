@@ -11,6 +11,19 @@ const MAX_BODY_BYTES = 1_900_000;
 
 export const hasCache = env => !!(env.DB || env.HINTS_CACHE);
 
+// Only a reply whose model finished normally and actually wrote an answer is
+// cached — a cut-off reply would otherwise be served forever. (One regex pass
+// over the finished text, never per-chunk work.)
+export function isCompleteReply(raw, kind) {
+  const cut = /"finish_reason"\s*:\s*"length"|"finishReason"\s*:\s*"MAX_TOKENS"/.test(raw);
+  const finished = !cut && (kind === 'gemini' ? /"finishReason"\s*:\s*"STOP"/.test(raw)
+                 : kind === 'workersai' ? raw.includes('[DONE]')
+                 : /"finish_reason"\s*:\s*"stop"/.test(raw));
+  const answered = kind === 'gemini' ? /"text"\s*:\s*"[^"]/.test(raw)
+                 : /"(content|response)"\s*:\s*"[^"]/.test(raw);
+  return finished && answered;
+}
+
 // → { raw, kind, layer } or null
 export async function readCache(env, key, now = Date.now()) {
   if (env.DB) {
