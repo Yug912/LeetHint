@@ -12,6 +12,7 @@
 import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt,
          INTERVIEW_STAGES, INTERVIEW_EVENTS } from '../../shared/prompts.js';
 import { configuredProviders, describeModels, openStream } from './providers.js';
+import { hasCache, readCache, writeCache } from './store.js';
 
 // Input limits — real LeetCode problems fit comfortably inside these
 const LIMITS = {
@@ -20,11 +21,9 @@ const LIMITS = {
   tags: 30, tag: 60, hints: 10, hint: 1500, failure: 3000
 };
 
-const CACHE_TTL_SECONDS = 60 * 60 * 24 * 30;   // 30 days
-
-// KV is eventually consistent: a fresh write can take ~60 s to become
-// readable, and a miss is itself cached at the edge for ~60 s. This small
-// in-memory layer (per Worker isolate) answers repeats inside that window.
+// The shared cache lives in D1 (store.js). This small in-memory layer (per
+// Worker isolate) answers repeats without a database read — and covers KV's
+// ~60 s eventual consistency while KV is still the fallback.
 const MEMORY_CACHE_MAX = 200;
 const memoryCache = new Map();
 
@@ -209,7 +208,7 @@ async function handleGenerate(request, env, ctx, cors) {
   // fixed came from the shared cache, so every user sends the same prompt and
   // gets the same stored fix. Other code only ever fills its own key.
   const signatureFix = action === 'fix' && body.reason === 'signature' && !extra.failure;
-  const cacheable = (action !== 'fix' || signatureFix) && !interviewing && env.HINTS_CACHE;
+  const cacheable = (action !== 'fix' || signatureFix) && !interviewing && hasCache(env);
   const keyFor = async (act, lang, p) => `${PROMPT_VERSION}:${act}${lang ? '-' + lang : ''}:${problem.slug}:${await sha256(p)}`.slice(0, 500);
   const cacheKey = cacheable ? await keyFor(action, signatureFix ? 'signature' : extra.language, prompt) : '';
   // Hints/solution in a user's language also count as the problem's SHARED
@@ -222,11 +221,10 @@ async function handleGenerate(request, env, ctx, cors) {
   for (const key of cacheKeys) {
     const fromMemory = memoryCache.get(key);
     if (fromMemory) return sseResponse(fromMemory.raw, fromMemory.kind, cors, { 'X-LeetHint-Cache': 'HIT', 'X-LeetHint-Cache-Layer': 'memory' });
-    const { value, metadata } = await env.HINTS_CACHE.getWithMetadata(key);
-    if (value) {
-      const kind = metadata?.kind || 'openai';
-      rememberReply(key, { raw: value, kind });
-      return sseResponse(value, kind, cors, { 'X-LeetHint-Cache': 'HIT', 'X-LeetHint-Cache-Layer': key === cacheKey ? 'kv' : 'kv-shared' });
+    const hit = await readCache(env, key);
+    if (hit) {
+      rememberReply(key, { raw: hit.raw, kind: hit.kind });
+      return sseResponse(hit.raw, hit.kind, cors, { 'X-LeetHint-Cache': 'HIT', 'X-LeetHint-Cache-Layer': key === cacheKey ? hit.layer : hit.layer + '-shared' });
     }
   }
 
@@ -268,7 +266,7 @@ async function cacheWhenComplete(env, cacheKeys, stream, kind) {
     if (!finished || !answered) return;
     for (const key of cacheKeys) {
       rememberReply(key, { raw, kind });
-      await env.HINTS_CACHE.put(key, raw, { expirationTtl: CACHE_TTL_SECONDS, metadata: { kind } });
+      await writeCache(env, key, raw, kind);
     }
   } catch (e) {
     console.warn('cache write skipped:', e.message);
