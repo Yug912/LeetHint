@@ -2,7 +2,9 @@
 // examples, 300 random brute-force-checked cases, and max-size inputs (TLE).
 //   python3 tools/accuracy/hard/gen.py      (once: writes the test drivers)
 //   node tools/accuracy/hard/run.mjs        (BACKEND=<url>, default http://localhost:8787)
-// Pass mark (prompt p6, 5 Nov 2026): at least 4/5 correct and fast.
+// Pass mark: at least 4/5 correct and fast.
+// Met on prompt p6 (5 Nov 2026); must be met again on the current PROMPT_VERSION
+// before the pre-fill runs (a prompt change can change every answer).
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { generateHints, LANGUAGES } from '../../../api/ai.js';
@@ -13,6 +15,10 @@ const SERVER = (process.env.BACKEND || 'http://localhost:8787').replace(/\/+$/, 
 let lastModel = '?', lastCache = '?';
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
+  // Test the live prompt, never a pre-made file from the static cache site
+  if (/^https?:\/\/[^/]+\/cache\/[a-z0-9-]+\.json/i.test(String(url)) && !String(url).startsWith(BACKEND_URL)) {
+    return new Response('', { status: 404 });
+  }
   const ours = String(url).startsWith(BACKEND_URL);
   if (ours) {
     url = SERVER + String(url).slice(BACKEND_URL.length);
