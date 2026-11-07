@@ -72,6 +72,18 @@ Stop it: `launchctl unload ~/Library/LaunchAgents/com.leethint.prefill.plist`.
 Needs `backend/.dev.vars` with a dev key, `npx wrangler login` done once, and
 an SSH key that can push to the repo.
 
+## interview-tokens.mjs — what a mock interview costs
+
+`node --no-warnings tools/interview-tokens.mjs [--slug trapping-rain-water]`
+builds the exact prompts of one scripted interview (no AI calls) and totals
+their tokens with the Worker's estimator: the old way (full transcript and
+code every turn, 30 minutes, code events) vs the cheaper trial way (15
+minutes, a summary every 6 interviewer turns + the last 4 turns, code only
+when it changed). Result on 2026-11-07: **~36k tokens vs ~90k for today's
+30-minute interview (41%)**; on the identical 15-minute script it is 75%, since
+each turn's ~1.6k tokens of instructions stay. Request bodies after turn 10:
+~3.3 KB. Run it again after changing the interview prompts.
+
 ## accuracy/
 
 10 standard problems (`standard.mjs`, `ONLY=<slug,...>` for a few) and 5 very
