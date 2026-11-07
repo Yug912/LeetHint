@@ -159,7 +159,7 @@ export function buildCsv({ stats = {}, revisionQueue = {}, interviewHistory = []
   const rows = [];
   for (const [slug, p] of Object.entries(stats.problems || {})) {
     rows.push({ type: 'problem', slug, title: p.title || '', difficulty: p.difficulty || '', date: p.solvedOn || '',
-                score: p.score, detail: `${p.solved === false ? 'not solved' : 'solved'}; level ${p.level}${p.pattern ? '; ' + p.pattern : ''}` });
+                score: p.score, detail: [p.solved === false ? 'not solved' : 'solved', p.level != null && `level ${p.level}`, p.pattern].filter(Boolean).join('; ') });
   }
   for (const [slug, item] of Object.entries(revisionQueue)) {
     rows.push({ type: 'revision', slug, title: item.title || '', difficulty: item.difficulty || '',

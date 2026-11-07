@@ -454,7 +454,7 @@ async function loadHints() {
     if (myId !== hintsGenerationId) return;
     if (fromFile) {
       state.hints = fromFile;
-      await chrome.storage.local.set({ [cacheKey]: fromFile });
+      await chrome.storage.local.set({ [cacheKey]: fromFile }).catch(() => {});   // not saved → still shown
       renderHints();
       showState('hints');
       extras.onHintsReady(state.hints);
