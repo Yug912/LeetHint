@@ -1,4 +1,5 @@
-// tools/html-text.mjs — LeetCode statement HTML → plain text, for Node.
+// shared/html-text.js — LeetCode statement HTML → plain text, without a DOM
+// (used by tools/prefill.mjs and the Worker's weekly refresh).
 // The SAME rules as htmlToText() in content/content.js (the extension), so
 // the pre-fill builds the same prompt — and the same cache key — a user's
 // browser would. content.js gets textContent from DOMParser; here tags are

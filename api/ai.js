@@ -267,7 +267,7 @@ async function callBackend(action, problem, opts = {}) {
 // The server passes the provider's Server-Sent Events through untouched;
 // pull the answer text out of them. kind: 'openai' (OpenAI-style chat
 // chunks: Groq, Cerebras, OpenRouter), 'workersai' or 'gemini'. Reasoning is ignored.
-async function readAnswerStream(res, kind, onText) {
+export async function readAnswerStream(res, kind, onText) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = '', text = '';
@@ -351,6 +351,15 @@ function applyReference(result, reference) {
   // The parts on their own (the pre-fill script writes them to static files)
   result.solution = { code: reference.code, approach: reference.approach, tc: reference.tc, sc: reference.sc };
   return result;
+}
+
+
+// A complete hints reply → the object the side panel shows (no network).
+// Used by tools/export-d1.mjs to turn cached replies into static files.
+export function parseHintsReply(raw) {
+  const result = parseHintsJSON(raw);
+  const reference = parseSolutionResponse(raw);
+  return reference.code ? applyReference(result, reference) : result;
 }
 
 

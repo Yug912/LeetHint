@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { htmlToText } from '../tools/html-text.mjs';
+import { htmlToText } from '../shared/html-text.js';
 import { compileError } from '../tools/prefill.mjs';
 
 test('statement HTML → text keeps exponents and decodes entities like content.js', () => {
