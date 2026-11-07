@@ -1,7 +1,7 @@
-# leethint-cache
+# cache-site
 
 Static hint files for the [LeetHint](https://github.com/Yug912/LeetHint) Chrome
-extension, served by Cloudflare Pages at `https://leethint-cache.pages.dev`.
+extension, served by Cloudflare Pages at `https://leethint.pages.dev`.
 The extension reads `cache/<slug>.json` before asking the AI server, so a
 problem with a file here costs no AI call.
 
@@ -34,7 +34,7 @@ exports hints the Worker generated for new problems.
 ## Cloudflare Pages setup (once)
 
 Dashboard → Workers & Pages → Create → Pages → Connect to Git → the
-**LeetHint** repo. Project name `leethint-cache`, framework preset None,
+**LeetHint** repo. Project name `leethint`, framework preset None,
 **no build command**, build output directory `cache-site`. Free plan, no
 card. Every push to `main` redeploys. (Not direct upload: the weekly sync
 publishes by pushing.)
@@ -47,7 +47,7 @@ LeetHint repo → Settings → Secrets and variables → Actions → add:
 - `CF_API_TOKEN` — a token with only **Account → D1 → Read**
 - `D1_DATABASE_ID` — `f811f082-7749-4111-b771-31bcb4eb800b` (the `database_id` in `backend/wrangler.toml`)
 
-Then check `https://leethint-cache.pages.dev/cache/two-sum.json` returns the
+Then check `https://leethint.pages.dev/cache/two-sum.json` returns the
 file. If the name was taken, put the real host in `api/config.js`
 (`CACHE_URL`), `manifest.json` host_permissions and the plan doc's
 Interfaces item 1.

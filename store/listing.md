@@ -39,7 +39,7 @@ Helps users solve LeetCode problems on leetcode.com with progressive hints, a ve
 | alarms | Updates the "problems due for revision" badge after midnight. |
 | Host: leetcode.com | Reads the problem statement and submission results. |
 | Host: leethint-api.yugthakral07.workers.dev | LeetHint's server, which generates hints for problems not cached yet. |
-| Host: leethint-cache.pages.dev | Pre-generated hint files and company tags (static files). |
+| Host: leethint.pages.dev | Pre-generated hint files and company tags (static files). |
 | Host: api.groq.com, openrouter.ai, generativelanguage.googleapis.com | Only when the user adds their own API key: requests go straight to that provider. |
 
 Remote code: none. All code is in the package.

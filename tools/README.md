@@ -6,7 +6,7 @@ Scripts that run on a developer's computer, never in the extension or the Worker
 
 Solves every free LeetCode problem once and writes `cache/<slug>.json` (plus
 `index.json`) into this repo's `cache-site/` folder, which Cloudflare Pages (project
-`leethint-cache`) serves at `https://leethint-cache.pages.dev`. The extension reads these
+`leethint`) serves at `https://leethint.pages.dev`. The extension reads these
 files before asking the Worker, so a pre-filled problem costs no AI call.
 
 ```sh

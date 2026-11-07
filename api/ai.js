@@ -472,7 +472,7 @@ export function parseHintsReply(raw) {
 
 
 // ─────────────────────────────────────────────
-// 4b. STATIC HINT FILES — https://leethint-cache.pages.dev/cache/<slug>.json
+// 4b. STATIC HINT FILES — https://leethint.pages.dev/cache/<slug>.json
 //     Generated once per problem by tools/prefill.mjs (compile-checked, with
 //     the exact LeetCode signature), so reading one costs no AI call at all.
 // ─────────────────────────────────────────────

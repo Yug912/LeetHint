@@ -316,7 +316,7 @@ LeetHint uses carefully tuned prompts that enforce:
 | `alarms` | Refresh the due-revisions badge just after local midnight |
 | `https://leetcode.com/*` | Access LeetCode pages |
 | `https://leethint-api.yugthakral07.workers.dev/*` | Call the LeetHint server (change it if you deploy your own) |
-| `https://leethint-cache.pages.dev/*` | Read the pre-generated hint files and company tags |
+| `https://leethint.pages.dev/*` | Read the pre-generated hint files and company tags |
 | `https://generativelanguage.googleapis.com/*`, `https://api.groq.com/*`, `https://openrouter.ai/*` | Only with your own key: call that provider directly |
 | `http://localhost:8787/*` | Local server during development (removed by `store/build.sh`) |
 

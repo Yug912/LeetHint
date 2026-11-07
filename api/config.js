@@ -9,4 +9,4 @@ export const BACKEND_URL = 'https://leethint-api.yugthakral07.workers.dev';
 
 // Static hint files (this repo's cache-site/ folder on Cloudflare Pages), read
 // before the server: a problem with a file costs no AI call at all
-export const CACHE_URL = 'https://leethint-cache.pages.dev';
+export const CACHE_URL = 'https://leethint.pages.dev';
