@@ -23,6 +23,8 @@
 
 ---
 
+> **Team:** remaining deploy, checks and release work is in [docs/HANDOFF-YUG.md](docs/HANDOFF-YUG.md) and [docs/HANDOFF-ANUSHKA.md](docs/HANDOFF-ANUSHKA.md).
+
 ## ✨ Features
 
 ### 🎯 Progressive AI Hints
