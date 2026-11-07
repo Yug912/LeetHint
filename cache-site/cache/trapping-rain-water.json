@@ -1,0 +1,41 @@
+{
+  "slug": "trapping-rain-water",
+  "title": "Trapping Rain Water",
+  "difficulty": "Hard",
+  "promptVersion": "p7",
+  "generatedAt": "2026-11-07",
+  "pattern": "Two Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int left, right, maxLeft, maxRight, water: 5 scalars → O(1)\n- recursion depth: none\n- not counted: input vector `height`",
+  "approach": "Water at any index is bounded by the minimum of the tallest bar to its left and the tallest bar to its right. We track these two maxima with two pointers moving inward: the side with the smaller current maximum is the limiting wall, so we can settle the water at that pointer immediately. This avoids precomputing arrays and processes each index exactly once.",
+  "hints": [
+    "For each position, the trapped water is capped by the shorter of the tallest bar on its left and the tallest bar on its right. With n up to 2*10^4, can you decide each position's water without scanning the whole array again for every index?",
+    "Use two pointers (left, right) plus running maxima maxLeft and maxRight. On height=[0,1,0,2,1,0,1,3,2,1,2,1], start left=0,right=11: maxLeft=0,maxRight=1; since maxLeft<maxRight, water += maxLeft-height[0]=0, then left=1.",
+    "left = 0, right = n-1, maxLeft = 0, maxRight = 0, water = 0\nwhile left < right:\n    if height[left] < height[right]:\n        if height[left] >= maxLeft: maxLeft = height[left]\n        else: water += maxLeft - height[left]\n        left++\n    else:\n        if height[right] >= maxRight: maxRight = height[right]\n        else: water += maxRight - height[right]\n        right--\nreturn water",
+    "**Single element** - no room to trap anything, loop never runs.\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: initializing `water` to 1 → returns 1\n\n**All equal** - every bar is a wall, no dips to fill.\n`Input: [3,3,3,3]` → `Expected: 0`\n⚠️ Bug: using `>` instead of `>=` when updating maxLeft/maxRight → returns 0 (still correct here, but breaks on [3,2,3])\n\n**Flat valley** - a long run of zeros between two tall walls.\n`Input: [5,0,0,0,5]` → `Expected: 15`\n⚠️ Bug: only adding water when `height[i] < maxLeft` but forgetting the right-side branch → returns 10\n\n**Monotonic increasing** - no water can be trapped at all.\n`Input: [1,2,3,4,5]` → `Expected: 0`\n⚠️ Bug: always advancing `left` regardless of which max is smaller → returns 0 (correct) but on [5,4,3,2,1] a symmetric bug returns 0 instead of 0; the real failure is on [2,1,2,1,2] where a one-sided advance returns 1 instead of 2\n\n**Large values** - max height 10^5 over 2*10^4 bars keeps the sum within int range.\n`Input: [100000,0,100000]` → `Expected: 100000`\n⚠️ Bug: using `short` for maxLeft/maxRight → overflows and returns a negative value"
+  ],
+  "followUps": [
+    {
+      "q": "What if the elevation map is given as a stream (you can only read each bar once, left to right)?",
+      "a": "Use a monotonic stack: push indices while heights are non-decreasing, and when a shorter bar is popped, fill the rectangle between it and the new top using the popped bar's height as the base. Time O(n), space O(n) for the stack."
+    },
+    {
+      "q": "Can you solve it using only one pass and O(1) extra space without two pointers?",
+      "a": "No - the two-pointer method already uses O(1) space and one pass; any single-pointer variant needs either a precomputed prefix/suffix max (O(n) space) or a stack (O(n) space)."
+    },
+    {
+      "q": "How would you extend this to a 2D grid of elevations?",
+      "a": "Use a min-heap (priority queue) seeded with the boundary cells, then repeatedly pop the lowest boundary cell and fill water into its unvisited neighbors up to that cell's height. Time O(mn log(mn)), space O(mn)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int trap(vector<int>& height) {\n        int n = height.size();\n        if (n < 3) return 0;\n        int left = 0, right = n - 1;\n        int maxLeft = 0, maxRight = 0;\n        int water = 0;\n        while (left < right) {\n            if (height[left] < height[right]) {\n                if (height[left] >= maxLeft) {\n                    maxLeft = height[left];\n                } else {\n                    water += maxLeft - height[left];\n                }\n                left++;\n            } else {\n                if (height[right] >= maxRight) {\n                    maxRight = height[right];\n                } else {\n                    water += maxRight - height[right];\n                }\n                right--;\n            }\n        }\n        return water;\n    }\n};",
+    "java": "class Solution {\n    public int trap(int[] height) {\n        int n = height.length;\n        if (n < 3) return 0;\n        int left = 0, right = n - 1;\n        int maxLeft = 0, maxRight = 0;\n        int water = 0;\n        while (left < right) {\n            if (height[left] < height[right]) {\n                if (height[left] >= maxLeft) {\n                    maxLeft = height[left];\n                } else {\n                    water += maxLeft - height[left];\n                }\n                left++;\n            } else {\n                if (height[right] >= maxRight) {\n                    maxRight = height[right];\n                } else {\n                    water += maxRight - height[right];\n                }\n                right--;\n            }\n        }\n        return water;\n    }\n}",
+    "python3": "class Solution:\n    def trap(self, height: list[int]) -> int:\n        n = len(height)\n        if n < 3:\n            return 0\n        left = 0\n        right = n - 1\n        max_left = 0\n        max_right = 0\n        water = 0\n        while left < right:\n            if height[left] < height[right]:\n                if height[left] >= max_left:\n                    max_left = height[left]\n                else:\n                    water += max_left - height[left]\n                left += 1\n            else:\n                if height[right] >= max_right:\n                    max_right = height[right]\n                else:\n                    water += max_right - height[right]\n                right -= 1\n        return water",
+    "javascript": "/**\n * @param {number[]} height\n * @return {number}\n */\nvar trap = function(height) {\n    const n = height.length;\n    if (n < 3) return 0;\n    let left = 0, right = n - 1;\n    let maxLeft = 0, maxRight = 0;\n    let water = 0;\n    while (left < right) {\n        if (height[left] < height[right]) {\n            if (height[left] >= maxLeft) {\n                maxLeft = height[left];\n            } else {\n                water += maxLeft - height[left];\n            }\n            left++;\n        } else {\n            if (height[right] >= maxRight) {\n                maxRight = height[right];\n            } else {\n                water += maxRight - height[right];\n            }\n            right--;\n        }\n    }\n    return water;\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}
