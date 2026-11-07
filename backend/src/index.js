@@ -11,7 +11,7 @@
 // API keys live only in Worker secrets (wrangler secret put ...).
 
 import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt,
-         INTERVIEW_STAGES, INTERVIEW_EVENTS } from '../../shared/prompts.js';
+         INTERVIEW_STAGES, INTERVIEW_EVENTS, INTERVIEW_MINUTES } from '../../shared/prompts.js';
 import { configuredProviders, describeModels, openStream } from './providers.js';
 import { hasCache, readCache, writeCache, saveReport, takeTrial, refundTrial, admitInterview,
          isBlocked, utcDay, isoWeek, nextUtcMidnightIso, nextMondayIso } from './store.js';
@@ -145,6 +145,11 @@ async function checkTrial(env, installId, action, signatureFix, interview) {
     }
     return { refund: () => refundTrial(env, installId, 'fix', period) };
   }
+  // Trial interviews have no separate code-check turns (the editor code still
+  // rides along with every spoken turn)
+  if (action === 'interview_turn' && interview?.event === 'code') {
+    throw replyError(400, { error: 'code_checks_off', message: 'Code checks are not part of free trial interviews.' });
+  }
   if (action === 'interview_turn' && interview?.event === 'start' && interview.interviewId) {
     const verdict = await admitInterview(env, installId, interview.interviewId, cfg.trialInterviewsPerWeek);
     if (verdict === 'refused') throw replyError(403, { error: 'trial_used', action: 'interview', resetsAt: nextMondayIso() });
@@ -215,7 +220,7 @@ async function handleGenerate(request, env, ctx, cors) {
     const snippets = body.snippets && typeof body.snippets === 'object' ? body.snippets : {};
     extra.snippets = Object.fromEntries(extra.languages.map(l => [l, clip(snippets[l], LIMITS.cppSnippet)]));
   }
-  const interviewing = action === 'interview_turn' || action === 'interview_score';
+  const interviewing = action === 'interview_turn' || action === 'interview_score' || action === 'interview_summary';
   if (interviewing) extra.interview = sanitizeInterview(body.interview);
 
   const prompt = buildPrompt(action, problem, code, extra);
@@ -235,7 +240,7 @@ async function handleGenerate(request, env, ctx, cors) {
   // Interviewer turns are short spoken replies — low reasoning keeps them
   // fast enough for a conversation (the hidden reference does the judging);
   // the scorecard is graded once, so it gets more thought
-  const effort = translating || action === 'interview_turn' || body.lowEffort === true ? 'low'
+  const effort = translating || action === 'interview_turn' || action === 'interview_summary' || body.lowEffort === true ? 'low'
                : action === 'interview_score' ? 'medium' : hard ? 'high' : 'medium';
 
   // Ask only for the tokens each job needs (thinking included) — free tiers
@@ -246,7 +251,7 @@ async function handleGenerate(request, env, ctx, cors) {
   const maxTokens = {
     hints: hard ? 8000 : 4500, solve: hard ? 7000 : 3500, fix: hard ? 6000 : 4000,
     translate: 1500, translate_all: 500 + 650 * (extra.languages?.length || 0),
-    interview_turn: 1200, interview_score: 2500
+    interview_turn: 1200, interview_score: 2500, interview_summary: 800
   }[action] + (extra.language && !translating ? 400 : 0);
 
   // Translations go to a smaller/faster model first, keeping the big model's
@@ -259,7 +264,7 @@ async function handleGenerate(request, env, ctx, cors) {
   // a different model than hints do, so they don't share a per-minute budget
   // Hard hints/solutions/fixes: strong models only, with their full thinking
   // budget (small models and cut-off replies produced the wrong Hard solutions)
-  const tier = translating || quickTurn ? 'fast'
+  const tier = translating || quickTurn || action === 'interview_summary' ? 'fast'
              : action === 'interview_score' ? 'judge'
              : interviewing ? 'interview'
              : hard ? 'hard' : 'main';
@@ -367,7 +372,7 @@ function sanitizeProblem(p) {
 // Mock interview state from the extension — known fields only, all clipped.
 // The transcript is the candidate's own conversation, so it's bounded here
 // and trimmed again (oldest turns first) when the prompt is built.
-const INTERVIEW_LIMITS = { turns: 150, text: 1500, code: 20000, refCode: 8000, refText: 1500 };
+const INTERVIEW_LIMITS = { turns: 150, text: 1500, code: 20000, refCode: 8000, refText: 1500, summary: 1500 };
 
 function sanitizeInterview(iv) {
   if (!iv || typeof iv !== 'object') throw clientError(400, 'Missing interview state.');
@@ -378,6 +383,8 @@ function sanitizeInterview(iv) {
     event:      INTERVIEW_EVENTS.includes(iv.event) ? iv.event : 'answer',
     stage:      INTERVIEW_STAGES.includes(iv.stage) ? iv.stage : 'intro',
     elapsedSec: num(iv.elapsedSec, 4 * 3600),
+    durationMin: num(iv.durationMin, 120) || INTERVIEW_MINUTES,
+    summary:    clip(iv.summary, INTERVIEW_LIMITS.summary),
     hintsGiven: num(iv.hintsGiven, 50),
     code:       clip(iv.code, INTERVIEW_LIMITS.code),
     history:    (Array.isArray(iv.history) ? iv.history : []).slice(-INTERVIEW_LIMITS.turns)
