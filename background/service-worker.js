@@ -32,6 +32,19 @@ async function initPanels() {
 chrome.runtime.onInstalled.addListener(initPanels);
 chrome.runtime.onStartup.addListener(initPanels);
 
+// Anonymous install ID — one random UUID per install, sent as
+// X-LeetHint-Install so the server's limits and free trials are per install,
+// not per Wi-Fi. Not linked to any account. (api/ai.js creates it too if the
+// side panel runs first.)
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    const { installId } = await chrome.storage.local.get('installId');
+    if (!installId) await chrome.storage.local.set({ installId: crypto.randomUUID() });
+  } catch (e) {
+    console.warn('LeetHint SW: could not create the install ID', e.message);
+  }
+});
+
 // Open the panel for THIS tab when the icon is clicked on a LeetCode problem.
 // Not awaited before open(): sidePanel.open() must run while the click still
 // counts as a user gesture. Both calls are queued in order.
