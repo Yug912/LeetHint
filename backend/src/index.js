@@ -4,6 +4,7 @@
 //   GET  /health                                     →  { ok, providers }
 //   GET  /config                                     →  feature switches (cached 1 hour)
 //   POST /v1/report     { slug, promptVersion, reason, note? }  →  204
+//   GET  /stats?token=  →  today's use per provider + trial budget left (STATS_TOKEN secret)
 //
 // The extension sends PROBLEM DATA, never a prompt: prompts are built here
 // from shared/prompts.js, so this endpoint can only produce LeetHint hints —
@@ -39,44 +40,110 @@ function rememberReply(key, text) {
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const cors = corsHeaders(request, env);
-
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-    if (!cors) return json({ error: 'Origin not allowed' }, 403);
-
-    if (url.pathname === '/health' && request.method === 'GET') {
-      // Provider and model NAMES only — never anything about the keys themselves
-      const health = { ok: true, providers: configuredProviders(env).map(p => p.name) };
-      if (url.searchParams.has('models')) health.models = await describeModels(env);
-      return json(health, 200, cors);
-    }
-
-    if (url.pathname === '/config' && request.method === 'GET') {
-      return json(remoteConfig(env), 200, { ...cors, 'Cache-Control': 'public, max-age=3600' });
-    }
-
-    if (url.pathname === '/v1/report' && request.method === 'POST') {
-      try {
-        await guard(request, env);
-        return await handleReport(request, env, cors);
-      } catch (e) {
-        return errorResponse(e, cors);
-      }
-    }
-
-    if (url.pathname === '/v1/generate' && request.method === 'POST') {
-      try {
-        await guard(request, env);
-        return await handleGenerate(request, env, ctx, cors);
-      } catch (e) {
-        return errorResponse(e, cors);
-      }
-    }
-
-    return json({ error: 'Not found' }, 404, cors);
+    const res = await route(request, env, ctx);
+    logEvent(env, request, res);
+    return res;
   }
 };
+
+async function route(request, env, ctx) {
+  const url = new URL(request.url);
+  if (url.pathname === '/stats' && request.method === 'GET') return handleStats(url, env);
+  const cors = corsHeaders(request, env);
+
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+  if (!cors) return json({ error: 'Origin not allowed' }, 403);
+
+  if (url.pathname === '/health' && request.method === 'GET') {
+    // Provider and model NAMES only — never anything about the keys themselves
+    const health = { ok: true, providers: configuredProviders(env).map(p => p.name) };
+    if (url.searchParams.has('models')) health.models = await describeModels(env);
+    return json(health, 200, cors);
+  }
+
+  if (url.pathname === '/config' && request.method === 'GET') {
+    return json(remoteConfig(env), 200, { ...cors, 'Cache-Control': 'public, max-age=3600' });
+  }
+
+  if (url.pathname === '/v1/report' && request.method === 'POST') {
+    try {
+      await guard(request, env);
+      return await handleReport(request, env, cors);
+    } catch (e) {
+      return errorResponse(e, cors);
+    }
+  }
+
+  if (url.pathname === '/v1/generate' && request.method === 'POST') {
+    try {
+      await guard(request, env);
+      return await handleGenerate(request, env, ctx, cors);
+    } catch (e) {
+      return errorResponse(e, cors);
+    }
+  }
+
+  return json({ error: 'Not found' }, 404, cors);
+}
+
+
+// ─────────────────────────────────────────────
+// MONITORING — one Analytics Engine event per /v1 request (free, no extra
+// CPU: writeDataPoint is fire-and-forget), plus GET /stats for a quick look
+// ─────────────────────────────────────────────
+const eventInfo = new WeakMap();   // request → { action, trial }
+const noteEvent = (request, info) => eventInfo.set(request, { ...eventInfo.get(request), ...info });
+
+function logEvent(env, request, res) {
+  if (!env.EVENTS) return;
+  const path = new URL(request.url).pathname;
+  if (!path.startsWith('/v1/')) return;
+  try {
+    const info = eventInfo.get(request) || {};
+    const outcome = res.status === 429 ? (res.headers.get('X-LeetHint-Error') || 'rate_limited')
+                  : res.status === 403 ? (res.headers.get('X-LeetHint-Error') || 'forbidden')
+                  : res.status >= 400 ? 'error' : 'ok';
+    const model = res.headers.get('X-LeetHint-Model') || '';
+    env.EVENTS.writeDataPoint({
+      indexes: [path],
+      // blob1 action · blob2 cache layer (or "miss") · blob3 provider · blob4 outcome · blob5 trial
+      blobs: [info.action || '', res.headers.get('X-LeetHint-Cache-Layer') || (res.headers.get('X-LeetHint-Cache') === 'MISS' ? 'miss' : ''),
+              model.split(' (')[0], outcome, info.trial || ''],
+      doubles: [res.status]
+    });
+  } catch (e) {
+    console.warn('event log failed:', e.message);
+  }
+}
+
+// GET /stats?token=<STATS_TOKEN> — today's numbers. Without the right token
+// (or with no STATS_TOKEN secret set) it doesn't exist: 404.
+async function handleStats(url, env) {
+  const token = url.searchParams.get('token') || '';
+  if (!env.STATS_TOKEN || token.length !== env.STATS_TOKEN.length || token !== env.STATS_TOKEN) {
+    return json({ error: 'Not found' }, 404);
+  }
+  const q = await quotaClient(env).snapshot();
+  const out = {
+    day: q.day, dailyTokens: q.dailyTokens,
+    tokensReservedByProvider: q.byProvider || {},
+    tokensUsedByShare: q.used || {},
+    tokensLeftByShare: q.left || {},
+    trialShareLeftPercent: q.dailyTokens ? Math.round(100 * (q.left?.trial || 0) / (q.dailyTokens * 0.25)) : null,
+    trialInterviewsRunning: q.interviewsRunning || 0,
+    pausedUntil: Object.fromEntries(Object.entries(q.paused || {}).map(([k, t]) => [k, new Date(t).toISOString()]))
+  };
+  if (env.DB) {
+    const day = utcDay(), week = isoWeek();
+    const rows = (await env.DB.prepare(`SELECT action, SUM(count) AS n, COUNT(*) AS installs FROM usage
+                                         WHERE (action = 'fix' AND period = ?) OR (action = 'interview' AND period = ?) GROUP BY action`)
+      .bind(day, week).all()).results;
+    out.trialsGranted = Object.fromEntries(rows.map(r => [r.action, { count: r.n, installs: r.installs }]));
+    out.reportsToday = (await env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE day = ?').bind(day).first())?.n || 0;
+    out.cachedReplies = (await env.DB.prepare('SELECT COUNT(*) AS n FROM cache').first())?.n || 0;
+  }
+  return json(out);
+}
 
 function errorResponse(e, cors) {
   if (e.body) return json(e.body, e.status, { ...cors, ...e.headers });
@@ -246,7 +313,10 @@ async function handleGenerate(request, env, ctx, cors) {
   // The signature fix is automatic, not a trial; requests without an install
   // ID (old extension versions) aren't counted.
   const installId = installIdOf(request);
-  const trial = await checkTrial(env, installId, action, body.reason === 'signature' && !extra.failure, extra.interview);
+  noteEvent(request, { action });
+  const trial = await checkTrial(env, installId, action, body.reason === 'signature' && !extra.failure, extra.interview)
+    .catch(e => { if (e.body?.error === 'trial_used') noteEvent(request, { trial: 'refused' }); throw e; });
+  if (trial) noteEvent(request, { trial: 'granted' });
 
   // More thinking where it pays off: Hard problems get "high" reasoning;
   // translation of already-verified code needs little
@@ -456,7 +526,7 @@ function replyError(status, body, headers = {}) {
   const e = new Error(body.error);
   e.status = status;
   e.body = body;
-  e.headers = headers;
+  e.headers = { 'X-LeetHint-Error': body.error, ...headers };
   return e;
 }
 
