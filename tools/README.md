@@ -31,7 +31,7 @@ node tools/prefill.mjs --limit 20       # terminal 2
 What it does per problem:
 
 1. Fetches the statement, hints, tags and code snippets from LeetCode GraphQL,
-   with the same text rules as `content/content.js` (see `html-text.mjs`).
+   with the same text rules as `content/content.js` (see `shared/html-text.js`).
 2. Calls the extension's own `generateHints()` (api/ai.js) against the local
    Worker, then `translateSolution()` for Java, Python and JavaScript.
 3. Compile-checks the C++ with `clang++ -std=c++17 -fsyntax-only` and

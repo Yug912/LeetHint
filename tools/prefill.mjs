@@ -21,7 +21,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
-import { htmlToText } from './html-text.mjs';
+import { htmlToText } from '../shared/html-text.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LANGS = ['java', 'python3', 'javascript'];   // translated besides C++
@@ -48,7 +48,7 @@ function parseArgs(argv) {
 }
 
 // ── LeetCode GraphQL ──
-async function leetcode(query, variables) {
+export async function leetcode(query, variables) {
   for (let attempt = 1; ; attempt++) {
     const res = await fetch('https://leetcode.com/graphql', {
       method: 'POST',
@@ -77,7 +77,7 @@ async function listProblems() {
 }
 
 // The same query and field mapping as getEnrichedProblemData() in content/content.js
-async function problemData(slug) {
+export async function problemData(slug) {
   const query = `query questionData($titleSlug: String!) {
     question(titleSlug: $titleSlug) {
       questionFrontendId title difficulty content hints

@@ -16,6 +16,7 @@ import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt,
 import { configuredProviders, describeModels, openStream } from './providers.js';
 import { quotaClient } from './quota.js';
 import { openThroughGate } from './gate.js';
+import { refreshNewProblems } from './refresh.js';
 import { hasCache, readCache, writeCache, isCompleteReply, saveReport, takeTrial, refundTrial, admitInterview,
          isBlocked, utcDay, isoWeek, nextUtcMidnightIso, nextMondayIso } from './store.js';
 
@@ -43,6 +44,11 @@ export default {
     const res = await route(request, env, ctx);
     logEvent(env, request, res);
     return res;
+  },
+
+  // Monday 06:00 UTC (wrangler.toml [triggers]): pre-generate the newest problems
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(refreshNewProblems(env).catch(e => console.warn('refresh failed:', e.message)));
   }
 };
 
