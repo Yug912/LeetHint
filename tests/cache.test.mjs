@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 let aiCalls = 0;
 globalThis.fetch = async (url) => {
   if (String(url).endsWith('/models')) return Response.json({ data: [{ id: 'openai/gpt-oss-120b' }] });
+  if (String(url).includes('leetcode.com/graphql')) return Response.json({ data: { topTwoContests: [] } });   // no contest running
   aiCalls++;
   return new Response('data: {"choices":[{"delta":{"content":"---HINT1--- ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n');
 };
