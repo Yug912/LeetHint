@@ -336,7 +336,11 @@ titleObserver.observe(titleEl, { childList: true, subtree: true, characterData: 
 //    A solve = an "Accepted" submission result shown soon after the user
 //    pressed Submit (button or Ctrl/Cmd+Enter). Old accepted submissions
 //    opened from the Submissions tab don't count — no Submit was pressed.
+//    A failed submission (Wrong Answer, Time Limit Exceeded, Runtime Error…)
+//    is reported the same way as PROBLEM_FAILED, for the tilt detector; and
+//    pressing Run or Submit as CODE_SUBMITTED, for the time-limit check.
 // ─────────────────────────────────────────────
+const FAILED_VERDICTS = ['Wrong Answer', 'Time Limit Exceeded', 'Runtime Error', 'Memory Limit Exceeded', 'Output Limit Exceeded', 'Compile Error'];
 const SUBMIT_WINDOW_MS = 2 * 60 * 1000;
 
 function watchForSolves() {
@@ -345,19 +349,25 @@ function watchForSolves() {
 
   // sawPending: the previous result has gone (or isn't "Accepted") since
   // Submit was pressed, so an old "Accepted" still on screen isn't counted
-  let armedUntil = 0, armedSlug = '', sawPending = false, checkTimer = null;
+  // sawGone: the result panel disappeared since Submit — so a failure shown
+  // now is THIS submission's, not the previous one still on screen
+  let armedUntil = 0, armedSlug = '', sawPending = false, sawGone = false, checkTimer = null;
   const arm = () => {
     armedUntil = Date.now() + SUBMIT_WINDOW_MS;
     armedSlug = getCurrentSlug();
     sawPending = false;
+    sawGone = false;
     if (!checkTimer) checkTimer = setTimeout(check, 400);
   };
+  const ran = () => chrome.runtime.sendMessage({ type: 'CODE_SUBMITTED', slug: getCurrentSlug() }).catch(() => {});
 
   document.addEventListener('click', e => {
-    if (e.target.closest?.('[data-e2e-locator="console-submit-button"]')) arm();
+    if (e.target.closest?.('[data-e2e-locator="console-submit-button"]')) { arm(); ran(); }
+    else if (e.target.closest?.('[data-e2e-locator="console-run-button"]')) ran();
   }, true);
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) arm();
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { arm(); ran(); }
+    else if (e.key === "'" && (e.ctrlKey || e.metaKey)) ran();   // LeetCode's Run shortcut
   }, true);
 
   // The result panel of THIS submission says "Accepted"
@@ -365,7 +375,15 @@ function watchForSolves() {
     checkTimer = null;
     if (!armedUntil || Date.now() > armedUntil) { armedUntil = 0; return; }
     const result = document.querySelector('[data-e2e-locator="submission-result"]');
-    if (!result || result.textContent.trim() !== 'Accepted') { sawPending = true; return; }
+    if (!result) { sawPending = true; sawGone = true; return; }
+    const verdict = result.textContent.trim();
+    if (FAILED_VERDICTS.includes(verdict)) {
+      if (!sawGone || armedSlug !== getCurrentSlug()) { sawPending = true; return; }
+      armedUntil = 0;   // one result per Submit
+      chrome.runtime.sendMessage({ type: 'PROBLEM_FAILED', slug: armedSlug, verdict }).catch(() => {});
+      return;
+    }
+    if (verdict !== 'Accepted') { sawPending = true; return; }
     if (!sawPending) return;
     if (armedSlug !== getCurrentSlug()) { armedUntil = 0; return; }
     armedUntil = 0;   // one solve per Submit
