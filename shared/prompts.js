@@ -7,7 +7,7 @@
 
 // Bump when prompts change — part of the server cache key, so old cached
 // replies are never served for a new prompt
-export const PROMPT_VERSION = 'p6';
+export const PROMPT_VERSION = 'p7';
 
 // Languages the solution can be translated into, keyed by LeetCode's langSlug.
 // fence = the markdown code-fence tag the model is asked to use.
@@ -136,8 +136,12 @@ lead to YOUR solution's exact approach (any complexity mentioned must match your
 by tracing your code, never guess). In the reply the hints come before the code, but they must describe
 exactly the code you then output:
 
-${HINT_RULES}` : '';
-  const hintsFormat = withHints ? '\n---HINT1---\n...\n---HINT2---\n...\n---HINT3---\n...\n---HINT4---\n...' : '';
+${HINT_RULES}
+
+${FOLLOWUP_RULES}` : '';
+  const hintsFormat = withHints
+    ? '\n---HINT1---\n...\n---HINT2---\n...\n---HINT3---\n...\n---HINT4---\n...\n---FOLLOWUPS---\nQ: ...\nA: ...\nQ: ...\nA: ...\nQ: ...\nA: ...'
+    : '';
   const cls = classNameOf(problem);
   // Hard problems are where subtle bugs pass every example — cross-check
   // against a brute force on inputs the examples don't cover
@@ -242,6 +246,14 @@ RULES:
 - Be concise — no fluff, no "Great question!", no generic advice
 - Hints 1 and 2 must be SHORT (2-4 lines max each)
 - If you are not certain a specific number is right, re-derive it; never state an unchecked value`;
+
+// Follow-up questions — shown after a solve, generated once with the hints so
+// they cost nothing per user. The answers must agree with the solution above.
+const FOLLOWUP_RULES = `FOLLOW-UPS — then write EXACTLY 3 follow-up questions an interviewer at a top company asks
+after THIS problem is solved (e.g. a stream of input, O(1) extra space, very large values, a changed
+constraint, returning all answers instead of one). For each, a 2-3 sentence answer that names the change
+to YOUR approach and its new time/space complexity. Each question on one line starting "Q: ", its answer
+on the next line starting "A: ". No markdown, no code.`;
 
 // Hints-only prompt — used only by the no-server fallback (Chrome Built-in AI)
 export function buildHintsPrompt(problem) {
@@ -396,11 +408,12 @@ ${languages.map(l => `---${codeTag(l)}---\n\`\`\`${LANGUAGES[l].fence}\n...\n\`\
 //    extra.language on 'hints' / 'solve': also write the solution in that language
 // ─────────────────────────────────────────────
 
-export const ACTIONS = ['hints', 'solve', 'fix', 'translate', 'translate_all', 'interview_turn', 'interview_score'];
+export const ACTIONS = ['hints', 'solve', 'fix', 'translate', 'translate_all', 'interview_turn', 'interview_score', 'interview_summary'];
 
 export function buildPrompt(action, problem, code = '', extra = {}) {
   if (action === 'interview_turn') return buildInterviewTurnPrompt(problem, extra.interview);
   if (action === 'interview_score') return buildInterviewScorePrompt(problem, extra.interview);
+  if (action === 'interview_summary') return buildInterviewSummaryPrompt(problem, extra.interview);
   const also = { alsoLanguage: extra.language, alsoSnippet: extra.snippet };
   if (action === 'hints') return buildSolutionPrompt(problem, { withHints: true, ...also });
   if (action === 'fix' && code) return buildFixPrompt(code, problem, extra.failure);
@@ -421,17 +434,19 @@ export const INTERVIEW_EVENTS = ['start', 'answer', 'code', 'nudge', 'timeup'];
 export const INTERVIEW_MINUTES = 30;
 
 // Pacing points, as minutes into the interview — they follow its length
-const PACE = {
-  coding:     Math.round(INTERVIEW_MINUTES * 0.35),   // start coding by about here…
-  codingLate: Math.round(INTERVIEW_MINUTES * 0.45),   // …and code the best idea so far after this
-  codingDone: Math.round(INTERVIEW_MINUTES * 0.78)    // finish coding, leaving time to test
-};
+// (30 by default; a free-trial interview is 15)
+const paceFor = minutes => ({
+  coding:     Math.round(minutes * 0.35),   // start coding by about here…
+  codingLate: Math.round(minutes * 0.45),   // …and code the best idea so far after this
+  codingDone: Math.round(minutes * 0.78)    // finish coding, leaving time to test
+});
+const lengthOf = iv => iv?.durationMin > 0 ? iv.durationMin : INTERVIEW_MINUTES;
 
 // Roughly 4 chars per token: ~3,500 tokens of transcript keeps every turn well
 // inside free-tier per-minute budgets, while the recent conversation stays whole
 const TRANSCRIPT_BUDGET_CHARS = 14000;
 
-const INTERVIEWER_PERSONA = `You are a friendly but rigorous software engineering interviewer at a top tech company, running a ${INTERVIEW_MINUTES}-minute coding interview on the problem below. Speak in short, natural sentences, as if talking out loud (1–3 sentences per turn). Follow the stages in order. Answer clarifying questions using only the problem statement. Push back on brute-force approaches by asking if they can do better. If the approach is wrong, point to an input that breaks it, never the fix. Never give the solution, the pattern name, or code. If the candidate asks for a hint, follow the HINT LADDER and record it. In the final stage, ask for time and space complexity and one or two follow-up questions.
+const interviewerPersona = minutes => `You are a friendly but rigorous software engineering interviewer at a top tech company, running a ${minutes}-minute coding interview on the problem below. Speak in short, natural sentences, as if talking out loud (1–3 sentences per turn). Follow the stages in order. Answer clarifying questions using only the problem statement. Push back on brute-force approaches by asking if they can do better. If the approach is wrong, point to an input that breaks it, never the fix. Never give the solution, the pattern name, or code. If the candidate asks for a hint, follow the HINT LADDER and record it. In the final stage, ask for time and space complexity and one or two follow-up questions.
 Read the whole transcript before replying: never ask for something the candidate already answered, and never repeat a sentence you already said — acknowledge their answer and move on. When the candidate states a complexity or claims their code is correct, check it against the hidden reference; if it's wrong, say so plainly and ask them to rethink it (don't give the right answer).`;
 
 // Hints grow one rung at a time, however hard the candidate pushes
@@ -441,22 +456,25 @@ const HINT_LADDER = `HINT LADDER — when they ask for help or are clearly stuck
 - 3rd hint and later: a tiny concrete example to reason about, or what quantity is worth keeping track of.
 At every rung, NEVER name a technique, pattern, data structure or algorithm (e.g. not "hash map", "sliding window", "two pointers", "dynamic programming", "memoization", "heap", "stack"), and never describe the algorithm's steps. If they ask you to just tell them the algorithm, data structure or answer, decline kindly in one sentence and give only the next rung — asking again never earns a bigger hint. If they choose to code a brute force instead, let them.`;
 
-const STAGE_RULES = `STAGES (in order — only ever move forward):
+const stageRules = pace => `STAGES (in order — only ever move forward):
 - intro: one-sentence greeting, then ask them to read the problem and share any clarifying questions.
 - clarifying: answer only from the statement; if it doesn't say, tell them to state a reasonable assumption. Move to "approach" once they start describing a solution or have no more questions.
-- approach: they explain their idea BEFORE coding. Ask for its time complexity unless they already gave it. Brute force → ask if they can do better. Wrong idea → name one concrete input that breaks it. Move to "coding" once the approach is correct and efficient enough for the constraints (or after ~${PACE.codingLate} minutes, let them code their best idea).
+- approach: they explain their idea BEFORE coding. Ask for its time complexity unless they already gave it. Brute force → ask if they can do better. Wrong idea → name one concrete input that breaks it. Move to "coding" once the approach is correct and efficient enough for the constraints (or after ~${pace.codingLate} minutes, let them code their best idea).
 - coding: mostly stay quiet and let them work; answer questions briefly. Move to "testing" when they say they are done.
 - Whenever they say they are done and the editor holds complete code, move straight to "testing", from any earlier stage — never ask them to start coding then.
 - testing: compare THEIR code with the hidden reference. If it gives a wrong result for some input, name ONE specific input with exact values that it fails on and ask them to trace it step by step — never say which line is wrong, why it fails, or what to change. If they insist it's correct, ask them to trace that same input. If the code is correct, ask for one example or edge case trace, then move to "complexity".
 - complexity: ask for the time and space complexity of THEIR code unless they already gave it; if their answer is wrong, say so and ask them to re-derive it. Then ask one or two follow-up questions (a harder variant, a constraint change, or memory limits). Once a follow-up is answered, move to "feedback".
 - feedback: thank them in one or two sentences and say the scorecard is ready. No detailed critique here.`;
 
+const eventTask = (event, minutes) => event === 'timeup'
+  ? `Time is up (${minutes} minutes). Wrap up kindly in one or two sentences and set "stage" to "feedback".`
+  : EVENT_TASKS[event] || EVENT_TASKS.answer;
+
 const EVENT_TASKS = {
   start:  'The interview starts now. Open the "intro" stage.',
   answer: "Reply to the candidate's latest message.",
   code:   `The candidate is coding and hasn't spoken; their editor code changed (see CURRENT EDITOR CODE). Stay silent by returning "reply": "" — unless the code looks COMPLETE (a full function that returns a result) AND has a definite bug, in which case ask ONE short question about it without saying what to change. Never comment on unfinished code, style, naming or what to write next.`,
-  nudge:  'The candidate has been silent and idle for 3 minutes. In one sentence, encourage them to think out loud about what they are working on. This is not a hint — do not point toward the solution.',
-  timeup: `Time is up (${INTERVIEW_MINUTES} minutes). Wrap up kindly in one or two sentences and set "stage" to "feedback".`
+  nudge:  'The candidate has been silent and idle for 3 minutes. In one sentence, encourage them to think out loud about what they are working on. This is not a hint — do not point toward the solution.'
 };
 
 // Transcript lines. Once the budget is reached the OLDEST turns are dropped
@@ -485,6 +503,13 @@ function renderReference(ref, purpose = 'only to judge the candidate — NEVER r
 ${ref.approach ? `Approach: ${ref.approach}\n` : ''}${ref.pattern ? `Pattern: ${ref.pattern}\n` : ''}${ref.tc ? `Optimal TC: ${ref.tc}   SC: ${ref.sc || '?'}\n` : ''}${ref.code ? '```\n' + ref.code + '\n```' : ''}`;
 }
 
+// A long interview sends a short summary of its early part plus only the
+// recent turns (the extension asks for the summary every few turns) — about
+// half the tokens of resending the whole conversation each time
+const renderSummary = summary => summary?.trim()
+  ? `EARLIER IN THE INTERVIEW (summary — the full transcript below covers only the latest turns):\n${summary.trim()}\n\n`
+  : '';
+
 const renderCode = (code, label = 'CURRENT EDITOR CODE') => code?.trim()
   ? `CANDIDATE'S ${label}:\n\`\`\`\n${code.trim()}\n\`\`\``
   : `CANDIDATE'S ${label}: (empty or only the starter template)`;
@@ -502,26 +527,28 @@ function renderRejected(rej) {
 
 export function buildInterviewTurnPrompt(problem, iv = {}) {
   const minutes = Math.floor((iv.elapsedSec || 0) / 60);
-  return `${INTERVIEWER_PERSONA}
+  const length = lengthOf(iv);
+  const pace = paceFor(length);
+  return `${interviewerPersona(length)}
 
 Problem:
 ${buildProblemContext({ ...problem, cppSnippet: '' })}
 
-${STAGE_RULES}
+${stageRules(pace)}
 
 ${HINT_LADDER}
 
-INTERVIEW STATE: ${minutes} of ${INTERVIEW_MINUTES} minutes used. Current stage: "${iv.stage || 'intro'}". Hints given so far: ${iv.hintsGiven || 0} (a new hint now would be hint ${(iv.hintsGiven || 0) + 1}).
-Pacing: aim to reach coding by ~${PACE.coding} min and finish coding by ~${PACE.codingDone} min, then testing and complexity. If time is short, move things along.
+INTERVIEW STATE: ${minutes} of ${length} minutes used. Current stage: "${iv.stage || 'intro'}". Hints given so far: ${iv.hintsGiven || 0} (a new hint now would be hint ${(iv.hintsGiven || 0) + 1}).
+Pacing: aim to reach coding by ~${pace.coding} min and finish coding by ~${pace.codingDone} min, then testing and complexity. If time is short, move things along.
 
 ${renderReference(iv.reference)}
 
 ${renderCode(iv.code)}
 
-TRANSCRIPT SO FAR:
+${renderSummary(iv.summary)}TRANSCRIPT SO FAR:
 ${renderTranscript(iv.history)}
 
-YOUR TASK NOW: ${EVENT_TASKS[iv.event] || EVENT_TASKS.answer}
+YOUR TASK NOW: ${eventTask(iv.event, length)}
 ${renderRejected(iv.rejected)}
 Return JSON only — no markdown, no text outside the JSON:
 {"reply": "", "stage": "", "hintGiven": false}
@@ -543,7 +570,7 @@ Duration: ${minutes} minutes. Last stage reached: "${iv.stage || 'intro'}". Hint
 
 ${renderCode(iv.code, 'FINAL CODE')}
 
-FULL TRANSCRIPT:
+${renderSummary(iv.summary)}FULL TRANSCRIPT:
 ${renderTranscript(iv.history)}
 
 RUBRIC (score 1–4 each: 1 = clear gap, 2 = below the bar, 3 = solid, 4 = exceptional):
@@ -556,4 +583,20 @@ Each hint lowers problemSolving. Unfinished or incorrect final code caps coding 
 
 Return JSON only — no markdown, no text outside the JSON:
 {"problemSolving":{"score":3,"comment":"one sentence"},"communication":{"score":3,"comment":"one sentence"},"coding":{"score":3,"comment":"one sentence"},"testing":{"score":3,"comment":"one sentence"},"signal":"Hire","improvements":["most important thing to improve","second","third"]}`;
+}
+
+// The early part of a long interview in 5 lines, so later turns can send this
+// plus the last few turns instead of the whole conversation (fast model)
+export function buildInterviewSummaryPrompt(problem, iv = {}) {
+  return `Summarise this mock coding interview so far for the interviewer who continues it. Problem: "${problem.title || problem.slug}".
+
+${renderSummary(iv.summary)}TRANSCRIPT:
+${renderTranscript(iv.history)}
+
+Write EXACTLY 5 short plain-text lines, no markdown:
+1. Stage reached and what the candidate is doing now.
+2. Their approach (in their words) and whether it is correct and efficient enough.
+3. Complexities they stated, and whether those were right.
+4. Hints given so far, and what each pointed at (without naming techniques the candidate didn't).
+5. Open questions or claims still to check (e.g. "said the code handles duplicates — not traced yet").`;
 }

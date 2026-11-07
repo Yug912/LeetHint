@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { leakedTerms, repeatsEarlier, parseInterviewerReply } from '../api/interview.js';
-import { buildInterviewTurnPrompt } from '../shared/prompts.js';
+import { buildInterviewTurnPrompt, buildPrompt } from '../shared/prompts.js';
 
 const problem = { title: 'Two Sum', description: 'Return indices of the two numbers that add up to target.' };
 const reference = { pattern: 'Hash Map', approach: 'one pass', code: '', tc: 'O(n)', sc: 'O(n)' };
@@ -63,4 +63,19 @@ test('prompt: hint ladder and rejected draft are included', () => {
   assert.match(p, /a new hint now would be hint 2/);
   assert.match(p, /PREVIOUS DRAFT WAS REJECTED[\s\S]*use a hash map/);
   assert.doesNotMatch(buildInterviewTurnPrompt({ title: 'T', description: 'x' }, { event: 'answer' }), /REJECTED/);
+});
+
+test('prompt: a 15-minute trial interview paces itself to 15 minutes', () => {
+  const p = buildInterviewTurnPrompt({ title: 'T', description: 'x' }, { event: 'timeup', elapsedSec: 900, durationMin: 15 });
+  assert.match(p, /15-minute coding interview/);
+  assert.match(p, /15 of 15 minutes used/);
+  assert.match(p, /reach coding by ~5 min and finish coding by ~12 min/);
+  assert.match(p, /Time is up \(15 minutes\)/);
+});
+
+test('prompt: a summary stands in for the early transcript', () => {
+  const p = buildInterviewTurnPrompt({ title: 'T', description: 'x' },
+    { event: 'answer', summary: 'Stage approach; candidate proposed two loops.', history: [{ role: 'candidate', text: 'Can I use a map?' }] });
+  assert.match(p, /EARLIER IN THE INTERVIEW \(summary[^\n]*\n[^\n]*two loops[\s\S]*TRANSCRIPT SO FAR:\nCandidate: Can I use a map\?/);
+  assert.match(buildPrompt('interview_summary', { title: 'Two Sum' }, '', { interview: { history: [] } }), /EXACTLY 5 short plain-text lines/);
 });
