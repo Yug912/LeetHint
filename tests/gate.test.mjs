@@ -67,3 +67,26 @@ test('a gate whose provider is busy answers busy, and the next request tries aga
   assert.equal(ok.status, 200);
   await ok.text();
 });
+
+test('a failing gate (e.g. the daily Durable Object limit) falls back to a direct AI call, still cached', async () => {
+  const before = providerCalls;
+  const env = { GROQ_API_KEY: 't', PROVIDER_ORDER: 'groq', DB: fakeD1() };
+  const call = slug => worker.fetch(new Request('https://api.test/v1/generate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'chrome-extension://test' },
+    body: JSON.stringify({ action: 'hints', problem: { slug, title: 'G', difficulty: 'Easy', description: 'x' } })
+  }), env, { waitUntil: p => pending.push(p) });
+  const pending = [];
+  for (const [i, gate] of [
+    { idFromName: n => n, get: () => ({ fetch: async () => { throw new Error('Exceeded allowed volume of requests in Durable Objects free tier.'); } }) },
+    { idFromName: n => n, get: () => ({ fetch: async () => new Response('internal', { status: 500 }) }) }
+  ].entries()) {
+    env.GATE = gate;
+    env.DB = fakeD1();
+    const res = await call(`gate-down-${i}`);
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), REPLY.join(''));
+    await Promise.all(pending.splice(0));
+    assert.equal(env.DB.db.prepare('SELECT COUNT(*) AS n FROM cache').get().n, 1);   // the Worker cached it itself
+  }
+  assert.equal(providerCalls - before, 2);
+});

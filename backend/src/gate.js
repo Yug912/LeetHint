@@ -10,6 +10,14 @@
 //   • when the reply completes, the gate writes the cache and closes.
 // Bytes pass through untouched — chunks are only stored and forwarded, never
 // parsed (the free plan's 10 ms CPU limit).
+//
+// Free-plan limits (checked 2026-11-07, developers.cloudflare.com/durable-objects/
+// platform/pricing): SQLite-backed classes only, 100,000 DO requests/day and
+// 13,000 GB-s of duration/day (128 MB per object). A gate is awake only while
+// one reply streams (~5 s on Groq, ~30 s on Workers AI → 0.6-4 GB-s), so a few
+// thousand cache misses a day fit — far more than the free AI quotas allow.
+// It stores nothing (all in memory). If the gate itself fails (limit reached,
+// outage), the Worker calls the AI directly, as it did before the gate.
 
 import { openStream } from './providers.js';
 import { isCompleteReply, writeCache } from './store.js';
@@ -101,8 +109,19 @@ function concat(chunks) {
 // Worker side: send a cache miss through its gate. → { upstream, kind, label }
 // like openStream(), or throws the same errors openStream() would.
 export async function openThroughGate(env, cacheKey, prompt, opts, cacheKeys) {
-  const stub = env.GATE.get(env.GATE.idFromName(cacheKey));
-  const res = await stub.fetch('https://gate/open', { method: 'POST', body: JSON.stringify({ prompt, opts, cacheKeys }) });
+  let res;
+  try {
+    const stub = env.GATE.get(env.GATE.idFromName(cacheKey));
+    res = await stub.fetch('https://gate/open', { method: 'POST', body: JSON.stringify({ prompt, opts, cacheKeys }) });
+  } catch (e) {
+    res = null;
+    console.warn('gate unavailable, calling the AI directly:', e.message);
+  }
+  // The gate itself failed (not the AI) → the pre-gate path; the Worker caches it
+  if (!res || (!res.ok && res.status !== 599)) {
+    if (res) console.warn(`gate answered HTTP ${res.status}, calling the AI directly`);
+    return { ...(await openStream(env, prompt, opts)), gated: false };
+  }
   if (res.status === 599) {
     const info = await res.json();
     const e = new Error(info.message);
