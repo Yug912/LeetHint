@@ -92,6 +92,15 @@ A **30-minute mock interview** with an AI interviewer on the problem you have op
 
 > The first time, LeetHint opens a small page to ask for microphone access, since Chrome can't show the permission prompt inside the side panel.
 
+### 🧩 Train How You Think
+- **Guess the pattern** before Hint 1 — a skippable row of chips; Stats shows how often you spot each pattern, and patterns under 50% become revision suggestions
+- **Confidence check** — "Will you solve this without hints?" — then Stats tells you if you're over- or underconfident, per difficulty
+- **Tilt detector** — after 3 wrong submissions in 10 minutes, or a long time without progress, one gentle card: take a break, unlock the next hint, or try an easier problem on the same pattern
+- **TLE warning** — a heuristic that compares your loops with the constraints ("nested loops look like O(n²); with n up to 10^5 aim for O(n log n)")
+- **Déjà vu** — "This looks like #146 LRU Cache, which you solved 3 weeks ago with Hint 3"
+- **Interview follow-ups** after a solve, answers hidden until clicked
+- **Streaks** and a **CSV export** of your stats, revision and interviews
+
 ### 🏢 Company Tags
 Know which **top tech companies** have asked each problem — pulled from a curated database of **hundreds of problems**, tagged with companies like Google, Meta, Amazon, Apple, and more.
 
@@ -108,6 +117,8 @@ Enter your own complexity and check it against the solution:
 - Mock interview conversations are **never cached or logged** on the server
 - Falls back to **Chrome's built-in AI** (`window.ai`) if the server can't be reached
 - Zero data collection — your stats, revision queue and interview history stay in Chrome's local storage
+- An **anonymous install ID** (a random number) is sent for fair-use limits and free trials — never linked to you
+- **Your own key** (optional) is stored only in your browser and sent only to that provider — never to the LeetHint server
 
 > **Note on voice:** spoken answers are transcribed by Chrome's built-in speech recognition, which sends the audio to Google's servers. Type your answers instead if you'd rather not.
 
@@ -142,11 +153,22 @@ Enter your own complexity and check it against the solution:
 Install the extension, open a problem, and hints start streaming. All AI calls go through the
 **LeetHint server** (a Cloudflare Worker), which holds the API keys — users never see or enter one.
 
+- **Instant for most problems** — pre-generated, compile-checked hint files are read first (no AI call at all)
 - **Fast** — the server uses the fastest providers first (Cerebras, Groq), then OpenRouter and Gemini
 - **Shared cache** — once anyone has opened a problem, it loads instantly for everyone
 - **Never stuck** — a provider that hits its limit is skipped automatically; if a reply is cut off before the code, the solution is fetched separately
 
 > **Server unreachable?** LeetHint falls back to Chrome's built-in AI for basic hints (no solution code).
+> **Server busy?** You wait in line (the panel shows it) instead of seeing an error.
+
+### Free trials and your own key
+
+Hints are always free. Without a key, **Fix** is free 3 times a day and a **15-minute mock
+interview** once a week. Add a free key of your own (Gemini at
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey) or Groq at
+[console.groq.com/keys](https://console.groq.com/keys), no card) in **Stats → Settings**
+for unlimited Fix and full 30-minute interviews — requests then go straight from your
+browser to that provider.
 
 ### Running your own server
 
@@ -186,15 +208,30 @@ LeetHint/
 ├── manifest.json          # Extension config (MV3)
 ├── api/
 │   ├── ai.js              # Server client, streaming parser, built-in AI fallback, TC/SC matcher
-│   ├── interview.js       # Mock interview: reply/scorecard parsing, stage rules, code-change check
-│   └── config.js          # BACKEND_URL (public — no secrets)
+│   ├── interview.js       # Mock interview: reply/scorecard parsing, stage rules, summaries
+│   ├── direct.js          # Your own API key: calls Gemini / Groq / OpenRouter directly
+│   ├── remote.js          # Remote switches (GET /config)
+│   └── config.js          # BACKEND_URL + CACHE_URL (public — no secrets)
 ├── shared/
 │   ├── prompts.js         # All prompts — used by the server AND the offline fallback
-│   └── revision.js        # Spaced-repetition schedule (pure logic, shared by panel + worker)
-├── backend/               # Cloudflare Worker that holds the API keys
-│   ├── src/index.js       # Routes, validation, rate limit, cache, streaming
-│   ├── src/providers.js   # Cerebras / Groq / OpenRouter / Gemini with model fallbacks
+│   ├── revision.js        # Spaced-repetition schedule (pure logic, shared by panel + worker)
+│   ├── patterns.js        # Pattern-guess matching
+│   ├── complexity.js      # TLE heuristic (constraints vs loop nesting)
+│   ├── insights.js        # Confidence, tilt, déjà vu, streaks, CSV
+│   └── html-text.js       # Statement HTML → text without a DOM (Worker + tools)
+├── backend/               # Cloudflare Worker that holds the API keys — see backend/README.md
+│   ├── src/index.js       # Routes, validation, limits, trials, cache, streaming
+│   ├── src/providers.js   # Cerebras / Groq / Workers AI / OpenRouter / Gemini with model fallbacks
+│   ├── src/quota.js       # QuotaKeeper Durable Object (global limits, daily budget)
+│   ├── src/gate.js        # ProblemGate Durable Object (merges identical misses)
+│   ├── src/store.js       # D1 cache, reports, trials, blocklist
+│   ├── src/refresh.js     # Monday cron: newest problems
+│   ├── migrations/        # D1 schema
 │   └── wrangler.toml      # Worker config (no secrets)
+├── tools/
+│   ├── prefill.mjs        # Generates the static hint files (compile-checked)
+│   └── export-d1.mjs      # Weekly export of new D1 rows to the cache site
+├── store/build.sh         # Chrome Web Store / Edge zip (dist/)
 ├── background/
 │   └── service-worker.js  # Navigation detection, message relay, due-revisions badge
 ├── content/
@@ -205,13 +242,14 @@ LeetHint/
 │   ├── sidepanel.css      # Styling (dark mode, glassmorphism)
 │   ├── sidepanel.js       # Main logic: hints, score, stats, revision tab
 │   ├── interview.js       # Mock interview UI and session flow
+│   ├── extras.js          # Pattern guess, confidence, tilt, TLE, déjà vu, settings, reports
+│   ├── editor.js          # Reads (never changes) the LeetCode editor
 │   ├── voice.js           # Speech synthesis + speech recognition
 │   └── mic-permission.*   # One-time microphone permission page
 ├── data/
 │   ├── companies.json     # Problem → company mapping database
 │   └── build_companies.py # Script to build the companies DB
-├── tests/
-│   └── revision.test.mjs  # Spaced-repetition tests (node --test tests/*.test.mjs)
+├── tests/                 # node --test tests/*.test.mjs (LEETHINT_LIVE=1 adds the GraphQL smoke test)
 └── icons/
 ```
 
@@ -271,14 +309,16 @@ LeetHint uses carefully tuned prompts that enforce:
 | Permission | Why it's needed |
 |------------|----------------|
 | `sidePanel` | Show the hint panel alongside LeetCode |
-| `storage` | Save your hints cache, progress and stats locally |
-| `tabs` | Detect when you navigate to a new problem |
-| `scripting` | Inject content script to read problem data |
+| `storage` | Save your hints cache, progress, stats, settings and own key locally |
+| `tabs` | Detect when you navigate to a new problem; open linked problems |
+| `scripting` | Inject the content script; read (never change) the editor code for interviews, the tilt detector and the TLE check |
 | `webNavigation` | Track problem page transitions |
 | `alarms` | Refresh the due-revisions badge just after local midnight |
 | `https://leetcode.com/*` | Access LeetCode pages |
 | `https://leethint-api.yugthakral07.workers.dev/*` | Call the LeetHint server (change it if you deploy your own) |
-| `http://localhost:8787/*` | Local server during development |
+| `https://leethint-cache.pages.dev/*` | Read the pre-generated hint files and company tags |
+| `https://generativelanguage.googleapis.com/*`, `https://api.groq.com/*`, `https://openrouter.ai/*` | Only with your own key: call that provider directly |
+| `http://localhost:8787/*` | Local server during development (removed by `store/build.sh`) |
 
 ---
 

@@ -9,13 +9,48 @@ Extension ──POST /v1/generate {action, problem}──▶ Worker ──▶ Ce
           ◀──────── streamed text ─────────────── (keys = Worker secrets)
 ```
 
+Most hints never reach the Worker: the extension first reads a static file
+from the **leethint-cache** site (`tools/prefill.mjs` fills it). The Worker
+answers cache misses, Fix and mock interviews.
+
+## Endpoints
+
+| Route | What |
+|---|---|
+| `POST /v1/generate` | `{ action, problem, ... }` → the provider's SSE stream, passed through untouched |
+| `POST /v1/report` | `{ slug, promptVersion, reason, note? }` → 204 ("Report wrong hint") |
+| `GET /config` | remote switches from `[vars]` `CONFIG_*`, cached 1 hour |
+| `GET /health` | `{ ok, providers }` (`?models` adds model names) |
+| `GET /stats?token=` | today's tokens per provider, trial budget left, trials granted (secret `STATS_TOKEN`; 404 otherwise) |
+
+Error shapes (shared contract): busy → `429 { error: "busy", retryAfter, position }` +
+`Retry-After`; too many requests → `429 { error: "rate_limited", retryAfter: 60 }`;
+free trial used → `403 { error: "trial_used", action, resetsAt }`; blocked install →
+`403 { error: "blocked" }`. Requests without the new fields (old extension versions) keep working.
+
+## Bindings (all free plan, no payment method)
+
+| Binding | Kind | Purpose |
+|---|---|---|
+| `AI` | Workers AI | free overflow model |
+| `HINTS_CACHE` | KV | old shared cache — read-only fallback for a month after D1, then remove |
+| `DB` | D1 | shared cache, reports, free-trial counters, blocklist (`migrations/`) |
+| `QUOTA` | Durable Object `QuotaKeeper` | one global view of provider limits; day budget 70% hints / 25% trials / 5% reserve |
+| `GATE` | Durable Object `ProblemGate` | identical cache misses share one AI call |
+| `INSTALL_LIMITER` / `RATE_LIMITER` | Rate limiting | 20/min per install ID, 120/min per IP |
+| `EVENTS` | Analytics Engine | one event per `/v1` request |
+| cron `0 6 * * 1` | Trigger | pre-generate LeetCode's newest problems (`src/refresh.js`) |
+
+Free trials (per anonymous install ID, `X-LeetHint-Install`): Fix 3 per UTC day, one mock
+interview per ISO week (15 minutes, at most 3 running at once). Signature fixes and requests
+without an install ID are not counted. Change the numbers with the `CONFIG_*` vars.
 ## Security model
 
 | Concern | How it's handled |
 |---|---|
 | API keys | Stored only as encrypted Worker secrets. Never in the repo, the extension, or any response. `.dev.vars` is gitignored. |
 | Misuse as a free AI proxy | The client can't send a prompt — only problem fields. Prompts are built server-side from [`shared/prompts.js`](../shared/prompts.js), so the endpoint only ever produces LeetHint output. |
-| Abuse / cost | Per-IP rate limit (20 req/min, `wrangler.toml`), input size limits, action whitelist. |
+| Abuse / cost | Per-install (20/min) and per-IP (120/min) rate limits, free-trial counters, blocklist (`blocked` table in D1), input size limits, action whitelist. |
 | Who can call it | `ALLOWED_ORIGINS` pins the API to your extension ID once published. |
 | Error leaks | Upstream errors are logged server-side; clients only get generic messages. |
 | Cache poisoning | Cache key = hash of the full prompt, so a fake statement can't overwrite a real problem's cached hints. |
@@ -39,8 +74,19 @@ npx wrangler secret put GEMINI_API_KEY       # free: https://aistudio.google.com
 npx wrangler kv namespace create HINTS_CACHE
 #   → paste the printed id into wrangler.toml and uncomment the [[kv_namespaces]] block
 
+# D1: cache, reports, trials, blocklist
+npx wrangler d1 create leethint
+#   → paste the printed database_id into wrangler.toml and uncomment [[d1_databases]]
+npx wrangler d1 migrations apply leethint --remote
+
+# /stats (optional): any long random string
+npx wrangler secret put STATS_TOKEN
+
+node --test ../tests/*.test.mjs   # must pass before every deploy
 npm run deploy
 ```
+
+Block an abusive install: `npx wrangler d1 execute leethint --remote --command "INSERT INTO blocked (install_id, reason, created) VALUES ('<id>', 'abuse', 0)"`.
 
 `deploy` prints your URL, e.g. `https://leethint-api.<you>.workers.dev`. Then:
 
@@ -76,7 +122,9 @@ curl http://localhost:8787/health -H "Origin: chrome-extension://test"
 | `PROVIDER_ORDER` | `wrangler.toml` `[vars]` | `cerebras,groq,workersai,openrouter,gemini` (fastest first) |
 | `WORKERSAI_MODELS` | `wrangler.toml` `[vars]` | unset = `gpt-oss-120b`, then `gpt-oss-20b` |
 | `ALLOWED_ORIGINS` | `wrangler.toml` `[vars]` | empty = any `chrome-extension://` origin |
-| Rate limit | `wrangler.toml` `[[ratelimits]]` | 20 requests / 60 s per IP |
+| Rate limits | `wrangler.toml` `[[ratelimits]]` | 20 / 60 s per install ID, 120 / 60 s per IP |
+| Remote switches | `wrangler.toml` `[vars]` `CONFIG_*` (or the dashboard) | interview + fix on; 3 fixes/day, 1 × 15-min interview/week |
+| Daily token budget | `QUOTA_DAILY_TOKENS` | 3,000,000 across all providers |
 | Models per provider | `src/providers.js` | see `PROVIDERS` |
 
 Free-tier limits change often — check each provider's dashboard.
@@ -88,6 +136,8 @@ Free-tier limits change often — check each provider's dashboard.
 - **Right-sized requests** — each action asks only for the tokens it needs; translations go to a smaller model first.
 - **Short limits are waited out** (up to 8 s) rather than returned as errors.
 - **Daily limits pause a model.** Groq's free tier also caps each model at ~200,000 tokens/day (≈ 50 questions on `gpt-oss-120b`). When a model reports its daily limit, it's skipped until the reset time Groq gives, instead of being retried on every request. Budgets are tracked only from refusals — on success Groq's "remaining" header still counts the request's full `max_tokens` reservation.
+- **One global view.** The token buckets, daily pauses and the day's budget live in the `QuotaKeeper` Durable Object, so every Worker copy sees the same limits (without the binding, each copy keeps its own, as before).
+- **Identical misses merge.** Requests for the same uncached problem go through its `ProblemGate`, which makes one AI call and replays the bytes to everyone.
 - Every refused attempt is logged (`refused: <model> <status> <reason>`) — watch with `npx wrangler tail`.
 - **The reply stream is passed through untouched.** The Worker never parses the provider's Server-Sent Events — the extension does. Parsing every chunk in the Worker exceeded the free plan's 10 ms CPU limit, and Cloudflare cut replies off mid-way (missing code, missing languages). Caching uses a native stream copy (`tee()` + `Response.text()`), which costs almost no CPU.
 
