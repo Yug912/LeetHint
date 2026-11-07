@@ -3,7 +3,7 @@
 //
 // Each problem is solved ONCE here (on your computer, against a local Worker
 // with a dev key), compile-checked, and written as cache/<slug>.json into the
-// leethint-cache site. The extension reads those files first, so hints for a
+// cache site (the cache-site/ folder of this repo). The extension reads those files first, so hints for a
 // pre-filled problem cost no AI call at all.
 //
 //   cd backend && npx wrangler dev           # terminal 1 (dev key in .dev.vars)
@@ -11,7 +11,7 @@
 //
 // Flags:
 //   --only <slug>    just this problem (repeatable)       --force      regenerate even if current
-//   --limit <n>      at most n problems this run          --out <dir>  the leethint-cache checkout
+//   --limit <n>      at most n problems this run          --out <dir>  default cache-site/
 //   --worker <url>   default http://localhost:8787        --pace <s>   seconds between problems (default 20-30)
 //   --no-compile     skip the clang++ check (not recommended)
 // Resumable: problems whose file already has the current promptVersion are skipped.
@@ -30,7 +30,7 @@ const SNIPPET_LANGS = ['cpp', 'java', 'python3', 'c', 'javascript', 'typescript'
 
 // ── arguments ──
 function parseArgs(argv) {
-  const a = { only: [], force: false, limit: Infinity, out: resolve(ROOT, '..', 'leethint-cache'),
+  const a = { only: [], force: false, limit: Infinity, out: resolve(ROOT, 'cache-site'),
               worker: 'http://localhost:8787', pace: null, compile: true };
   for (let i = 0; i < argv.length; i++) {
     const f = argv[i], next = () => argv[++i];

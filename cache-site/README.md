@@ -33,32 +33,21 @@ exports hints the Worker generated for new problems.
 
 ## Cloudflare Pages setup (once)
 
-Dashboard → Workers & Pages → Create → Pages → Connect to Git → this repo.
-Free plan, **no build command**, output folder `/`. Every push redeploys.
+Dashboard → Workers & Pages → Create → Pages → Connect to Git → the
+**LeetHint** repo. Project name `leethint-cache`, framework preset None,
+**no build command**, build output directory `cache-site`. Free plan, no
+card. Every push to `main` redeploys. (Not direct upload: the weekly sync
+publishes by pushing.)
 
-## Weekly sync (`.github/workflows/sync-cache.yml`)
+## Weekly sync (`.github/workflows/sync-cache.yml` in the repo root)
 
-Repo → Settings → Secrets and variables → Actions → add:
+LeetHint repo → Settings → Secrets and variables → Actions → add:
 
 - `CF_ACCOUNT_ID` — Cloudflare account ID (dashboard sidebar)
 - `CF_API_TOKEN` — a token with only **Account → D1 → Read**
 - `D1_DATABASE_ID` — from `npx wrangler d1 create leethint`
 
-## Handoff (S6) — what's left
-
-This folder is a copy of the `leethint-cache` site, kept in the LeetHint repo
-so it isn't only on one laptop. The three sample files (`two-sum`, `3sum`,
-`trapping-rain-water`, prompt p7, C++ compile-checked) were made with
-`node tools/prefill.mjs --only <slug>`. To put it live:
-
-1. Create an empty GitHub repo `Yug912/leethint-cache` (no README).
-2. Push this folder's contents to it as `main`
-   (`cd cache-site && git init -b main && git add -A && git commit -m init &&
-   git remote add origin git@github.com:Yug912/leethint-cache.git && git push -u origin main`).
-3. Cloudflare → Workers & Pages → Create → Pages → **Connect to Git** →
-   `leethint-cache`. Free plan, no build command, output folder `/`.
-   (Not direct upload: the weekly sync Action publishes by pushing.)
-4. Add the three Action secrets above.
-5. Check `https://leethint-cache.pages.dev/cache/two-sum.json` returns the file.
-   If the name was taken, put the real host in `api/config.js` (`CACHE_URL`),
-   `manifest.json` host_permissions and the plan doc's Interfaces item 1.
+Then check `https://leethint-cache.pages.dev/cache/two-sum.json` returns the
+file. If the name was taken, put the real host in `api/config.js`
+(`CACHE_URL`), `manifest.json` host_permissions and the plan doc's
+Interfaces item 1.
