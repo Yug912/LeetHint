@@ -1,0 +1,41 @@
+{
+  "slug": "stone-game-vi",
+  "title": "Stone Game VI",
+  "difficulty": "Medium",
+  "promptVersion": "p7",
+  "generatedAt": "2026-11-07",
+  "pattern": "Greedy by combined value",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> order: up to n entries → O(n)  \n- recursion depth: none  \n- not counted: input vectors, returned int",
+  "approach": "Each stone influences the final score by the sum of Alice’s and Bob’s values, because taking it gives the player his own points and simultaneously removes the opponent’s potential points. Therefore the optimal play is to pick stones in decreasing order of aliceValues[i] + bobValues[i]. Simulating the alternating picks on this order yields the final scores, and comparing them decides the winner.",
+  "hints": [
+    "What single number tells you how much a stone changes the *difference* between the two players’ scores?  \nSince n ≤ 10⁵, you need a decision that can be made in O(1) per stone after a one‑time preprocessing.",
+    "Sort the stones by the value aliceValues[i] + bobValues[i] using a vector of pairs.  \nExample: for alice=[1,3], bob=[2,1] the sums are [3,4] → order indices [1,0].",
+    "compute sum = alice[i] + bob[i] for each i  \nstore (sum, i) in a list  \nsort list descending by sum  \naliceScore = 0, bobScore = 0  \nfor turn from 0 to n‑1  \n idx = list[turn].second  \n if turn is even → aliceScore += alice[idx]  \n else → bobScore += bob[idx]  \nreturn sign of (aliceScore - bobScore)",
+    "**Single stone** - only one stone exists, the first player always gets it.  \n`Input: [5],[7]` → `Expected: 1`  \n⚠️ Bug: always returning 0 → returns 0  \n\n**Tie after optimal play** - total scores become equal.  \n`Input: [1,2],[3,1]` → `Expected: 0`  \n⚠️ Bug: sorting by only aliceValues → order [0,1] → returns 1  \n\n**Equal combined sums** - different individual values but same alice+bob.  \n`Input: [4,1],[1,4]` → `Expected: 0`  \n⚠️ Bug: using stable_sort with original index as tie‑breaker → returns -1  \n\n**Maximum size & values** - n = 10⁵, each value = 100, sums fit in 32‑bit but totals may exceed it.  \n`Input: vector of 100000 elements all 100, same for bob` → `Expected: 0`  \n⚠️ Bug: storing totals in int → overflow, yields wrong sign"
+  ],
+  "followUps": [
+    {
+      "q": "What if the players could pick **two** stones per turn instead of one?",
+      "a": "The game becomes a turn‑based selection of pairs; the same “combined value” idea applies, but now each turn removes the two highest remaining sums. The algorithm stays O(n log n) after sorting, with a simple loop that advances by two indices per iteration."
+    },
+    {
+      "q": "How would the solution change if the arrays could contain **negative** values?",
+      "a": "With negatives the “sum” still represents the swing in score, so sorting by descending sum remains optimal. The implementation must use long long for sums and scores, but time and space complexities stay O(n log n) and O(n)."
+    },
+    {
+      "q": "Suppose the input is streamed and you can only store **O(1)** extra memory besides the two arrays.",
+      "a": "You can avoid the extra vector by sorting the indices in‑place using a custom comparator that accesses the original arrays, which still needs O(n log n) time and O(1) auxiliary space (apart from the recursion stack of the sort, which is O(log n))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int stoneGameVI(vector<int>& aliceValues, vector<int>& bobValues) {\n        int n = aliceValues.size();\n        vector<pair<int,int>> order;\n        order.reserve(n);\n        for (int i = 0; i < n; ++i) {\n            order.emplace_back(aliceValues[i] + bobValues[i], i);\n        }\n        sort(order.begin(), order.end(),\n             [](const pair<int,int>& a, const pair<int,int>& b) {\n                 return a.first > b.first;\n             });\n        long long aliceScore = 0, bobScore = 0;\n        for (int turn = 0; turn < n; ++turn) {\n            int idx = order[turn].second;\n            if (turn % 2 == 0) {\n                aliceScore += aliceValues[idx];\n            } else {\n                bobScore += bobValues[idx];\n            }\n        }\n        if (aliceScore > bobScore) return 1;\n        if (aliceScore < bobScore) return -1;\n        return 0;\n    }\n};",
+    "java": "class Solution {\n    public int stoneGameVI(int[] aliceValues, int[] bobValues) {\n        int n = aliceValues.length;\n        Integer[] order = new Integer[n];\n        for (int i = 0; i < n; i++) {\n            order[i] = i;\n        }\n        // Sort indices by aliceValues[i] + bobValues[i] in descending order\n        java.util.Arrays.sort(order, (a, b) -> {\n            int sumA = aliceValues[a] + bobValues[a];\n            int sumB = aliceValues[b] + bobValues[b];\n            return Integer.compare(sumB, sumA); // descending\n        });\n\n        long aliceScore = 0L;\n        long bobScore = 0L;\n        for (int turn = 0; turn < n; turn++) {\n            int idx = order[turn];\n            if (turn % 2 == 0) {\n                aliceScore += aliceValues[idx];\n            } else {\n                bobScore += bobValues[idx];\n            }\n        }\n\n        if (aliceScore > bobScore) return 1;\n        if (aliceScore < bobScore) return -1;\n        return 0;\n    }\n}",
+    "python3": "class Solution:\n    def stoneGameVI(self, aliceValues: list[int], bobValues: list[int]) -> int:\n        n = len(aliceValues)\n        order = [(aliceValues[i] + bobValues[i], i) for i in range(n)]\n        order.sort(key=lambda x: x[0], reverse=True)\n\n        aliceScore = 0\n        bobScore = 0\n        for turn, (_, idx) in enumerate(order):\n            if turn % 2 == 0:\n                aliceScore += aliceValues[idx]\n            else:\n                bobScore += bobValues[idx]\n\n        if aliceScore > bobScore:\n            return 1\n        if aliceScore < bobScore:\n            return -1\n        return 0",
+    "javascript": "/**\n * @param {number[]} aliceValues\n * @param {number[]} bobValues\n * @return {number}\n */\nvar stoneGameVI = function(aliceValues, bobValues) {\n    const n = aliceValues.length;\n    const order = new Array(n);\n    for (let i = 0; i < n; ++i) {\n        order[i] = { sum: aliceValues[i] + bobValues[i], idx: i };\n    }\n    order.sort((a, b) => b.sum - a.sum); // descending by sum\n\n    let aliceScore = 0;\n    let bobScore = 0;\n    for (let turn = 0; turn < n; ++turn) {\n        const idx = order[turn].idx;\n        if (turn % 2 === 0) {\n            aliceScore += aliceValues[idx];\n        } else {\n            bobScore += bobValues[idx];\n        }\n    }\n    if (aliceScore > bobScore) return 1;\n    if (aliceScore < bobScore) return -1;\n    return 0;\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}

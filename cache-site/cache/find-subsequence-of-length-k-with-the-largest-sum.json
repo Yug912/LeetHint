@@ -1,0 +1,41 @@
+{
+  "slug": "find-subsequence-of-length-k-with-the-largest-sum",
+  "title": "Find Subsequence of Length K With the Largest Sum",
+  "difficulty": "Easy",
+  "promptVersion": "p7",
+  "generatedAt": "2026-11-07",
+  "pattern": "Sorting with index preservation",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> vec: n elements → O(n)  \n- vector<int> result: k elements → O(k) (≤ O(n))  \n- sorting operations: no extra memory beyond the vectors",
+  "approach": "Pick the k largest values while keeping their original order.  \nSort the indices by value descending, take the first k, then sort those indices ascending to preserve order.  \nThis guarantees the maximum possible sum and a valid subsequence.",
+  "hints": [
+    "What if you only need the largest k numbers, but you must keep their original positions?  \nThe array size is at most 1000, so a full sort is cheap enough.",
+    "Use a vector of (value, index) pairs, sort it by value descending, then pick the first k indices and sort those indices ascending.  \nFor example, nums = [2,1,3,3], k=2 → pairs: (2,0),(1,1),(3,2),(3,3); top2 indices {2,3}; sorted → [2,3] → [3,3].",
+    "```\nCreate list of (value, original_index) for each element\nSort list by value descending\nTake first k elements from sorted list\nExtract their original indices into a new list\nSort the indices ascending\nReturn the elements at these indices in order\n```",
+    "**Smallest n** - Input: nums = [5], k = 1 → Expected: [5]  \n⚠️ Bug: using a loop that assumes n>1 → returns empty vector  \n\n**All negatives** - Input: nums = [-5,-4,-3], k = 2 → Expected: [-4,-3]  \n⚠️ Bug: initializing max with 0 instead of INT_MIN → picks wrong elements  \n\n**Duplicates** - Input: nums = [1,1,1,1], k = 2 → Expected: [1,1] (any two)  \n⚠️ Bug: using a set to deduplicate indices → returns fewer than k elements  \n\n**Already sorted ascending** - Input: nums = [1,2,3,4], k = 3 → Expected: [2,3,4]  \n⚠️ Bug: sorting indices ascending after picking top k but forgetting to keep original order → could return [3,4,2]  \n\n**Large values** - Input: nums = [100000, 100000, 100000], k = 2 → Expected: [100000,100000]  \n⚠️ Bug: summing into int and comparing sums → overflow not an issue here, but using int for sum could mislead if extended to larger constraints."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums.length could be up to 10^5 instead of 1000?",
+      "a": "The same algorithm works; sorting O(n log n) remains fine. If memory is tight, we could use a min-heap of size k to keep top k in O(n log k) time and O(k) space."
+    },
+    {
+      "q": "How would you solve this if you could only stream the array once and k is small?",
+      "a": "Maintain a min-heap of size k while scanning; each new element replaces the smallest if larger. This gives O(n log k) time and O(k) space, suitable for streaming."
+    },
+    {
+      "q": "Suppose you need the subsequence with the largest sum but also the smallest possible length if multiple sums tie.",
+      "a": "First find the maximum sum by selecting top k values. Then, if multiple subsets achieve that sum, choose the one with minimal length by greedily dropping the smallest values among the selected until the sum would drop. This adds a linear scan over the selected k elements."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maxSubsequence(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<pair<int,int>> vec;\n        vec.reserve(n);\n        for (int i = 0; i < n; ++i) {\n            vec.emplace_back(nums[i], i);\n        }\n        sort(vec.begin(), vec.end(), [](const auto& a, const auto& b){\n            return a.first > b.first; // descending by value\n        });\n        vector<int> idx;\n        idx.reserve(k);\n        for (int i = 0; i < k; ++i) {\n            idx.push_back(vec[i].second);\n        }\n        sort(idx.begin(), idx.end()); // ascending by original index\n        vector<int> res;\n        res.reserve(k);\n        for (int id : idx) {\n            res.push_back(nums[id]);\n        }\n        return res;\n    }\n};",
+    "java": "import java.util.*;\n\nclass Solution {\n    public int[] maxSubsequence(int[] nums, int k) {\n        int n = nums.length;\n        // Pair each value with its original index\n        List<int[]> pairs = new ArrayList<>(n);\n        for (int i = 0; i < n; ++i) {\n            pairs.add(new int[]{nums[i], i});\n        }\n\n        // Sort descending by value\n        pairs.sort((a, b) -> Integer.compare(b[0], a[0]));\n\n        // Collect indices of the first k elements (largest values)\n        int[] idx = new int[k];\n        for (int i = 0; i < k; ++i) {\n            idx[i] = pairs.get(i)[1];\n        }\n\n        // Sort indices to restore original order\n        Arrays.sort(idx);\n\n        // Build result subsequence using the sorted indices\n        int[] res = new int[k];\n        for (int i = 0; i < k; ++i) {\n            res[i] = nums[idx[i]];\n        }\n        return res;\n    }\n}",
+    "python3": "class Solution:\n    def maxSubsequence(self, nums: list[int], k: int) -> list[int]:\n        # Pair each element with its original index\n        paired = [(val, idx) for idx, val in enumerate(nums)]\n\n        # Sort by value in descending order\n        paired.sort(key=lambda x: x[0], reverse=True)\n\n        # Take the indices of the first k elements (largest values)\n        idx = [paired[i][1] for i in range(k)]\n\n        # Restore original order by sorting indices ascending\n        idx.sort()\n\n        # Build the resulting subsequence using the ordered indices\n        return [nums[i] for i in idx]",
+    "javascript": "/**\n * @param {number[]} nums\n * @param {number} k\n * @return {number[]}\n */\nvar maxSubsequence = function(nums, k) {\n    const n = nums.length;\n    // store value and original index\n    const vec = [];\n    for (let i = 0; i < n; ++i) {\n        vec.push([nums[i], i]); // [value, index]\n    }\n    // sort descending by value\n    vec.sort((a, b) => b[0] - a[0]);\n\n    // take first k indices\n    const idx = [];\n    for (let i = 0; i < k; ++i) {\n        idx.push(vec[i][1]);\n    }\n    // sort indices to restore original order\n    idx.sort((a, b) => a - b);\n\n    // build result subsequence\n    const res = [];\n    for (const id of idx) {\n        res.push(nums[id]);\n    }\n    return res;\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}

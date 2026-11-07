@@ -1,0 +1,41 @@
+{
+  "slug": "increasing-decreasing-string",
+  "title": "Increasing Decreasing String",
+  "difficulty": "Easy",
+  "promptVersion": "p7",
+  "generatedAt": "2026-11-07",
+  "pattern": "Counting Sort‑style Sweep",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26]: fixed size 26 → O(1)  \n- string res: stores the answer, not counted as extra space per LeetCode convention  \n- no recursion or dynamic containers",
+  "approach": "The process only cares about how many of each letter are still present, not their original positions. By counting frequencies of the 26 lowercase letters we can repeatedly emit the smallest existing character, then the next larger, and after reaching the largest emit them in reverse order. Repeating these two sweeps until all counts are zero produces exactly the required ordering.",
+  "hints": [
+    "Which character is always removed first from the current multiset of letters?  \nNotice that after each full forward‑then‑backward pass you only need to know how many of each letter remain, and the constraints say 1 ≤ s.length ≤ 500.",
+    "Use an array of length 26 to store the frequency of each letter.  \nExample: for s = \"rat\" the array becomes [0,…,1 at ‘a’,1 at ‘r’,1 at ‘t’,…].",
+    "while result length < n:\n    for c from 'a' to 'z':\n        if count[c] > 0: append c, decrement count[c]\n    for c from 'z' down to 'a':\n        if count[c] > 0: append c, decrement count[c]",
+    "**Single character** - only one letter, the algorithm should return it.  \n`Input: \"z\"` → `Expected: \"z\"`  \n⚠️ Bug: stopping after the first forward sweep only → returns `\"\"`.\n\n**All equal** - every character identical, the result must be the same string.  \n`Input: \"aaaaa\"` → `Expected: \"aaaaa\"`  \n⚠️ Bug: using a set of distinct chars → returns `\"a\"`.\n\n**Ascending** - string already in increasing order.  \n`Input: \"abc\"` → `Expected: \"abc\"`  \n⚠️ Bug: omitting the backward sweep → returns `\"ab\"`.\n\n**Descending** - string in decreasing order.  \n`Input: \"cba\"` → `Expected: \"abc\"`  \n⚠️ Bug: only performing the forward sweep → returns `\"cba\"`.\n\n**Mixed duplicates** - duplicates cause several passes.  \n`Input: \"aaabbb\"` → `Expected: \"abbaab\"`  \n⚠️ Bug: terminating after one forward‑and‑backward cycle → returns `\"abba\"`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the input length can be up to 10⁵ instead of 500?",
+      "a": "The same counting‑array solution still runs in O(n) time and O(1) extra space, so it easily handles the larger limit."
+    },
+    {
+      "q": "How would the solution change if the string could contain any Unicode character?",
+      "a": "We would replace the fixed‑size array with an ordered map (e.g., std::map<char,int>) to keep counts while preserving order; the algorithmic idea stays the same, giving O(n log σ) time where σ is the number of distinct characters."
+    },
+    {
+      "q": "Suppose we must output the reordered string as a stream without storing the whole result in memory.",
+      "a": "We can emit each character immediately when it is selected in the two sweeps, keeping only the 26‑element count array; this uses O(1) auxiliary memory and still processes the input in O(n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string sortString(string s) {\n        int cnt[26] = {0};\n        for (char c : s) cnt[c - 'a']++;\n        string res;\n        res.reserve(s.size());\n        int n = s.size();\n        while ((int)res.size() < n) {\n            for (int i = 0; i < 26; ++i) {\n                if (cnt[i] > 0) {\n                    res.push_back('a' + i);\n                    --cnt[i];\n                }\n            }\n            for (int i = 25; i >= 0; --i) {\n                if (cnt[i] > 0) {\n                    res.push_back('a' + i);\n                    --cnt[i];\n                }\n            }\n        }\n        return res;\n    }\n};",
+    "java": "class Solution {\n    public String sortString(String s) {\n        int[] cnt = new int[26];\n        for (char c : s.toCharArray()) {\n            cnt[c - 'a']++;\n        }\n        StringBuilder res = new StringBuilder(s.length());\n        int n = s.length();\n        while (res.length() < n) {\n            for (int i = 0; i < 26; i++) {\n                if (cnt[i] > 0) {\n                    res.append((char) ('a' + i));\n                    cnt[i]--;\n                }\n            }\n            for (int i = 25; i >= 0; i--) {\n                if (cnt[i] > 0) {\n                    res.append((char) ('a' + i));\n                    cnt[i]--;\n                }\n            }\n        }\n        return res.toString();\n    }\n}",
+    "python3": "class Solution:\n    def sortString(self, s: str) -> str:\n        cnt = [0] * 26\n        for c in s:\n            cnt[ord(c) - ord('a')] += 1\n\n        res = []\n        n = len(s)\n        while len(res) < n:\n            for i in range(26):\n                if cnt[i] > 0:\n                    res.append(chr(ord('a') + i))\n                    cnt[i] -= 1\n            for i in range(25, -1, -1):\n                if cnt[i] > 0:\n                    res.append(chr(ord('a') + i))\n                    cnt[i] -= 1\n        return ''.join(res)",
+    "javascript": "/**\n * @param {string} s\n * @return {string}\n */\nvar sortString = function(s) {\n    // Count frequency of each lowercase letter\n    const cnt = new Array(26).fill(0);\n    for (const ch of s) {\n        cnt[ch.charCodeAt(0) - 97]++;\n    }\n\n    const res = [];\n    const n = s.length;\n\n    // Repeat until all characters are used\n    while (res.length < n) {\n        // Ascending pass: from 'a' to 'z'\n        for (let i = 0; i < 26; i++) {\n            if (cnt[i] > 0) {\n                res.push(String.fromCharCode(97 + i));\n                cnt[i]--;\n            }\n        }\n        // Descending pass: from 'z' to 'a'\n        for (let i = 25; i >= 0; i--) {\n            if (cnt[i] > 0) {\n                res.push(String.fromCharCode(97 + i));\n                cnt[i]--;\n            }\n        }\n    }\n\n    return res.join('');\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}

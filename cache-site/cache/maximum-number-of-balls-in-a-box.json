@@ -1,0 +1,41 @@
+{
+  "slug": "maximum-number-of-balls-in-a-box",
+  "title": "Maximum Number of Balls in a Box",
+  "difficulty": "Easy",
+  "promptVersion": "p7",
+  "generatedAt": "2026-11-07",
+  "pattern": "Counting / Frequency Array",
+  "tc": "O(highLimit - lowLimit + 1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> cnt(100): constant size (≤ 100) → O(1)  \n- recursion depth: none  \n- not counted: input parameters, return value",
+  "approach": "Iterate over every ball number from lowLimit to highLimit, compute its digit‑sum, and increase a counter for that sum. Because the maximum possible digit‑sum for numbers ≤ 10⁵ is 45, a fixed‑size array (or vector) is enough to store all counters. While counting, keep the current maximum counter value; that value is the answer.",
+  "hints": [
+    "What is the size of the interval you have to process (highLimit - lowLimit + 1) and how many times will you need to recompute a digit‑sum?  \nSince the interval length is at most 10⁵, you can afford to handle each number individually.",
+    "Use a simple fixed‑size array (or vector) to store how many balls fall into each box.  \nExample: for lowLimit = 1, highLimit = 10 the sums are {1,2,3,4,5,6,7,8,9,1} → cnt[1] becomes 2, which is the maximum.",
+    "```\nmaxCnt ← 0\ncnt[0…99] ← 0\nfor x from lowLimit to highLimit do\n    s ← digitSum(x)\n    cnt[s] ← cnt[s] + 1\n    if cnt[s] > maxCnt then\n        maxCnt ← cnt[s]\nreturn maxCnt\n```",
+    "**Single element** - only one ball exists.  \n`Input: lowLimit = 7, highLimit = 7` → `Expected: 1`  \n⚠️ Bug: initializing maxCnt to 0 and returning it without updating → returns 0.\n\n**Full range** - the largest allowed interval.  \n`Input: lowLimit = 1, highLimit = 100000` → `Expected: 2` (box 1 gets balls 1 and 10, box 10 gets 19 and 28, etc.)  \n⚠️ Bug: using an array of size 45 (max sum) and accessing index 45 for number 99999 → out‑of‑bounds.\n\n**Tie** - more than one box reaches the same maximum count.  \n`Input: lowLimit = 5, highLimit = 15` → `Expected: 2` (boxes 5 and 6 both have 2)  \n⚠️ Bug: returning the index of the box with max count instead of the count → would return 5 or 6.\n\n**Maximum digit sum** - number with the largest possible digit sum.  \n`Input: lowLimit = 99990, highLimit = 99999` → `Expected: 2` (box 45 gets balls 99990 and 99999)  \n⚠️ Bug: computing digit sum with `while(x)` and forgetting to handle x = 0 → sum for 0 becomes 0 incorrectly (not relevant here but shows a common mistake)."
+  ],
+  "followUps": [
+    {
+      "q": "What if highLimit can be as large as 10⁹ while the interval length is still ≤ 10⁵?",
+      "a": "The same O(n) algorithm works because we still only iterate over the given interval; the digit‑sum routine now processes up to 10 digits, still O(1) per number. Time stays O(n) and space remains O(1)."
+    },
+    {
+      "q": "How would you modify the solution to return all box numbers that achieve the maximum count?",
+      "a": "After the first pass that finds the maximum count, perform a second pass over the counter array and collect every index whose value equals the maximum. This adds O(k) extra time where k ≤ max digit sum (≈ 45) and O(k) extra space for the result list."
+    },
+    {
+      "q": "Suppose the numbers arrive as a stream and you cannot store the whole interval in memory, but you still need the answer after the stream ends.",
+      "a": "Keep the same fixed‑size counter array and update it on‑the‑fly for each incoming number; no additional memory is required beyond the array and a single max variable, so the solution remains O(1) extra space and O(total stream size) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countBalls(int lowLimit, int highLimit) {\n        // maximum possible digit sum for numbers up to 100000 is 45,\n        // we allocate a little more to be safe.\n        int cnt[100] = {0};\n        int maxCnt = 0;\n        for (int x = lowLimit; x <= highLimit; ++x) {\n            int s = 0, y = x;\n            while (y > 0) {\n                s += y % 10;\n                y /= 10;\n            }\n            ++cnt[s];\n            if (cnt[s] > maxCnt) maxCnt = cnt[s];\n        }\n        return maxCnt;\n    }\n};",
+    "java": "class Solution {\n    public int countBalls(int lowLimit, int highLimit) {\n        // maximum possible digit sum for numbers up to 100000 is 45,\n        // we allocate a little more to be safe.\n        int[] cnt = new int[100];\n        int maxCnt = 0;\n        for (int x = lowLimit; x <= highLimit; ++x) {\n            int s = 0;\n            int y = x;\n            while (y > 0) {\n                s += y % 10;\n                y /= 10;\n            }\n            ++cnt[s];\n            if (cnt[s] > maxCnt) {\n                maxCnt = cnt[s];\n            }\n        }\n        return maxCnt;\n    }\n}",
+    "python3": "class Solution:\n    def countBalls(self, lowLimit: int, highLimit: int) -> int:\n        # maximum possible digit sum for numbers up to 100000 is 45,\n        # we allocate a little more to be safe.\n        cnt = [0] * 100\n        maxCnt = 0\n        for x in range(lowLimit, highLimit + 1):\n            s = 0\n            y = x\n            while y > 0:\n                s += y % 10\n                y //= 10\n            cnt[s] += 1\n            if cnt[s] > maxCnt:\n                maxCnt = cnt[s]\n        return maxCnt",
+    "javascript": "/**\n * @param {number} lowLimit\n * @param {number} highLimit\n * @return {number}\n */\nvar countBalls = function(lowLimit, highLimit) {\n    // maximum possible digit sum for numbers up to 100000 is 45,\n    // we allocate a little more to be safe.\n    const cnt = new Array(100).fill(0);\n    let maxCnt = 0;\n    for (let x = lowLimit; x <= highLimit; ++x) {\n        let s = 0, y = x;\n        while (y > 0) {\n            s += y % 10;\n            y = Math.floor(y / 10);\n        }\n        ++cnt[s];\n        if (cnt[s] > maxCnt) maxCnt = cnt[s];\n    }\n    return maxCnt;\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}
