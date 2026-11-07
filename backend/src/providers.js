@@ -71,9 +71,12 @@ const PROVIDERS = {
     secret: 'OPENROUTER_API_KEY',
     kind: 'openai',
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    headers: { 'HTTP-Referer': 'https://github.com/Yug912/AlgoMentor', 'X-Title': 'LeetHint' },
-    // Paid model first; the :free variants keep working when credits run out
-    fallback: ['deepseek/deepseek-r1', 'openai/gpt-oss-120b:free', 'deepseek/deepseek-r1:free', 'qwen/qwen3-coder:free']
+    headers: { 'HTTP-Referer': 'https://github.com/Yug912/LeetHint', 'X-Title': 'LeetHint' },
+    // FREE (:free) models only — never a paid one. OpenRouter retires free
+    // models often: check https://openrouter.ai/api/v1/models (ids ending in
+    // :free). Checked 2026-11-07; the old gpt-oss-120b / deepseek-r1 /
+    // qwen3-coder :free ids are gone.
+    fallback: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-31b-it:free', 'nvidia/nemotron-3.5-super-vl:free']
   },
   // Cloudflare Workers AI — FREE with the Cloudflare account (daily allowance),
   // no API key: it's reached through the Worker's AI binding (wrangler.toml).
