@@ -459,6 +459,11 @@ export async function openStream(env, prompt, opts = {}) {
   // Log the details server-side; the client only gets a generic message
   console.warn('All providers failed:', errors.map(e => e.message).join(' | '));
   const allLimited = errors.length && errors.every(e => e.status === 429 || e.status === 402);
-  throw apiError('LeetHint server', allLimited ? 429 : 502,
-    allLimited ? 'all AI providers are at their limit right now' : 'no AI provider could answer');
+  // When every model is busy, say how long until the first one frees up, so
+  // the extension can wait in line instead of showing an error
+  const err = apiError('LeetHint server', allLimited ? 429 : 502,
+    allLimited ? 'all AI providers are at their limit right now' : 'no AI provider could answer',
+    soonest?.waitMs);
+  err.busy = !!allLimited;
+  throw err;
 }

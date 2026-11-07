@@ -95,6 +95,19 @@ async function rateLimit(request, env) {
   }
 }
 
+// Contract: every AI provider is at its per-minute limit → a waiting line:
+// HTTP 429, Retry-After, { error: "busy", retryAfter, position }. position is
+// a best estimate: how many requests this Worker copy sent back to wait in the
+// last retryAfter seconds (they will come back before this one).
+const recentBusy = [];
+export function busyError(retryAfterMs, now = Date.now()) {
+  const retryAfter = Math.min(60, Math.max(5, Math.ceil((retryAfterMs > 0 ? retryAfterMs : 20000) / 1000)));
+  while (recentBusy.length && recentBusy[0] < now - retryAfter * 1000) recentBusy.shift();
+  recentBusy.push(now);
+  return replyError(429, { error: 'busy', retryAfter, position: recentBusy.length },
+                    { 'Retry-After': String(retryAfter) });
+}
+
 // Contract: HTTP 429 { error: "rate_limited", retryAfter: 60 }
 function rateLimited() {
   return replyError(429, { error: 'rate_limited', retryAfter: 60, message: 'Too many requests — wait a minute and try again.' },
@@ -221,7 +234,9 @@ async function handleGenerate(request, env, ctx, cors) {
   // (logs never include the interview transcript — only the action and slug)
   const tag = `${action}${extra.language ? '-' + extra.language : ''}${interviewing ? '-' + extra.interview.event : ''} ${problem.slug}`;
   const easy = /easy/i.test(problem.difficulty);
-  const { upstream, kind, label } = await openStream(env, prompt, { effort, maxTokens, tier, easy });
+  const { upstream, kind, label } = await openStream(env, prompt, { effort, maxTokens, tier, easy }).catch(e => {
+    throw e.busy ? busyError(e.retryAfterMs) : e;
+  });
   console.log(`${tag} (${effort}, ${maxTokens} tok) → ${label}`);
 
   // The upstream SSE bytes go to the client UNTOUCHED — the Worker never parses
