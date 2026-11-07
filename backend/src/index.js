@@ -2,6 +2,7 @@
 //
 //   POST /v1/generate   { action, problem, code? }  →  the provider's SSE stream, passed through
 //   GET  /health                                     →  { ok, providers }
+//   GET  /config                                     →  feature switches (cached 1 hour)
 //
 // The extension sends PROBLEM DATA, never a prompt: prompts are built here
 // from shared/prompts.js, so this endpoint can only produce LeetHint hints —
@@ -48,10 +49,16 @@ export default {
       return json(health, 200, cors);
     }
 
+    if (url.pathname === '/config' && request.method === 'GET') {
+      return json(remoteConfig(env), 200, { ...cors, 'Cache-Control': 'public, max-age=3600' });
+    }
+
     if (url.pathname === '/v1/generate' && request.method === 'POST') {
       try {
+        await rateLimit(request, env);
         return await handleGenerate(request, env, ctx, cors);
       } catch (e) {
+        if (e.body) return json(e.body, e.status, { ...cors, ...e.headers });
         console.error('generate failed:', e.message);
         const status = e.status >= 400 && e.status < 600 ? e.status : 500;
         // Only our own (generic) messages reach the client — never upstream details
@@ -63,14 +70,53 @@ export default {
   }
 };
 
-async function handleGenerate(request, env, ctx, cors) {
-  // ── Rate limit per client IP (Workers Rate Limiting binding) ──
+// The anonymous install ID the extension sends (X-LeetHint-Install), or ''
+// for old extension versions and anything not shaped like a UUID
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function installIdOf(request) {
+  const id = (request.headers.get('X-LeetHint-Install') || '').trim();
+  return UUID_RE.test(id) ? id.toLowerCase() : '';
+}
+
+// ── Rate limits (Workers Rate Limiting bindings) ──
+// Per install (20/min) is the real limit, so testers sharing one Wi-Fi don't
+// block each other; the per-IP limit (120/min) is only a backstop. Requests
+// without an install ID (old extension versions) get the IP limit alone.
+async function rateLimit(request, env) {
+  const installId = installIdOf(request);
+  if (installId && env.INSTALL_LIMITER) {
+    const { success } = await env.INSTALL_LIMITER.limit({ key: installId });
+    if (!success) throw rateLimited();
+  }
   if (env.RATE_LIMITER) {
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
     const { success } = await env.RATE_LIMITER.limit({ key: ip });
-    if (!success) throw clientError(429, 'Too many requests — wait a minute and try again.');
+    if (!success) throw rateLimited();
   }
+}
 
+// Contract: HTTP 429 { error: "rate_limited", retryAfter: 60 }
+function rateLimited() {
+  return replyError(429, { error: 'rate_limited', retryAfter: 60, message: 'Too many requests — wait a minute and try again.' },
+                    { 'Retry-After': '60' });
+}
+
+// GET /config — remote feature switches, from [vars] (editable in the
+// Cloudflare dashboard without an extension update)
+const flag = (v, dflt) => v === undefined || v === '' ? dflt : !/^(false|0|off|no)$/i.test(String(v).trim());
+const count = (v, dflt) => Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : dflt;
+export function remoteConfig(env) {
+  return {
+    interview: flag(env.CONFIG_INTERVIEW, true),
+    fix: flag(env.CONFIG_FIX, true),
+    trialInterviewsPerWeek: count(env.CONFIG_TRIAL_INTERVIEWS_PER_WEEK, 1),
+    trialInterviewMinutes: count(env.CONFIG_TRIAL_INTERVIEW_MINUTES, 15),
+    trialFixesPerDay: count(env.CONFIG_TRIAL_FIXES_PER_DAY, 3),
+    message: String(env.CONFIG_MESSAGE || '').slice(0, 300)
+  };
+}
+
+async function handleGenerate(request, env, ctx, cors) {
   const raw = await request.text();
   if (raw.length > 80000) throw clientError(413, 'Request too large.');
   let body;
@@ -287,8 +333,8 @@ function corsHeaders(request, env) {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Expose-Headers': 'X-LeetHint-Cache, X-LeetHint-Cache-Layer, X-LeetHint-Model, X-LeetHint-Format',
+    'Access-Control-Allow-Headers': 'Content-Type, X-LeetHint-Install',
+    'Access-Control-Expose-Headers': 'X-LeetHint-Cache, X-LeetHint-Cache-Layer, X-LeetHint-Model, X-LeetHint-Format, Retry-After',
     'Vary': 'Origin'
   };
 }
@@ -297,6 +343,15 @@ function clientError(status, message) {
   const e = new Error(message);
   e.status = status;
   e.expose = true;
+  return e;
+}
+
+// An error answered with an exact JSON body (the shared contract's error shapes)
+function replyError(status, body, headers = {}) {
+  const e = new Error(body.error);
+  e.status = status;
+  e.body = body;
+  e.headers = headers;
   return e;
 }
 
