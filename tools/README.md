@@ -51,6 +51,27 @@ problem with `node tools/prefill.mjs --only <slug> --force`. Then commit and
 push `cache-site/`; Pages redeploys by itself. Every Monday the `sync-cache` Action
 also exports new hints from D1 (`tools/export-d1.mjs`) into `cache-site/`.
 
+### Nightly (Mac)
+
+`tools/prefill-nightly.sh` does one night's work: pulls `main`, starts a local
+Worker (unless one is running), runs the pre-fill until the free limits stop
+it, then commits **only** `cache-site/` and `tools/needs-review.txt` and pushes
+to `main`. Pages redeploys `https://leethint.pages.dev` on the push. Log:
+`tools/prefill.log` (gitignored).
+
+Install it once (runs every night at 01:30 while the Mac is awake; set
+*System Settings → Battery → Options → Prevent automatic sleeping* to be sure):
+
+```sh
+sed "s|__ROOT__|$PWD|g" tools/com.leethint.prefill.plist > ~/Library/LaunchAgents/com.leethint.prefill.plist
+launchctl load ~/Library/LaunchAgents/com.leethint.prefill.plist
+launchctl start com.leethint.prefill        # optional: run one now
+```
+
+Stop it: `launchctl unload ~/Library/LaunchAgents/com.leethint.prefill.plist`.
+Needs `backend/.dev.vars` with a dev key, `npx wrangler login` done once, and
+an SSH key that can push to the repo.
+
 ## accuracy/
 
 10 standard problems (`standard.mjs`, `ONLY=<slug,...>` for a few) and 5 very
