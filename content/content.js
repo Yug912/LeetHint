@@ -331,45 +331,62 @@ titleObserver.observe(titleEl, { childList: true, subtree: true, characterData: 
 
 
 // ─────────────────────────────────────────────
-// 6. SOLVE DETECTION — read-only
+// 6. SUBMISSION RESULTS — read-only
 //    Only LISTENS to the page: never adds, changes or patches anything.
-//    A solve = an "Accepted" submission result shown soon after the user
-//    pressed Submit (button or Ctrl/Cmd+Enter). Old accepted submissions
-//    opened from the Submissions tab don't count — no Submit was pressed.
+//    A result counts when it appears soon after the user pressed Submit
+//    (button or Ctrl/Cmd+Enter). Old results opened from the Submissions
+//    tab don't count — no Submit was pressed.
+//      Accepted                       → PROBLEM_SOLVED { slug }
+//      Wrong Answer / Time Limit
+//      Exceeded / Runtime Error       → PROBLEM_FAILED { slug, verdict }
+//    Pressing Run or Submit           → CODE_SUBMITTED { slug, kind }
+//    (the panel may then check the code's speed — TLE warning)
 // ─────────────────────────────────────────────
 const SUBMIT_WINDOW_MS = 2 * 60 * 1000;
+const FAILED_VERDICTS = ['Wrong Answer', 'Time Limit Exceeded', 'Runtime Error'];
+const FINAL_VERDICTS = ['Accepted', ...FAILED_VERDICTS, 'Memory Limit Exceeded', 'Output Limit Exceeded', 'Compile Error'];
 
 function watchForSolves() {
   if (window.__leethintSolveWatch) return;   // re-injected content script
   window.__leethintSolveWatch = true;
 
-  // sawPending: the previous result has gone (or isn't "Accepted") since
-  // Submit was pressed, so an old "Accepted" still on screen isn't counted
-  let armedUntil = 0, armedSlug = '', sawPending = false, checkTimer = null;
+  const send = msg => chrome.runtime.sendMessage(msg).catch(() => {});
+
+  // An old result still on screen isn't counted again: a verdict counts once
+  // the result went away / wasn't final since Submit (sawPending), or when it
+  // differs from the one showing when Submit was pressed (shownAtSubmit)
+  const verdictNow = () => document.querySelector('[data-e2e-locator="submission-result"]')?.textContent.trim() || '';
+  let armedUntil = 0, armedSlug = '', sawPending = false, shownAtSubmit = '', checkTimer = null;
   const arm = () => {
     armedUntil = Date.now() + SUBMIT_WINDOW_MS;
     armedSlug = getCurrentSlug();
     sawPending = false;
+    shownAtSubmit = verdictNow();
     if (!checkTimer) checkTimer = setTimeout(check, 400);
+    send({ type: 'CODE_SUBMITTED', slug: armedSlug, kind: 'submit' });
   };
 
   document.addEventListener('click', e => {
     if (e.target.closest?.('[data-e2e-locator="console-submit-button"]')) arm();
+    else if (e.target.closest?.('[data-e2e-locator="console-run-button"]')) {
+      send({ type: 'CODE_SUBMITTED', slug: getCurrentSlug(), kind: 'run' });
+    }
   }, true);
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) arm();
   }, true);
 
-  // The result panel of THIS submission says "Accepted"
+  // The result panel of THIS submission shows a final verdict
   function check() {
     checkTimer = null;
     if (!armedUntil || Date.now() > armedUntil) { armedUntil = 0; return; }
-    const result = document.querySelector('[data-e2e-locator="submission-result"]');
-    if (!result || result.textContent.trim() !== 'Accepted') { sawPending = true; return; }
-    if (!sawPending) return;
+    const verdict = verdictNow();
+    if (!FINAL_VERDICTS.includes(verdict)) { sawPending = true; return; }
+    if (!sawPending && verdict === shownAtSubmit) return;
     if (armedSlug !== getCurrentSlug()) { armedUntil = 0; return; }
-    armedUntil = 0;   // one solve per Submit
-    chrome.runtime.sendMessage({ type: 'PROBLEM_SOLVED', slug: armedSlug }).catch(() => {});
+    armedUntil = 0;   // one result per Submit
+    if (verdict === 'Accepted') send({ type: 'PROBLEM_SOLVED', slug: armedSlug });
+    else if (FAILED_VERDICTS.includes(verdict)) send({ type: 'PROBLEM_FAILED', slug: armedSlug, verdict });
   }
 
   // Cheap: only look while a submission is pending, at most every 400ms

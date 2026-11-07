@@ -2,7 +2,9 @@
 // own client. C++ is compiled and run on LeetCode's examples plus edge cases;
 // Python solutions (asked as the user's language) are run too.
 //   node tools/accuracy/standard.mjs        (BACKEND=<url>, default http://localhost:8787)
-// Pass mark (prompt p6, 5 Nov 2026): 10/10 fully correct, Hint 1 clean on at least 9/10.
+// Pass mark: 10/10 fully correct, Hint 1 clean on at least 9/10.
+// Met on prompt p6 (5 Nov 2026); must be met again on the current PROMPT_VERSION
+// before the pre-fill runs (a prompt change can change every answer).
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { generateHints, compareComplexity, LANGUAGES } from '../../api/ai.js';
@@ -12,6 +14,10 @@ const LOCAL = process.env.BACKEND || 'http://localhost:8787';
 let lastCache = '?', lastModel = '?';
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
+  // Test the live prompt, never a pre-made file from the static cache site
+  if (/^https?:\/\/[^/]+\/cache\/[a-z0-9-]+\.json/i.test(String(url)) && !String(url).startsWith(BACKEND_URL)) {
+    return new Response('', { status: 404 });
+  }
   let u = String(url);
   if (u.startsWith(BACKEND_URL)) {
     u = LOCAL + u.slice(BACKEND_URL.length);

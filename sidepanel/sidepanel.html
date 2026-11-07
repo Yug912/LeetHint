@@ -38,6 +38,9 @@
   <!-- ============ HINTS TAB ============ -->
   <main class="tab-content active" id="content-hints">
 
+    <!-- One-line notice: from the server (/config message), or "LeetCode changed its page" -->
+    <div class="server-banner" id="server-banner" hidden></div>
+
     <!-- Revision status of this problem: due review / in queue / solved -->
     <div class="revision-bar" id="revision-bar" hidden>
       <span class="revision-bar-text" id="revision-bar-text"></span>
@@ -47,7 +50,7 @@
     <!-- Mock interview: start button (hidden until a problem is open) -->
     <div class="interview-bar" id="interview-bar" hidden>
       <button class="btn-interview-start" id="btn-interview-start">
-        🎙️ Start Mock Interview <span class="interview-bar-sub">30 min · voice</span>
+        🎙️ Start Mock Interview <span class="interview-bar-sub" id="interview-bar-sub">30 min · voice</span>
       </button>
       <p class="interview-elsewhere" id="interview-elsewhere" hidden></p>
     </div>
@@ -92,6 +95,39 @@
       <span class="no-problem-icon">⚠️</span>
       <p id="error-message">Failed to generate hints.</p>
       <button class="btn-retry" id="btn-retry">🔄 Retry</button>
+    </div>
+
+    <!-- Before Hint 1: two skippable questions (confidence + pattern guess) -->
+    <section class="precheck" id="precheck" hidden aria-label="Before you start">
+      <div class="precheck-row" id="confidence-row">
+        <span class="precheck-q">Will you solve this without hints?</span>
+        <div class="precheck-choices">
+          <button class="chip" data-confidence="yes">Yes</button>
+          <button class="chip" data-confidence="maybe">Maybe</button>
+          <button class="chip" data-confidence="no">No</button>
+        </div>
+      </div>
+      <div class="precheck-row" id="pattern-row">
+        <span class="precheck-q">Which pattern is it? <span class="precheck-sub">Guess before Hint 1</span></span>
+        <div class="precheck-choices" id="pattern-chips"></div>
+      </div>
+      <button class="precheck-skip" id="precheck-skip">Skip</button>
+    </section>
+    <p class="precheck-result" id="pattern-result" hidden></p>
+
+    <!-- "This looks like #146 LRU Cache, which you solved 3 weeks ago" -->
+    <div class="deja-vu" id="deja-vu" hidden>
+      <span id="deja-vu-text"></span>
+      <a href="#" id="deja-vu-link">Open it</a>
+    </div>
+
+    <!-- Gentle nudge when stuck or after several wrong submissions -->
+    <div class="tilt-card" id="tilt-card" hidden role="status">
+      <p id="tilt-text"></p>
+      <div class="tilt-actions">
+        <button class="btn-tilt-action" id="tilt-action" hidden></button>
+        <button class="btn-tilt-dismiss" id="tilt-dismiss">Got it</button>
+      </div>
     </div>
 
     <!-- Main hints layout: hint cards + score bar side by side -->
@@ -167,6 +203,18 @@
           <div class="hint-content locked-overlay">
             <p class="hint-text" id="hint-text-solution"></p>
           </div>
+        </div>
+
+        <!-- Report a wrong hint or solution (sent to the LeetHint server) -->
+        <div class="report-row" id="report-row">
+          <button class="report-link" id="report-open">⚑ Report wrong hint</button>
+          <div class="report-picker" id="report-picker" hidden>
+            <span class="report-q">What's wrong?</span>
+            <button class="chip" data-report="wrong_solution">The solution</button>
+            <button class="chip" data-report="wrong_hint">A hint</button>
+            <button class="chip" data-report="other">Something else</button>
+          </div>
+          <span class="report-thanks" id="report-thanks" hidden>Thanks, we'll check it.</span>
         </div>
 
       </div>
@@ -269,6 +317,12 @@
         <button class="btn-check" id="btn-check-tcsc">Check</button>
       </div>
 
+      <button class="btn-speed" id="btn-check-speed" title="Estimate whether your editor code may time out">⏱ Check speed</button>
+      <div class="tle-warning" id="tle-warning" hidden role="status">
+        <p id="tle-text"></p>
+        <button class="btn-tilt-dismiss" id="tle-dismiss">Dismiss</button>
+      </div>
+
       <!-- Result shown after clicking Check -->
       <div class="tcsc-result" id="tcsc-result" style="display:none">
         <div class="tcsc-result-row" id="tc-result-row">
@@ -283,6 +337,16 @@
         </div>
         <div class="sc-breakdown" id="sc-breakdown" hidden></div>
       </div>
+    </section>
+
+    <!-- ============ FOLLOW-UP QUESTIONS (after a solve) ============ -->
+    <section class="followups-section" id="followups" hidden>
+      <div class="section-header">
+        <span class="section-icon">🎯</span>
+        <span class="section-title">Interview follow-ups</span>
+      </div>
+      <p class="followups-sub">What an interviewer might ask next. Think first, then reveal.</p>
+      <div class="followups-list" id="followups-list"></div>
     </section>
 
     <!-- ============ COMPANY TAGS ============ -->
@@ -319,6 +383,18 @@
         <div class="stat-card">
           <span class="stat-value" id="stat-best">—</span>
           <span class="stat-label">Best</span>
+        </div>
+      </div>
+
+      <!-- Streaks: days with a solve or a revision -->
+      <div class="stats-cards">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-streak">0</span>
+          <span class="stat-label">Day streak</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-best-streak">0</span>
+          <span class="stat-label">Best streak</span>
         </div>
       </div>
 
@@ -390,14 +466,33 @@
         </div>
       </div>
 
+      <!-- Pattern recognition: accuracy per pattern (3+ guesses) -->
+      <div class="stats-breakdown" id="pattern-stats" hidden>
+        <h3 class="breakdown-title">Pattern Recognition</h3>
+        <div class="hint-distribution" id="pattern-bars"></div>
+        <p class="settings-hint" id="pattern-weak" hidden></p>
+      </div>
+
+      <!-- Confidence calibration (after 10 answered + solved problems) -->
+      <div class="stats-breakdown" id="confidence-stats" hidden>
+        <h3 class="breakdown-title">Confidence Check</h3>
+        <p class="confidence-line" id="confidence-line"></p>
+        <ul class="confidence-list" id="confidence-list"></ul>
+      </div>
+
       <!-- Mock interview scorecards -->
       <div class="stats-breakdown">
         <h3 class="breakdown-title">Mock Interviews <span class="revision-count" id="interview-count">0</span></h3>
         <ul class="revision-list" id="interview-history"></ul>
       </div>
 
+      <!-- Export -->
+      <div class="stats-breakdown">
+        <button class="btn-export" id="btn-export-csv">⬇ Download my history (CSV)</button>
+      </div>
+
       <!-- Settings section -->
-      <div class="settings-section">
+      <div class="settings-section" id="settings-section">
         <h3 class="breakdown-title">Settings</h3>
 
         <div class="settings-row">
@@ -407,6 +502,32 @@
           </span>
         </div>
         <p class="settings-hint" id="ai-status">Checking…</p>
+
+        <!-- Optional: the user's own free key — unlimited Fix and interviews -->
+        <div class="own-key" id="own-key">
+          <div class="settings-row">
+            <span class="settings-label">Your own free key <span class="key-badge">OPTIONAL</span></span>
+          </div>
+          <p class="settings-hint">Unlimited fixes and full 30-minute interviews. Free, no card needed:
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a> ·
+            <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a> ·
+            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a></p>
+          <div class="own-key-row">
+            <select id="own-key-provider" aria-label="Provider">
+              <option value="gemini">Gemini</option>
+              <option value="groq">Groq</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
+            <input type="password" id="own-key-input" placeholder="Paste your key" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="own-key-row">
+            <button class="btn-check" id="own-key-test">Test key</button>
+            <button class="btn-check" id="own-key-save">Save</button>
+            <button class="btn-link" id="own-key-remove" hidden>Remove</button>
+          </div>
+          <p class="settings-hint" id="own-key-status"></p>
+          <p class="settings-hint own-key-note" id="own-key-note">Your key is stored on this computer and sent only to Gemini.</p>
+        </div>
       </div>
 
 

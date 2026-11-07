@@ -6,6 +6,11 @@
 // Service worker only handles storage + tab management
 
 import { planQueue, migrateQueue, localDate, DEFAULT_DAILY_LIMIT } from '../shared/revision.js';
+import { getInstallId } from '../api/install.js';
+
+// The anonymous install ID (X-LeetHint-Install) — created once, on install.
+// The side panel creates it too if it opens first.
+chrome.runtime.onInstalled.addListener(() => { getInstallId(); });
 
 // ─────────────────────────────────────────────
 // SIDE PANEL — per tab, only on LeetCode problem pages

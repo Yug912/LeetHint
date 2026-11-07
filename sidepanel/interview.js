@@ -9,20 +9,26 @@
 //         → scorecard → saved to interviewHistory (shown on the Stats tab)
 
 import { INTERVIEW_STAGES, INTERVIEW_MINUTES, STAGE_LABELS, SCORE_KEYS, SCORE_LABELS,
-         interviewerTurn, scoreInterview, codeChangedMeaningfully, referenceFromHints } from '../api/interview.js';
+         interviewerTurn, scoreInterview, codeChangedMeaningfully, referenceFromHints,
+         needsSummary, summarizeInterview } from '../api/interview.js';
+import { waitingText } from '../api/errors.js';
 import { speak, stopSpeaking, isSpeaking, onSpeakingChange, setMuted, isMuted,
          Listener, speechSupported, micPermission, openMicPermissionPage } from './voice.js';
+import { readEditorCode } from './editor.js';
 
 const SESSION_KEY   = 'activeInterview';
 const HISTORY_KEY   = 'interviewHistory';
 const MUTE_KEY      = 'interviewMuted';
-const DURATION_MS   = INTERVIEW_MINUTES * 60 * 1000;
+// A session's length: 30 minutes, or the free trial's length (from /config)
+// when the user has no own key. Older sessions have no durationMin.
+const durationMs = s => (s?.durationMin || INTERVIEW_MINUTES) * 60 * 1000;
 const CODE_CHECK_MS = 60 * 1000;        // read the editor every minute
 const IDLE_NUDGE_MS = 3 * 60 * 1000;    // "think out loud" after 3 quiet minutes
 const MAX_SAVED     = 50;
 const HOLD_MS       = 600;              // held longer than this = push-to-talk
 
-let ctx = null;            // { getProblem(), getHintsFor(slug), showToast(msg), isReviewDue(slug), onScored(session, card) }
+let ctx = null;            // { getProblem(), getHintsFor(slug), showToast(msg), isReviewDue(slug), onScored(session, card),
+                           //   newInterviewOptions() → { minutes, trial }, openOwnKeySettings() }
 let session = null;        // the saved interview (see startInterview)
 let viewOn = false;
 let tickTimer = null;
@@ -32,6 +38,8 @@ let busy = false;          // an interviewer request is in flight
 let scoring = false;
 let listener = null;
 let micDownAt = 0;
+let summarizing = false;
+let enabled = true;        // the server's remote switch (/config interview)
 const el = {};
 
 const $ = id => document.getElementById(id);
@@ -43,7 +51,7 @@ const $ = id => document.getElementById(id);
 export async function initInterview(context) {
   ctx = context;
   Object.assign(el, {
-    bar: $('interview-bar'), start: $('btn-interview-start'), elsewhere: $('interview-elsewhere'),
+    bar: $('interview-bar'), start: $('btn-interview-start'), elsewhere: $('interview-elsewhere'), sub: $('interview-bar-sub'),
     view: $('interview-view'), timer: $('iv-timer'), hints: $('iv-hints'), mute: $('iv-mute'),
     end: $('iv-end'), stages: $('iv-stages'), log: $('iv-log'), status: $('iv-status'),
     live: $('iv-live'), inputRow: $('iv-input'), mic: $('iv-mic'), text: $('iv-text'),
@@ -91,12 +99,20 @@ export const isInterviewActive = slug => !!session && !!slug && session.slug ===
 // Any interview at all (only one runs at a time)
 export const hasInterview = () => !!session;
 
+// The remote switch and the length a NEW interview would have
+export function setInterviewOptions({ enabled: on = true, minutes = INTERVIEW_MINUTES } = {}) {
+  enabled = on;
+  if (el.sub) el.sub.textContent = `${minutes} min · voice`;
+  syncInterview(ctx?.getProblem());
+}
+
 // Called whenever the panel's problem changes (or there is none)
 export function syncInterview(problem) {
   if (!el.view) return;
   const slug = problem?.slug || '';
   const here = isInterviewActive(slug);
-  el.bar.hidden = !slug || here;
+  // Switched off remotely: no new interviews, but a running one can finish
+  el.bar.hidden = !slug || here || (!enabled && !session);
   el.start.disabled = !!session && !here;
   el.elsewhere.hidden = !(session && !here);
   if (session && !here) el.elsewhere.textContent = `Interview in progress on “${session.title}” — open that problem to continue or end it.`;
@@ -126,10 +142,13 @@ function setView(on) {
 // Also called by the Revision tab's "Review as interview" once the problem is open
 export async function startInterview() {
   const p = ctx.getProblem();
-  if (!p?.slug || session) return false;
+  if (!p?.slug || session || !enabled) return false;
+  // Own key → the full 30 minutes; otherwise the server's free-trial length
+  const { minutes = INTERVIEW_MINUTES, trial = false } = (await ctx.newInterviewOptions?.()) || {};
   const now = Date.now();
   session = {
     slug: p.slug, title: p.title, difficulty: p.difficulty, problemNumber: p.problemNumber,
+    interviewId: crypto.randomUUID(), durationMin: minutes, trial,
     review: !!ctx.isReviewDue?.(p.slug),   // a due revision — the scorecard schedules the next one
     startedAt: now, stage: 'intro', history: [], hintsGiven: 0,
     lastActivityAt: now, lastNudgeAt: 0, lastCodeCheckAt: now,
@@ -147,7 +166,7 @@ function resume() {
   if (session.scorecard) return;                                    // just show it
   if (session.ended) return void finishInterview(session.endReason || 'ended');
   const elapsed = Date.now() - session.startedAt;
-  if (elapsed > DURATION_MS + 5 * 60 * 1000 || (elapsed >= DURATION_MS && session.timeupSent)) {
+  if (elapsed > durationMs(session) + 5 * 60 * 1000 || (elapsed >= durationMs(session) && session.timeupSent)) {
     return void finishInterview('timeup');                          // time ran out while away
   }
   const last = session.history.at(-1);
@@ -192,7 +211,10 @@ async function finishInterview(reason) {
     if (problem?.slug !== slug) throw new Error('Open the interview problem to get the scorecard.');
     const code = (await readEditorCode(slug)) ?? session.lastCode ?? '';
     session.finalCode = code;
-    const card = await scoreInterview(problem, session, { code, reference: referenceFromHints(ctx.getHintsFor(slug)) });
+    const card = await scoreInterview(problem, session, {
+      code, reference: referenceFromHints(ctx.getHintsFor(slug)),
+      onWait: w => el.scorecard.replaceChildren(textEl('p', waitingText(w), 'iv-scoring'))
+    });
     if (!session || session.slug !== slug) return;
     session.scorecard = card;
     await saveToHistory(session, card);
@@ -249,7 +271,8 @@ async function runTurn(event, codeOverride) {
   try {
     const code = codeOverride ?? (await readEditorCode(slug)) ?? session.lastCode ?? '';
     const result = await interviewerTurn(problem, session, event, {
-      code, reference: referenceFromHints(ctx.getHintsFor(slug))
+      code, reference: referenceFromHints(ctx.getHintsFor(slug)),
+      onWait: w => { if (!quiet(event)) setStatus(waitingText(w)); }
     });
     if (!session || session.slug !== slug) return;
 
@@ -262,6 +285,8 @@ async function runTurn(event, codeOverride) {
     setStatus('');
   } catch (e) {
     if (quiet(event)) { console.warn('LeetHint: interviewer check-in skipped →', e.message); return; }
+    if (e.code === 'trial_used') return void trialUsed(e);
+    if (e.code === 'blocked' || e.code === 'rate_limited') { setStatus(`⚠️ ${e.message}`); return; }
     setStatus(`⚠️ ${e.message}`, () => queueTurn(event));
     return;
   } finally {
@@ -270,8 +295,52 @@ async function runTurn(event, codeOverride) {
     updateControls();
   }
 
+  maybeSummarize();
   if (reply && viewOn) await speak(reply);
   if (session?.stage === 'feedback') finishInterview(event === 'timeup' ? 'timeup' : 'feedback');
+}
+
+// Fold older turns into the summary in the background, so later requests
+// stay small. A failure only means the next turns send more history.
+async function maybeSummarize() {
+  if (summarizing || !session || session.ended || !needsSummary(session)) return;
+  summarizing = true;
+  const slug = session.slug;
+  try {
+    const problem = ctx.getProblem();
+    if (problem?.slug !== slug) return;
+    const done = await summarizeInterview(problem, session);
+    if (done && session?.slug === slug) {
+      session.summary = done.summary;
+      session.summaryUpTo = done.summaryUpTo;
+      await save();
+    }
+  } finally {
+    summarizing = false;
+  }
+}
+
+// The free interview for this period is used. Nothing was said yet →
+// cancel quietly; otherwise keep the transcript and let them end it.
+async function trialUsed(e) {
+  const started = session?.history.some(h => h.role === 'interviewer');
+  if (!started) {
+    stopSpeaking();
+    session = null;
+    await chrome.storage.local.remove(SESSION_KEY).catch(() => {});
+    syncInterview(ctx.getProblem());
+    el.elsewhere.hidden = false;
+    el.elsewhere.replaceChildren(textEl('span', `🎙️ ${e.message} `), ownKeyButton());
+    return;
+  }
+  setStatus(`⚠️ ${e.message}`);
+  el.status.appendChild(ownKeyButton());
+}
+
+function ownKeyButton() {
+  const b = textEl('button', 'Add a free key', 'iv-link');
+  b.addEventListener('click', () => ctx.openOwnKeySettings?.());
+  return b;
 }
 
 function sendCandidate(text) {
@@ -313,7 +382,7 @@ function stopTicking() {
 function tick() {
   if (!session || session.ended) return stopTicking();
   const now = Date.now();
-  const left = Math.max(0, DURATION_MS - (now - session.startedAt));
+  const left = Math.max(0, durationMs(session) - (now - session.startedAt));
   renderTimer(left);
 
   if (left === 0) {
@@ -343,43 +412,11 @@ async function checkCode() {
   session.lastCode = code;
   markActivity();
   save();
-  if (session.stage === 'coding' && !busy && !queued.size && !isSpeaking() && !listener.active) {
+  // Free-trial interviews skip these optional check-ins (they cost a request each)
+  if (session.stage === 'coding' && !session.trial && !busy && !queued.size && !isSpeaking() && !listener.active) {
     queueTurn('code', code);
   }
 }
-
-// The LeetCode editor is Monaco, which only puts the VISIBLE lines in the
-// page, so read its model in the page's own JS world. Only for the tab that
-// is showing the interview problem.
-async function readEditorCode(slug) {
-  if (!slug) return null;
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const onProblem = new RegExp(`leetcode\\.com/problems/${slug}(?:[/?#]|$)`, 'i').test(tab?.url || '');
-    if (!tab?.id || !onProblem) return null;
-    const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', func: readMonacoCode });
-    return typeof res?.result === 'string' ? res.result : null;
-  } catch (e) {
-    console.warn('LeetHint: could not read the editor →', e.message);
-    return null;
-  }
-}
-
-// Runs INSIDE the LeetCode page (serialised by executeScript) — self-contained
-function readMonacoCode() {
-  const api = window.monaco?.editor;
-  if (api) {
-    const fromEditors = (api.getEditors?.() || []).map(e => e.getModel?.()).filter(Boolean);
-    const pool = (fromEditors.length ? fromEditors : api.getModels?.() || []).filter(m => !m.isDisposed?.());
-    // The code editor, not the test-case box: a real language, the most text
-    const best = pool.filter(m => (m.getLanguageId?.() || '') !== 'plaintext')
-                     .sort((a, b) => b.getValueLength() - a.getValueLength())[0] || pool[0];
-    if (best) return best.getValue();
-  }
-  const lines = document.querySelectorAll('.monaco-editor .view-lines .view-line');
-  return lines.length ? [...lines].map(l => l.textContent.replace(/ /g, ' ')).join('\n') : null;
-}
-
 
 // ─────────────────────────────────────────────
 // 5. MICROPHONE — tap to start/stop, or hold to talk
@@ -467,8 +504,8 @@ function renderAll() {
   el.log.replaceChildren(...session.history.map(messageEl));
   el.log.scrollTop = el.log.scrollHeight;
   renderMeta();
-  renderTimer(session.ended ? Math.max(0, DURATION_MS - ((session.endedAt || Date.now()) - session.startedAt))
-                            : Math.max(0, DURATION_MS - (Date.now() - session.startedAt)));
+  renderTimer(session.ended ? Math.max(0, durationMs(session) - ((session.endedAt || Date.now()) - session.startedAt))
+                            : Math.max(0, durationMs(session) - (Date.now() - session.startedAt)));
   if (session.scorecard) renderScorecard(session.scorecard);
   else if (!scoring) el.scorecard.hidden = true;
   updateControls();
