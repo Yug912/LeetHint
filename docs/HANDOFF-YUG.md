@@ -1,11 +1,24 @@
 # LeetHint — Yug's remaining tasks (after S1–S33)
 
-As of 2026-11-07. Live copy (may be newer): https://claude.ai/artifact/3KwpkfYKssALJ8GoAvSqSi
+As of 2026-11-08. Live copy (may be newer): https://claude.ai/artifact/3KwpkfYKssALJ8GoAvSqSi
 Anushka's side: [HANDOFF-ANUSHKA.md](HANDOFF-ANUSHKA.md). The full build plan (S1–S33, Interfaces): https://claude.ai/artifact/EfUNCTZhmRG4gUdsyn88UH
 
 ## Context
 
-All code for S1–S33 is on `main` of `Yug912/LeetHint` and tested (`node --test tests/*.test.mjs`: 123 pass, 0 fail, 1 skipped live test). Nothing is deployed yet: the live Worker still runs the 2026-11-05 code. Your jobs are the deploy, the checks after it, the GitHub Action secrets and a few dated follow-ups.
+All code for S1–S33 is on `main` of `Yug912/LeetHint` and tested (`node --test tests/*.test.mjs`: 123 pass, 0 fail, 1 skipped live test). It is deployed: the live Worker runs `main` as of commit `2fb752e` (deployed 2026-11-08 01:14 UTC). Tasks 0–4 are done; what is left waits on a date or on the store listings (table below).
+
+### Status on 2026-11-08
+
+| Task | State |
+| --- | --- |
+| 0 — secrets, dev setup | Done. `STATS_TOKEN` kept at Anushka's original value (live, and saved in `~/.leethint-stats-token`). Live `GROQ_API_KEY` replaced with a new key on 2026-11-08; delete the old one in the Groq console if not done yet. Yug's `backend/.dev.vars` holds Yug's own dev Groq key (not the live one) and `ALLOWED_ORIGINS=` empty. |
+| 1 — deploy | Done 2026-11-08 01:14 UTC. Durable Objects `QuotaKeeper` and `ProblemGate` created (migration `v1`), Monday cron set. `KV_FALLBACK_UNTIL` kept at `2026-12-15`. |
+| 2 — live checks | Passed, test rows cleaned. Notes: check 5's tail had no `gate hints` line, but D1 held exactly one row; the per-install limit started at request 22, not 21 (Cloudflare counts approximately). Optional trial check skipped. |
+| 2 — S30 cron | **Open:** check after Monday 2026-11-09 06:00 UTC for `refresh: N generated, M already cached, K skipped`. |
+| 3 — sync secrets | Done. Repo secrets set, workflow permissions Read and write, `main` unprotected. Run #1 green with no commit: the test slugs aren't real LeetCode problems, so the export skips them. The two `deploy-check-*` rows were deleted from D1. |
+| 4 — contest query | Done. Confirmed during Weekly Contest 527 (2026-11-08 02:35 UTC, 4 problems); comment updated in `backend/src/refresh.js` (`de98945`). |
+| 5 — ALLOWED_ORIGINS | **Open:** waits for the store listings to show the Chrome and Edge extension IDs. |
+| 6 — follow-ups | **Open:** remove KV after 2026-12-15; watch `/stats` after launch. OpenRouter `:free` ids in `providers.js` / `direct.js` checked 2026-11-08: all 3 still exist. 0 reports so far. |
 
 **How to use this doc with an AI assistant:** give it this file plus the repo. Every task lists the exact commands, the expected result and what to do if it differs. The project rules at the end of this section apply to every change.
 
@@ -17,9 +30,8 @@ All code for S1–S33 is on `main` of `Yug912/LeetHint` and tested (`node --test
 | Privacy policy | Live at https://leethint.pages.dev/privacy (linked in `store/listing.md`). |
 | D1 database | `leethint`, id `f811f082-7749-4111-b771-31bcb4eb800b`. All tables exist remotely: `cache`, `reports`, `usage`, `trial_interviews`, `blocked`. |
 | Analytics Engine | Enabled, dataset `leethint_events`. |
-| Worker secrets (live) | `GROQ_API_KEY`, `GEMINI_API_KEY`, `STATS_TOKEN` (set 2026-11-07 — set your own with Task 0; never paste it in chat or commit it). |
-| Durable Objects | Not created yet. The first deploy creates `QuotaKeeper` and `ProblemGate` (migration tag `v1`). Checked: the 2026-11-05 deploy had no Durable Objects, so `v1` applies cleanly. |
-| Store package | `sh store/build.sh` → `dist/leethint-1.2.0.zip` (148 KB, no localhost host). Submission is Anushka's. |
+| Worker secrets (live) | `GROQ_API_KEY` (new key, 2026-11-08), `GEMINI_API_KEY`, `STATS_TOKEN` (Anushka's original value, kept). Never paste them in chat or commit them. |
+| Durable Objects | Created by the 2026-11-08 deploy: `QuotaKeeper` and `ProblemGate` (migration tag `v1`). || Store package | `sh store/build.sh` → `dist/leethint-1.2.0.zip` (148 KB, no localhost host). Submission is Anushka's. |
 | Accuracy (prompt p7) | 10/10 standard, 4/5 very hard. No re-run needed unless prompts or model routing change. |
 
 ### Account facts
