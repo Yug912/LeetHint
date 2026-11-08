@@ -8,7 +8,7 @@ problem with a file here costs no AI call.
 | Path | What |
 | --- | --- |
 | `cache/<slug>.json` | one problem: hints, approach, TC/SC, follow-ups, code (format below) |
-| `index.json` | `{ "promptVersion": "p7", "slugs": { "two-sum": "p7", ... } }` |
+| `index.json` | `{ "promptVersion": "p8", "slugs": { "two-sum": "p8", ... } }` |
 | `companies.json` | company tags per slug (same format as LeetHint's `data/companies.json`) |
 | `privacy.html` | the extension's privacy policy (linked from the store listing) |
 
@@ -21,13 +21,13 @@ exports hints the Worker generated for new problems.
 ```json
 {
   "slug": "two-sum", "title": "Two Sum", "difficulty": "Easy",
-  "promptVersion": "p7", "generatedAt": "2026-11-20",
+  "promptVersion": "p8", "generatedAt": "2026-11-20",
   "pattern": "Hash Map", "tc": "O(n)", "sc": "O(n)", "spaceBreakdown": "...",
   "approach": "one-paragraph approach",
   "hints": ["hint 1", "hint 2", "hint 3", "hint 4"],
   "followUps": [{ "q": "...", "a": "..." }, { "q": "...", "a": "..." }, { "q": "...", "a": "..." }],
   "code": { "cpp": "...", "java": "...", "python3": "...", "javascript": "..." },
-  "verified": { "compiled": true }
+  "verified": { "compiled": true, "examples": "3/3" }
 }
 ```
 

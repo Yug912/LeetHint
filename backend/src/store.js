@@ -14,6 +14,17 @@ export const hasCache = env => !!(env.DB || env.HINTS_CACHE);
 // Only a reply whose model finished normally and actually wrote an answer is
 // cached — a cut-off reply would otherwise be served forever. (One regex pass
 // over the finished text, never per-chunk work.)
+// Solutions and hints are cached only when a LARGE model wrote them: one
+// wrong answer from a small fallback model would otherwise be served to every
+// later user (and exported to the static site). Translations of verified code
+// are fine from any model. label: "Groq (openai/gpt-oss-120b)" etc.
+export const LARGE_MODEL = /gpt-oss-120b|kimi-k2|deepseek-r1|qwen-3-235b|qwen-3-coder|nemotron-3-ultra|gemini-3\.8-flash|gemini-flash-latest/i;
+export function cacheableFrom(key, label) {
+  const action = String(key).split(':')[1] || '';
+  if (!/^(hints|solve|fix)(-|$)/.test(action)) return true;
+  return LARGE_MODEL.test(String(label || ''));
+}
+
 export function isCompleteReply(raw, kind) {
   const cut = /"finish_reason"\s*:\s*"length"|"finishReason"\s*:\s*"MAX_TOKENS"/.test(raw);
   const finished = !cut && (kind === 'gemini' ? /"finishReason"\s*:\s*"STOP"/.test(raw)

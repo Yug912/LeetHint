@@ -26,7 +26,10 @@ const DEFAULT_ORDER = ['cerebras', 'groq', 'workersai', 'openrouter', 'gemini'];
 // Never pick these from a /models list (speech, safety, embedding models...)
 const NOT_CHAT = /whisper|tts|guard|playai|orpheus|compound|embed|vision|audio|transcri|moderation|allam|image/i;
 
-// prefer.main: solving + hints (accuracy first). prefer.fast: translation of
+// prefer.main: solving + hints + fixes — LARGE models only (accuracy first):
+// on 2026-11-08 gpt-oss-20b, picked when the 120b's per-minute budget ran out,
+// wrote a wrong Medium solution that was then cached for everyone. When every
+// large model is busy the user waits in line instead of getting a weaker answer. prefer.fast: translation of
 // verified code (a smaller model is enough — and it keeps the big model's
 // token budget free for the next problem). prefer.interview: mock interview
 // turns, prefer.judge: the scorecard — large models only (small ones leak the
@@ -42,7 +45,7 @@ const PROVIDERS = {
     endpoint: 'https://api.cerebras.ai/v1/chat/completions',
     modelsUrl: 'https://api.cerebras.ai/v1/models',
     prefer: {
-      main: [/gpt-oss-120b/, /qwen-3-235b.*thinking/, /qwen-3-235b/, /qwen-3-coder/, /llama-4-maverick/, /llama-3\.3-70b/],
+      main: [/gpt-oss-120b/, /qwen-3-235b.*thinking/, /qwen-3-235b/, /qwen-3-coder/],
       fast: [/llama-4-scout/, /llama-3\.3-70b/, /qwen-3-coder/, /gpt-oss-120b/, /qwen-3/],
       interview: [/qwen-3-235b/, /gpt-oss-120b/],
       judge: [/gpt-oss-120b/, /qwen-3-235b/],
@@ -57,13 +60,13 @@ const PROVIDERS = {
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     modelsUrl: 'https://api.groq.com/openai/v1/models',
     prefer: {
-      main: [/gpt-oss-120b/, /gpt-oss-20b/, /kimi-k2/, /qwen3/, /deepseek-r1/, /llama-4-maverick/, /llama-3\.3-70b/, /llama-4-scout/],
+      main: [/gpt-oss-120b/, /kimi-k2/, /deepseek-r1/],
       fast: [/gpt-oss-20b/, /llama-4-scout/, /llama-4-maverick/, /llama-3\.3-70b/, /kimi-k2/, /gpt-oss-120b/, /qwen3/],
       interview: [/qwen3/, /kimi-k2/, /gpt-oss-120b/],
       judge: [/gpt-oss-120b/, /kimi-k2/, /qwen3/],
       hard: [/gpt-oss-120b/, /kimi-k2/]
     },
-    fallback: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'],
+    fallback: ['openai/gpt-oss-120b'],
     tokensPerMinute: 8000   // free tier, per model; refined from response headers
   },
   openrouter: {
@@ -76,7 +79,15 @@ const PROVIDERS = {
     // models often: check https://openrouter.ai/api/v1/models (ids ending in
     // :free). Checked 2026-11-07; the old gpt-oss-120b / deepseek-r1 /
     // qwen3-coder :free ids are gone.
-    fallback: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-31b-it:free', 'nvidia/nemotron-3.5-super-vl:free']
+    fallback: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-31b-it:free', 'nvidia/nemotron-3.5-super-vl:free'],
+    // Solving, hints, fixes and grading: the large model only
+    tiers: {
+      main: ['nvidia/nemotron-3-ultra-550b-a55b:free'],
+      fast: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-31b-it:free', 'nvidia/nemotron-3.5-super-vl:free'],
+      interview: ['nvidia/nemotron-3-ultra-550b-a55b:free'],
+      judge: ['nvidia/nemotron-3-ultra-550b-a55b:free'],
+      hard: ['nvidia/nemotron-3-ultra-550b-a55b:free']
+    }
   },
   // Cloudflare Workers AI — FREE with the Cloudflare account (daily allowance),
   // no API key: it's reached through the Worker's AI binding (wrangler.toml).
@@ -89,7 +100,7 @@ const PROVIDERS = {
     // 5035 "not available on the Workers Free plan". Slower than Groq
     // (~10-20 s), so it's the overflow when Groq is busy, not the first choice.
     tiers: {
-      main: ['@cf/openai/gpt-oss-120b', '@cf/openai/gpt-oss-20b'],
+      main: ['@cf/openai/gpt-oss-120b'],
       fast: ['@cf/openai/gpt-oss-20b', '@cf/openai/gpt-oss-120b'],
       interview: ['@cf/openai/gpt-oss-120b'],
       judge: ['@cf/openai/gpt-oss-120b'],
@@ -101,7 +112,15 @@ const PROVIDERS = {
     secret: 'GEMINI_API_KEY',
     kind: 'gemini',
     // Each Gemini model has its OWN free quota — the lite model often still has room
-    fallback: ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest']
+    fallback: ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'],
+    // The lite model only translates verified code — never solves or hints
+    tiers: {
+      main: ['gemini-3.8-flash', 'gemini-flash-latest'],
+      fast: ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'],
+      interview: ['gemini-3.8-flash', 'gemini-flash-latest'],
+      judge: ['gemini-3.8-flash', 'gemini-flash-latest'],
+      hard: ['gemini-3.8-flash', 'gemini-flash-latest']
+    }
   }
 };
 

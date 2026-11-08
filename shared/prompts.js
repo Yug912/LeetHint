@@ -7,7 +7,7 @@
 
 // Bump when prompts change — part of the server cache key, so old cached
 // replies are never served for a new prompt
-export const PROMPT_VERSION = 'p7';
+export const PROMPT_VERSION = 'p8';
 
 // Languages the solution can be translated into, keyed by LeetCode's langSlug.
 // fence = the markdown code-fence tag the model is asked to use.
@@ -194,10 +194,15 @@ export const codeTag = language => `CODE_${language.toUpperCase()}`;
 
 const HINT_RULES = `Generate EXACTLY 4 progressive hints. Follow these rules STRICTLY:
 
-HINT 1 — Pattern Recognition (MAX 2 sentences, NO technique named):
-- Ask ONE pointed question about the constraint or property that reveals the approach
-- Follow with a nudge toward the key insight (e.g. what work is repeated, or a space-vs-time trade-off)
-- Quote the real constraint values from the statement (e.g. "n ≤ 10^5"), never invent them
+HINT 1 — Pattern Recognition (MAX 2 sentences, NO technique named OR described):
+- Ask ONE pointed question about an OBSERVATION on the input or the answer that reveals the approach
+- Follow with a nudge toward that observation (e.g. which work is repeated, what property the answer has)
+- Quote a constraint only when it points toward the approach (e.g. "n ≤ 10^5" rules out checking every pair),
+  using the statement's real values; skip constraints that don't help
+- NEVER describe how the technique works either — the reader must still discover the method:
+  no recurrence or formula (not "f(n) depends on f(n-1) and f(n-2)"), no "store a result for every value",
+  no "keep only the k best / a limited collection", no "explore from both ends", and never state the key
+  quantity the solution is built on (e.g. a ratio to sort by). Ask about the observation that LEADS there.
 - NEVER name an algorithm, technique or data structure — not even to say what NOT to use. Banned in
   Hint 1: DP / dynamic programming, memoization, prefix / suffix (sums, products, max), two pointers,
   sliding window, hash map / set, heap, stack, queue, BFS / DFS, binary search, greedy, sorting,

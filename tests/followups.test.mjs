@@ -5,8 +5,8 @@ import { buildPrompt, PROMPT_VERSION } from '../shared/prompts.js';
 
 const problem = difficulty => ({ slug: 'x', title: 'X', difficulty, description: 'Do the thing.', cppSnippet: 'class Solution {\npublic:\n    int f(int n) {\n    }\n};' });
 
-test('prompt version is p7 (follow-ups changed the reply format)', () => {
-  assert.equal(PROMPT_VERSION, 'p7');
+test('prompt version is p8 (Hint 1 may not describe the method either)', () => {
+  assert.equal(PROMPT_VERSION, 'p8');
 });
 
 test('hints ask for 3 follow-ups with answers that match the solution', () => {

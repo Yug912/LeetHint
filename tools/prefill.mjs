@@ -13,7 +13,7 @@
 //   --only <slug>    just this problem (repeatable)       --force      regenerate even if current
 //   --limit <n>      at most n problems this run          --out <dir>  default cache-site/
 //   --worker <url>   default http://localhost:8787        --pace <s>   seconds between problems (default 20-30)
-//   --no-compile     skip the clang++ check (not recommended)
+//   --no-compile     skip the clang++ checks: compile + LeetCode's examples (not recommended)
 // Resumable: problems whose file already has the current promptVersion are skipped.
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from 'node:fs';
@@ -22,6 +22,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
 import { htmlToText } from '../shared/html-text.js';
+import { runExamples, describeFailure } from './examples.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LANGS = ['java', 'python3', 'javascript'];   // translated besides C++
@@ -151,6 +152,24 @@ async function generate(client, problem, { compile, promptVersion }) {
     }
     compiled = true;
   }
+  // LeetCode's own examples: a wrong answer gets one fix with the failing case
+  // as the reason; still wrong → needs review, never a static file
+  let examples = null;
+  if (compile) {
+    let ex = await runExamples(problem.slug, sol.code, { leetcode });
+    if (!ex.ok && ex.failures) {
+      const why = ex.failures.map(describeFailure).join('\n');
+      console.log(`  examples ${ex.passed}/${ex.total} → asking for a fix:\n    ${why.split('\n')[0]}`);
+      const fixed = await client.validateSolutionCode(sol.code, problem, `Wrong Answer on LeetCode's examples:\n${why}`);
+      if (fixed?.code && !compileError(fixed.code)) {
+        ex = await runExamples(problem.slug, fixed.code, { leetcode });
+        if (ex.ok) sol = { ...sol, code: fixed.code, tc: fixed.tc || sol.tc, sc: fixed.sc || sol.sc };
+      }
+      if (!ex.ok) throw Object.assign(new Error(`wrong on LeetCode's examples (${ex.passed ?? 0}/${ex.total ?? '?'}): ${describeFailure(ex.failures?.[0] || {})}`), { review: true });
+    }
+    if (ex.ok) examples = `${ex.passed}/${ex.total}`;
+    else console.log(`  examples not run: ${ex.skipped}`);
+  }
   const hints = [result.hint1, result.hint2, result.hint3, result.hint4].map(h => (h || '').trim());
   const problems = [];
   if (hints.some(h => !h)) problems.push('fewer than 4 hints');
@@ -173,7 +192,7 @@ async function generate(client, problem, { compile, promptVersion }) {
     hints,
     followUps: result.followUps || [],
     code,
-    verified: { compiled: compiled === true }
+    verified: { compiled: compiled === true, ...(examples ? { examples } : {}) }
   };
 }
 

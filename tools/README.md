@@ -38,7 +38,12 @@ What it does per problem:
    LeetCode's headers and `ListNode`/`TreeNode`/`Node` (`cpp/`). On an error
    it asks for one fix with the compiler message; still failing → the slug
    goes to `tools/needs-review.txt` and is skipped.
-4. Checks 4 hints, TC, SC and the exact LeetCode signature, then writes the file.
+4. Runs the C++ on LeetCode's own examples (`tools/examples.mjs`: inputs from
+   `exampleTestcaseList`, expected outputs from the statement). A wrong answer
+   gets one fix with the failing case; still wrong → `tools/needs-review.txt`.
+   Problems the runner can't drive (design classes, in-place `void`) are noted
+   and skipped by this check.
+5. Checks 4 hints, TC, SC and the exact LeetCode signature, then writes the file.
 
 Order: problems in `data/companies.json` first, then the rest by number. It is
 resumable (files with the current `promptVersion` are skipped) and stops
@@ -49,7 +54,8 @@ decide it), so a few weeks for all ~3,800 free problems.
 Weekly refresh: run it again (new problems are added); regenerate a reported
 problem with `node tools/prefill.mjs --only <slug> --force`. Then commit and
 push `cache-site/`; Pages redeploys by itself. Every Monday the `sync-cache` Action
-also exports new hints from D1 (`tools/export-d1.mjs`) into `cache-site/`.
+also exports new hints from D1 (`tools/export-d1.mjs`) into `cache-site/` —
+only replies whose C++ passes LeetCode's examples.
 
 ### Nightly (Mac)
 

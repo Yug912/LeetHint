@@ -10,12 +10,15 @@
 // have a file with the current prompt version are left alone (the pre-fill's
 // files are richer: they carry translations and a compile check). Exported
 // files carry C++ only; the extension translates other languages on demand.
+// A reply is exported only if its C++ passes LeetCode's own examples
+// (tools/examples.mjs; needs clang++ — the GitHub runner has it).
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { PROMPT_VERSION } from '../shared/prompts.js';
 import { readAnswerStream, parseHintsReply, missingSignatureParts } from '../api/ai.js';
 import { problemData } from './prefill.mjs';
+import { runExamples } from './examples.mjs';
 
 function args(argv) {
   const a = { out: resolve('cache-site'), days: 8 };
@@ -80,6 +83,11 @@ async function main() {
       if (problem.cppSnippet && missingSignatureParts(parsed.solution.code, problem.cppSnippet).length) continue;
       const file = toStaticFile(problem, parsed, new Date(row.created).toISOString().slice(0, 10));
       if (file.hints.some(h => !h) || !file.tc || !file.sc) continue;
+      // Only a solution that passes LeetCode's own examples becomes a static file
+      // (the live cache still serves the rest; a reported one is regenerated)
+      const ex = await runExamples(slug, parsed.solution.code);
+      if (!ex.ok) { console.log(`✗ ${slug}: ${ex.skipped ? 'examples not run (' + ex.skipped + ')' : `examples ${ex.passed}/${ex.total}`} — not exported`); continue; }
+      file.verified.examples = `${ex.passed}/${ex.total}`;
       writeFileSync(join(a.out, 'cache', `${slug}.json`), JSON.stringify(file, null, 2) + '\n');
       index.slugs[slug] = PROMPT_VERSION;
       written++;

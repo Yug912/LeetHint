@@ -69,3 +69,17 @@ test('hints: busy 120b → another model still answers', async () => {
   const pick = await setup(['openai/gpt-oss-120b']);
   assert.notEqual(await pick('main'), 'Groq (openai/gpt-oss-120b)');
 });
+
+test('hints/solve/fix never go to a small model: busy 120b → Workers AI 120b, not 20b or qwen', async () => {
+  const pick = await setup(['openai/gpt-oss-120b']);
+  assert.equal(await pick('main'), 'Workers AI (@cf/openai/gpt-oss-120b)');
+});
+
+test('Gemini: the lite model only translates, never solves', async () => {
+  const { openStream } = await import(`../backend/src/providers.js?run=${++run}`);
+  const tried = [];
+  globalThis.fetch = async (url) => { const m = String(url).match(/models\/([^:]+):/)?.[1]; tried.push(m); return new Response('', { status: 429 }); };
+  const env = { GEMINI_API_KEY: 'test', PROVIDER_ORDER: 'gemini' };
+  await openStream(env, 'prompt', { tier: 'main', maxTokens: 1000 }).catch(() => {});
+  assert.ok(tried.length && !tried.some(m => /lite/.test(m)), `tried ${tried.join(', ')}`);
+});

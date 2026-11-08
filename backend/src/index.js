@@ -17,7 +17,7 @@ import { configuredProviders, describeModels, openStream } from './providers.js'
 import { quotaClient } from './quota.js';
 import { openThroughGate } from './gate.js';
 import { refreshNewProblems } from './refresh.js';
-import { hasCache, readCache, writeCache, isCompleteReply, saveReport, takeTrial, refundTrial, admitInterview,
+import { hasCache, readCache, writeCache, isCompleteReply, cacheableFrom, saveReport, takeTrial, refundTrial, admitInterview,
          isBlocked, utcDay, isoWeek, nextUtcMidnightIso, nextMondayIso } from './store.js';
 
 // Input limits — real LeetCode problems fit comfortably inside these
@@ -415,7 +415,7 @@ async function handleGenerate(request, env, ctx, cors) {
   if (cacheable && !gated) {
     const [toClient, toCache] = upstream.body.tee();
     stream = toClient;
-    ctx.waitUntil(cacheWhenComplete(env, cacheKeys, toCache, kind));
+    ctx.waitUntil(cacheWhenComplete(env, cacheKeys, toCache, kind, label));
   }
 
   // Which provider/model answered (names only) — for diagnosing slow replies
@@ -425,11 +425,12 @@ async function handleGenerate(request, env, ctx, cors) {
 // Reads the copy of the stream natively (no per-chunk JS) and caches it only
 // if the model finished normally and actually wrote an answer — a cut-off
 // reply would otherwise be served forever.
-async function cacheWhenComplete(env, cacheKeys, stream, kind) {
+async function cacheWhenComplete(env, cacheKeys, stream, kind, label) {
   try {
     const raw = await new Response(stream).text();
     if (!isCompleteReply(raw, kind)) return;
     for (const key of cacheKeys) {
+      if (!cacheableFrom(key, label)) { console.log(`not cached (small model): ${label}`); continue; }
       rememberReply(key, { raw, kind });
       await writeCache(env, key, raw, kind);
     }

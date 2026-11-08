@@ -19,6 +19,7 @@ All code for S1–S33 is on `main` of `Yug912/LeetHint` and tested (`node --test
 | 4 — contest query | Done. Confirmed during Weekly Contest 527 (2026-11-08 02:35 UTC, 4 problems); comment updated in `backend/src/refresh.js` (`de98945`). |
 | 5 — ALLOWED_ORIGINS | **Open:** waits for the store listings to show the Chrome and Edge extension IDs. |
 | 6 — follow-ups | **Open:** remove KV after 2026-12-15; watch `/stats` after launch. OpenRouter `:free` ids in `providers.js` / `direct.js` checked 2026-11-08: all 3 still exist. 0 reports so far. |
+| Hint test + accuracy fixes | 35-problem live test on 2026-11-08: 34/35 right on LeetCode's examples; the wrong one came from a small fallback model and had been cached. Fixed: hints/solve/fix use large models only (`backend/src/providers.js`), small-model replies are never cached (`cacheableFrom()` in `backend/src/store.js`), prompt p8 forbids describing the method in Hint 1, and static files must pass LeetCode's examples (`tools/examples.mjs`, used by the pre-fill and the weekly sync). Trade-off: when every large model is at its free limit, users wait in line instead of getting a weaker answer. |
 
 **How to use this doc with an AI assistant:** give it this file plus the repo. Every task lists the exact commands, the expected result and what to do if it differs. The project rules at the end of this section apply to every change.
 
@@ -32,7 +33,7 @@ All code for S1–S33 is on `main` of `Yug912/LeetHint` and tested (`node --test
 | Analytics Engine | Enabled, dataset `leethint_events`. |
 | Worker secrets (live) | `GROQ_API_KEY` (new key, 2026-11-08), `GEMINI_API_KEY`, `STATS_TOKEN` (Anushka's original value, kept). Never paste them in chat or commit them. |
 | Durable Objects | Created by the 2026-11-08 deploy: `QuotaKeeper` and `ProblemGate` (migration tag `v1`). || Store package | `sh store/build.sh` → `dist/leethint-1.2.0.zip` (148 KB, no localhost host). Submission is Anushka's. |
-| Accuracy (prompt p7) | 10/10 standard, 4/5 very hard. No re-run needed unless prompts or model routing change. |
+| Accuracy (prompt p8, 2026-11-08) | 10/10 standard, 4/5 very hard (twice). No re-run needed unless prompts or model routing change. |
 
 ### Account facts
 
@@ -142,12 +143,12 @@ for i in $(seq 1 10); do curl -s -o /dev/null -D - -X POST $API/v1/generate "${H
   -d '{"action":"hints","problem":{"slug":"deploy-check-gate","title":"Gate Check","difficulty":"Easy","description":"Return a times b."}}' | grep -i x-leethint-model & done; wait
 
 # S10 — run the report twice, then look in D1 (expect ONE row)
-curl -s -o /dev/null -w '%{http_code}\n' -X POST $API/v1/report "${H[@]}" -H "X-LeetHint-Install: $ID" -d '{"slug":"two-sum","promptVersion":"p7","reason":"wrong_hint"}'
+curl -s -o /dev/null -w '%{http_code}\n' -X POST $API/v1/report "${H[@]}" -H "X-LeetHint-Install: $ID" -d '{"slug":"two-sum","promptVersion":"p8","reason":"wrong_hint"}'
 npx wrangler d1 execute leethint --remote --command "SELECT install_id, slug, day, reason FROM reports WHERE install_id='$ID'"
 
 # S2 — rate limit: 25 requests from one install
 for i in $(seq 1 25); do curl -s -o /dev/null -w "$i:%{http_code} " -X POST $API/v1/report "${H[@]}" \
-  -H "X-LeetHint-Install: 22222222-2222-4333-8444-555555555555" -d '{"slug":"two-sum","promptVersion":"p7","reason":"other"}'; done; echo
+  -H "X-LeetHint-Install: 22222222-2222-4333-8444-555555555555" -d '{"slug":"two-sum","promptVersion":"p8","reason":"other"}'; done; echo
 
 # S29 — blocked install: insert, call /v1/generate (expect 403 blocked), delete
 npx wrangler d1 execute leethint --remote --command "INSERT INTO blocked (install_id, reason, created) VALUES ('$ID','deploy test',0)"
@@ -253,7 +254,7 @@ From that day the Worker no longer reads KV (`kvFallbackOpen()` in `backend/src/
 
 ### Accuracy check (whenever prompts or routing change)
 
-Against a local Worker (`cd backend && npx wrangler dev`, dev key in `backend/.dev.vars`): `node tools/accuracy/standard.mjs` (pass mark 10/10) and, after `python3 tools/accuracy/hard/gen.py` once, `node tools/accuracy/hard/run.mjs` (pass mark 4/5). Current p7 result: 10/10 and 4/5.
+Against a local Worker (`cd backend && npx wrangler dev`, dev key in `backend/.dev.vars`): `node tools/accuracy/standard.mjs` (pass mark 10/10) and, after `python3 tools/accuracy/hard/gen.py` once, `node tools/accuracy/hard/run.mjs` (pass mark 4/5). Current p8 result (2026-11-08): 10/10 and 4/5.
 
 ### Ongoing
 
@@ -295,7 +296,7 @@ Error replies the extension understands: `429 {"error":"busy","retryAfter","posi
 | `backend/src/providers.js` | provider list, models per task, routing |
 | `backend/src/quota.js`, `gate.js`, `store.js`, `refresh.js` | QuotaKeeper, ProblemGate, D1/KV cache + reports + trials, Monday cron |
 | `backend/migrations/0001_init.sql` | D1 schema |
-| `shared/prompts.js` | every prompt; `PROMPT_VERSION = 'p7'` is part of every cache key |
+| `shared/prompts.js` | every prompt; `PROMPT_VERSION = 'p8'` is part of every cache key |
 | `cache-site/` | the Pages site: `cache/<slug>.json`, `index.json`, `companies.json`, `privacy.html` |
 | `tools/prefill.mjs`, `tools/prefill-nightly.sh` | static-file generator and its nightly wrapper (runs on Anushka's Mac) |
 | `tools/export-d1.mjs`, `.github/workflows/sync-cache.yml` | weekly D1 → static files |
