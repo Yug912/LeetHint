@@ -52,3 +52,22 @@ test('a live contest whose problem list comes back empty skips the whole run', a
   assert.deepEqual(generatedFor, []);
   contestList = [{ titleSlug: 'contest-d' }];
 });
+
+test('cron runs (limit 1) generate one problem each, starting at a different place, skipping cached ones', async () => {
+  const { runIndex } = await import('../backend/src/refresh.js');
+  assert.equal(runIndex(Date.UTC(2026, 10, 23, 6, 0)), 0);
+  assert.equal(runIndex(Date.UTC(2026, 10, 23, 6, 10)), 1);
+  assert.equal(runIndex(Date.UTC(2026, 10, 23, 8, 50)), 17);
+  const env = { GROQ_API_KEY: 't', PROVIDER_ORDER: 'groq', DB: fakeD1() };
+  generatedFor = [];
+  const run = async minutes => refreshNewProblems(env, { now: Date.UTC(2026, 10, 30, 6, minutes), limit: 1 });
+  // a week after NOW no contest is live, so contest-d is a normal problem here
+  const first = await run(10);                      // run 1 starts at new-b
+  assert.deepEqual(first.generated, ['new-b']);
+  const second = await run(0);                      // run 0 starts at new-a
+  assert.deepEqual(second.generated, ['new-a']);
+  const third = await run(10);                      // new-b now cached → next one
+  assert.deepEqual(third.cached, ['new-b']);
+  assert.equal(third.generated.length, 1);
+  assert.deepEqual(generatedFor.slice(0, 2), ['new-b', 'new-a']);
+});

@@ -39,7 +39,7 @@ free trial used → `403 { error: "trial_used", action, resetsAt }`; blocked ins
 | `GATE` | Durable Object `ProblemGate` | identical cache misses share one AI call |
 | `INSTALL_LIMITER` / `RATE_LIMITER` | Rate limiting | 20/min per install ID, 120/min per IP |
 | `EVENTS` | Analytics Engine | one event per `/v1` request |
-| cron `0 6 * * 1` | Trigger | pre-generate LeetCode's newest problems (`src/refresh.js`) |
+| cron `*/10 6-8 * * 1` | Trigger | pre-generate LeetCode's newest problems (`src/refresh.js`) |
 
 Free trials (per anonymous install ID, `X-LeetHint-Install`): Fix 3 per UTC day, one mock
 interview per ISO week (15 minutes, at most 3 running at once). Signature fixes and requests

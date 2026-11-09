@@ -14,7 +14,7 @@ All code for S1–S33 is on `main` of `Yug912/LeetHint` and tested (`node --test
 | 0 — secrets, dev setup | Done. `STATS_TOKEN` kept at Anushka's original value (live, and saved in `~/.leethint-stats-token`). Live `GROQ_API_KEY` replaced with a new key on 2026-11-08; delete the old one in the Groq console if not done yet. Yug's `backend/.dev.vars` holds Yug's own dev Groq key (not the live one) and `ALLOWED_ORIGINS=` empty. |
 | 1 — deploy | Done 2026-11-08 01:14 UTC. Durable Objects `QuotaKeeper` and `ProblemGate` created (migration `v1`), Monday cron set. `KV_FALLBACK_UNTIL` kept at `2026-12-15`. |
 | 2 — live checks | Passed, test rows cleaned. Notes: check 5's tail had no `gate hints` line, but D1 held exactly one row; the per-install limit started at request 22, not 21 (Cloudflare counts approximately). Optional trial check skipped. |
-| 2 — S30 cron | **Open:** check after Monday 2026-11-09 06:00 UTC for `refresh: N generated, M already cached, K skipped`. |
+| 2 — S30 cron | **Open.** The single 06:00 UTC run on 2026-11-09 wrote nothing to D1 (cause not visible without Workers Logs: dashboard → Workers → leethint-api → Logs, 2026-11-09 06:00). Since 2026-11-09 the cron runs every 10 min, 06:00–08:50 UTC Mondays, one problem per run, so no single run hits the Free plan's per-invocation limits. Check Monday 2026-11-16: each run logs `refresh: N generated, M already cached, K skipped`; `refresh failed: LeetCode GraphQL HTTP 403` would mean LeetCode blocks Cloudflare's IPs. |
 | 3 — sync secrets | Done. Repo secrets set, workflow permissions Read and write, `main` unprotected. Run #1 green with no commit: the test slugs aren't real LeetCode problems, so the export skips them. The two `deploy-check-*` rows were deleted from D1. |
 | 4 — contest query | Done. Confirmed during Weekly Contest 527 (2026-11-08 02:35 UTC, 4 problems); comment updated in `backend/src/refresh.js` (`de98945`). |
 | 5 — ALLOWED_ORIGINS | **Open:** waits for the store listings to show the Chrome and Edge extension IDs. |
@@ -95,7 +95,7 @@ One deploy puts every server step (S1–S30) live at once. It is free: everythin
 What the first deploy creates or changes:
 
 - Durable Objects `QuotaKeeper` (binding `QUOTA`) and `ProblemGate` (binding `GATE`) through migration `v1` (`new_sqlite_classes`, free plan).
-- The Monday cron `0 6 * * 1` (new problems).
+- The Monday cron `*/10 6-8 * * 1` (new problems).
 - Bindings: D1 `DB`, KV `HINTS_CACHE` (read-only fallback), Analytics Engine `EVENTS`, rate limiters, Workers AI `AI`.
 - `[vars]` from `wrangler.toml`: `PROVIDER_ORDER`, `QUOTA_DAILY_TOKENS`, `KV_FALLBACK_UNTIL`, the `CONFIG_*` switches for `/config`, and `ALLOWED_ORIGINS = ""` (any extension origin allowed until S33).
 
@@ -167,7 +167,7 @@ Not checked by hand on the server (covered by unit tests, and tested in the exte
 
 ## Task 3 — GitHub Action secrets for the weekly sync
 
-The workflow `.github/workflows/sync-cache.yml` (repo root) runs every Monday 09:00 UTC, three hours after the Worker's cron. It exports hints the Worker generated into D1 (cron + live cache misses, last 8 days) as `cache-site/cache/<slug>.json` with `tools/export-d1.mjs`, copies `data/companies.json` to `cache-site/`, then commits and pushes to `main`. Pages redeploys on that push. It needs three repo secrets.
+The workflow `.github/workflows/sync-cache.yml` (repo root) runs every Monday 09:00 UTC, after the Worker's cron runs (06:00–08:50). It exports hints the Worker generated into D1 (cron + live cache misses, last 8 days) as `cache-site/cache/<slug>.json` with `tools/export-d1.mjs`, copies `data/companies.json` to `cache-site/`, then commits and pushes to `main`. Pages redeploys on that push. It needs three repo secrets.
 
 1. Create a Cloudflare API token that can only read D1:
    1. Cloudflare dashboard → My Profile → API Tokens → Create Token → Create Custom Token.

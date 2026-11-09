@@ -1,0 +1,41 @@
+{
+  "slug": "prime-subset-selection-i",
+  "title": "Prime Subset Selection I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-09",
+  "pattern": "Greedy after sorting (small‑to‑large)",
+  "tc": "O(n log log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<char> isPrime of size n+1 → O(n)  \n- vector<int> primes (all primes ≤ n) → O(π(n)) ≤ O(n)  \n- recursion depth: none  \n- not counted: input parameters, returned vector",
+  "approach": "The only way to increase the number of chosen primes while staying under a fixed sum `s` is to use the smallest primes first - any larger prime would consume more of the budget without giving an extra element.  \nHence we (1) generate every prime ≤ `n` with a sieve, (2) walk through them in increasing order, adding a prime while the running total does not exceed `s`. The collected primes form an optimal answer.",
+  "hints": [
+    "With a fixed budget `s`, which primes let you fit the most of them in?  \n`n ≤ 10⁶` limits the total amount of primes we have to consider.",
+    "Use a boolean array (Sieve of Eratosthenes) to list all primes up to `n`.  \nExample: `n = 7` → primes `[2,3,5,7]`.",
+    "```\nsieve all primes ≤ n\nans = empty list\nsum = 0\nfor p in primes (increasing):\n    if sum + p ≤ s:\n        ans.append(p)\n        sum += p\n    else break\nreturn ans\n```",
+    "**No prime fits** - `n = 5, s = 1` → `[]`  \n⚠️ Bug: stopping only when `p > s` (ignoring accumulated sum) → would incorrectly return `[2]`.\n\n**Large sum overflow** - `n = 1 000 000, s = 2 000 000 000`  \n⚠️ Bug: using `int sum` (32‑bit) → overflow makes condition true too early, returning too few primes.\n\n**Exact budget** - `n = 15, s = 15` → one optimal answer `[3,5,7]` (any three‑prime combination summing to 15).  \n⚠️ Bug: breaking on first prime that exceeds `s` without considering that later larger primes could still fit together → would stop after `[2]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if `n` can be as large as 10⁹ while `s` stays ≤ 10⁹?",
+      "a": "We can no longer store a full sieve. A segmented sieve (or a prime iterator using a deterministic Miller‑Rabin test) generates primes on‑the‑fly up to `n`, and we greedily consume them until the sum exceeds `s`. Time becomes O(π(√n) + π(n) log log n) for the segment, space O(√n)."
+    },
+    {
+      "q": "Suppose we must maximise the *sum* of selected primes without exceeding `s` (instead of the count).",
+      "a": "The problem turns into a classic 0/1 knapsack with weight = value = prime, which is NP‑hard for the given limits; no polynomial‑time greedy solution exists in general."
+    },
+    {
+      "q": "How would you adapt the solution if the output array must be produced using O(1) extra memory besides the result?",
+      "a": "Replace the explicit `primes` vector with an on‑the‑fly prime generator (e.g., linear sieve that reuses the same boolean buffer for each block). We keep only the sieve buffer for the current block and the running sum, achieving O(√n) auxiliary memory, which is O(1) relative to the output size."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maxPrimes(int n, int s) {\n        if (n < 2) return {};\n        vector<char> isPrime(n + 1, true);\n        isPrime[0] = isPrime[1] = false;\n        for (int i = 2; i * 1LL * i <= n; ++i) {\n            if (isPrime[i]) {\n                for (int j = i * i; j <= n; j += i)\n                    isPrime[j] = false;\n            }\n        }\n\n        vector<int> ans;\n        long long curSum = 0;\n        for (int p = 2; p <= n; ++p) {\n            if (!isPrime[p]) continue;\n            if (curSum + p <= s) {\n                ans.push_back(p);\n                curSum += p;\n            } else {\n                break;          // further primes are larger, will only increase the sum\n            }\n        }\n        return ans;\n    }\n};",
+    "java": "import java.util.ArrayList;\nimport java.util.List;\n\nclass Solution {\n    public List<Integer> maxPrimes(int n, int s) {\n        if (n < 2) return new ArrayList<>();\n\n        boolean[] isPrime = new boolean[n + 1];\n        for (int i = 2; i <= n; i++) isPrime[i] = true;\n        isPrime[0] = isPrime[1] = false;\n\n        for (int i = 2; (long) i * i <= n; i++) {\n            if (isPrime[i]) {\n                for (int j = i * i; j <= n; j += i) {\n                    isPrime[j] = false;\n                }\n            }\n        }\n\n        List<Integer> ans = new ArrayList<>();\n        long curSum = 0;\n        for (int p = 2; p <= n; p++) {\n            if (!isPrime[p]) continue;\n            if (curSum + p <= s) {\n                ans.add(p);\n                curSum += p;\n            } else {\n                break; // further primes are larger, will only increase the sum\n            }\n        }\n        return ans;\n    }\n}",
+    "python3": "class Solution:\n    def maxPrimes(self, n: int, s: int) -> list[int]:\n        if n < 2:\n            return []\n        is_prime = [True] * (n + 1)\n        is_prime[0] = is_prime[1] = False\n        i = 2\n        while i * i <= n:\n            if is_prime[i]:\n                j = i * i\n                while j <= n:\n                    is_prime[j] = False\n                    j += i\n            i += 1\n\n        ans = []\n        cur_sum = 0\n        for p in range(2, n + 1):\n            if not is_prime[p]:\n                continue\n            if cur_sum + p <= s:\n                ans.append(p)\n                cur_sum += p\n            else:\n                break  # further primes are larger, will only increase the sum\n        return ans",
+    "javascript": "/**\n * @param {number} n\n * @param {number} s\n * @return {number[]}\n */\nvar maxPrimes = function(n, s) {\n    if (n < 2) return [];\n    // Sieve of Eratosthenes\n    const isPrime = new Array(n + 1).fill(true);\n    isPrime[0] = isPrime[1] = false;\n    for (let i = 2; i * i <= n; i++) {\n        if (isPrime[i]) {\n            for (let j = i * i; j <= n; j += i) {\n                isPrime[j] = false;\n            }\n        }\n    }\n\n    const ans = [];\n    let curSum = 0;\n    for (let p = 2; p <= n; p++) {\n        if (!isPrime[p]) continue;\n        if (curSum + p <= s) {\n            ans.push(p);\n            curSum += p;\n        } else {\n            break; // further primes are larger, will only increase the sum\n        }\n    }\n    return ans;\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}

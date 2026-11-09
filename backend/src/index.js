@@ -46,9 +46,11 @@ export default {
     return res;
   },
 
-  // Monday 06:00 UTC (wrangler.toml [triggers]): pre-generate the newest problems
+  // Mondays every 10 min, 06:00-08:50 UTC (wrangler.toml [triggers]):
+  // pre-generate the newest problems, one per run
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(refreshNewProblems(env).catch(e => console.warn('refresh failed:', e.message)));
+    ctx.waitUntil(refreshNewProblems(env, { now: event.scheduledTime || Date.now(), limit: 1 })
+      .catch(e => console.warn('refresh failed:', e.message)));
   }
 };
 

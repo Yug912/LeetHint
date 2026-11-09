@@ -2,40 +2,41 @@
   "slug": "two-sum",
   "title": "Two Sum",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Hash Table Lookup",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-09",
+  "pattern": "Hash‑Map Complement Search",
   "tc": "O(n)",
   "sc": "O(n)",
-  "spaceBreakdown": "- unordered_map<int,int> mp: up to n entries → O(n)  \n- recursion depth: none  \n- not counted: input vector, returned vector",
-  "approach": "Store each number together with its index as you scan the array. For the current element compute the value that would complete the target; if that value has been seen before, you have found the required pair. This single pass with a hash table yields the answer in linear time and guarantees the unique solution is returned.",
+  "spaceBreakdown": "- unordered_map<int,int> idx: up to n entries → O(n)  \n- recursion depth: none  \n- not counted: input vector, returned vector",
+  "approach": "For each element we ask which single other value would complete the required sum. While scanning the array we store every number we have already seen in a hash table that maps the value to its index. When the needed partner is already in the table we have found the unique answer. This single pass uses O(n) time and O(n) extra space.",
   "hints": [
-    "What if you could remember every number you have already visited while scanning the array once?  \nThe array length is limited to **n ≤ 10^4**, so a constant‑time lookup for each element is feasible.",
-    "Use an **unordered_map** to map a number to its index.  \nExample: for `nums = [2,7,11,15]`, `target = 9`, after seeing 2 we store (2→0); when we see 7 we find 2 as its complement and return `[0,1]`.",
-    "```\ncreate empty hash map M\nfor i from 0 to n‑1\n    need = target - nums[i]\n    if need exists in M\n        return [M[need], i]\n    insert (nums[i] → i) into M\n```",
-    "**Duplicate values** - two identical numbers sum to the target.  \n`Input: nums = [3,3], target = 6` → `Expected: [0,1]`  \n⚠️ Bug: inserting the current element before checking → returns `[0,0]`.\n\n**Negative numbers** - target and elements can be negative.  \n`Input: nums = [-1,-2,-3,-4], target = -5` → `Expected: [0,3]`  \n⚠️ Bug: using an unsigned key in the map → lookup fails and returns `[]`.\n\n**Large magnitude** - values near ±10⁹.  \n`Input: nums = [1000000000,-1000000000,0], target = 0` → `Expected: [0,1]`  \n⚠️ Bug: storing complement in a 32‑bit signed int after subtraction without casting (if target were outside the allowed range) could overflow and give a wrong index.\n\n**First‑and‑last element** - solution uses the extremes of the array.  \n`Input: nums = [1,2,3,4,5], target = 6` → `Expected: [0,4]`  \n⚠️ Bug: stopping the loop at `i < n‑1` and never checking the last element as a complement → returns `[]`."
+    "If you pick any element, what single other value must appear elsewhere to reach the target?  \nThe array length satisfies n ≤ 10⁴.",
+    "Store each number you have already visited in an **unordered_map** from value to its index.  \nExample: nums = [2,7,11,15], target = 9 → after seeing 2 we store (2,0); the next element 7 needs 2, which is already in the map, so we return [0,1].",
+    "for i from 0 to n‑1\n    need = target - nums[i]\n    if need is in map\n        return [map[need], i]\n    insert (nums[i], i) into map",
+    "**Duplicate pair** - two identical numbers that sum to the target  \n`Input: nums = [3,3], target = 6` → `Expected: [0,1]`  \n⚠️ Bug: inserting the element into the map **before** the lookup → returns `[0,0]`\n\n**Negative numbers** - mix of positive and negative values  \n`Input: nums = [-3,4,3,90], target = 0` → `Expected: [0,2]`  \n⚠️ Bug: using an unsigned type for the complement → computes a huge positive number and fails to find the pair.\n\n**First‑and‑last indices** - the solution uses the first and last elements  \n`Input: nums = [1,2,3,4,5], target = 6` → `Expected: [0,4]`  \n⚠️ Bug: checking the map **after** inserting the current element → the first element never finds its partner and the algorithm returns the wrong pair or none."
   ],
   "followUps": [
     {
-      "q": "How would you solve the problem if the input array were guaranteed to be sorted?",
-      "a": "Use the two‑pointer technique: start one pointer at the beginning and one at the end, move them inward based on the sum compared to the target. This runs in O(n) time and O(1) extra space."
+      "q": "What if the input array is guaranteed to be sorted?",
+      "a": "You can use the two‑pointer technique, moving one pointer from the start and one from the end until their sum matches the target. This runs in O(n) time with O(1) extra space."
     },
     {
-      "q": "What if you were not allowed to use extra O(n) space?",
-      "a": "Sort the array (O(n log n) time) and then apply the two‑pointer method, achieving O(1) auxiliary space while still meeting the time requirement."
+      "q": "How would you solve the problem if you were not allowed to use extra O(n) memory?",
+      "a": "Sort the array in‑place (O(n log n)) and then apply the two‑pointer method; you must keep track of the original indices, e.g., by sorting pairs of (value, index)."
     },
     {
-      "q": "How would you handle a stream of numbers where you can only keep a limited amount of memory?",
-      "a": "Keep a hash set (or unordered_map) of the numbers seen so far, discarding older entries if memory exceeds the limit; this yields an approximate solution or requires multiple passes with external storage. The time remains O(n) per pass, but space is bounded by the allowed memory budget."
+      "q": "Suppose the numbers arrive as a stream and you cannot store the whole array.",
+      "a": "Maintain a hash set of values seen so far; for each incoming number x, check whether target‑x is already in the set. This still uses O(n) expected space but works in a single pass without needing the full array beforehand."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        unordered_map<int, int> mp;\n        for (int i = 0; i < (int)nums.size(); ++i) {\n            int need = target - nums[i];\n            auto it = mp.find(need);\n            if (it != mp.end()) {\n                return {it->second, i};\n            }\n            mp[nums[i]] = i;\n        }\n        return {};\n    }\n};",
-    "java": "import java.util.HashMap;\nimport java.util.Map;\n\nclass Solution {\n    public int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> mp = new HashMap<>();\n        for (int i = 0; i < nums.length; ++i) {\n            int need = target - nums[i];\n            Integer j = mp.get(need);\n            if (j != null) {\n                return new int[]{j, i};\n            }\n            mp.put(nums[i], i);\n        }\n        return new int[0];\n    }\n}",
-    "python3": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        mp = {}\n        for i, num in enumerate(nums):\n            need = target - num\n            if need in mp:\n                return [mp[need], i]\n            mp[num] = i\n        return []",
-    "javascript": "/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(nums, target) {\n    const mp = new Map(); // value -> index\n    for (let i = 0; i < nums.length; ++i) {\n        const need = target - nums[i];\n        if (mp.has(need)) {\n            return [mp.get(need), i];\n        }\n        mp.set(nums[i], i);\n    }\n    return [];\n};"
+    "cpp": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        unordered_map<int, int> idx;\n        for (int i = 0; i < (int)nums.size(); ++i) {\n            int need = target - nums[i];\n            auto it = idx.find(need);\n            if (it != idx.end()) {\n                return {it->second, i};\n            }\n            idx[nums[i]] = i;\n        }\n        return {}; // guaranteed to have a solution\n    }\n};",
+    "java": "import java.util.HashMap;\nimport java.util.Map;\n\nclass Solution {\n    public int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> idx = new HashMap<>();\n        for (int i = 0; i < nums.length; ++i) {\n            int need = target - nums[i];\n            Integer j = idx.get(need);\n            if (j != null) {\n                return new int[]{j, i};\n            }\n            idx.put(nums[i], i);\n        }\n        return new int[0]; // guaranteed to have a solution\n    }\n}",
+    "python3": "class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:\n        idx = {}\n        for i, num in enumerate(nums):\n            need = target - num\n            if need in idx:\n                return [idx[need], i]\n            idx[num] = i\n        return []  # guaranteed to have a solution",
+    "javascript": "/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(nums, target) {\n    const idx = new Map(); // value -> index\n    for (let i = 0; i < nums.length; ++i) {\n        const need = target - nums[i];\n        if (idx.has(need)) {\n            return [idx.get(need), i];\n        }\n        idx.set(nums[i], i);\n    }\n    return []; // guaranteed to have a solution\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "3/3"
   }
 }

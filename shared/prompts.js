@@ -7,7 +7,7 @@
 
 // Bump when prompts change — part of the server cache key, so old cached
 // replies are never served for a new prompt
-export const PROMPT_VERSION = 'p8';
+export const PROMPT_VERSION = 'p9';
 
 // Languages the solution can be translated into, keyed by LeetCode's langSlug.
 // fence = the markdown code-fence tag the model is asked to use.
@@ -194,15 +194,26 @@ export const codeTag = language => `CODE_${language.toUpperCase()}`;
 
 const HINT_RULES = `Generate EXACTLY 4 progressive hints. Follow these rules STRICTLY:
 
-HINT 1 — Pattern Recognition (MAX 2 sentences, NO technique named OR described):
-- Ask ONE pointed question about an OBSERVATION on the input or the answer that reveals the approach
-- Follow with a nudge toward that observation (e.g. which work is repeated, what property the answer has)
+HINT 1 — Pattern Recognition (ONE question + at most one fact sentence, NO technique named OR described):
+- Ask ONE pointed, OPEN question about an OBSERVATION on the input or the answer that leads to the approach.
+  The reader must still have to think: never a yes/no question whose "yes" is the method, and never put the
+  answer inside the question
+- Optionally ONE more sentence that ONLY restates a fact from the statement (a constraint, an example value).
+  NEVER a claim, guess or "notice that ..." about the solution or the answer — that sentence is where the
+  method leaks
 - Quote a constraint only when it points toward the approach (e.g. "n ≤ 10^5" rules out checking every pair),
   using the statement's real values; skip constraints that don't help
 - NEVER describe how the technique works either — the reader must still discover the method:
   no recurrence or formula (not "f(n) depends on f(n-1) and f(n-2)"), no "store a result for every value",
   no "keep only the k best / a limited collection", no "explore from both ends", and never state the key
   quantity the solution is built on (e.g. a ratio to sort by). Ask about the observation that LEADS there.
+- NEVER state the rule the solution follows or the answer's closed form — that IS the method:
+  no "always choose the smallest / largest first", no "the sum is (just) twice X", no "the answer is
+  always ...", no "it is enough to check only ...".
+  Bad:  "Consider what happens if you always pick the smallest available prime first."
+  Bad:  "Notice the sum seems to be exactly twice the largest term."
+  Good: "With a fixed budget, which primes let you fit the most of them in?"
+  Good: "Write out a few sums of three consecutive Fibonacci numbers — how does each compare to its terms?"
 - NEVER name an algorithm, technique or data structure — not even to say what NOT to use. Banned in
   Hint 1: DP / dynamic programming, memoization, prefix / suffix (sums, products, max), two pointers,
   sliding window, hash map / set, heap, stack, queue, BFS / DFS, binary search, greedy, sorting,

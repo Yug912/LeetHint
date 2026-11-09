@@ -2,6 +2,13 @@
 // generate hints for LeetCode's newest problems before users open them, so
 // the first visitor of a new problem gets a cache hit too.
 //
+// The cron fires every 10 minutes from 06:00 to 08:50 UTC on Mondays and each
+// run generates at most ONE problem (limit: 1). One run doing all ~20 in a row
+// (Hard ones take 1-4 min each on Workers AI) can hit the Workers Free plan's
+// per-invocation limits; on 2026-11-09 the single 06:00 run wrote nothing.
+// Each run starts at a different place in the list, so a problem that keeps
+// failing never blocks the others.
+//
 //   • fetches the newest ~20 problems from LeetCode GraphQL
 //   • skips premium ones and ones already in the cache
 //   • skips problems of a contest that is running right now (no hints for a
@@ -81,13 +88,35 @@ async function sha256(text) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Any current-version hints row for this problem? (one indexed range read —
+// no LeetCode call, no prompt building, so cached problems cost almost no CPU)
+async function hasHintsRow(env, slug) {
+  if (!env.DB) return false;
+  const prefix = `${PROMPT_VERSION}:hints:${slug}:`;
+  try {
+    return !!(await env.DB.prepare('SELECT 1 FROM cache WHERE key >= ? AND key < ? LIMIT 1').bind(prefix, prefix + '\uffff').first());
+  } catch { return false; }
+}
+
+// Which 10-minute run of the morning this is (06:00 → 0, 06:10 → 1, ...)
+export const runIndex = now => Math.max(0, Math.floor((now % 86400000 - 6 * 3600000) / 600000));
+
 // → { generated: [...], cached: [...], skipped: [...] }
-export async function refreshNewProblems(env, { now = Date.now(), slugs } = {}) {
+// limit: most problems to generate (or try) in this run — the cron passes 1
+export async function refreshNewProblems(env, { now = Date.now(), slugs, limit = Infinity } = {}) {
   const out = { generated: [], cached: [], skipped: [] };
   const contest = await liveContestSlugs(now);
   if (contest.live.length) console.log(`refresh: live contest ${contest.live.join(', ')} — its problems wait for next week`);
-  for (const slug of slugs || await newestProblems()) {
+  let list = slugs || await newestProblems();
+  if (Number.isFinite(limit) && list.length) {
+    const start = runIndex(now) % list.length;
+    list = [...list.slice(start), ...list.slice(0, start)];
+  }
+  let tried = 0;
+  for (const slug of list) {
+    if (tried >= limit) break;
     if (contest.slugs.has(slug)) { out.skipped.push(slug); continue; }
+    if (await hasHintsRow(env, slug)) { out.cached.push(slug); continue; }
     try {
       const problem = await problemData(slug);
       if (!problem) { out.skipped.push(slug); continue; }
@@ -96,6 +125,7 @@ export async function refreshNewProblems(env, { now = Date.now(), slugs } = {}) 
       const prompt = buildPrompt('hints', problem);
       const key = `${PROMPT_VERSION}:hints:${slug}:${await sha256(prompt)}`.slice(0, 500);
       if (await readCache(env, key, now)) { out.cached.push(slug); continue; }
+      tried++;
       const hard = /hard/i.test(problem.difficulty);
       const { upstream, kind, label } = await openStream(env, prompt, {
         effort: hard ? 'high' : 'medium', maxTokens: hard ? 8000 : 4500, tier: hard ? 'hard' : 'main',
