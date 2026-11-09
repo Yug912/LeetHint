@@ -96,6 +96,11 @@ function cleanCppCode(code) {
     .trim();
 }
 
+// C++ has braces and statements ending in ";" — pseudocode ("for i = 0 .. n-1:") has neither
+export function looksLikeCpp(code) {
+  return !!code && /[{}]/.test(code) && /;/.test(code) && /\b(class|struct|int|long|bool|void|auto|vector|string|return)\b/.test(code);
+}
+
 function extractCppFence(text) {
   const m = String(text || '').match(/```(?:cpp|c\+\+)?\s*([\s\S]*?)```/i);
   return m ? cleanCppCode(m[1]) : '';
@@ -129,8 +134,11 @@ function parseSolutionResponse(raw) {
   const codeSection = extractUntilNext(text, 'CODE');
   // Fallbacks: unfenced code in the CODE section, then a class Solution anywhere
   // (e.g. the model wrongly put it inside a hint), then any fence at all
-  const code = extractCppFence(codeSection) || extractClassSolution(codeSection) ||
-               extractClassSolution(text) || extractCppFence(text);
+  // Only real code counts: a reply whose only fence is Hint 3's pseudocode
+  // (seen on 2026-11-09) would otherwise be shown as "the solution" — with
+  // no code, generateHints() asks for the solution separately instead
+  const code = [extractCppFence(codeSection), extractClassSolution(codeSection),
+                extractClassSolution(text), extractCppFence(text)].find(looksLikeCpp) || '';
 
   const tc = extractAllBigO(extractUntilNext(text, 'TC'))[0] || '';
   const sc = extractAllBigO(extractUntilNext(text, 'SC'))[0] || '';
@@ -264,6 +272,11 @@ export async function backendHeaders(extra = {}) {
 // the caller falls back (hints: Chrome's built-in AI, as before).
 export const WAIT = { maxMs: 3 * 60 * 1000, sleep: ms => new Promise(r => setTimeout(r, ms)), now: () => Date.now() };
 
+// A reply must START within headersMs; after that it may take as long as it
+// keeps streaming — it is given up only after idleMs without a single byte, or
+// at totalMs. (A fixed 3-minute limit cut off slow Hard replies mid-way.)
+export const TIMEOUTS = { headersMs: 120000, idleMs: 90000, totalMs: 360000 };
+
 export function nextWaitMs(tries, retryAfterSec) {
   const steps = [10, 20, 40, 60];
   const sec = tries === 0 ? (retryAfterSec > 0 ? retryAfterSec : 10) : steps[Math.min(tries - 1, steps.length - 1)];
@@ -319,19 +332,19 @@ async function callBackend(action, problem, opts = {}) {
                                 interview, failure, reason, lowEffort });
   const headers = await backendHeaders({ 'Content-Type': 'application/json' });
   const startedAt = WAIT.now();
-  let res;
+  let res, watch;
   for (let tries = 0; ; tries++) {
+    watch = stallWatch();
     try {
-      res = await fetch(`${BACKEND_URL}/v1/generate`, {
-        method: 'POST', headers, body,
-        signal: AbortSignal.timeout(180000)   // reasoning models can think for a while
-      });
+      res = await fetch(`${BACKEND_URL}/v1/generate`, { method: 'POST', headers, body, signal: watch.signal });
     } catch (e) {
+      watch.stop();
       const err = new Error('Could not reach the LeetHint server — check your connection.');
       err.offline = true;
       throw err;
     }
     if (res.ok) break;
+    watch.stop();
     const err = serverError(res.status, await res.json().catch(() => ({})));
     // Busy → wait in line, then try again (never for rate_limited/trial_used)
     if (err.code !== 'busy') throw err;
@@ -342,7 +355,15 @@ async function callBackend(action, problem, opts = {}) {
   }
 
   console.log(`LeetHint: ${action} reply (${res.headers.get('X-LeetHint-Cache') || '?'}, ${res.headers.get('X-LeetHint-Model') || 'cache'})`);
-  const text = await readAnswerStream(res, res.headers.get('X-LeetHint-Format') || 'openai', onText);
+  let text;
+  try {
+    text = await readAnswerStream(watch.track(res), res.headers.get('X-LeetHint-Format') || 'openai', onText);
+  } catch (e) {
+    if (watch.signal.aborted) throw new Error('The AI stopped answering — please retry.');
+    throw e;
+  } finally {
+    watch.stop();
+  }
 
   if (!text.trim()) {
     // The model spent its whole token budget thinking — ask again with less thinking
@@ -353,6 +374,26 @@ async function callBackend(action, problem, opts = {}) {
     throw new Error('The AI returned an empty reply — please retry.');
   }
   return text;
+}
+
+// Abort signal for one request: no headers within TIMEOUTS.headersMs, then no
+// new bytes for TIMEOUTS.idleMs, or TIMEOUTS.totalMs in all. track(res) wraps
+// the body so every chunk re-arms the idle timer.
+function stallWatch() {
+  const ctrl = new AbortController();
+  let idle = setTimeout(() => ctrl.abort(), TIMEOUTS.headersMs);
+  const total = setTimeout(() => ctrl.abort(), TIMEOUTS.totalMs);
+  const arm = () => { clearTimeout(idle); idle = setTimeout(() => ctrl.abort(), TIMEOUTS.idleMs); };
+  const stop = () => { clearTimeout(idle); clearTimeout(total); };
+  return {
+    signal: ctrl.signal, stop,
+    track(res) {
+      if (!res.body) return res;
+      arm();
+      const body = res.body.pipeThrough(new TransformStream({ transform(chunk, c) { arm(); c.enqueue(chunk); } }), { signal: ctrl.signal });
+      return new Response(body, { status: res.status, headers: res.headers });
+    }
+  };
 }
 
 // The server passes the provider's Server-Sent Events through untouched;

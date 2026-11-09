@@ -13,7 +13,7 @@
 import { PROMPT_VERSION, buildPrompt } from '../../shared/prompts.js';
 import { htmlToText } from '../../shared/html-text.js';
 import { openStream } from './providers.js';
-import { readCache, writeCache, isCompleteReply } from './store.js';
+import { readCache, writeCache, isCompleteReply, cacheableFrom } from './store.js';
 
 const NEWEST = 20;
 const SNIPPET_LANGS = ['cpp', 'java', 'python3', 'c', 'javascript', 'typescript', 'csharp', 'golang', 'kotlin', 'swift', 'rust'];
@@ -103,6 +103,7 @@ export async function refreshNewProblems(env, { now = Date.now(), slugs } = {}) 
       });
       const raw = await new Response(upstream.body).text();
       if (!isCompleteReply(raw, kind)) { console.warn(`refresh: ${slug} reply incomplete (${label})`); out.skipped.push(slug); continue; }
+      if (!cacheableFrom(key, label)) { console.warn(`refresh: ${slug} answered by a small model (${label}) — not cached`); out.skipped.push(slug); continue; }
       await writeCache(env, key, raw, kind, now);
       console.log(`refresh: ${slug} → ${label}`);
       out.generated.push(slug);

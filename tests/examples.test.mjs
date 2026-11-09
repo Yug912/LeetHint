@@ -50,3 +50,10 @@ test('a problem the runner cannot drive is skipped, not failed', async () => {
   assert.equal(r.ok, false);
   assert.ok(r.skipped);
 });
+
+test('"return any of them": a different valid answer is not a failure', { skip: !hasClang && 'needs clang++' }, async () => {
+  const anyOf = { ...TWO_SUM, content: TWO_SUM.content + '<p>If multiple answers exist, return any of them.</p>' };
+  const r = await runExamples('two-sum-variant', WRONG, { leetcode: fake(anyOf) });
+  assert.equal(r.ok, false);
+  assert.match(r.skipped, /several answers are valid/);
+});

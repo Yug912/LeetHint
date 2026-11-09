@@ -11,7 +11,8 @@
 //   await runExamples('two-sum', cppCode)
 //   → { ok: true, passed: 3, total: 3 }
 //   → { ok: false, passed: 1, total: 3, failures: [{ input, expected, got }] }
-//   → { ok: false, skipped: '<why the examples could not be run>' }   (unsupported type, no compiler…)
+//   → { ok: false, skipped: '<why the examples could not decide>' }   (unsupported type, no compiler,
+//     or several answers are valid and this one differs from the statement's)
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -133,13 +134,19 @@ export async function runExamples(slug, code, { leetcode, cxx = process.env.CXX 
   } catch (e) {
     return { ok: false, passed: 0, total: cases.length, failures: [{ error: e.signal === 'SIGTERM' ? 'time limit (10 s)' : `runtime error (${e.signal || e.status})` }] };
   }
-  const mode = ANY_ORDER[slug];
+  const statement = htmlToText(q.content);
+  const mode = ANY_ORDER[slug] || (/in any order/i.test(statement) ? 'deep' : undefined);
   const failures = [];
   cases.forEach((args, i) => {
     if (!sameAnswer(normalise(parse(got[i]), mode), normalise(parse(expected[i]), mode))) {
       failures.push({ input: q.exampleTestcaseList[i].replace(/\n/g, ', '), expected: expected[i], got: got[i] ?? '(nothing)' });
     }
   });
+  // "If multiple answers exist, return any of them": a different answer may be
+  // just as right — that can't be decided from the examples, so it's not a failure
+  if (failures.length && /return any|any of them|any valid|any such/i.test(statement)) {
+    return { ok: false, skipped: `several answers are valid; ${cases.length - failures.length}/${cases.length} match the statement's` };
+  }
   return { ok: !failures.length, passed: cases.length - failures.length, total: cases.length, ...(failures.length ? { failures } : {}) };
 }
 
