@@ -9,6 +9,7 @@ import { loadCompanies } from '../api/companies.js';
 import { initInterview, syncInterview, isInterviewActive, hasInterview, startInterview,
          renderInterviewHistory, setInterviewOptions } from './interview.js';
 import * as extras from './extras.js';
+import { initCompanies, renderCompanies } from './companies.js';
 import { STEPS, SCORE_NAMES, QUEUE_SCORE_MAX, DEFAULT_DAILY_LIMIT, localDate, parseLocalDate, daysBetween,
          clampLimit, outcomeForScore, outcomeForInterview, interviewHintScore, newQueueItem, applyReview,
          markMastered, lastScore, lowerJoinScore, syncJoinScores, migrateQueue, planQueue,
@@ -79,9 +80,11 @@ const DOM = {
   tabHints:       $('tab-hints'),
   tabStats:       $('tab-stats'),
   tabRevision:    $('tab-revision'),
+  tabCompanies:   $('tab-companies'),
   contentHints:   $('content-hints'),
   contentStats:   $('content-stats'),
   contentRevision: $('content-revision'),
+  contentCompanies: $('content-companies'),
 
   // States
   loadingState:   $('loading-state'),
@@ -225,6 +228,7 @@ async function init() {
     openKeySettings: () => extras.openOwnKeySettings()
   });
   renderRevision();   // migrates an old-format queue + the tab badge
+  initCompanies({ switchTab, showToast }).catch(e => console.warn('LeetHint: Companies tab unavailable →', e.message));
   await loadCurrentProblem();
 }
 
@@ -242,6 +246,10 @@ function setupTabListeners() {
     switchTab('revision');
     renderRevision();
   });
+  DOM.tabCompanies?.addEventListener('click', () => {
+    switchTab('companies');
+    renderCompanies();   // re-reads what's solved each time
+  });
 }
 
 function switchTab(tab) {
@@ -253,6 +261,8 @@ function switchTab(tab) {
   DOM.contentHints.classList.toggle('active', tab === 'hints');
   DOM.contentStats.classList.toggle('active', tab === 'stats');
   DOM.contentRevision.classList.toggle('active', tab === 'revision');
+  DOM.tabCompanies?.classList.toggle('active', tab === 'companies');
+  DOM.contentCompanies?.classList.toggle('active', tab === 'companies');
 }
 
 

@@ -13,7 +13,7 @@ cp -R manifest.json background content sidepanel api data icons "$OUT/"
 mkdir -p "$OUT/shared"
 # Only the shared modules the extension imports (html-text.js is for tools/ and the Worker)
 cp shared/prompts.js shared/revision.js shared/patterns.js shared/complexity.js shared/insights.js "$OUT/shared/"
-rm -f "$OUT/data/build_companies.py"
+rm -f "$OUT/data/build_companies.py" "$OUT/data/build_company_lists.py"
 find "$OUT" -name '.DS_Store' -delete
 node -e '
   const fs = require("fs"), f = process.argv[1];
