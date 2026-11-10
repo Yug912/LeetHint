@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { fakeD1 } from './helpers/fake-d1.mjs';
 
 let providerCalls = 0;
-const REPLY = ['data: {"choices":[{"delta":{"content":"---HINT1--- a"}}]}\n\n',
+const REPLY = ['data: {"choices":[{"delta":{"content":"---HINT1--- a ---HINT2--- a ---HINT3--- a ---HINT4--- a"}}]}\n\n',
                'data: {"choices":[{"delta":{"content":" b"}}]}\n\n',
                'data: {"choices":[{"delta":{"content":" c"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'];
 globalThis.fetch = async (url) => {

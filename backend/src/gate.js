@@ -20,7 +20,7 @@
 // outage), the Worker calls the AI directly, as it did before the gate.
 
 import { openStream } from './providers.js';
-import { isCompleteReply, writeCache, cacheableFrom } from './store.js';
+import { isCompleteReply, writeCache, cacheableFrom, hasRequiredSections } from './store.js';
 
 export class ProblemGate {
   constructor(ctx, env) {
@@ -90,7 +90,9 @@ export class ProblemGate {
     try {
       const raw = new TextDecoder().decode(concat(flight.chunks));
       if (isCompleteReply(raw, flight.kind)) {
-        for (const key of cacheKeys) if (cacheableFrom(key, flight.label)) await writeCache(this.env, key, raw, flight.kind);
+        for (const key of cacheKeys) {
+          if (cacheableFrom(key, flight.label) && hasRequiredSections(raw, key)) await writeCache(this.env, key, raw, flight.kind);
+        }
       }
     } catch (e) {
       console.warn('gate: cache write skipped:', e.message);

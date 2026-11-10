@@ -17,7 +17,7 @@ import { configuredProviders, describeModels, openStream } from './providers.js'
 import { quotaClient } from './quota.js';
 import { openThroughGate } from './gate.js';
 import { refreshNewProblems } from './refresh.js';
-import { hasCache, readCache, writeCache, isCompleteReply, cacheableFrom, saveReport, takeTrial, refundTrial, admitInterview,
+import { hasCache, readCache, writeCache, isCompleteReply, cacheableFrom, hasRequiredSections,saveReport, takeTrial, refundTrial, admitInterview,
          isBlocked, utcDay, isoWeek, nextUtcMidnightIso, nextMondayIso } from './store.js';
 
 // Input limits — real LeetCode problems fit comfortably inside these
@@ -433,6 +433,7 @@ async function cacheWhenComplete(env, cacheKeys, stream, kind, label) {
     if (!isCompleteReply(raw, kind)) return;
     for (const key of cacheKeys) {
       if (!cacheableFrom(key, label)) { console.log(`not cached (small model): ${label}`); continue; }
+      if (!hasRequiredSections(raw, key)) { console.log(`not cached (sections missing): ${label}`); continue; }
       rememberReply(key, { raw, kind });
       await writeCache(env, key, raw, kind);
     }

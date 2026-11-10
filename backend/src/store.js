@@ -25,6 +25,29 @@ export function cacheableFrom(key, label) {
   return LARGE_MODEL.test(String(label || ''));
 }
 
+// The answer text of a finished SSE reply: one native regex pass over the
+// string fields (OpenAI-style "content", Workers AI "response", Gemini "text").
+// Escapes are left as they are — only the ---TAG--- delimiters are looked at.
+export function replyText(raw) {
+  let text = '';
+  for (const m of String(raw).matchAll(/"(?:content|response|text)"\s*:\s*"((?:[^"\\]|\\.)*)"/g)) text += m[1];
+  return text;
+}
+
+// A finished reply can still be unusable: a model that leaks its raw
+// reasoning or chat-format tokens ("analysis: …", "<|return|>") and mangles
+// the delimiters ("--- H hint1"). The extension then fails to parse it, and a
+// cached copy would fail for every later user. Hints need all four hint
+// sections, solve/fix a CODE section. Other actions aren't checked.
+export function hasRequiredSections(raw, key) {
+  const action = String(key).split(':')[1] || '';
+  if (!/^(hints|solve|fix)(-|$)/.test(action)) return true;
+  const text = replyText(raw);
+  if (/<\|(?:return|channel|message|end|start)\|>/.test(text)) return false;
+  const tags = action.startsWith('hints') ? ['HINT1', 'HINT2', 'HINT3', 'HINT4'] : ['CODE'];
+  return tags.every(t => new RegExp(`---\\s*${t}\\s*---`, 'i').test(text));
+}
+
 export function isCompleteReply(raw, kind) {
   const cut = /"finish_reason"\s*:\s*"length"|"finishReason"\s*:\s*"MAX_TOKENS"/.test(raw);
   const finished = !cut && (kind === 'gemini' ? /"finishReason"\s*:\s*"STOP"/.test(raw)

@@ -8,7 +8,7 @@ let aiCalls = 0;
 globalThis.fetch = async (url) => {
   if (String(url).endsWith('/models')) return Response.json({ data: [{ id: 'openai/gpt-oss-120b' }] });
   aiCalls++;
-  return new Response('data: {"choices":[{"delta":{"content":"---HINT1--- ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n');
+  return new Response('data: {"choices":[{"delta":{"content":"---HINT1--- ok ---HINT2--- ok ---HINT3--- ok ---HINT4--- ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n');
 };
 const { default: worker } = await import('../backend/src/index.js?d1');
 const problem = { slug: 'two-sum', title: 'Two Sum', difficulty: 'Easy', description: 'Find two numbers.' };
@@ -61,4 +61,34 @@ test('the KV fallback ends after KV_FALLBACK_UNTIL, and a KV failure is a miss',
   assert.equal(await readCache(env, 'k', Date.parse('2026-12-20T00:00:00Z')), null);
   const broken = { DB, HINTS_CACHE: { getWithMetadata: async () => { throw new Error('KV down'); } } };
   assert.equal(await readCache(broken, 'k'), null);
+});
+
+// A finished reply that leaked raw reasoning and mangled the ---TAG---
+// delimiters must not be cached: the extension can't parse it, and every
+// later user would get the same error (seen live on Coin Change, p9).
+import { hasRequiredSections } from '../backend/src/store.js';
+const sse = (...parts) => parts.map(p => `data: {"choices":[{"delta":{"content":${JSON.stringify(p)}}}]}\n\n`).join('') + 'data: [DONE]\n\n';
+
+test('cache check: hints need all four hint sections, split across chunks is fine', () => {
+  const good = sse('---APP', 'ROACH--- x\n---', 'HINT1--- a\n---HINT2--- b\n', '---HINT3--- c\n---HINT4', '--- d\n---END---');
+  assert.equal(hasRequiredSections(good, 'p9:hints:two-sum:abc'), true);
+  assert.equal(hasRequiredSections(good, 'p9:hints-python3:two-sum:abc'), true);
+  assert.equal(hasRequiredSections(sse('---HINT1--- a ---HINT2--- b'), 'p9:hints:two-sum:abc'), false);
+});
+
+test('cache check: leaked reasoning and chat tokens are refused', () => {
+  const leaked = sse('analysis: We need to produce final answer\n--- H hint1: ask\n', '---HINT1--- a ---HINT2--- b ---HINT3--- c ---HINT4--- d\n--- END---<|return|>');
+  assert.equal(hasRequiredSections(leaked, 'p9:hints:coin-change:abc'), false);
+  assert.equal(hasRequiredSections(sse('analysis: think\n--- H hint1 x\n--- CODE---'), 'p9:hints:coin-change:abc'), false);
+});
+
+test('cache check: solve/fix need a CODE section; other actions are not checked', () => {
+  assert.equal(hasRequiredSections(sse('---APPROACH--- x\n---CODE---\n```cpp\nint f();\n```'), 'p9:solve:two-sum:abc'), true);
+  assert.equal(hasRequiredSections(sse('---APPROACH--- x only'), 'p9:solve:two-sum:abc'), false);
+  assert.equal(hasRequiredSections(sse('---APPROACH--- x only'), 'p9:fix-signature:two-sum:abc'), false);
+  assert.equal(hasRequiredSections(sse('def f(): pass'), 'p9:translate-python3:two-sum:abc'), true);
+  const gemini = 'data: {"candidates":[{"content":{"parts":[{"text":"---HINT1--- a ---HINT2--- b ---HINT3--- c ---HINT4--- d"}]},"finishReason":"STOP"}]}\n\n';
+  assert.equal(hasRequiredSections(gemini, 'p9:hints:two-sum:abc'), true);
+  const workersai = 'data: {"response":"---HINT1--- a ---HINT2--- b "}\n\ndata: {"response":"---HINT3--- c ---HINT4--- d"}\n\ndata: [DONE]\n\n';
+  assert.equal(hasRequiredSections(workersai, 'p9:hints:two-sum:abc'), true);
 });
