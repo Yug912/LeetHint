@@ -456,7 +456,7 @@ function textEl(tag, text, className) {
 }
 
 function addMessage(role, text, { hint = false } = {}) {
-  session.history.push({ role, text, at: Date.now(), ...(hint ? { hint: true } : {}) });
+  session.history.push({ role, text, at: Date.now(), stage: session.stage, ...(hint ? { hint: true } : {}) });
   el.log.appendChild(messageEl(session.history.at(-1)));
   el.log.scrollTop = el.log.scrollHeight;
 }

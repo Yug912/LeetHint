@@ -236,6 +236,27 @@ export async function summarise(problem, session) {
   return summary ? { summary, summaryAt: asked, summaryUpTo: turns.length } : null;
 }
 
+// Ending early: a fast candidate who has covered everything gets the
+// scorecard instead of recycled questions. The prompt asks for this; these
+// limits make sure of it even when the model keeps going.
+const WRAP_UP = "That covers everything I wanted to ask. Great work, thanks for walking me through it. Your scorecard is ready.";
+const MOVE_ON = "Okay, let's move on. What are the time and space complexity of your code?";
+// Interviewer lines per late stage before moving on. Complexity: the
+// complexity question, a possible correction, up to two follow-ups. Testing:
+// a trace, a correction or edge case, a re-trace.
+export const MAX_COMPLEXITY_TURNS = 4;
+export const MAX_TESTING_TURNS = 4;
+const LIMITS = { testing: MAX_TESTING_TURNS, complexity: MAX_COMPLEXITY_TURNS };
+// Testing → on to complexity; complexity → the scorecard
+const moveOn = stage => stage === 'testing'
+  ? { reply: MOVE_ON, stage: 'complexity', hintGiven: false }
+  : { reply: WRAP_UP, stage: 'feedback', hintGiven: false };
+
+export function overstaying(session) {
+  const limit = LIMITS[session.stage];
+  return !!limit && session.history.filter(h => h.role === 'interviewer' && h.stage === session.stage).length >= limit;
+}
+
 export async function interviewerTurn(problem, session, event, { code, reference } = {}) {
   const payload = interviewPayload(session, event, code, reference);
   const ask = async extra => parseInterviewerReply(
@@ -243,18 +264,24 @@ export async function interviewerTurn(problem, session, event, { code, reference
   const problemOf = r => !r.reply ? null
     : PRE_CODING.includes(session.stage) && leakedTerms(r.reply, { problem, history: session.history, reference }).length ? 'leak'
     : repeatsEarlier(r.reply, session.history) ? 'repeat' : null;
+  // Still in the same late stage past its limit → move on (the model's own
+  // move to a later stage is kept)
+  const done = r => r.stage === session.stage && event === 'answer' && overstaying(session) ? moveOn(session.stage) : r;
 
   const first = await ask();
   const reason = problemOf(first);
-  if (!reason) return first;
+  if (!reason) return done(first);
   console.warn(`LeetHint: interviewer reply rejected (${reason}) — asking again`);
   let second = null;
   try { second = await ask({ rejected: { reason, draft: first.reply } }); } catch { /* keep the first draft below */ }
   const again = second && problemOf(second);
-  if (second && !again) return second;
-  // Still leaking → a safe nudge instead; a repeat is better than silence
+  if (second && !again) return done(second);
+  // Still leaking → a safe nudge instead
   if ((again || reason) === 'leak') return { ...first, reply: SAFE_HINT, hintGiven: true };
-  return second || first;
+  // Still repeating once the code is written → nothing new is left to ask in
+  // this stage: move on instead of asking the same thing again
+  if (LIMITS[session.stage]) return moveOn(session.stage);
+  return done(second || first);
 }
 
 export async function scoreInterview(problem, session, { code, reference } = {}) {
