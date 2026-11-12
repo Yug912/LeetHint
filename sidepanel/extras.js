@@ -10,7 +10,7 @@
 
 import { PATTERN_CHIPS, matchPattern, patternAccuracy, weakPatterns, canonicalPattern } from '../shared/patterns.js';
 import { tleWarning } from '../shared/complexity.js';
-import { calibration, CONFIDENCE_MIN, tiltCheck, easierProblem, dejaVu, streaks, activityDays, buildCsv } from '../shared/insights.js';
+import { calibration, CONFIDENCE_MIN, confidenceOutcome, confidenceProgress, tiltCheck, easierProblem, dejaVu, streaks, activityDays, buildCsv } from '../shared/insights.js';
 import { localDate } from '../shared/revision.js';
 import { PROMPT_VERSION } from '../shared/prompts.js';
 import { reportHint, getInstallId } from '../api/ai.js';
@@ -107,12 +107,16 @@ export async function onSolved(problem, { score }) {
   await push('activityLog', localDate(), 400);
   // Confidence: the latest open answer for this problem gets its outcome
   const { confidenceLog = [] } = await store.get('confidenceLog');
+  let closed = null;
   for (let i = confidenceLog.length - 1; i >= 0; i--) {
     const e = confidenceLog[i];
-    if (e.slug === problem.slug && e.solo === null) { e.solo = score === 100; break; }
+    if (e.slug === problem.slug && e.solo === null) { e.solo = score === 100; closed = e; break; }
   }
   await store.set({ confidenceLog });
   $('confidence-row').hidden = true;
+  // Tell them how their guess went (only on the problem still on screen)
+  const outcome = closed && confidenceOutcome(closed.answer, closed.solo);
+  if (outcome && problem.slug === current) showConfidenceResult(outcome.text, confidenceProgress(confidenceLog), outcome.right ? 'right' : 'off');
   const t = tiltFor(problem.slug);
   if (t) { t.solved = true; saveTilt(); }
   const hints = ctx.getHints();
@@ -123,7 +127,7 @@ export async function onSolved(problem, { score }) {
 export const onReviewed = () => push('activityLog', localDate(), 400);
 
 function hideAll() {
-  for (const id of ['pattern-guess', 'pattern-result', 'confidence-row', 'dejavu-row', 'tilt-card', 'hint-tools', 'followups-section', 'tle-warning']) {
+  for (const id of ['pattern-guess', 'pattern-result', 'confidence-row', 'confidence-result', 'dejavu-row', 'tilt-card', 'hint-tools', 'followups-section', 'tle-warning']) {
     const el = $(id);
     if (el) el.hidden = true;
   }
@@ -206,7 +210,21 @@ function setupConfidence() {
     if (b.dataset.answer === 'skip') { skippedConfidence.add(problem.slug); return; }
     await push('confidenceLog', { slug: problem.slug, answer: b.dataset.answer,
                                   difficulty: String(problem.difficulty || '').toLowerCase(), date: localDate(), solo: null });
+    if (problem.slug !== current) return;
+    const label = b.dataset.answer[0].toUpperCase() + b.dataset.answer.slice(1);
+    showConfidenceResult(`Noted: ${label}. When you solve it, we'll show whether you were right.`, '', '');
   }));
+  $('confidence-result-close')?.addEventListener('click', () => { $('confidence-result').hidden = true; });
+}
+
+function showConfidenceResult(text, sub, tone) {
+  const el = $('confidence-result');
+  if (!el) return;
+  el.classList.remove('right', 'off');
+  if (tone) el.classList.add(tone);
+  $('confidence-result-text').textContent = text;
+  $('confidence-result-sub').textContent = sub;
+  el.hidden = false;
 }
 
 async function showConfidence(problem) {
@@ -423,7 +441,8 @@ export async function renderStatsExtras() {
 
   // Confidence calibration (after 10 answered)
   const cal = calibration(data.confidenceLog || []);
-  $('confidence-card').hidden = !cal;
+  const confAnswered = (data.confidenceLog || []).some(e => typeof e.solo === 'boolean');
+  $('confidence-card').hidden = !cal && !confAnswered;
   if (cal) {
     const verdict = { overconfident: 'You tend to be overconfident', underconfident: 'You tend to be underconfident', 'well-calibrated': 'You are well-calibrated' }[cal.verdict];
     $('confidence-summary').textContent = (cal.yesSoloPct === null ? '' : `When you say Yes, you solve it alone ${cal.yesSoloPct}% of the time. `) + `${verdict}.`;
@@ -435,7 +454,8 @@ export async function renderStatsExtras() {
     }));
   } else {
     const answered = (data.confidenceLog || []).filter(e => typeof e.solo === 'boolean').length;
-    $('confidence-summary').textContent = `${answered}/${CONFIDENCE_MIN} answered`;
+    $('confidence-summary').textContent = `${answered}/${CONFIDENCE_MIN} solved after answering "Will you solve this without hints?". Your report shows at ${CONFIDENCE_MIN}.`;
+    $('confidence-by-difficulty').replaceChildren();
   }
 
   const id = await getInstallId();

@@ -43,6 +43,30 @@ export function calibration(log = []) {
 }
 
 
+// The line shown when a problem is solved: your guess vs what happened.
+// → { right: bool, text } for an answer of 'yes'|'maybe'|'no', or null
+const OUTCOME = {
+  yes:   { true:  [true,  'You said Yes and solved it without hints. Spot on!'],
+           false: [false, 'You said Yes but needed hints. A bit overconfident this time.'] },
+  maybe: { true:  [true,  'You said Maybe and solved it without hints. Trust yourself more!'],
+           false: [true,  'You said Maybe and needed hints. Fair call.'] },
+  no:    { true:  [false, 'You said No but solved it without hints. Better than you thought!'],
+           false: [true,  'You said No and needed hints. Honest read.'] }
+};
+export function confidenceOutcome(answer, solo) {
+  const o = OUTCOME[answer]?.[solo === true];
+  return o ? { right: o[0], text: o[1] } : null;
+}
+
+// "3/10 more until your confidence report" or the overall verdict once it exists
+export function confidenceProgress(log = []) {
+  const cal = calibration(log);
+  if (cal) return `Overall you are ${cal.verdict}. See Stats for details.`;
+  const done = log.filter(e => typeof e.solo === 'boolean').length;
+  return `${done}/${CONFIDENCE_MIN} solved: your confidence report unlocks in Stats at ${CONFIDENCE_MIN}.`;
+}
+
+
 // ─────────────────────────────────────────────
 // 2. TILT — gentle help when a problem is going badly
 //    3 failed submissions within 10 minutes, or 25 / 40 / 60 minutes (Easy /

@@ -1,7 +1,7 @@
 // Confidence (B11), tilt (B12), déjà vu (B14), streaks + CSV (B15) — run with: node --test tests/*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calibration, tiltCheck, easierProblem, dejaVu, agoText, streaks, activityDays, buildCsv, csvCell } from '../shared/insights.js';
+import { calibration, confidenceOutcome, confidenceProgress, tiltCheck, easierProblem, dejaVu, agoText, streaks, activityDays, buildCsv, csvCell } from '../shared/insights.js';
 
 test('confidence card: right numbers for a hand-made log', () => {
   const e = (answer, solo, difficulty = 'medium') => ({ slug: 's', answer, solo, difficulty, date: '2026-11-01' });
@@ -87,4 +87,17 @@ test('CSV: one header, escaped cells, every kind of row', () => {
   assert.match(lines[4], /^interview,two-sum,Two Sum,Easy,2026-11-04,Hire,25 min; 1 hints; reached feedback$/);
   // a problem without a saved level: no "level undefined"
   assert.match(buildCsv({ stats: { problems: { x: { title: 'X', difficulty: 'Hard', score: 0, solved: false } } } }), /,not solved\r\n$/);
+});
+
+test('confidence result: your guess vs what happened, and progress to the report', () => {
+  assert.deepEqual(confidenceOutcome('yes', true).right, true);
+  assert.equal(confidenceOutcome('yes', false).right, false);
+  assert.equal(confidenceOutcome('no', true).right, false);
+  assert.equal(confidenceOutcome('maybe', false).right, true);
+  assert.match(confidenceOutcome('no', true).text, /without hints/);
+  assert.equal(confidenceOutcome('skip', true), null);
+  assert.equal(confidenceOutcome(undefined, false), null);
+  const e = (answer, solo) => ({ slug: 's', answer, solo, difficulty: 'easy', date: '2026-11-01' });
+  assert.match(confidenceProgress([e('yes', true), e('no', null)]), /^1\/10 solved/);
+  assert.match(confidenceProgress(Array.from({ length: 10 }, () => e('yes', true))), /^Overall you are underconfident/);
 });
