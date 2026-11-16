@@ -1,0 +1,39 @@
+{
+  "slug": "maximize-sum-after-at-most-k-digit-rearrangements",
+  "title": "Maximize Sum After At Most K Digit Rearrangements",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-15",
+  "pattern": "Sorting Gains",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> gains: up to n entries → O(n)  \n- recursion depth: none  \n- not counted: input array, returned long long",
+  "approach": "Each number can be turned into its largest possible value by sorting its decimal digits in decreasing order; this operation is independent for every element. The improvement (gain) of an element is the difference between that maximal value and the original number. To maximise the total sum with at most k operations we simply pick the k largest positive gains and add them to the original sum. Sorting the gains (or keeping a size‑k heap) yields the answer.",
+  "hints": [
+    "If you may reorder the digits of a single integer arbitrarily, which ordering gives the greatest possible value?  \nThe budget k is at most the array length n.",
+    "Use a min‑heap (priority queue) to keep the k largest positive gains.  \nExample: nums = [123,45]; gains = [198,0]; after inserting both, the heap keeps 198 as the only element when k = 1.",
+    "```\ntotal = sum of all nums\nfor each x in nums:\n    maxX = digits of x sorted descending\n    gain = maxX - x\n    if gain > 0: store gain\nkeep the k largest stored gains\ntotal += sum of those gains\nreturn total\n```",
+    "**Single element** - only one number, no improvement possible.  \n`Input: [5], k = 1` → `Expected: 5`  \n⚠️ Bug: ignoring the case when gains vector is empty and accessing gains[0] → crash or garbage.\n\n**All gains zero** - every number is already maximal.  \n`Input: [99, 111], k = 2` → `Expected: 210`  \n⚠️ Bug: adding negative gains because of signed overflow when using int for gain → returns a smaller sum.\n\n**k larger than positive gains** - more operations allowed than useful.  \n`Input: [12, 21], k = 5` → `Expected: 33` (21+12)  \n⚠️ Bug: looping exactly k times without checking vector size → adds uninitialized memory.\n\n**Maximum size & values** - n = 10⁵, each nums[i] = 10⁹.  \n`Input: [1000000000 repeated 100000 times], k = 100000` → `Expected: 1000000000 * 100000` (no gain)  \n⚠️ Bug: using 32‑bit int for the running sum → overflow to negative."
+  ],
+  "followUps": [
+    {
+      "q": "What if each operation may be applied at most once to any element, but we are allowed to perform up to k rearrangements on the same element (i.e., we can rearrange its digits multiple times)?",
+      "a": "Since the first rearrangement already yields the maximal digit order, any further rearrangements give zero gain, so the answer and complexity stay the same: O(n log n) time, O(n) space."
+    },
+    {
+      "q": "How would the solution change if k could be larger than n (e.g., k ≤ 10⁹) and we must still perform at most one operation per element?",
+      "a": "The algorithm is unchanged; we simply take all positive gains because we cannot apply more than one operation per element. The time and space complexities remain O(n log n) and O(n)."
+    },
+    {
+      "q": "Suppose the array is streamed and cannot be stored entirely in memory, but k is small (e.g., k ≤ 100). How can we compute the answer?",
+      "a": "Maintain a min‑heap of size k while reading each number, inserting its positive gain if the heap is not full or if the gain exceeds the heap’s minimum; also keep a running total of the original numbers. This uses O(k) extra space and O(n log k) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximizeSum(vector<int>& nums, int k) {\n        long long total = 0;\n        vector<long long> gains;\n        gains.reserve(nums.size());\n        for (int x : nums) {\n            total += x;\n            string s = to_string(x);\n            sort(s.begin(), s.end(), greater<char>());\n            long long maxVal = stoll(s);\n            long long gain = maxVal - x;\n            if (gain > 0) gains.push_back(gain);\n        }\n        sort(gains.begin(), gains.end(), greater<long long>());\n        int limit = min(k, (int)gains.size());\n        for (int i = 0; i < limit; ++i) total += gains[i];\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "2/2"
+  }
+}

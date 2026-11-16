@@ -1,0 +1,39 @@
+{
+  "slug": "evaluate-reverse-polish-notation",
+  "title": "Evaluate Reverse Polish Notation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-12",
+  "pattern": "Stack Evaluation of RPN",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> st: up to tokens.size() entries → O(n)  \n- recursion depth: none  \n- not counted: input `tokens`, returned int",
+  "approach": "Scanning the tokens from left to right, every time we see a number we store it, and every time we see an operator we combine the two most recent numbers. A stack naturally provides the “most recent” values, so we push operands and pop the top two for each operator, push the result back, and finally the stack holds the answer. This works because Reverse Polish Notation guarantees that an operator’s operands are exactly the two values that were produced immediately before it.",
+  "hints": [
+    "When you read the tokens from left to right, what should you do each time you encounter an operator?  \nEach token is either an integer or one of “+”, “-”, “*”, “/”.",
+    "Use a stack to keep intermediate results.  \nExample: for [\"2\",\"1\",\"+\",\"3\",\"*\"], after processing “2”, “1”, and “+” the stack contains 3.",
+    "for each token t in tokens\n    if t is an operator\n        b ← pop()\n        a ← pop()\n        push( a (op) b )\n    else\n        push( integer value of t )\nreturn top of stack",
+    "**Single number** - the expression may consist of only one operand.  \n`Input: [\"-42\"]` → `Expected: -42`  \n⚠️ Bug: treating every token as an operator → returns error or 0.\n\n**Negative division** - division must truncate toward zero, not floor.  \n`Input: [\"-7\",\"3\",\"/\"]` → `Expected: -2`  \n⚠️ Bug: using `floor((double)a/b)` → returns -3.\n\n**All operators** - a long chain of operators tests stack order.  \n`Input: [\"5\",\"1\",\"2\",\"+\",\"4\",\"*\",\"+\",\"3\",\"-\"]` → `Expected: 14`  \n⚠️ Bug: popping only one value for an operator → uses uninitialized operand → wrong result.\n\n**Maximum length** - 10⁴ tokens stresses the O(n) stack size.  \n`Input: (10000 times \"0\")` → `Expected: 0`  \n⚠️ Bug: using recursion instead of an explicit stack → stack overflow."
+  ],
+  "followUps": [
+    {
+      "q": "How would you evaluate the expression if the tokens were given as a stream that cannot be stored entirely in memory?",
+      "a": "Process the stream token by token, maintaining the same stack; the stack size never exceeds the number of operands that have appeared without being consumed, which is O(n) in the worst case but uses only O(k) where k is the current depth. Time remains O(n) and space is O(k) ≤ O(n)."
+    },
+    {
+      "q": "Suppose the operators also included exponentiation “^” with right‑associative semantics. How does that affect the algorithm?",
+      "a": "Exponentiation still consumes the two most recent operands, so the same stack algorithm works; you just add a case for “^” computing `pow(a,b)` (using integer exponentiation). Time stays O(n) and space O(n)."
+    },
+    {
+      "q": "If the result had to be returned modulo 10⁹+7, what changes are needed?",
+      "a": "After each arithmetic operation, apply the modulo to keep intermediate values within range, taking care to handle negative results (e.g., `(res % MOD + MOD) % MOD`). The algorithmic complexity does not change: O(n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int evalRPN(vector<string>& tokens) {\n        vector<int> st;\n        st.reserve(tokens.size());\n        for (const string& t : tokens) {\n            if (t == \"+\" || t == \"-\" || t == \"*\" || t == \"/\") {\n                int b = st.back(); st.pop_back();\n                int a = st.back(); st.pop_back();\n                long long res = 0;\n                if (t == \"+\") res = (long long)a + b;\n                else if (t == \"-\") res = (long long)a - b;\n                else if (t == \"*\") res = (long long)a * b;\n                else /* t == \"/\" */ res = b == 0 ? 0 : (long long)a / b; // truncates toward zero\n                st.push_back((int)res);\n            } else {\n                st.push_back(stoi(t));\n            }\n        }\n        return st.back();\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

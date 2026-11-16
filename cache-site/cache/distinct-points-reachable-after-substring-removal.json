@@ -1,0 +1,39 @@
+{
+  "slug": "distinct-points-reachable-after-substring-removal",
+  "title": "Distinct Points Reachable After Substring Removal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-15",
+  "pattern": "Prefix Sum + Hash Set",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> prefX, prefY: up to n+1 entries → O(n)  \n- unordered_set of points (pair<long long,long long>): up to n entries → O(n)  \n- recursion depth: none",
+  "approach": "The final coordinate after deleting a block `[i, i+k‑1]` equals the total displacement of the whole string minus the displacement contributed by that block. By storing prefix sums of the x‑ and y‑coordinates we can obtain the block displacement in O(1). For every possible start `i` we compute the resulting point and insert it into a hash set; the size of the set is the answer.",
+  "hints": [
+    "If we know the total displacement of the whole string, how does removing a contiguous block of moves change the final position?  \nThe string length satisfies n ≤ 10⁵.",
+    "Store each reachable final coordinate in an **unordered_set** (hash set).  \nFor the example `s = \"LUL\", k = 1`, removing the first character leaves `\"UL\"` → final point `(-1,1)`.",
+    "```\ncompute prefixX, prefixY\ntotalX = prefixX[n], totalY = prefixY[n]\nfor i = 0 … n‑k\n    subX = prefixX[i+k] - prefixX[i]\n    subY = prefixY[i+k] - prefixY[i]\n    final = (totalX‑subX , totalY‑subY)\n    insert final into hash set\nreturn size of hash set\n```",
+    "**Single character string** - removing the only character leaves an empty move list.  \n`Input: s = \"U\", k = 1` → `Expected: 1`  \n⚠️ Bug: returning `0` because the loop is skipped when `i+k > n`.  \n\n**k equals whole length** - only the empty string remains.  \n`Input: s = \"UDLR\", k = 4` → `Expected: 1`  \n⚠️ Bug: using `i < n‑k` instead of `i <= n‑k` yields no iteration and returns `0`.  \n\n**All moves cancel** - total displacement is (0,0) but different blocks give the same result.  \n`Input: s = \"LRLR\", k = 2` → `Expected: 1`  \n⚠️ Bug: storing only x‑coordinate in the set loses distinct y values, producing a wrong count."
+  ],
+  "followUps": [
+    {
+      "q": "What if we have to remove **any number of substrings** (each of length k) instead of exactly one?",
+      "a": "We would need to consider all subsets of removable blocks, which is exponential; a DP over positions with state “how many blocks have been removed” can solve it in O(n·m) where m is the maximum number of deletions allowed, using the same prefix‑sum idea."
+    },
+    {
+      "q": "How would the solution change if the string length could be up to 10⁶ and we were required to use only O(1) extra memory?",
+      "a": "We could compute the total displacement once, then slide a window of size k while maintaining the current block’s displacement in two running counters, inserting each result into a Bloom filter‑like structure or sorting the results on‑the‑fly; the time stays O(n) but true O(1) distinct counting is impossible without extra memory, so we would have to output the count after a second pass using an in‑place radix sort on the encoded points."
+    },
+    {
+      "q": "Suppose the moves are given as a stream and we cannot store the whole string. Can we still compute the answer?",
+      "a": "Yes. First pass over the stream computes the total displacement. In a second pass we maintain a sliding window of size k with a queue to know the displacement of the current block, updating the final point for each possible removal and inserting it into a hash set. This uses O(k) auxiliary memory and O(n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int distinctPoints(string s, int k) {\n        int n = (int)s.size();\n        vector<long long> prefX(n + 1, 0), prefY(n + 1, 0);\n        for (int i = 0; i < n; ++i) {\n            long long dx = 0, dy = 0;\n            switch (s[i]) {\n                case 'U': dy = 1; break;\n                case 'D': dy = -1; break;\n                case 'L': dx = -1; break;\n                case 'R': dx = 1; break;\n            }\n            prefX[i + 1] = prefX[i] + dx;\n            prefY[i + 1] = prefY[i] + dy;\n        }\n        long long totalX = prefX[n];\n        long long totalY = prefY[n];\n\n        struct PairHash {\n            size_t operator()(const pair<long long,long long>&p) const noexcept {\n                return (static_cast<size_t>(p.first) << 32) ^ static_cast<size_t>(p.second);\n            }\n        };\n        unordered_set<pair<long long,long long>, PairHash> seen;\n        seen.reserve(n);\n\n        for (int i = 0; i + k <= n; ++i) {\n            long long subX = prefX[i + k] - prefX[i];\n            long long subY = prefY[i + k] - prefY[i];\n            long long fx = totalX - subX;\n            long long fy = totalY - subY;\n            seen.emplace(fx, fy);\n        }\n        return (int)seen.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

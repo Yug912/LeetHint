@@ -1,0 +1,39 @@
+{
+  "slug": "last-visited-cell-in-a-directional-grid",
+  "title": "Last Visited Cell in a Directional Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-15",
+  "pattern": "Visited‑Mark Traversal",
+  "tc": "O(m·n)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- vector<vector<bool>> visited: up to m·n entries → O(m·n)  \n- recursion depth: none  \n- not counted: input grid, returned vector",
+  "approach": "The walk forms a deterministic path on a directed graph whose vertices are the cells.  \nBecause we stop as soon as the next step would leave the board or revisit a vertex, we only need to follow the path while remembering which cells have already been seen.  \nA simple simulation with a `visited` boolean matrix records the visited cells and stops exactly when the rule requires.",
+  "hints": [
+    "Given that the walk stops when the next cell is outside the grid **or** already visited, what property of the path can you exploit?  \nThe product m·n is at most 10⁵.",
+    "Use a 2‑D boolean array to remember which cells have been visited.  \nExample: start at (0,0), mark it visited, read ‘R’, compute (0,1); since (0,1) is inside and not visited, move there and mark it.",
+    "```\nr = 0, c = 0\nvisited[r][c] = true\nwhile true:\n    (nr, nc) = next cell according to grid[r][c]\n    if nr < 0 or nr >= m or nc < 0 or nc >= n: break\n    if visited[nr][nc]: break\n    r = nr; c = nc\n    visited[r][c] = true\nreturn [r, c]\n```",
+    "**Single cell** - the only cell points outside.  \n`Input: [[\"U\"]]` → `Expected: [0,0]`  \n⚠️ Bug: forgetting to mark the start as visited → would try to move out repeatedly and never stop.  \n\n**Immediate revisit** - two cells pointing at each other.  \n`Input: [[\"R\",\"L\"]]` → `Expected: [0,1]`  \n⚠️ Bug: checking visited *after* moving → would move back to (0,0) and then stop, returning `[0,0]`.  \n\n**Long straight line** - 1 × 5 all ‘R’.  \n`Input: [[\"R\",\"R\",\"R\",\"R\",\"R\"]]` → `Expected: [0,4]`  \n⚠️ Bug: using recursion for each step → stack overflow when length approaches 10⁵.  \n\n**Cycle of four** - a loop that returns to the start.  \n`Input: [[\"R\",\"D\"],[\"U\",\"L\"]]` → `Expected: [1,0]`  \n⚠️ Bug: not marking a cell visited before moving → infinite loop cycling forever.  \n\n**Maximum size linear chain** - 10⁵ cells in a single row, all ‘R’.  \n`Input: vector of size 1×100000 filled with 'R'` → `Expected: [0,99999]`  \n⚠️ Bug: using an O(m·n) × log (m·n) structure (e.g., set) for visited → exceeds time limit."
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid can be as large as 10⁷ cells but we are only allowed O(1) extra memory?",
+      "a": "We can reuse the input grid itself to store the visited flag by overwriting each character with a sentinel (e.g., ‘#’) after reading it. The algorithm still runs in O(m·n) time and uses only constant extra space."
+    },
+    {
+      "q": "Suppose we also need to return the whole sequence of visited cells, not just the last one.",
+      "a": "While simulating, push each visited coordinate into a vector. This adds O(m·n) additional memory, but the time remains O(m·n)."
+    },
+    {
+      "q": "If each cell contained an integer step count instead of a single direction (e.g., move k cells up/down/left/right), how would the solution change?",
+      "a": "The same visited‑mark simulation works; we compute the target cell by adding k times the direction vector and then apply the same out‑of‑bounds and visited checks. Time stays O(m·n) because each cell is processed at most once."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> lastVisitedCell(vector<vector<char>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        vector<vector<bool>> visited(m, vector<bool>(n, false));\n        int r = 0, c = 0;\n        visited[r][c] = true;\n        while (true) {\n            int nr = r, nc = c;\n            char dir = grid[r][c];\n            if (dir == 'L') nc--;\n            else if (dir == 'R') nc++;\n            else if (dir == 'U') nr--;\n            else if (dir == 'D') nr++;\n            // check bounds\n            if (nr < 0 || nr >= m || nc < 0 || nc >= n) break;\n            // check visited\n            if (visited[nr][nc]) break;\n            // move\n            r = nr; c = nc;\n            visited[r][c] = true;\n        }\n        return {r, c};\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "2/2"
+  }
+}

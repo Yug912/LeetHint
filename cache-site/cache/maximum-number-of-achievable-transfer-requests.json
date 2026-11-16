@@ -1,0 +1,39 @@
+{
+  "slug": "maximum-number-of-achievable-transfer-requests",
+  "title": "Maximum Number of Achievable Transfer Requests",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-10",
+  "pattern": "Bitmask Enumeration",
+  "tc": "O(2^m · (m + n))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> balance of size n: up to n entries → O(n)  \n- loop counters, mask, temporary ints: O(1)  \n- not counted: input parameters, returned int",
+  "approach": "Because the number of requests is at most 16, we can enumerate every subset of requests with a bitmask.  \nA subset is feasible exactly when the net change of employees for every building is zero (out‑degree equals in‑degree).  \nThe largest feasible subset size is the answer.",
+  "hints": [
+    "If we pick some requests, what must be true about the total number of employees leaving and entering each building?  \n`requests.length ≤ 16`.",
+    "Use a **bitmask** (an integer whose i‑th bit tells whether request i is taken).  \nExample: for the first sample, mask = 0b10101 selects requests 0, 2 and 4.",
+    "```\nans = 0\nfor each mask from 0 to (1<<m)-1:\n    balance[0..n-1] = 0\n    for i = 0 .. m-1:\n        if mask has bit i:\n            balance[from_i]-- ; balance[to_i]++\n    if every balance[x] == 0:\n        ans = max(ans, popcount(mask))\nreturn ans\n```",
+    "**Self‑loop only** - all requests stay in the same building, always feasible.  \n`Input: n = 1, requests = [[0,0],[0,0],[0,0]]` → `Expected: 3`  \n⚠️ Bug: stopping early when a non‑zero balance is found before processing all bits → may return 0.\n\n**Impossible set** - no subset larger than 0 can balance.  \n`Input: n = 3, requests = [[0,1],[1,2]]` → `Expected: 0`  \n⚠️ Bug: using `>=` instead of `==` when checking balance → would incorrectly accept this case.\n\n**Duplicate opposite requests** - two opposite moves cancel each other.  \n`Input: n = 2, requests = [[0,1],[1,0],[0,1]]` → `Expected: 3`  \n⚠️ Bug: counting popcount of mask before verifying feasibility → would output 3 even when only first two are feasible.\n\n**Maximum size** - 16 requests, all can be satisfied.  \n`Input: n = 4, requests = [[0,1],[1,2],[2,3],[3,0],\n                           [0,2],[2,0],[1,3],[3,1],\n                           [0,3],[3,0],[1,0],[0,1],\n                           [2,1],[1,2],[3,2],[2,3]]` → `Expected: 16`  \n⚠️ Bug: using `int` for mask when m = 16 is fine, but using `1<<m` with `int` overflow if m = 31; here safe but a generic implementation may fail for larger m."
+  ],
+  "followUps": [
+    {
+      "q": "What if the number of requests grows to 10⁵ while n stays ≤ 20?",
+      "a": "We must switch to a DP over subsets of buildings (state = balance vector) or use a max‑flow formulation; the bitmask enumeration becomes infeasible (2^10⁵). The DP runs in O(n·2ⁿ) ≈ O(20·2²⁰)."
+    },
+    {
+      "q": "How would you modify the algorithm to also return one feasible set of maximum size?",
+      "a": "Keep an extra variable `bestMask`. Whenever a feasible mask has a larger popcount, store it. After the loop, decode `bestMask` back into the list of requests. Time and space remain unchanged."
+    },
+    {
+      "q": "Suppose the requests are streamed and cannot be stored entirely, but m ≤ 16 still holds.",
+      "a": "Store the streamed requests in a fixed‑size array of length 16 as they arrive; the enumeration works unchanged because the whole set fits in memory. The algorithm stays O(2^m·(m+n)) time and O(n) extra space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumRequests(int n, vector<vector<int>>& requests) {\n        int m = requests.size();\n        int ans = 0;\n        vector<int> balance(n);\n        for (int mask = 0; mask < (1 << m); ++mask) {\n            fill(balance.begin(), balance.end(), 0);\n            for (int i = 0; i < m; ++i) {\n                if (mask & (1 << i)) {\n                    int from = requests[i][0];\n                    int to   = requests[i][1];\n                    --balance[from];\n                    ++balance[to];\n                }\n            }\n            bool ok = true;\n            for (int v : balance) {\n                if (v != 0) { ok = false; break; }\n            }\n            if (ok) {\n                int cnt = __builtin_popcount(mask);\n                ans = max(ans, cnt);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

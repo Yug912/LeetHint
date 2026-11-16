@@ -1,0 +1,39 @@
+{
+  "slug": "find-root-of-a-colored-tree",
+  "title": "Find Root of a Colored Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-15",
+  "pattern": "Rerooting DP on Trees",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- adjacency list `vector<vector<pair<int,int>>> g`: up to 2·(n‑1) entries → O(n)  \n- vector `bad`: n integers → O(n)  \n- recursion depth of two DFS calls: O(n) in worst case → O(n) stack",
+  "approach": "Each edge forces a unique direction: the child must have the successor color of its parent, otherwise the edge is impossible.  \nIf we orient every edge according to this rule, a valid root is exactly a node with indegree 0 while every other node has indegree 1, and its degree must be ≤ 2 (the binary‑tree condition).  \nWe compute the number of “wrongly oriented” edges for an arbitrary root (node 0) and then reroot the tree: moving the root across one edge flips only that edge’s orientation, so the wrong‑edge count can be updated in O(1).  \nScanning all nodes gives a root with zero wrong edges and degree ≤ 2, or -1 if none exists.",
+  "hints": [
+    "If two adjacent nodes share the same color, can any root satisfy the required layered pattern?  \nEach node’s degree is at most three.",
+    "Use an adjacency list that stores, for every edge, whether the forced direction goes from the current node to its neighbour (1) or the opposite (‑1).  \nFor the edge (3,1) in the first example, colour 3 = W, colour 1 = R, so we store (1, 1) for node 3 and (3, ‑1) for node 1.",
+    "```\nbuild adjacency with direction flag (1 = forced current→neighbour, -1 = opposite)\ndfs1(root):\n    count edges where flag == -1   // wrong for this rooting\ndfs2(node):\n    for each child:\n        bad[child] = bad[node] + (flag == 1 ? +1 : -1)\n        dfs2(child)\nanswer = first node with bad == 0 and degree <= 2\n```",
+    "**Equal colours** - an edge whose ends have the same colour can never be satisfied.  \n`Input: edges=[[0,1]], colors=\"RR\"` → `Expected: -1`  \n⚠️ Bug: ignoring this case and proceeding → returns 0 (incorrect).\n\n**Root degree 3** - a node of degree 3 cannot be a root because it would need three children.  \n`Input: edges=[[0,1],[0,2],[0,3]], colors=\"RBGW\"` → `Expected: -1`  \n⚠️ Bug: only checking bad‑edge count → may return 0 (incorrect).\n\n**All colours different but orientation wrong** - a line tree where every edge is forced opposite to the initial rooting.  \n`Input: edges=[[0,1],[1,2],[2,3]], colors=\"RWBW\"` → `Expected: 1`  \n⚠️ Bug: using a static “bad” count without rerooting → returns -1.\n\n**Maximum size** - n = 10⁵, a skewed tree (depth = n‑1).  \n`Input: edges=[[i,i+1] for i=0..99998], colors` alternating correctly → `Expected: 0` (or any endpoint with degree 1).  \n⚠️ Bug: recursive DFS without tail‑call optimisation causing stack overflow → runtime error."
+  ],
+  "followUps": [
+    {
+      "q": "What if the binary‑tree restriction is removed (each node may have up to three children)?",
+      "a": "The only change is the degree check; a valid root now needs degree ≤ 3. The rerooting DP and indegree condition stay the same, so the algorithm remains O(n) time and O(n) space."
+    },
+    {
+      "q": "Suppose the colour cycle length is k (k ≥ 2) instead of three, and the pattern must repeat every k depths. How does the solution adapt?",
+      "a": "For each edge we still have a unique forced direction because any two different colours are exactly one step apart in the k‑cycle. The same adjacency‑flag construction works, and the rerooting DP is unchanged, giving O(n) time and O(n) space."
+    },
+    {
+      "q": "If the tree is given as a stream of edges (one by one) and we must output a valid root after the whole stream, can we do it with O(1) extra memory per edge?",
+      "a": "Yes. Maintain for each node its current indegree (initially 0) and degree. When an edge arrives, update the indegree of the node that should be the child according to the colour rule; also update degrees. After the stream ends, scan the nodes to find one with indegree 0 and degree ≤ 2. This uses O(n) total memory and O(n) time overall."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findColoredRoot(vector<vector<int>>& edges, string colors) {\n        int n = colors.size();\n        // adjacency list: neighbour, flag (1 = forced current->neighbour, -1 = opposite)\n        vector<vector<pair<int,int>>> g(n);\n        auto succ = [&](char c) -> char {\n            if (c == 'R') return 'B';\n            if (c == 'B') return 'W';\n            return 'R';\n        };\n        for (auto &e : edges) {\n            int u = e[0], v = e[1];\n            if (colors[u] == colors[v]) return -1;               // impossible edge\n            if (colors[v] == succ(colors[u])) {\n                g[u].push_back({v, 1});\n                g[v].push_back({u, -1});\n            } else {\n                g[u].push_back({v, -1});\n                g[v].push_back({u, 1});\n            }\n        }\n\n        vector<int> bad(n, 0);\n        int bad0 = 0;\n        function<void(int,int)> dfs1 = [&](int u, int p) {\n            for (auto &pr : g[u]) {\n                int v = pr.first, dir = pr.second;\n                if (v == p) continue;\n                if (dir == -1) ++bad0;          // edge oriented opposite to forced direction\n                dfs1(v, u);\n            }\n        };\n        dfs1(0, -1);\n        bad[0] = bad0;\n\n        function<void(int,int)> dfs2 = [&](int u, int p) {\n            for (auto &pr : g[u]) {\n                int v = pr.first, dir = pr.second;\n                if (v == p) continue;\n                // moving root from u to v flips this edge\n                bad[v] = bad[u] + (dir == 1 ? 1 : -1);\n                dfs2(v, u);\n            }\n        };\n        dfs2(0, -1);\n\n        for (int i = 0; i < n; ++i) {\n            if (bad[i] == 0 && (int)g[i].size() <= 2) return i;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "2/2"
+  }
+}

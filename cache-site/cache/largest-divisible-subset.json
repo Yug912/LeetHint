@@ -1,0 +1,39 @@
+{
+  "slug": "largest-divisible-subset",
+  "title": "Largest Divisible Subset",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-14",
+  "pattern": "DP on Sorted Array",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: up to n entries → O(n)  \n- vector<int> parent: up to n entries → O(n)  \n- vector<int> result: up to n entries → O(n)  \n- recursion depth: none  \n- not counted: input vector, returned vector",
+  "approach": "If the numbers are examined from the smallest upward, any element can only be appended to a subset whose last element divides it.  By keeping, for each position, the length of the longest valid subset that ends there and a link to its predecessor, we can build the optimal answer with a simple double loop.  The reconstruction follows the stored links from the best ending position.",
+  "hints": [
+    "When the numbers are considered from the smallest to the largest, which relationship must hold between a new element and the last element of a growing subset?  \nThe array length satisfies n ≤ 1000.",
+    "Use an array (DP table) that stores, for each index, the size of the longest divisible subset ending at that index.  \nFor [1,2,4,8] after processing 4, the table entry for 4 becomes 3 (1→2→4).",
+    "sort nums  \nfor i = 0 … n‑1  \n dp[i] = 1, parent[i] = -1  \n for j = 0 … i‑1  \n  if nums[i] % nums[j] == 0 and dp[j] + 1 > dp[i]  \n   dp[i] = dp[j] + 1, parent[i] = j  \ntrack index of maximum dp value  \nreconstruct answer by following parent links backward",
+    "**Single element** - the subset is the element itself.  \n`Input: [7]` → `Expected: [7]`  \n⚠️ Bug: initializing maxSize to 0 and never updating when all dp values stay 1 → returns empty vector.  \n\n**No divisibility chain** - only subsets of size 1 exist.  \n`Input: [2,3,5,7]` → `Expected: [2]` (any single element is acceptable)  \n⚠️ Bug: forgetting to sort and checking divisibility only with previous element → may return [] or wrong element.  \n\n**Mixed chain with gaps** - the optimal subset skips numbers that break divisibility.  \n`Input: [1,2,3,6,24]` → `Expected: [1,2,6,24]` (size 4)  \n⚠️ Bug: using “>” instead of “>=” when comparing dp values → could keep a shorter predecessor and miss the optimal chain."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be as large as 2·10⁴, making the O(n²) DP too slow?",
+      "a": "We can replace the double loop by iterating over the divisors of each number (≤ √max) and using a hash map that stores the best chain length for each divisor value, achieving roughly O(n·√max) time."
+    },
+    {
+      "q": "How would the solution change if the input could contain duplicate numbers?",
+      "a": "After sorting, treat equal numbers as a separate group; a number can only extend a subset ending with a divisor that is ≤ it, so we keep the same DP but allow “% == 0” to hold for equal values, and the parent link may point to the previous occurrence."
+    },
+    {
+      "q": "Suppose the numbers arrive as a stream and we must output the size of the largest divisible subset seen so far using O(1) extra memory per element.",
+      "a": "Maintain a hash map from each value to the length of the longest chain ending at that value; for each incoming number, iterate over its divisors, query the map for the best length, store the new length, and keep a global maximum. This uses O(k) memory where k is the number of distinct values seen (still O(n) in the worst case) and O(√value) time per element."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> largestDivisibleSubset(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 0) return {};\n        sort(nums.begin(), nums.end());\n\n        vector<int> dp(n, 1), parent(n, -1);\n        int maxSize = 1, maxIdx = 0;\n\n        for (int i = 0; i < n; ++i) {\n            for (int j = 0; j < i; ++j) {\n                if (nums[i] % nums[j] == 0 && dp[j] + 1 > dp[i]) {\n                    dp[i] = dp[j] + 1;\n                    parent[i] = j;\n                }\n            }\n            if (dp[i] > maxSize) {\n                maxSize = dp[i];\n                maxIdx = i;\n            }\n        }\n\n        vector<int> ans;\n        for (int cur = maxIdx; cur != -1; cur = parent[cur])\n            ans.push_back(nums[cur]);\n        reverse(ans.begin(), ans.end());\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "2/2"
+  }
+}

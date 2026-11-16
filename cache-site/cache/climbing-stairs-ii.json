@@ -1,0 +1,39 @@
+{
+  "slug": "climbing-stairs-ii",
+  "title": "Climbing Stairs II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-10",
+  "pattern": "DP with Fixed Look‑Back (size 3)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long dp[4]: 4 values → O(1)  \n- loop indices and temporaries: O(1)  \n- not counted: input vector costs, returned int",
+  "approach": "From any step you can only jump at most three steps forward, therefore the optimal cost to reach step j depends only on the three previous states.  \nDefine dp[j] as the minimum total cost to stand on step j and compute it by trying the three possible previous steps.  \nThe recurrence uses only constant‑time work per position, giving a linear‑time solution.",
+  "hints": [
+    "If you can only move forward by at most three steps, which earlier positions can ever affect the cost of reaching a given step?  \nThe array length is up to 10⁵.",
+    "Use a small DP array that stores the best cost for the last three steps.  \nFor the example costs = [1,2,3,4] the DP values become 0, 2, 5, 9, 13.",
+    "dp[0] = 0  \nfor j = 1 … n  \n best = INF  \n for k = 1 … 3  \n  if j‑k ≥ 0  \n   best = min(best, dp[j‑k] + costs[j‑1] + k*k)  \n dp[j] = best  \nreturn dp[n]",
+    "**Single step** - n = 1, costs = [7] → Expected: 7 + 1² = 8  \n⚠️ Bug: initializing dp array with zeros and not handling j‑k < 0 → returns 0  \n\n**Two‑step jump** - n = 2, costs = [5,1] → Expected: 1 + 2² = 5 (jump 0→2)  \n⚠️ Bug: only considering jumps of length 1 → returns 6  \n\n**Maximum jump length** - n = 3, costs = [9,8,3] → Expected: 3 + 3² = 12 (jump 0→3)  \n⚠️ Bug: loop limited to k = 1,2 → returns 17  \n\n**Large values** - n = 100000, all costs = 10000 → Expected fits in 32‑bit, but using int for intermediate sums overflows.  \n⚠️ Bug: using int for dp → overflow gives negative result."
+  ],
+  "followUps": [
+    {
+      "q": "What if the maximum jump length is an arbitrary k instead of 3?",
+      "a": "The DP recurrence becomes dp[j] = min_{1≤d≤k, j‑d≥0} (dp[j‑d] + costs[j‑1] + d²). The algorithm still runs in O(n·k) time and O(k) extra space; for large k a deque/monotonic structure can reduce it to O(n)."
+    },
+    {
+      "q": "How would you adapt the solution when n can be as large as 10⁷ and the memory limit forces O(1) extra space?",
+      "a": "Keep only the last k (dp) values in a circular buffer of size k (here k = 3). Each iteration overwrites the oldest entry, so the memory stays constant while the time remains O(n)."
+    },
+    {
+      "q": "Suppose the costs array is provided as a stream and cannot be stored entirely. Can you still compute the answer?",
+      "a": "Yes. Process the stream step by step, maintaining the last 3 dp values and the current index. For each incoming cost you compute the new dp value using those three previous dp’s, then discard the oldest dp. This yields O(1) extra space and O(n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int climbStairs(int n, vector<int>& costs) {\n        const long long INF = (1LL<<60);\n        long long dp[4];\n        dp[0] = 0;                     // dp for step 0\n        dp[1] = dp[2] = dp[3] = INF;   // placeholders\n\n        for (int j = 1; j <= n; ++j) {\n            long long best = INF;\n            for (int k = 1; k <= 3; ++k) {\n                if (j - k < 0) continue;\n                long long prev = dp[(j - k) % 4];\n                long long cand = prev + costs[j - 1] + 1LL * k * k;\n                if (cand < best) best = cand;\n            }\n            dp[j % 4] = best;\n        }\n        return static_cast<int>(dp[n % 4]);\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

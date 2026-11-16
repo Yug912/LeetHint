@@ -1,0 +1,39 @@
+{
+  "slug": "minimum-interval-selection-to-cover-target-intervals",
+  "title": "Minimum Interval Selection to Cover Target Intervals",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-15",
+  "pattern": "Greedy interval covering",
+  "tc": "O((A+T) log (A+T))",
+  "sc": "O(A+T)",
+  "spaceBreakdown": "- vector<pair<int,int>> avail: up to A entries → O(A)  \n- vector<pair<int,int>> mergedTarget: up to T entries → O(T)  \n- sorting of both vectors: O(log A) / O(log T) recursion stack → O(log (A+T)) (not counted as extra memory)",
+  "approach": "Merge all target intervals that intersect or touch, obtaining a list of disjoint required segments.  \nSort the available intervals by their left endpoint.  \nSweep the merged target segments from left to right, always picking among intervals that start at or before the current uncovered point the one that reaches farthest to the right (standard greedy covering of a line).  \nIf at any step no interval can extend the coverage, the task is impossible.",
+  "hints": [
+    "When several target intervals overlap or just meet at an endpoint, what single continuous region must be covered instead of handling each separately?  \nAll interval endpoints are integers not larger than 10⁵.",
+    "Use a **sorted array** of the available intervals and scan it with a moving pointer.  \nIn the first example, after sorting we examine intervals starting ≤ 1, pick the one ending at 7, then continue from there.",
+    "```\nmerge target intervals → req[]\nsort available intervals → avail[]\ni = 0, cur = -∞, ans = 0\nfor each [L,R] in req:\n    cur = max(cur, L)\n    while cur < R:\n        far = cur\n        while i < n and avail[i].l ≤ cur:\n            far = max(far, avail[i].r)\n            i++\n        if far == cur: return -1\n        ans++, cur = far\nreturn ans\n```",
+    "**Touching targets** - intervals that only share an endpoint  \n`Input: available=[[1,2],[2,4]], target=[[1,2],[2,3]]` → `Expected: 2`  \n⚠️ Bug: merging targets with condition `next.l < curR` (strict) treats them as separate, leading to answer -1.\n\n**Gap in available intervals** - impossible to cover  \n`Input: available=[[1,2],[4,5]], target=[[1,5]]` → `Expected: -1`  \n⚠️ Bug: using `while avail[i].l < cur` (strict) discards the interval starting exactly at `cur`, causing a false negative.\n\n**Reuse of a long interval** - one interval covers several merged targets  \n`Input: available=[[1,10]], target=[[2,3],[5,6]]` → `Expected: 1`  \n⚠️ Bug: resetting `cur` to the left endpoint of each target segment loses the already‑gained coverage and returns 2.\n\n**Duplicate available intervals** - need the farthest right one  \n`Input: available=[[1,5],[1,4]], target=[[1,5]]` → `Expected: 1`  \n⚠️ Bug: picking the first interval that starts ≤ cur without checking its right endpoint yields answer 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if the coordinates can be as large as 10⁹ instead of 10⁵?",
+      "a": "The same greedy algorithm works because it only relies on sorting the intervals; the values fit in 32‑bit signed integers, so time stays O((A+T) log (A+T)) and space O(A+T)."
+    },
+    {
+      "q": "Suppose we also have to output the list of selected available intervals. How would you modify the solution?",
+      "a": "Keep a vector of the chosen intervals; each time the greedy step picks an interval (the one that gave the maximal `far`), store its index or pair. The extra work is O(1) per selection, so complexities remain unchanged."
+    },
+    {
+      "q": "If the available intervals arrive as a stream and cannot be stored entirely, can the problem still be solved online?",
+      "a": "Yes. Maintain a priority queue (max‑heap) of intervals whose left endpoint ≤ current point, keyed by right endpoint. When the current point advances, push newly arriving intervals and pop the one with the farthest right to extend coverage. This uses O(k) memory where k is the number of intervals overlapping the current point and runs in O((A+T) log k) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSelection(vector<vector<int>>& availableIntervals,\n                     vector<vector<int>>& targetIntervals) {\n        // 1. sort and merge target intervals\n        vector<pair<int,int>> target;\n        target.reserve(targetIntervals.size());\n        for (auto &v : targetIntervals) target.emplace_back(v[0], v[1]);\n        sort(target.begin(), target.end(),\n             [](const pair<int,int>& a, const pair<int,int>& b){\n                 return a.first < b.first;\n             });\n        vector<pair<int,int>> merged;\n        for (auto &p : target) {\n            if (merged.empty() || p.first > merged.back().second) {\n                merged.push_back(p);\n            } else {\n                merged.back().second = max(merged.back().second, p.second);\n            }\n        }\n\n        // 2. sort available intervals by left endpoint\n        vector<pair<int,int>> avail;\n        avail.reserve(availableIntervals.size());\n        for (auto &v : availableIntervals) avail.emplace_back(v[0], v[1]);\n        sort(avail.begin(), avail.end(),\n             [](const pair<int,int>& a, const pair<int,int>& b){\n                 if (a.first != b.first) return a.first < b.first;\n                 return a.second > b.second; // longer first for convenience\n             });\n\n        int n = (int)avail.size();\n        int i = 0;               // pointer in avail\n        long long cur = LLONG_MIN;\n        int ans = 0;\n\n        for (auto &seg : merged) {\n            long long L = seg.first, R = seg.second;\n            if (cur < L) cur = L;          // start of uncovered part\n            while (cur < R) {\n                long long far = cur;\n                while (i < n && avail[i].first <= cur) {\n                    far = max(far, (long long)avail[i].second);\n                    ++i;\n                }\n                if (far == cur) return -1; // cannot extend\n                ++ans;\n                cur = far;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

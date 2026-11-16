@@ -1,0 +1,39 @@
+{
+  "slug": "count-frequency-staircase-subarrays-i",
+  "title": "Count Frequency Staircase Subarrays I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-15",
+  "pattern": "Frequency‑Map Expansion",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n entries → O(n)  \n- unordered_map<int,int> rank: up to n entries → O(n)  \n- other variables: O(1)  \n- not counted: input vector, returned integer",
+  "approach": "Fix the left border of a subarray and extend the right border one step at a time.  \nFor each newly seen value assign a “rank” equal to the number of distinct values seen so far; this rank is the exact frequency it must reach.  \nMaintain a hash map of current frequencies, the rank of each value, and a counter of how many values are currently mismatched.  \nWhenever the mismatch counter is zero the current window is a valid staircase; if any frequency ever exceeds its rank we stop extending because the window can never become valid again.",
+  "hints": [
+    "If we keep the left end fixed, what determines the required count of a value the first time it appears inside the window?  \n(Recall that the statement forces the first distinct value to appear once, the second twice, …)",
+    "Use an **unordered_map** to store the current frequency of each value and another map for its required rank.  \nExample: for nums = [5,8,8,2,…] starting at index 0, when we first meet 8 its rank becomes 2, so we later need exactly two 8’s.",
+    "```\nans = 0\nfor L = 0 … n‑1\n    clear freq, rank\n    distinct = 0, bad = 0\n    for R = L … n‑1\n        x = nums[R]\n        ++freq[x]\n        if x not in rank\n            ++distinct\n            rank[x] = distinct\n            if freq[x] != rank[x]   bad++\n        else\n            if freq[x]‑1 == rank[x]   bad++\n            if freq[x]   == rank[x]   bad--\n        if freq[x] > rank[x]   break\n        if bad == 0            ++ans\nreturn ans\n```",
+    "**Single element** - every length‑1 subarray is always valid.  \n`Input: [42]` → `Expected: 1`  \n⚠️ Bug: returning 0 for length‑1 windows → returns 0  \n\n**Immediate overflow of required rank** - when many distinct numbers appear, the required rank quickly exceeds the possible frequency.  \n`Input: [1,2,3,4,5]` → `Expected: 5` (only the five singletons)  \n⚠️ Bug: continuing after a value’s frequency exceeds its rank → would count longer invalid windows  \n\n**Repeated value before its rank is reached** - a value may appear many times before a new distinct value is introduced.  \n`Input: [7,7,7,8,8]` → `Expected: 6` (5 singletons + subarray [7,7,7,8,8])  \n⚠️ Bug: not breaking when a frequency exceeds its rank → would incorrectly count [7,7,7,7,8,8]  \n\n**All equal numbers** - no subarray longer than 1 can be a staircase.  \n`Input: [9,9,9,9]` → `Expected: 4`  \n⚠️ Bug: treating the first occurrence as a new distinct value each time → would over‑count."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array length goes up to 10⁵?",
+      "a": "The O(n²) scan becomes too slow. We can keep a global timestamped array for frequencies and ranks, allowing O(1) clear per left, and still need O(n²) worst‑case work, so we must switch to a true sliding‑window technique that moves the left pointer only forward, achieving O(n) average time."
+    },
+    {
+      "q": "Suppose we need to return the list of all staircase subarrays instead of just the count.",
+      "a": "While scanning we can store the pair (L,R) each time `bad==0`. This adds O(k) extra space where k is the answer size, but the time remains O(n²) because we still examine every possible window."
+    },
+    {
+      "q": "How would the solution change if the numbers could be negative as well as positive?",
+      "a": "The algorithm does not rely on the sign of the values; the unordered_map works for any 32‑bit integer, so no change is required besides using `int` keys, and the complexity stays O(n²) time and O(n) extra space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countStaircase(vector<int>& nums) {\n        int n = nums.size();\n        long long ans = 0;                     // answer may exceed 32‑bit\n        unordered_map<int,int> freq;\n        unordered_map<int,int> rank;\n        for (int L = 0; L < n; ++L) {\n            freq.clear();\n            rank.clear();\n            int distinct = 0;\n            int bad = 0;                       // #values whose freq != required rank\n            for (int R = L; R < n; ++R) {\n                int x = nums[R];\n                int f = ++freq[x];\n                if (rank.find(x) == rank.end()) {          // first time we see x in this window\n                    ++distinct;\n                    rank[x] = distinct;                    // required frequency\n                    if (f != rank[x]) ++bad;                // mismatch unless rank==1\n                } else {\n                    int req = rank[x];\n                    if (f - 1 == req) ++bad;                // was matching, now mismatching\n                    if (f == req) --bad;                    // now matches\n                }\n                if (freq[x] > rank[x]) break;               // cannot be repaired\n                if (bad == 0) ++ans;                        // valid staircase\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

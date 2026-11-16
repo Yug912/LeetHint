@@ -1,0 +1,39 @@
+{
+  "slug": "count-valid-suffix-sorts-i",
+  "title": "Count Valid Suffix Sorts I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-10",
+  "pattern": "Prefix‑Suffix + Frequency Difference",
+  "tc": "O(n + V)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- vector<int> diff of size V+1 → O(V)  \n- three bool vectors of length n → O(n) (included in O(V) because V = 10⁵ ≥ n)  \n- other variables: O(1)",
+  "approach": "For an index i the prefix nums[0..i‑1] must already equal the prefix of target, the suffix target[i..] must be non‑increasing, and the multiset of elements in nums[i..] must be exactly the multiset of target[i..].  \nWe pre‑compute three boolean arrays: (1) longest matching prefix, (2) suffixes of target that are non‑increasing, (3) whether the multisets of the two suffixes are equal.  \nThe multiset equality is maintained while scanning from the end using a frequency difference array and a counter of how many values have non‑zero difference, giving O(1) update per position.  \nFinally we count all positions i that satisfy the three conditions.",
+  "hints": [
+    "When the suffix of nums is sorted in non‑increasing order, what must be true about the order of the corresponding part in target?  \nThe statement guarantees n ≤ 10⁵, so we cannot compare every pair of suffixes naïvely.",
+    "Use a frequency‑difference array (size max value) while scanning from the end.  \nFor nums = [1,5,6,4,6] and target = [1,5,6,6,4] the difference becomes zero exactly at positions 2 and 3.",
+    "```\npref[0] = (nums[0]==target[0])\nfor i = 1..n-1: pref[i] = pref[i-1] && (nums[i]==target[i])\n\nsufInc[n-1] = true\nfor i = n-2..0: sufInc[i] = (target[i] >= target[i+1]) && sufInc[i+1]\n\nnonZero = 0\nfor i = n-1..0:\n    update diff[nums[i]]++, adjust nonZero\n    update diff[target[i]]--, adjust nonZero\n    good[i] = (nonZero == 0)\n\nans = 0\nfor i = 0..n-1:\n    if (i==0 || pref[i-1]) && sufInc[i] && good[i]: ans++\nreturn ans\n```",
+    "**Single element** - the only suffix is the whole array.  \n`Input: nums=[5], target=[5]` → `Expected: 1`  \n⚠️ Bug: forgetting the prefix check and always counting i=0 → returns 0.  \n\n**All equal values** - every suffix is already non‑increasing.  \n`Input: nums=[2,2,2], target=[2,2,2]` → `Expected: 3`  \n⚠️ Bug: using `>` instead of `>=` for the non‑increasing test → counts only i=0.  \n\n**Different multisets** - prefix matches but suffixes have different element counts.  \n`Input: nums=[1,2,3], target=[1,3,2]` → `Expected: 0`  \n⚠️ Bug: checking only order (non‑increasing) and ignoring multiset equality → would count i=1.  \n\n**Maximum value** - values up to 10⁵ require the frequency array to be sized accordingly.  \n`Input: nums=[100000,1], target=[1,100000]` → `Expected: 0`  \n⚠️ Bug: allocating diff of size 100 instead of max+1 causes out‑of‑bounds access."
+  ],
+  "followUps": [
+    {
+      "q": "What if we need to sort the suffix in **non‑decreasing** order instead of non‑increasing?",
+      "a": "The same framework works; only the monotonic‑suffix condition changes to `target[i] <= target[i+1]`. All other steps stay O(n+V)."
+    },
+    {
+      "q": "Suppose the values can be up to 10⁹, making a direct frequency array impossible. How would you adapt?",
+      "a": "Use an unordered_map to store the difference counts and maintain the number of keys with non‑zero value; updates stay O(1) expected, giving O(n) expected time and O(k) space where k is the number of distinct values in the suffixes."
+    },
+    {
+      "q": "If the arrays are streamed and we can only read them once from left to right, can we still solve it?",
+      "a": "No, because we need suffix information (multiset equality and monotonicity) which requires looking at the tail first; a two‑pass solution (store the whole arrays) is necessary, so the streaming constraint would increase space to O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countSuffix(vector<int>& nums, vector<int>& target) {\n        int n = nums.size();\n        // 1) prefix equality\n        vector<char> pref(n);\n        pref[0] = (nums[0] == target[0]);\n        for (int i = 1; i < n; ++i)\n            pref[i] = pref[i-1] && (nums[i] == target[i]);\n\n        // 2) suffix non‑increasing in target\n        vector<char> sufInc(n);\n        sufInc[n-1] = 1;\n        for (int i = n-2; i >= 0; --i)\n            sufInc[i] = (target[i] >= target[i+1]) && sufInc[i+1];\n\n        // 3) suffix multiset equality using frequency difference\n        int maxVal = 0;\n        for (int v : nums) if (v > maxVal) maxVal = v;\n        for (int v : target) if (v > maxVal) maxVal = v;\n        vector<int> diff(maxVal + 1, 0);\n        int nonZero = 0;\n        vector<char> good(n);\n        auto add = [&](int x, int delta) {\n            int before = diff[x];\n            int after = before + delta;\n            if (before == 0 && after != 0) ++nonZero;\n            else if (before != 0 && after == 0) --nonZero;\n            diff[x] = after;\n        };\n        for (int i = n-1; i >= 0; --i) {\n            add(nums[i], +1);\n            add(target[i], -1);\n            good[i] = (nonZero == 0);\n        }\n\n        // 4) count valid indices\n        int ans = 0;\n        for (int i = 0; i < n; ++i) {\n            bool prefixOk = (i == 0) ? true : pref[i-1];\n            if (prefixOk && sufInc[i] && good[i]) ++ans;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "merge-intervals",
+  "title": "Merge Intervals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-10",
+  "pattern": "Sorting + Linear Scan",
+  "tc": "O(n log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- sort(): uses O(log n) recursion stack (introsort) → O(log n) (dominant auxiliary space)  \n- result vector: not counted (output)  \n- other variables: constant",
+  "approach": "Sort the intervals by their start coordinate, then walk through them once, merging each interval with the previous one whenever they overlap (including touching). Because after sorting any overlapping intervals appear consecutively, a single linear scan is sufficient to produce the minimal set of disjoint intervals.",
+  "hints": [
+    "If you arrange the intervals in order of their starting points, how do overlapping intervals appear relative to each other?  \nAll intervals satisfy 0 ≤ start ≤ end ≤ 10⁴.",
+    "Use a sorted list (vector) of intervals.  \nExample: after sorting [[1,3],[2,6],[8,10],[15,18]] the first two intervals can be merged into [1,6].",
+    "sort intervals by start  \nresult ← empty list  \npush first interval into result  \nfor each interval i from second to last  \n last ← last element of result  \n if i.start ≤ last.end  \n  last.end ← max(last.end, i.end)  \n else  \n  append i to result",
+    "**Single interval** - only one interval is present.  \n`Input: [[5,7]]` → `Expected: [[5,7]]`  \n⚠️ Bug: assuming at least two intervals and accessing intervals[1] → out‑of‑bounds error.  \n\n**Touching intervals** - end of one equals start of the next.  \n`Input: [[1,4],[4,5]]` → `Expected: [[1,5]]`  \n⚠️ Bug: using `<` instead of `<=` when checking overlap → returns `[[1,4],[4,5]]`.  \n\n**Reverse‑ordered input** - intervals are given in decreasing start order.  \n`Input: [[15,18],[8,10],[2,6],[1,3]]` → `Expected: [[1,6],[8,10],[15,18]]`  \n⚠️ Bug: skipping the initial sort step → merges nothing and returns the original order.  \n\n**All intervals overlap** - every interval overlaps with the others.  \n`Input: [[1,5],[2,6],[3,7]]` → `Expected: [[1,7]]`  \n⚠️ Bug: resetting the current merged interval each iteration instead of extending it → returns `[[1,5],[2,6],[3,7]]`."
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle the problem if the intervals arrive as a stream and you cannot store them all at once?",
+      "a": "You could maintain a min‑heap keyed by start time to always have the earliest interval available, merging on the fly as new intervals arrive. This yields O(log k) per insertion where k is the number of active overlapping intervals, and O(1) additional memory besides the heap."
+    },
+    {
+      "q": "Suppose the output must preserve the original relative order of the merged intervals as they appeared in the input. How does the solution change?",
+      "a": "After sorting and merging, map each merged interval back to the earliest original index it covers, then sort the merged list by those indices. The extra mapping costs O(n) time and O(n) space, while the overall complexity stays O(n log n)."
+    },
+    {
+      "q": "If the coordinate range were up to 10⁹ and the number of intervals up to 10⁵, would the current algorithm still be optimal?",
+      "a": "Yes. Sorting by start still costs O(n log n) and the linear scan is O(n); using 64‑bit integers for the endpoints avoids overflow. The time and space complexities remain O(n log n) and O(1) auxiliary respectively."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> merge(vector<vector<int>>& intervals) {\n        if (intervals.empty()) return {};\n        sort(intervals.begin(), intervals.end(),\n             [](const vector<int>& a, const vector<int>& b) {\n                 return a[0] < b[0];\n             });\n        vector<vector<int>> res;\n        res.push_back(intervals[0]);\n        for (size_t i = 1; i < intervals.size(); ++i) {\n            auto& cur = intervals[i];\n            auto& last = res.back();\n            if (cur[0] <= last[1]) {\n                last[1] = max(last[1], cur[1]);\n            } else {\n                res.push_back(cur);\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}
