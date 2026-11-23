@@ -1,0 +1,39 @@
+{
+  "slug": "repeated-string-match-ii",
+  "title": "Repeated String Match II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-22",
+  "pattern": "Modulo‑Repetition Matching",
+  "tc": "O(a.length · min(L, lcm(a.length, b.length)))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- integers `A, B, lcm, g`: O(1)  \n- loop counters and temporary variables: O(1)  \n- not counted: input strings, returned bool",
+  "approach": "The only thing that matters is where the repeated pattern **b·y** starts inside **a·x**.  \nTwo starts that differ by a multiple of `a.length` see exactly the same infinite periodic string, so we only need to try offsets `0 … a.length‑1`.  \nWhile checking an offset the characters repeat every `lcm(a.length, b.length)` positions, therefore it is sufficient to compare at most `min(L, lcm)` characters (`L = b.length·y`).  \nIf any offset fits inside the total length `N = a.length·x` and all those characters match, the whole `b·y` is a substring.",
+  "hints": [
+    "If we slide the long string `b*y` over `a*x`, how many different starting positions can produce distinct character sequences?  \n`a.length ≤ 100`.",
+    "Use the **least common multiple (LCM)** of the two lengths to bound the needed comparisons.  \nExample: `a = \"abcd\", b = \"cdab\"` → `lcm(4,4)=4`; checking the first 4 characters of any alignment is enough.",
+    "```\nif (B*y > A*x) return false\nlcm = A / gcd(A,B) * B\nfor offset = 0 .. A-1\n    if (offset + B*y > A*x) continue\n    limit = min( B*y , lcm )\n    for t = 0 .. limit-1\n        if a[(offset+t) % A] != b[t % B] break\n    if all matched return true\nreturn false\n```",
+    "**Length overflow** - `A*x` or `B*y` does not fit in 32‑bit.  \n`Input: a=\"a\", b=\"b\", x=1000000000, y=1000000000` → `Expected: false`  \n⚠️ Bug: using `int` for `N` causes overflow → returns `true`.\n\n**Offset too close to the end** - start position leaves not enough room.  \n`Input: a=\"ab\", b=\"ab\", x=1, y=1` → `Expected: true`  \n⚠️ Bug: checking all offsets 0..A‑1 without `offset+L<=N` → may return `true` for offset 1 incorrectly.\n\n**Very long repetition but short lcm** - comparing the whole `L` is unnecessary.  \n`Input: a=\"ab\", b=\"ab\", x=1000000000, y=1000000000` → `Expected: true`  \n⚠️ Bug: looping `t` up to `L` (10⁹) → TLE."
+  ],
+  "followUps": [
+    {
+      "q": "What if we must return the minimum number of repetitions of `a` needed so that `b*y` becomes a substring?",
+      "a": "After finding a feasible offset, the required repetitions are `ceil((offset + L) / A)`. The algorithm stays O(A·min(L,lcm)) and uses O(1) extra space."
+    },
+    {
+      "q": "How would the solution change if `a` and `b` could be up to 10⁵ characters long?",
+      "a": "We would still only need to examine at most `A` offsets, but each offset may require up to `lcm(A,B)` comparisons, which could be as large as 10¹⁰. We would replace the explicit character check with a rolling‑hash (e.g., KMP) that works in O(A+B) preprocessing and O(1) per character, bringing the total to O(A+B)."
+    },
+    {
+      "q": "Suppose the strings are streamed and cannot be stored entirely; can we still solve it?",
+      "a": "Yes. We only need the characters of `a` and `b` repeatedly; we can keep a circular buffer of size `max(A,B)` and generate characters on‑the‑fly using the offset and modulo arithmetic. The algorithm remains O(A·min(L,lcm)) time and O(max(A,B)) memory."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool repeatedStringMatch(string a, string b, int x, int y) {\n        int A = (int)a.size();\n        int B = (int)b.size();\n\n        long long N = 1LL * A * x;          // total length of a repeated x times\n        long long L = 1LL * B * y;          // total length of b repeated y times\n        if (L > N) return false;           // impossible to fit\n\n        // compute lcm(A, B) safely\n        int g = gcd(A, B);\n        int lcm = A / g * B;                // fits in int because A,B ≤ 100\n\n        // try every possible offset modulo A\n        for (int offset = 0; offset < A; ++offset) {\n            if (offset + L > N) continue;   // not enough room from this start\n\n            int limit = (int)min<long long>(L, lcm);\n            bool ok = true;\n            for (int t = 0; t < limit; ++t) {\n                char ca = a[(offset + t) % A];\n                char cb = b[t % B];\n                if (ca != cb) { ok = false; break; }\n            }\n            if (ok) return true;            // the whole b*y matches here\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

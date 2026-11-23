@@ -1,0 +1,39 @@
+{
+  "slug": "minimum-cost-to-make-red-nodes-connected",
+  "title": "Minimum Cost to Make Red Nodes Connected",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-22",
+  "pattern": "Tree DP (maximum‑weight connected subgraph)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- adjacency list `vector<vector<int>> g`: up to n‑1 edges → O(n)  \n- vector<int> `parent`: n entries → O(n)  \n- vector<int> `sz`: n entries → O(n)  \n- vector<long long> `dp`: n entries → O(n)  \n- recursion/stack depth: iterative stack of at most n → O(n) (not counted as extra memory beyond the vectors)  \n- not counted: input `colors`, `edges`, return value",
+  "approach": "Flip every initially red node to blue - this costs the sum of the sizes of their sub‑trees (base cost).  \nFor each node define a weight = +size if it is red, −size if it is blue. Keeping a node red instead of the “all‑blue” baseline changes the total cost by −weight.  \nThus we need a connected set of nodes with maximum total weight; the answer is *base − maxWeight*.  \nOn a rooted tree the maximum‑weight connected set that contains a node *u* and stays inside its subtree is  \n`dp[u] = weight[u] + Σ max(0, dp[child])`.  \nThe overall best weight is the maximum dp over all nodes (or 0 for the empty set).  \nA single post‑order traversal computes subtree sizes, dp values and the answer in O(n).",
+  "hints": [
+    "If we decide which nodes finally stay red, how does the flipping cost of a node relate to the size of its subtree?  \nThe statement guarantees n ≤ 10⁵, so an O(n) pass over the tree is feasible.",
+    "Use a depth‑first traversal (stack‑based) and store for each node its “weight” (±subtree size) and a DP value.  \nIn example 1 the weights are [+1, −1, +1]; the DP at node 1 becomes −1 + max(0,1) + max(0,0)=0.",
+    "```\norder = preorder list of nodes (root → children)\nprocess nodes in reverse order:\n    sz[u] = 1 + Σ sz[child]\n    weight = (colors[u]=='R' ? sz[u] : -sz[u])\n    dp[u] = weight + Σ max(0, dp[child])\n    base += (colors[u]=='R' ? sz[u] : 0)\n    best = max(best, dp[u])\nanswer = base - max(0, best)\n```",
+    "**Single node, red** - the only node must stay red, cost 0.  \n`Input: n=1, colors=\"R\", edges=[]` → `Expected: 0`  \n⚠️ Bug: returning `base` directly (which is 1) → returns 1.\n\n**All blue, large chain** - no flips needed, answer 0.  \n`Input: n=5, colors=\"BBBBB\", edges=[[0,1],[1,2],[2,3],[3,4]]` → `Expected: 0`  \n⚠️ Bug: using `int` for sums (subtree size up to 10⁵) and then casting to `long long` only at the end may overflow in intermediate `int` → wrong large negative/positive value.\n\n**Mixed colors, negative dp** - forgetting `max(0, dp[child])` adds negative contributions.  \n`Input: n=3, colors=\"BRB\", edges=[[0,1],[1,2]]` → `Expected: 0` (keep all blue)  \n⚠️ Bug: `dp[u] = weight + Σ dp[child]` → dp[1] becomes ‑1, best = ‑1, answer = base ‑ (‑1) = 2 (incorrect).\n\n**Skewed tree, alternating colors** - tests recursion depth and correct accumulation.  \n`Input: n=4, colors=\"RBRB\", edges=[[0,1],[1,2],[2,3]]` → `Expected: 2`  \n⚠️ Bug: using recursive DFS without tail‑call may cause stack overflow on such a line‑shaped tree."
+  ],
+  "followUps": [
+    {
+      "q": "What if the cost of flipping a node equals its depth instead of its subtree size?",
+      "a": "Depth is independent of the subtree, so the base cost becomes Σ depth[u] for initially red nodes and the weight of a node is +depth if red, −depth if blue. The same DP formula works, giving O(n) time and O(n) space."
+    },
+    {
+      "q": "Suppose we also require the blue nodes to form a single connected component (or be empty).",
+      "a": "The problem becomes “partition the tree into at most two connected monochrome components”. One can try both possibilities for the root component and run a similar DP with two states per node, leading to O(n) time but O(n) memory for the two DP arrays."
+    },
+    {
+      "q": "If the tree is given as a parent array and we may only use O(1) extra memory besides the input, can we still solve it?",
+      "a": "Yes. Process nodes in reverse order of the parent array (which is a topological order from leaves to root), compute subtree sizes and dp values in‑place in two auxiliary long‑long arrays of size n (still O(n) memory). To achieve O(1) extra memory you would need to overwrite the parent array with the dp values, but the asymptotic time stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minCost(int n, string colors, vector<vector<int>>& edges) {\n        vector<vector<int>> g(n);\n        for (auto &e : edges) {\n            int u = e[0], v = e[1];\n            g[u].push_back(v);\n            g[v].push_back(u);\n        }\n\n        vector<int> parent(n, -1);\n        vector<int> order;\n        order.reserve(n);\n        stack<int> st;\n        st.push(0);\n        parent[0] = -2;                     // mark root\n\n        while (!st.empty()) {\n            int u = st.top(); st.pop();\n            order.push_back(u);\n            for (int v : g[u]) {\n                if (parent[v] == -1) {\n                    parent[v] = u;\n                    st.push(v);\n                }\n            }\n        }\n\n        vector<int> sz(n, 1);\n        vector<long long> dp(n, 0);\n        long long base = 0;\n        long long best = 0;\n\n        for (int i = n - 1; i >= 0; --i) {\n            int u = order[i];\n            long long weight = 0;\n            // accumulate children sizes and dp contributions\n            for (int v : g[u]) {\n                if (parent[v] == u) {\n                    sz[u] += sz[v];\n                }\n            }\n            // compute weight after size is known\n            if (colors[u] == 'R') {\n                weight = sz[u];\n                base += sz[u];\n            } else {\n                weight = - (long long)sz[u];\n            }\n\n            long long cur = weight;\n            for (int v : g[u]) {\n                if (parent[v] == u) {\n                    cur += max(0LL, dp[v]);\n                }\n            }\n            dp[u] = cur;\n            best = max(best, dp[u]);\n        }\n\n        return base - max(0LL, best);\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "4/4"
+  }
+}

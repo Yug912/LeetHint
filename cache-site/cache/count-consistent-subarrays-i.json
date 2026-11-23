@@ -1,0 +1,39 @@
+{
+  "slug": "count-consistent-subarrays-i",
+  "title": "Count Consistent Subarrays I",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-22",
+  "pattern": "Two‑Pointer Scan (fixed‑left, expanding right)",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- two integers curMin and curAnd: O(1)  \n- loop counters and answer variable: O(1)  \n- not counted: input vector, returned int",
+  "approach": "The minimum of a subarray can only stay the same or decrease when we extend it, and the bitwise AND can only stay the same or lose bits. By fixing the left endpoint and expanding the right endpoint while keeping the current minimum and current AND, we can test every subarray in O(1) per extension and count those where the two values are equal.",
+  "hints": [
+    "When you enlarge a subarray by one element, which two aggregate values can be updated using only the new element?  \nThe array length satisfies n ≤ 100.",
+    "Keep two running integers: the current minimum and the current bitwise AND.  \nFor nums = [5,3,1,2], starting at left = 0 we have curMin = curAnd = 5; after adding 3 we get curMin = 3, curAnd = 5 & 3 = 1.",
+    "for left = 0 … n‑1  \n    curMin = curAnd = nums[left]  \n    if curMin == curAnd add 1 to answer  \n    for right = left+1 … n‑1  \n        curMin = min(curMin, nums[right])  \n        curAnd = curAnd & nums[right]  \n        if curMin == curAnd add 1 to answer",
+    "**Single element** - the only subarray is the element itself.  \n`Input: [0]` → `Expected: 1`  \n⚠️ Bug: returning 0 for all inputs → returns 0.  \n\n**All equal** - every subarray is consistent.  \n`Input: [1,1,1]` → `Expected: 6`  \n⚠️ Bug: counting only singletons → returns 3.  \n\n**Decreasing values** - min changes while AND may stay larger.  \n`Input: [7,3,1]` → `Expected: 4` (subarrays: [7],[3],[1],[3,1])  \n⚠️ Bug: using `curAnd = curAnd | nums[right]` instead of `&` → returns 6.  \n\n**Mixed zeros** - zero forces both min and AND to zero quickly.  \n`Input: [5,0,2]` → `Expected: 5` (subarrays: [5],[0],[2],[5,0],[0,2])  \n⚠️ Bug: stopping the inner loop when curAnd becomes 0 → misses [0,2]."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the solution if nums.length could be up to 10⁵?",
+      "a": "The O(n²) scan would be too slow, so we would need a monotonic‑stack or segment‑tree technique to jump over ranges where the minimum and AND stay unchanged, achieving O(n log C) or O(n · log max) time."
+    },
+    {
+      "q": "What if the definition changed to “bitwise OR equals the maximum” of the subarray?",
+      "a": "The same incremental idea works, but we would maintain the running maximum and running OR while extending the right endpoint; the algorithm remains O(n²) with O(1) extra space."
+    },
+    {
+      "q": "Suppose the array is streamed and you may only use O(1) extra memory, cannot store the whole array.",
+      "a": "You can still process each left endpoint on the fly by reading the stream once per left, keeping only the current minimum and OR/AND; this requires O(n) passes over the stream, still O(1) auxiliary space but O(n²) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countConsistent(vector<int>& nums) {\n        int n = nums.size();\n        long long ans = 0;\n        for (int left = 0; left < n; ++left) {\n            int curMin = nums[left];\n            int curAnd = nums[left];\n            if (curMin == curAnd) ++ans;\n            for (int right = left + 1; right < n; ++right) {\n                curMin = min(curMin, nums[right]);\n                curAnd &= nums[right];\n                if (curMin == curAnd) ++ans;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

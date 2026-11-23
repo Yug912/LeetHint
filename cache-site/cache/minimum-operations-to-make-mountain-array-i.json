@@ -1,0 +1,39 @@
+{
+  "slug": "minimum-operations-to-make-mountain-array-i",
+  "title": "Minimum Operations to Make Mountain Array I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-22",
+  "pattern": "DP with prefix minima",
+  "tc": "O(n · (max(nums)+n))",
+  "sc": "O(n · (max(nums)+n))",
+  "spaceBreakdown": "- vector<vector<long long>> left: (n × (maxV+1)) entries → O(n·maxV)  \n- vector<vector<long long>> right: (n × (maxV+1)) entries → O(n·maxV)  \n- auxiliary 1‑D vectors for DP rows: O(maxV)  \n- recursion depth: none",
+  "approach": "Fix a possible value v for the peak.  \nAll elements left of the peak must form a strictly increasing sequence that ends with v, and all elements right of the peak must form a strictly decreasing sequence that starts with v.  \nBecause every element can be increased arbitrarily, it is enough to consider final values from 1 to max(nums)+n.  \nWe compute for every position i and every feasible value v the minimal cost to obtain a strictly increasing prefix (dpL) and a strictly decreasing suffix (dpR) using DP with a running prefix minimum, then combine the two tables for each internal peak.",
+  "hints": [
+    "If we decide what value the peak will finally have, how must the numbers on its left and on its right be arranged?  \nThe array length can be as small as 2.",
+    "Use a 2‑D DP table dp[i][v] that stores the cheapest cost to make the prefix 0…i strictly increasing and end with value v.  \nFor the array [2,2,3] and v=3 at i=1, the best previous value is 2, giving cost |2‑2|+|2‑3|=1.",
+    "for each i from 0 to n‑1\n    for each v from 1 to maxV\n        dpL[i][v] = min_{u<v} dpL[i‑1][u] + |nums[i]‑v|\nfor each i from n‑1 down to 0\n    for each v from 1 to maxV\n        dpR[i][v] = min_{u<v} dpR[i+1][u] + |nums[i]‑v|\nanswer = min_{peak i, v} dpL[i][v] + dpR[i][v] - |nums[i]‑v|",
+    "**n = 2** - a mountain needs a peak with neighbours on both sides.  \n`Input: [1,2]` → `Expected: -1`  \n⚠️ Bug: returning 0 when n < 3 → returns 0.\n\n**All equal values** - the algorithm must raise some elements to obtain strict monotonicity.  \n`Input: [5,5,5,5]` → `Expected: 4` (e.g., [5,6,5,4])  \n⚠️ Bug: using ≤ instead of < in the DP transition → treats equal neighbours as valid and returns 0.\n\n**Maximum possible final value** - the DP range must include max(nums)+n, otherwise the optimal solution is cut off.  \n`Input: [1000,1,1000]` → `Expected: 999` (peak = 2, raise middle to 1000)  \n⚠️ Bug: setting maxV = max(nums) only → returns 998."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array length can be up to 10⁵ instead of 10³?",
+      "a": "The DP over all values becomes too heavy. We can compress the value domain by observing that only values appearing in the optimal solution matter, leading to an O(n log n) solution using a Fenwick tree or segment tree for prefix minima."
+    },
+    {
+      "q": "Suppose each operation can change an element by any integer amount (cost = |new‑old|) but we are also given a total budget B and must decide if a mountain is achievable within B.",
+      "a": "Compute the minimal cost exactly as above and simply compare it with B; the algorithm and its complexity stay the same, O(n·maxV)."
+    },
+    {
+      "q": "How would you adapt the solution if the array must remain non‑decreasing on the left side and non‑increasing on the right side (allowing equal neighbours)?",
+      "a": "Change the DP transition to allow u ≤ v instead of u < v, i.e., use the running minimum up to v instead of v‑1. The rest of the algorithm is unchanged, still O(n·maxV) time and space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums) {\n        int n = nums.size();\n        if (n < 3) return -1;\n        int mx = *max_element(nums.begin(), nums.end());\n        int maxV = mx + n;                     // upper bound for final values\n        const long long INF = (1LL<<60);\n\n        // left DP\n        vector<vector<long long>> left(n, vector<long long>(maxV + 1, INF));\n        for (int v = 1; v <= maxV; ++v) {\n            left[0][v] = llabs((long long)nums[0] - v);\n        }\n        for (int i = 1; i < n; ++i) {\n            long long best = INF;\n            for (int v = 1; v <= maxV; ++v) {\n                // best = min_{u < v} left[i-1][u]\n                best = min(best, left[i-1][v-1]);\n                if (best < INF)\n                    left[i][v] = best + llabs((long long)nums[i] - v);\n            }\n        }\n\n        // right DP (strictly decreasing to the right)\n        vector<vector<long long>> right(n, vector<long long>(maxV + 1, INF));\n        for (int v = 1; v <= maxV; ++v) {\n            right[n-1][v] = llabs((long long)nums[n-1] - v);\n        }\n        for (int i = n - 2; i >= 0; --i) {\n            long long best = INF;\n            for (int v = 1; v <= maxV; ++v) {\n                best = min(best, right[i+1][v-1]);   // u < v for decreasing sequence\n                if (best < INF)\n                    right[i][v] = best + llabs((long long)nums[i] - v);\n            }\n        }\n\n        long long ans = INF;\n        for (int peak = 1; peak <= n - 2; ++peak) {\n            for (int v = 1; v <= maxV; ++v) {\n                if (left[peak][v] == INF || right[peak][v] == INF) continue;\n                long long total = left[peak][v] + right[peak][v] - llabs((long long)nums[peak] - v);\n                ans = min(ans, total);\n            }\n        }\n        return (ans >= INF/2) ? -1 : (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "4/4"
+  }
+}

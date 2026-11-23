@@ -1,0 +1,39 @@
+{
+  "slug": "assign-umbrella-on-rainy-days",
+  "title": "Assign Umbrella on Rainy Days",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-22",
+  "pattern": "Greedy Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cntA, cntB: constant space → O(1)  \n- loop index i and temporary booleans: constant space → O(1)  \n- not counted: input vector, returned answer vector",
+  "approach": "Observe that on each day we can decide who gets the umbrella only from the current rain pattern and the total number of times each person has already received it. By scanning the days left‑to‑right, keeping two counters for Alice and Bob, we can apply the given rules directly: if only one needs it, give it to that person; if both need it, give it to the one with the smaller counter (tie → Alice). This greedy simulation is optimal because the decision for a day never influences future “need” conditions, only the counters used for tie‑breaking, which the rule already specifies.",
+  "hints": [
+    "When does Alice need the umbrella compared to Bob, given the binary rain pattern?  \nThe array length satisfies n ≤ 100.",
+    "Use two integer counters (one for Alice, one for Bob).  \nExample: on rain = [1,1,0,1,1], on day 0 both need it, counts are (0,0) → give to Alice.",
+    "for i = 0 … n‑1\n    needBob   = (rain[i] == 1)\n    needAlice = (i+1 < n && rain[i] == 1 && rain[i+1] == 1)\n    if !needBob && !needAlice → answer[i] = \"None\"\n    else if needBob && !needAlice → answer[i] = \"Bob\",  cntB++\n    else if !needBob && needAlice → answer[i] = \"Alice\", cntA++\n    else // both need\n        if cntA <= cntB → answer[i] = \"Alice\", cntA++\n        else           → answer[i] = \"Bob\",   cntB++",
+    "**Single day, rain** - only Bob can need it.  \n`Input: [1]` → `Expected: [\"Bob\"]`  \n⚠️ Bug: always checking `i+1` without bounds → may read out‑of‑range and give Alice incorrectly.\n\n**Single day, no rain** - nobody needs it.  \n`Input: [0]` → `Expected: [\"None\"]`  \n⚠️ Bug: treating `rain[0]==1` as both need → returns [\"Alice\"].\n\n**All days rainy** - Alice needs on every day except the last, Bob needs every day.  \n`Input: [1,1,1,1]` → `Expected: [\"Alice\",\"Bob\",\"Alice\",\"Bob\"]`  \n⚠️ Bug: always giving to Alice when both need → returns [\"Alice\",\"Alice\",\"Alice\",\"Alice\"].\n\n**Rain only on isolated days** - Alice never needs it.  \n`Input: [0,1,0,1,0]` → `Expected: [\"None\",\"Bob\",\"None\",\"Bob\",\"None\"]`  \n⚠️ Bug: using `rain[i]==rain[i+1]==1` as `rain[i]==1 && rain[i+1]==1` without checking i+1 existence → may miss last‑day Bob."
+  ],
+  "followUps": [
+    {
+      "q": "What if there are k identical umbrellas that can be shared among Alice and Bob?",
+      "a": "We would need to track how many umbrellas each person currently holds and simulate borrowing/returning; the decision becomes a resource‑allocation problem solvable in O(n) by maintaining the current count of free umbrellas."
+    },
+    {
+      "q": "Suppose n can be up to 10⁵ and the input is provided as a stream (you cannot store the whole array).",
+      "a": "The same left‑to‑right simulation works because we only need the current rain value and the next one to decide Alice’s need; we can keep a one‑element look‑ahead buffer, achieving O(1) extra memory and O(n) time."
+    },
+    {
+      "q": "How would you modify the solution to also return the final counts of how many times Alice and Bob received the umbrella?",
+      "a": "After the simulation finishes, simply return the two counters alongside the answer vector (e.g., as a pair or additional output). The extra work is O(1) and does not affect the overall O(n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> assignUmbrella(vector<int>& rain) {\n        int n = rain.size();\n        vector<string> ans(n);\n        int cntA = 0, cntB = 0;\n        for (int i = 0; i < n; ++i) {\n            bool needBob = (rain[i] == 1);\n            bool needAlice = (i + 1 < n && rain[i] == 1 && rain[i + 1] == 1);\n            if (!needBob && !needAlice) {\n                ans[i] = \"None\";\n            } else if (needBob && !needAlice) {\n                ans[i] = \"Bob\";\n                ++cntB;\n            } else if (!needBob && needAlice) {\n                ans[i] = \"Alice\";\n                ++cntA;\n            } else { // both need it\n                if (cntA <= cntB) {\n                    ans[i] = \"Alice\";\n                    ++cntA;\n                } else {\n                    ans[i] = \"Bob\";\n                    ++cntB;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "2/2"
+  }
+}

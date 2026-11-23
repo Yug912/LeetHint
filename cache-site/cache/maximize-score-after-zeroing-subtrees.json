@@ -1,0 +1,39 @@
+{
+  "slug": "maximize-score-after-zeroing-subtrees",
+  "title": "Maximize Score After Zeroing Subtrees",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-22",
+  "pattern": "Tree DP (post‑order)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> children: up to n entries → O(n)  \n- vector<long long> dp: n entries → O(n)  \n- vector<int> order: n entries → O(n)  \n- recursion depth: none (iterative)",
+  "approach": "Process the tree bottom‑up. For each node compute the best total score its whole subtree can contribute if none of its ancestors have zeroed it. This value is the node’s own score plus the contributions of all children, possibly minus the contribution of one child that we decide to zero. For a required operation we must subtract the smallest child contribution; for an optional operation we subtract it only when it is negative. The answer is the value computed for the root.",
+  "hints": [
+    "When a node decides which child subtree to erase, what single piece of information about each child determines the effect on the total score?  \nThe statement guarantees a tree with at most 10⁵ nodes.",
+    "Use a post‑order traversal (stack‑based) to visit children before their parent.  \nFor node 3 in the first example, children contributions are {3, ‑3}; the smallest is ‑3, so erasing that child improves the sum.",
+    "```\nbuild children lists\norder = nodes in preorder\nfor u in reverse(order):\n    total = score[u] + sum(dp[child])\n    if u has children:\n        minChild = minimum dp[child]\n        if op[u] == 1:               // must erase one\n            total -= minChild\n        else if minChild < 0:        // optional erase\n            total -= minChild\n    dp[u] = total\nreturn dp[0]\n```",
+    "**Single node** - the tree consists only of the root (a leaf).  \n`Input: parent = [-1], op = [1], score = [-10]` → `Expected: -10`  \n⚠️ Bug: treating every node as non‑leaf and always subtracting a child → returns 0.\n\n**All positive scores, optional ops** - zeroing any subtree would only decrease the sum.  \n`Input: parent = [-1,0,0], op = [0,0,0], score = [5,2,3]` → `Expected: 10`  \n⚠️ Bug: always subtracting the smallest child even when it is positive → returns 8.\n\n**Negative child contribution, required op** - we must erase a child even if all are positive.  \n`Input: parent = [-1,0,0], op = [1,0,0], score = [1, -5, 2]` → `Expected: 3`  \n⚠️ Bug: forgetting the “must erase” rule and doing nothing → returns  -2.\n\n**Skewed tree (linked list)** - depth = n, recursion may overflow.  \n`Input: parent = [-1,0,1,2,3], op = [1,1,1,1,1], score = [1,1,1,1,1]` → `Expected: 5`  \n⚠️ Bug: recursive DFS without tail‑call → stack overflow at n = 10⁵."
+  ],
+  "followUps": [
+    {
+      "q": "What if the operation type `op[i]` could be any integer k (0 ≤ k ≤ deg(i)) meaning we must erase exactly k different child subtrees?",
+      "a": "The DP stays the same, but instead of picking a single minimum we need the sum of the k smallest child contributions. Sorting each child list would give O(∑deg·log deg) = O(n log n); using a linear‑time selection (nth_element) yields O(n) overall."
+    },
+    {
+      "q": "How would the solution change if the tree were given as an undirected graph and the root could be any node?",
+      "a": "First pick an arbitrary root (e.g., node 0) and run a BFS/DFS to orient the edges, building a directed children list. The DP then proceeds exactly as before, still O(n) time and space."
+    },
+    {
+      "q": "Suppose the scores are streamed one by one in the order of a BFS traversal and you cannot store the whole tree in memory (O(1) extra space).",
+      "a": "You would need to process nodes in reverse BFS order, which requires the whole tree or at least a stack of pending nodes; with O(1) extra memory the problem becomes infeasible because child contributions must be known before the parent is evaluated."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxScore(vector<int>& parent, vector<int>& op, vector<int>& score) {\n        int n = parent.size();\n        vector<vector<int>> child(n);\n        for (int i = 1; i < n; ++i) {\n            child[parent[i]].push_back(i);\n        }\n\n        // iterative preorder to obtain processing order\n        vector<int> order;\n        order.reserve(n);\n        vector<int> stk;\n        stk.push_back(0);\n        while (!stk.empty()) {\n            int u = stk.back();\n            stk.pop_back();\n            order.push_back(u);\n            for (int v : child[u]) stk.push_back(v);\n        }\n\n        vector<long long> dp(n, 0);\n        for (int idx = (int)order.size() - 1; idx >= 0; --idx) {\n            int u = order[idx];\n            long long total = score[u];\n            for (int v : child[u]) total += dp[v];\n\n            if (!child[u].empty()) {\n                long long minChild = LLONG_MAX;\n                for (int v : child[u]) {\n                    if (dp[v] < minChild) minChild = dp[v];\n                }\n                if (op[u] == 1) {               // must erase exactly one child\n                    total -= minChild;\n                } else {                         // optional erase\n                    if (minChild < 0) total -= minChild;\n                }\n            }\n            dp[u] = total;\n        }\n        return (int)dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}

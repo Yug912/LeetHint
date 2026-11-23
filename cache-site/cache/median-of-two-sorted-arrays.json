@@ -1,0 +1,39 @@
+{
+  "slug": "median-of-two-sorted-arrays",
+  "title": "Median of Two Sorted Arrays",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-16",
+  "pattern": "Binary Search on Partition",
+  "tc": "O(log min(m,n))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No additional containers are allocated.  \n- Recursion depth: none (iterative binary search).  \n- not counted: input vectors, returned double.",
+  "approach": "The median splits the combined sorted array into two halves of equal size (or off‑by‑one).  \nIf we cut the first array at position *i* and the second at *j = (m+n+1)/2 - i*, the elements left of the cuts are the left half and the rest are the right half.  \nA binary search on *i* (the smaller array) finds the cut where the greatest element on the left is ≤ the smallest element on the right in both arrays.  \nFrom that cut we compute the median directly.",
+  "hints": [
+    "When the two sorted arrays are merged, which element(s) sit exactly in the middle of the combined length?  \nThe total length satisfies m + n ≤ 2000.",
+    "Use binary search on the smaller array to locate the correct partition.  \nExample: nums1 = [1,3], nums2 = [2] → partition after 1 element of nums1 and 1 element of nums2 gives left side {1,2} and right side {3}.",
+    "```\nensure nums1 is the shorter array\nlow = 0, high = length(nums1)\nwhile low ≤ high:\n    i = (low + high) / 2\n    j = (m + n + 1) / 2 - i\n    if left1 ≤ right2 and left2 ≤ right1:\n        compute median from max(left1,left2) and min(right1,right2)\n    else if left1 > right2: high = i - 1\n    else: low = i + 1\n```",
+    "**Empty first array** - one array may be empty while the other contains all elements.  \n`Input: nums1 = [], nums2 = [5]` → `Expected: 5.0`  \n⚠️ Bug: assuming both arrays have at least one element and accessing nums1[0] → out‑of‑bounds.\n\n**All elements equal** - both arrays consist of the same repeated value.  \n`Input: nums1 = [2,2], nums2 = [2,2,2]` → `Expected: 2.0`  \n⚠️ Bug: using `<` instead of `<=` in the partition check may reject the correct cut and continue searching forever.\n\n**Odd total length with cut at array end** - the correct partition may place the cut at the end of the shorter array.  \n`Input: nums1 = [1,2,3,4], nums2 = [5,6,7]` → `Expected: 4.0`  \n⚠️ Bug: initializing `rightMin1` to `INT_MAX` only when `i == m` but later using it in a comparison that expects `rightMin1` to be a real element; if `i == m` and the condition is wrong, median becomes wrong."
+  ],
+  "followUps": [
+    {
+      "q": "What if the two input arrays are not sorted?",
+      "a": "We would need to sort each array first, which costs O(m log m + n log n) time, after which the same binary‑search partition works. The overall complexity becomes O(m log m + n log n)."
+    },
+    {
+      "q": "How would you generalize the solution to find the k‑th smallest element for any 1 ≤ k ≤ m + n?",
+      "a": "The same partition idea works: binary‑search a cut i in the first array such that i elements are taken from it and k‑i from the second, and ensure the left side’s maximum ≤ the right side’s minimum. This runs in O(log min(m,n)) time and O(1) space."
+    },
+    {
+      "q": "Suppose the arrays are huge and can only be accessed sequentially (streaming) with O(1) extra memory. How would you find the median?",
+      "a": "You would need to perform a two‑pointer merge up to the middle position, which is O(m + n) time and O(1) space, because random access required for binary search is unavailable."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double findMedianSortedArrays(vector<int>& nums1, vector<int>& nums2) {\n        // Ensure nums1 is the smaller array\n        if (nums1.size() > nums2.size())\n            return findMedianSortedArrays(nums2, nums1);\n        \n        int m = nums1.size();\n        int n = nums2.size();\n        int low = 0, high = m;\n        const int INF = numeric_limits<int>::max();\n        const int NINF = numeric_limits<int>::min();\n        \n        while (low <= high) {\n            int i = (low + high) / 2;               // cut in nums1\n            int j = (m + n + 1) / 2 - i;            // cut in nums2\n            \n            int left1  = (i == 0) ? NINF : nums1[i - 1];\n            int right1 = (i == m) ? INF  : nums1[i];\n            int left2  = (j == 0) ? NINF : nums2[j - 1];\n            int right2 = (j == n) ? INF  : nums2[j];\n            \n            if (left1 <= right2 && left2 <= right1) {\n                // Correct partition found\n                if ((m + n) % 2 == 1) {\n                    return static_cast<double>(max(left1, left2));\n                } else {\n                    double lo = static_cast<double>(max(left1, left2));\n                    double hi = static_cast<double>(min(right1, right2));\n                    return (lo + hi) / 2.0;\n                }\n            } else if (left1 > right2) {\n                // i is too big, move left\n                high = i - 1;\n            } else {\n                // i is too small, move right\n                low = i + 1;\n            }\n        }\n        // Should never reach here if input sizes are valid\n        return 0.0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "2/2"
+  }
+}

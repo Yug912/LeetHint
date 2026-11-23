@@ -1,0 +1,39 @@
+{
+  "slug": "minimum-set-bits-in-a-valid-integer",
+  "title": "Minimum Set Bits in a Valid Integer",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-22",
+  "pattern": "Subset DP (SOS DP) on bitmasks",
+  "tc": "O(17·n + 17·2¹⁷)",
+  "sc": "O(2¹⁷)",
+  "spaceBreakdown": "- vector<char> bad(1<<17): 2¹⁷ bytes → O(2¹⁷)  \n- vector<char> sub(1<<17): 2¹⁷ bytes → O(2¹⁷)  \n- int cnt[17]: constant → O(1)  \n- recursion depth: none",
+  "approach": "Only the lowest 17 bits can be set ( nums[i] ≤ 10⁵ < 2¹⁷ ).  \nFor every length‑k subarray we compute its AND xᵢ with a sliding window that keeps, for each bit, how many numbers in the window contain that bit.  \nA candidate y is valid iff no window AND is a sub‑mask of (~y).  \nWe mark every occurring window AND in an array bad[mask] and run a SOS‑DP (subset DP) so that sub[mask] tells whether any sub‑mask of mask appears as a window AND.  \nFinally we enumerate all masks y, keep those with sub[FULL ^ y] = false, and return the smallest pop‑count; if none exist return ‑1.",
+  "hints": [
+    "With a fixed k, what must a valid y share with each window‑AND xᵢ?  \nAll numbers are ≤ 10⁵, so only 17 bits matter.",
+    "Use a bit‑mask array and SOS‑DP (subset DP).  \nFor the example nums=[6,7,3], k=2 the window ANDs are 6 (110) and 3 (011); after SOS‑DP we can test every y quickly.",
+    "```\ncompute all window ANDs with a sliding‑window bit counter\nif any AND == 0 → return -1\nbad[mask] = true for every AND mask\nsub = bad\nfor each bit b:\n    for each mask:\n        if mask has bit b: sub[mask] |= sub[mask ^ (1<<b)]\nans = INF\nfor y = 1 … FULL:\n    if sub[FULL ^ y] == false:\n        ans = min(ans, popcount(y))\nreturn (ans==INF) ? -1 : ans\n```",
+    "**Zero window AND** - a window AND becomes 0, making any y invalid.  \n`Input: nums = [2,1], k = 2` → `Expected: -1`  \n⚠️ Bug: stopping the scan when a mask repeats and returning the current answer → returns 1.\n\n**All windows identical** - every window AND equals the same mask.  \n`Input: nums = [7,7,7], k = 1` → `Expected: 1` (y = 1,2 or 4)  \n⚠️ Bug: checking only the complement of y against bad[] (without SOS) → may think y=1 invalid.\n\n**Maximum bits used** - numbers use all 17 bits.  \n`Input: nums = [131071,131071], k = 2` → `Expected: 1` (any single bit works)  \n⚠️ Bug: using an int array of size 1<<16 for SOS → out‑of‑bounds access."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10⁹ (30 bits) while n remains 10⁵?",
+      "a": "The bit‑mask size becomes 2³⁰, impossible for SOS‑DP. One would need a different approach, e.g. greedy hitting‑set on at most 30 bits using BFS over subsets, giving O(30·2³⁰) which is still too large; the problem would have to be reformulated."
+    },
+    {
+      "q": "How would you adapt the solution if you had to output the actual y with the minimum number of set bits (any one if several)?",
+      "a": "While scanning masks y, keep the first mask achieving the minimal pop‑count; after the loop return that mask instead of only the count. Time and space stay unchanged."
+    },
+    {
+      "q": "Suppose the array is streamed and you can store only O(1) extra memory besides the input window. Can you still solve it?",
+      "a": "No, because we need to know all distinct window AND masks to run the subset DP; with O(1) memory we cannot record them, so the problem becomes infeasible under the same constraints."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSetBits(vector<int>& nums, int k) {\n        const int B = 17;\n        const int FULL = (1 << B) - 1;\n        int n = nums.size();\n        vector<int> cnt(B, 0);\n        // initialise first window\n        for (int i = 0; i < k; ++i) {\n            int v = nums[i];\n            for (int b = 0; b < B; ++b)\n                if (v & (1 << b)) ++cnt[b];\n        }\n        auto curMask = [&]() -> int {\n            int m = 0;\n            for (int b = 0; b < B; ++b)\n                if (cnt[b] == k) m |= (1 << b);\n            return m;\n        };\n        int mask = curMask();\n        if (mask == 0) return -1;\n        vector<char> bad(1 << B, 0);\n        bad[mask] = 1;\n        // slide the window\n        for (int i = k; i < n; ++i) {\n            int out = nums[i - k];\n            for (int b = 0; b < B; ++b)\n                if (out & (1 << b)) --cnt[b];\n            int in = nums[i];\n            for (int b = 0; b < B; ++b)\n                if (in & (1 << b)) ++cnt[b];\n            mask = curMask();\n            if (mask == 0) return -1;\n            bad[mask] = 1;\n        }\n        // SOS DP: sub[mask] = true if any submask of mask appears as a window AND\n        vector<char> sub = bad;\n        for (int b = 0; b < B; ++b) {\n            for (int m = 0; m < (1 << B); ++m) {\n                if (m & (1 << b))\n                    sub[m] |= sub[m ^ (1 << b)];\n            }\n        }\n        int ans = INT_MAX;\n        for (int y = 1; y <= FULL; ++y) {\n            int comp = FULL ^ y;\n            if (!sub[comp]) {\n                int pc = __builtin_popcount(y);\n                if (pc < ans) ans = pc;\n            }\n        }\n        return ans == INT_MAX ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3"
+  }
+}
