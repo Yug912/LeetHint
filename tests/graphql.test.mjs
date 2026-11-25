@@ -4,17 +4,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import '../shared/problem-data.js';
+
 const live = process.env.LEETHINT_LIVE === '1';
 
 test('the questionData query the extension uses still returns two-sum', { skip: !live && 'set LEETHINT_LIVE=1 to run' }, async () => {
-  // The exact query from content/content.js (fetchQuestionData)
-  const query = `query questionData($titleSlug: String!) {
-    question(titleSlug: $titleSlug) {
-      questionFrontendId title difficulty content hints
-      topicTags { name }
-      codeSnippets { langSlug code }
-    }
-  }`;
+  // The exact query content/content.js and tools/prefill.mjs send
+  const query = globalThis.LeetHintProblem.QUESTION_QUERY;
   const res = await fetch('https://leetcode.com/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Referer: 'https://leetcode.com/problems/two-sum/' },

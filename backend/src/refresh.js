@@ -19,11 +19,11 @@
 
 import { PROMPT_VERSION, buildPrompt } from '../../shared/prompts.js';
 import { htmlToText } from '../../shared/html-text.js';
+import '../../shared/problem-data.js';   // globalThis.LeetHintProblem
 import { openStream } from './providers.js';
 import { readCache, writeCache, isCompleteReply, cacheableFrom } from './store.js';
 
 const NEWEST = 20;
-const SNIPPET_LANGS = ['cpp', 'java', 'python3', 'c', 'javascript', 'typescript', 'csharp', 'golang', 'kotlin', 'swift', 'rust'];
 
 async function leetcode(query, variables = {}) {
   const res = await fetch('https://leetcode.com/graphql', {
@@ -69,18 +69,14 @@ export async function liveContestSlugs(now = Date.now()) {
   return { live: live.map(c => c.titleSlug), slugs };
 }
 
-// The problem as the extension would send it (content/content.js)
+// The problem as the extension would send it — the same query and mapping
+// as content/content.js (shared/problem-data.js)
 async function problemData(slug) {
-  const q = (await leetcode(`query questionData($titleSlug: String!) {
-    question(titleSlug: $titleSlug) { questionFrontendId title difficulty content hints topicTags { name } codeSnippets { langSlug code } }
-  }`, { titleSlug: slug })).question;
+  const { QUESTION_QUERY, problemFromQuestion } = globalThis.LeetHintProblem;
+  const q = (await leetcode(QUESTION_QUERY, { titleSlug: slug })).question;
   if (!q?.content) return null;
-  const snippets = Object.fromEntries((q.codeSnippets || []).filter(s => SNIPPET_LANGS.includes(s.langSlug)).map(s => [s.langSlug, s.code]));
-  return {
-    slug, title: q.title, problemNumber: String(q.questionFrontendId || ''), difficulty: q.difficulty,
-    description: htmlToText(q.content), cppSnippet: snippets.cpp || '',
-    topicTags: (q.topicTags || []).map(t => t.name), officialHints: (q.hints || []).map(htmlToText)
-  };
+  const { codeSnippets, ...problem } = problemFromQuestion(q, { slug, htmlToText });
+  return problem;
 }
 
 async function sha256(text) {

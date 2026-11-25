@@ -102,13 +102,8 @@ async function fetchQuestionData(slug) {
   if (!slug) return null;
   if (graphqlCache[slug]) return graphqlCache[slug];
 
-  const query = `query questionData($titleSlug: String!) {
-    question(titleSlug: $titleSlug) {
-      questionFrontendId title difficulty content hints
-      topicTags { name }
-      codeSnippets { langSlug code }
-    }
-  }`;
+  // Same fields as the pre-fill (shared/problem-data.js)
+  const query = LeetHintProblem.QUESTION_QUERY;
 
   const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
   const controller = new AbortController();
@@ -155,31 +150,13 @@ async function getEnrichedProblemData() {
   // No API data → we depend on the DOM, so make sure it's the NEW problem's DOM
   if (!q) await waitForDomOf(slug);
   const data = getProblemData(!q?.difficulty);
-  if (!q) return data;
+  if (!q) return { ...data, description: LeetHintProblem.normalizeDescription(data.description) };
 
-  // Premium-locked problems return content: null — keep DOM description then
-  const apiDescription = q.content ? htmlToText(q.content) : '';
-  // LeetCode's exact starter code per language — used to translate the solution
-  const codeSnippets = {};
-  for (const s of q.codeSnippets || []) {
-    if (SNIPPET_LANGS.includes(s.langSlug)) codeSnippets[s.langSlug] = s.code;
-  }
-
-  return {
-    ...data,
-    title:         q.title || data.title,
-    difficulty:    q.difficulty || data.difficulty,
-    problemNumber: q.questionFrontendId || data.problemNumber,
-    description:   apiDescription || data.description,
-    topicTags:     (q.topicTags || []).map(t => t.name),
-    officialHints: (q.hints || []).map(htmlToText),
-    cppSnippet:    codeSnippets.cpp || '',
-    codeSnippets
-  };
+  // The same mapping the pre-fill uses (shared/problem-data.js, loaded before
+  // this file). Premium-locked problems return content: null — the DOM
+  // description is kept then.
+  return LeetHintProblem.problemFromQuestion(q, { slug, htmlToText, dom: data });
 }
-
-// Same keys as LANGUAGES in shared/prompts.js (content scripts can't import modules)
-const SNIPPET_LANGS = ['cpp', 'java', 'python3', 'c', 'javascript', 'typescript', 'csharp', 'golang', 'kotlin', 'swift', 'rust'];
 
 
 // ─────────────────────────────────────────────

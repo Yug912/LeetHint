@@ -89,7 +89,7 @@ async function askContentScript(tabId) {
     if (res?.data?.title) return res.data;
   } catch (e) {
     console.log('LeetHint SW: content script not ready, injecting...');
-    await chrome.scripting.executeScript({ target: { tabId }, files: ['content/content.js'] }).catch(() => {});
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['shared/problem-data.js', 'content/content.js'] }).catch(() => {});
   }
   for (let attempt = 0; attempt < 8; attempt++) {
     const res = await chrome.tabs.sendMessage(tabId, { type: 'GET_PROBLEM_DATA' }).catch(() => null);

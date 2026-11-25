@@ -5,6 +5,8 @@
 // buildHintsPrompt for the offline Chrome Built-in AI fallback).
 // Pure functions only: no chrome.*, no fetch, no secrets.
 
+import './problem-data.js';   // sets globalThis.LeetHintProblem (normalizeDescription)
+
 // Bump when prompts change — part of the server cache key, so old cached
 // replies are never served for a new prompt
 export const PROMPT_VERSION = 'p9';
@@ -32,13 +34,17 @@ export const LANGUAGES = {
 //    decides the intended complexity — never slice the description.
 // ─────────────────────────────────────────────
 
+// Collapses scraping differences (CRLF, odd spaces) so the prompt — and its
+// hash, the Worker's cache key — is the same for every caller
+const { normalizeDescription } = globalThis.LeetHintProblem;
+
 export function buildProblemContext(problem) {
   const { title, problemNumber, difficulty, description, topicTags, officialHints, cppSnippet } = problem;
   const parts = [
     `PROBLEM: ${problemNumber ? `#${problemNumber} ` : ''}"${title}" (${difficulty || 'Unknown'})`,
     '',
     'FULL STATEMENT (examples + constraints included; "10^5" means ten to the fifth):',
-    description || '(statement unavailable — rely on your knowledge of this exact LeetCode problem)'
+    normalizeDescription(description) || '(statement unavailable — rely on your knowledge of this exact LeetCode problem)'
   ];
   if (cppSnippet) {
     parts.push('', 'EXACT LEETCODE C++ SIGNATURE (use this verbatim):', '```cpp', cppSnippet.trim(), '```');
