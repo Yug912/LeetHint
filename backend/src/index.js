@@ -1,7 +1,7 @@
 // backend/src/index.js — LeetHint API (Cloudflare Worker)
 //
 //   POST /v1/generate   { action, problem, code? }  →  the provider's SSE stream, passed through
-//   GET  /health                                     →  { ok, providers }
+//   GET  /health                                     →  { ok, version, promptVersion, providers }
 //   GET  /config                                     →  feature switches (cached 1 hour)
 //   POST /v1/report     { slug, promptVersion, reason, note? }  →  204
 //   GET  /stats?token=  →  today's use per provider + trial budget left (STATS_TOKEN secret)
@@ -11,6 +11,7 @@
 // it is useless as a free general-purpose AI proxy.
 // API keys live only in Worker secrets (wrangler secret put ...).
 
+import { WORKER_VERSION } from './version.js';
 import { ACTIONS, LANGUAGES, PROMPT_VERSION, buildPrompt,
          INTERVIEW_STAGES, INTERVIEW_EVENTS, INTERVIEW_MINUTES } from '../../shared/prompts.js';
 import { configuredProviders, describeModels, openStream } from './providers.js';
@@ -64,7 +65,7 @@ async function route(request, env, ctx) {
 
   if (url.pathname === '/health' && request.method === 'GET') {
     // Provider and model NAMES only — never anything about the keys themselves
-    const health = { ok: true, providers: configuredProviders(env).map(p => p.name) };
+    const health = { ok: true, version: WORKER_VERSION, promptVersion: PROMPT_VERSION, providers: configuredProviders(env).map(p => p.name) };
     if (url.searchParams.has('models')) health.models = await describeModels(env);
     return json(health, 200, cors);
   }

@@ -42,10 +42,28 @@ test('KV is still read as a fallback, D1 receives new writes', async () => {
   assert.deepEqual(await readCache(env, 'k2'), { raw: 'new reply', kind: 'openai', layer: 'd1' });
 });
 
-test('rows older than 30 days count as a miss', async () => {
+test('translations and fixes older than 30 days count as a miss', async () => {
   const env = { DB: fakeD1() };
-  await writeCache(env, 'old', 'x', 'openai', Date.now() - 31 * 24 * 3600 * 1000);
+  const old = Date.now() - 31 * 24 * 3600 * 1000;
+  await writeCache(env, 'old', 'x', 'openai', old);
+  await writeCache(env, 'p9:translate-java:two-sum:abc', 'x', 'openai', old);
   assert.equal(await readCache(env, 'old'), null);
+  assert.equal(await readCache(env, 'p9:translate-java:two-sum:abc'), null);
+});
+
+test('hints and solutions never expire (D1 and the KV-only setup)', async () => {
+  const env = { DB: fakeD1() };
+  const year = Date.now() - 400 * 24 * 3600 * 1000;
+  for (const key of ['p9:hints:two-sum:abc', 'p9:hints-python3:two-sum:abc', 'p9:solve:two-sum:abc']) {
+    await writeCache(env, key, 'x', 'openai', year);
+    assert.equal((await readCache(env, key))?.layer, 'd1', key);
+  }
+  const puts = [];
+  const kvOnly = { HINTS_CACHE: { put: async (k, v, opts) => puts.push([k, opts]) } };
+  await writeCache(kvOnly, 'p9:hints:two-sum:abc', 'x', 'openai');
+  await writeCache(kvOnly, 'p9:translate-java:two-sum:abc', 'x', 'openai');
+  assert.equal(puts[0][1].expirationTtl, undefined);
+  assert.equal(puts[1][1].expirationTtl, 30 * 24 * 3600);
 });
 
 test('the KV fallback ends after KV_FALLBACK_UNTIL, and a KV failure is a miss', async () => {

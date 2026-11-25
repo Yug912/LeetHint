@@ -20,7 +20,7 @@ answers cache misses, Fix and mock interviews.
 | `POST /v1/generate` | `{ action, problem, ... }` → the provider's SSE stream, passed through untouched |
 | `POST /v1/report` | `{ slug, promptVersion, reason, note? }` → 204 ("Report wrong hint") |
 | `GET /config` | remote switches from `[vars]` `CONFIG_*`, cached 1 hour |
-| `GET /health` | `{ ok, providers }` (`?models` adds model names) |
+| `GET /health` | `{ ok, version, promptVersion, providers }` (`?models` adds model names; `version` is `src/version.js`) |
 | `GET /stats?token=` | today's tokens per provider, trial budget left, trials granted (secret `STATS_TOKEN`; 404 otherwise) |
 
 Error shapes (shared contract): busy → `429 { error: "busy", retryAfter, position }` +

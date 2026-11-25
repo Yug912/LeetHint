@@ -3,8 +3,13 @@
 // still READ as a fallback for a month after the switch, then removed.
 // Every function works with either binding missing (then nothing is shared).
 
-const CACHE_TTL_MS = 30 * 24 * 3600 * 1000;   // replies older than 30 days are regenerated
+// Hints and solutions are kept forever: the key holds the prompt version and
+// the statement's hash, so a new prompt or a changed problem gets a new key
+// anyway. Everything else (translations, fixes) is regenerated after 30 days.
+const CACHE_TTL_MS = 30 * 24 * 3600 * 1000;
 const KV_TTL_SECONDS = 30 * 24 * 3600;
+// Key: "<promptVersion>:<action>[-<lang>]:<slug>:<hash>"
+export const keepsForever = key => /^[^:]*:(hints|solve)[-:]/.test(String(key));
 // D1 rows hold up to 2 MB; a reply is ~5-50 KB. Anything bigger isn't cached
 // (R2 would need a payment method on the account — never add one)
 const MAX_BODY_BYTES = 1_900_000;
@@ -63,7 +68,7 @@ export async function readCache(env, key, now = Date.now()) {
   if (env.DB) {
     try {
       const row = await env.DB.prepare('SELECT kind, body, created FROM cache WHERE key = ?').bind(key).first();
-      if (row && now - row.created < CACHE_TTL_MS) return { raw: row.body, kind: row.kind, layer: 'd1' };
+      if (row && (keepsForever(key) || now - row.created < CACHE_TTL_MS)) return { raw: row.body, kind: row.kind, layer: 'd1' };
     } catch (e) {
       console.warn('D1 cache read failed:', e.message);
     }
@@ -95,7 +100,7 @@ export async function writeCache(env, key, raw, kind, now = Date.now()) {
       .bind(key, kind, raw, now).run();
     return;
   }
-  if (env.HINTS_CACHE) await env.HINTS_CACHE.put(key, raw, { expirationTtl: KV_TTL_SECONDS, metadata: { kind } });
+  if (env.HINTS_CACHE) await env.HINTS_CACHE.put(key, raw, keepsForever(key) ? { metadata: { kind } } : { expirationTtl: KV_TTL_SECONDS, metadata: { kind } });
 }
 
 
