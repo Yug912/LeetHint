@@ -1,0 +1,39 @@
+{
+  "slug": "group-anagrams",
+  "title": "Group Anagrams",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Hashing",
+  "tc": "O(N · L log L)",
+  "sc": "O(N · L)",
+  "spaceBreakdown": "- unordered_map<string, vector<string>> mp: up to N entries, each key ≤ L chars and total stored strings ≤ N·L → O(N·L)  \n- temporary string key for each input: ≤ L chars → O(L) (reused)  \n- recursion depth: none  \n- not counted: input vector, returned vector of groups",
+  "approach": "Two strings are anagrams exactly when they contain the same multiset of letters.  \nBy converting each string to a canonical representation (its letters sorted) we obtain an identical key for all members of one anagram group.  \nStoring the original strings in a hash table keyed by that canonical form groups them in linear‑time overall, and the groups are then collected for the answer.",
+  "hints": [
+    "If two strings can be rearranged to become each other, what stays unchanged about their characters?  \nEach string length is at most 100.",
+    "Use an unordered_map whose key is a canonical form of the string.  \nExample: \"eat\" → sort → \"aet\"; map[\"aet\"] will collect \"eat\", \"tea\", \"ate\".",
+    "for each s in strs\n    key = sorted copy of s\n    mp[key].push_back(s)\nresult = all values of mp\nreturn result",
+    "**Empty string** - the only string is empty  \n`Input: [\"\"]` → `Expected: [[\"\"]]`  \n⚠️ Bug: using the original string as key (no sorting) → returns `[[\"\"]]` (still correct) but fails for `[\"ab\",\"ba\"]`.\n\n**All identical strings** - many duplicates of the same word  \n`Input: [\"abc\",\"abc\",\"abc\"]` → `Expected: [[\"abc\",\"abc\",\"abc\"]]`  \n⚠️ Bug: using an unordered_set instead of a map → returns `[[\"abc\"]]` (duplicates lost).\n\n**Mixed empty and non‑empty** - empty strings appear with others  \n`Input: [\"\",\"a\",\"\"]` → `Expected: [[\"\",\"\"],[\"a\"]]`  \n⚠️ Bug: using string length as key → groups both empty strings together (correct) but also groups any other strings of length 1 together, e.g. `[\"a\",\"b\"]` would become `[[\"a\",\"b\"]]` incorrectly.\n\n**All single‑character strings, all different** - each should be its own group  \n`Input: [\"a\",\"b\",\"c\",\"d\"]` → `Expected: [[\"a\"],[\"b\"],[\"c\"],[\"d\"]]` (order may vary)  \n⚠️ Bug: forgetting to push each string into the map value (e.g., only inserting the first occurrence) → would return empty groups or missing strings."
+  ],
+  "followUps": [
+    {
+      "q": "What if the strings may contain both lowercase and uppercase letters and grouping must be case‑insensitive?",
+      "a": "Convert every character to the same case (e.g., lower) before building the canonical key. The algorithmic complexity stays O(N·L log L) time and O(N·L) space."
+    },
+    {
+      "q": "What if the output must have each group sorted lexicographically and the groups themselves sorted by their first element?",
+      "a": "After filling the hash table, sort each vector<string> in the map, then collect them into a result vector and sort that vector using a comparator that looks at the first element of each group. This adds O(N log N) extra time for the final sorting while keeping O(N·L) space."
+    },
+    {
+      "q": "What if the total length of all strings is huge and we want to avoid storing a sorted copy for each string?",
+      "a": "Use a 26‑element count array as the key (e.g., encode counts into a string like \"1#0#2#…\"). The count array is built in O(L) time, and the key length is fixed (26 · small constant), so the overall time remains O(N·L) and space stays O(N) for the map entries."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<string>> groupAnagrams(vector<string>& strs) {\n        unordered_map<string, vector<string>> mp;\n        mp.reserve(strs.size() * 2);\n        for (const string& s : strs) {\n            string key = s;\n            sort(key.begin(), key.end());\n            mp[key].push_back(s);\n        }\n        vector<vector<string>> ans;\n        ans.reserve(mp.size());\n        for (auto& kv : mp) {\n            ans.push_back(move(kv.second));\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3"
+  }
+}

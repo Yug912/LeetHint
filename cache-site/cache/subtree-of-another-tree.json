@@ -1,0 +1,39 @@
+{
+  "slug": "subtree-of-another-tree",
+  "title": "Subtree of Another Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Tree Traversal + Subtree Matching",
+  "tc": "O(N·M)",
+  "sc": "O(H)",
+  "spaceBreakdown": "- recursion depth of isSubtree / isSame: up to height of root → O(H)  \n- recursion depth of isSame when a match is attempted: up to height of subRoot → O(H) (included in the same bound)  \n- not counted: input trees, constant‑size locals",
+  "approach": "If a node in **root** has the same value as the root of **subRoot**, the only way the subtree can match is that the two trees are identical from that point onward. Therefore we walk the whole **root** tree, and whenever the values coincide we launch a second recursive check that compares both structures and values node‑by‑node. If any such check succeeds we return true; otherwise we continue the walk. This guarantees correctness because every possible starting position is examined and the identical‑tree test is exact.",
+  "hints": [
+    "When a node in the big tree has the same value as the root of the small tree, what extra condition must hold for the small tree to be a subtree?  \nThe input guarantees at least one node in each tree.",
+    "Use a depth‑first recursive traversal.  \nExample: at root node 4 (value matches subRoot’s root 4) we start a second recursion that checks left child 1 vs 1 and right child 2 vs 2 and succeeds.",
+    "function isSubtree(root, subRoot):\n    if root is null: return false\n    if identical(root, subRoot): return true\n    return isSubtree(root.left, subRoot) OR isSubtree(root.right, subRoot)\n\nfunction identical(a, b):\n    if a is null and b is null: return true\n    if a is null or b is null: return false\n    return a.val == b.val AND identical(a.left, b.left) AND identical(a.right, b.right)",
+    "**Single node match** - both trees consist of one node with the same value.  \n`Input: root = [1], subRoot = [1]` → `Expected: true`  \n⚠️ Bug: only checking root.val equality without recursion → returns `true` (still correct) but fails on next case.\n\n**Duplicate values, wrong structure** - values line up but children differ.  \n`Input: root = [1,2,3], subRoot = [1,2]` → `Expected: false`  \n⚠️ Bug: returning true when root.val matches and ignoring left/right checks → returns `true`.\n\n**Skewed left tree** - both trees are linked‑list shaped to the left.  \n`Input: root = [5,4,null,3,null,2,null,1], subRoot = [4,3,null,2]` → `Expected: true`  \n⚠️ Bug: using BFS queue that assumes balanced tree → may miss deep left nodes → returns `false`.\n\n**Subtree equals whole tree** - subRoot is exactly root.  \n`Input: root = [2,1,3], subRoot = [2,1,3]` → `Expected: true`  \n⚠️ Bug: forgetting to check the case where root itself matches before recursing → returns `false`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the trees contain up to 10⁵ nodes each?",
+      "a": "The O(N·M) approach would become too slow. We can serialize both trees (e.g., preorder with null markers) and apply a linear‑time string‑matching algorithm such as KMP, achieving O(N+M) time and O(N+M) extra space."
+    },
+    {
+      "q": "How would you modify the solution to work when the trees are given as streams of nodes (cannot store the whole tree in memory)?",
+      "a": "Perform a rolling hash (e.g., Rabin‑Karp) on the preorder traversal as it streams, keeping only the current hash window of size equal to the subRoot’s serialized length. This uses O(h) memory for the current path and O(1) additional space for the hash."
+    },
+    {
+      "q": "Suppose you need to return the node in **root** where the matching subtree starts (or null if none).",
+      "a": "Keep a pointer to the current root node when calling the identical check; if it returns true, propagate that pointer up instead of a boolean. The algorithmic complexity stays O(N·M) and space stays O(H)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isSubtree(TreeNode* root, TreeNode* subRoot) {\n        if (!root) return false;\n        if (isSame(root, subRoot)) return true;\n        return isSubtree(root->left, subRoot) || isSubtree(root->right, subRoot);\n    }\nprivate:\n    bool isSame(TreeNode* s, TreeNode* t) {\n        if (!s && !t) return true;\n        if (!s || !t) return false;\n        if (s->val != t->val) return false;\n        return isSame(s->left, t->left) && isSame(s->right, t->right);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

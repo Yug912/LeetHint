@@ -1,0 +1,39 @@
+{
+  "slug": "spiral-matrix",
+  "title": "Spiral Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Boundary Simulation",
+  "tc": "O(m·n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- output vector<int> res: m·n elements → not counted (LeetCode convention)  \n- four integer boundaries (top, bottom, left, right): constant → O(1)  \n- loop variables and temporary ints: constant → O(1)  \n- not counted: input matrix",
+  "approach": "Observe that the matrix can be peeled layer by layer: the outermost row, then the outermost column, then the bottom row in reverse, then the left column upward, and repeat on the reduced sub‑matrix. By keeping four moving boundaries (top, bottom, left, right) we can simulate exactly this process in linear time. The algorithm stops when the boundaries cross, guaranteeing every element is visited once.",
+  "hints": [
+    "When you write down the coordinates of the cells in the required order, how do the row and column indices move after each complete side of the traversal?  \nThe matrix size is at most 10 × 10.",
+    "Use four integer boundaries (top, bottom, left, right) to walk around the current rectangle.  \nExample: for `[[1,2,3],[4,5,6],[7,8,9]]` the first pass reads 1‑2‑3 (top row), then 6‑9 (right column), then 8‑7 (bottom row reversed), then 4 (left column upward).",
+    "```\ntop = 0, bottom = rows‑1, left = 0, right = cols‑1\nwhile top ≤ bottom and left ≤ right:\n    traverse left→right on row top\n    top += 1\n    traverse top→bottom on column right\n    right -= 1\n    if top ≤ bottom:\n        traverse right→left on row bottom\n        bottom -= 1\n    if left ≤ right:\n        traverse bottom→top on column left\n        left += 1\n```",
+    "**Single row** - only one horizontal pass is needed.  \n`Input: [[1,2,3,4]]` → `Expected: [1,2,3,4]`  \n⚠️ Bug: using `while (top < bottom && left < right)` → returns `[1,2,3]` (misses last element).\n\n**Single column** - only one vertical pass is needed.  \n`Input: [[1],[2],[3],[4]]` → `Expected: [1,2,3,4]`  \n⚠️ Bug: same condition `top < bottom && left < right` → returns `[1,2,3]`.\n\n**Rectangular where rows > cols** - the last inner layer may be a single column.  \n`Input: [[1,2],[3,4],[5,6]]` → `Expected: [1,2,4,6,5,3]`  \n⚠️ Bug: forgetting the `if (left ≤ right)` check before the left‑column walk → adds extra `3` at the end, output `[1,2,4,6,5,3,3]`.\n\n**Square with odd size** - the centre cell must be visited exactly once.  \n`Input: [[1,2,3],[4,5,6],[7,8,9]]` → `Expected: [1,2,3,6,9,8,7,4,5]`  \n⚠️ Bug: using `while (top < bottom && left < right)` → skips the centre `5`."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the algorithm to return the elements in counter‑clockwise spiral order?",
+      "a": "Reverse the direction of each side: start with the left column top→bottom, then the bottom row left→right, then the right column bottom→top, then the top row right→left, updating the same four boundaries. The time stays O(m·n) and space stays O(1)."
+    },
+    {
+      "q": "What if the matrix is extremely large (e.g., 10⁴ × 10⁴) and cannot fit entirely in memory, but rows are streamed one by one?",
+      "a": "Keep only the current row in memory and maintain four boundary indices plus a small buffer for the pending column elements. You would need an auxiliary queue for the elements of the right and left columns that are waiting to be output, resulting in O(min(m,n)) extra space while still O(m·n) time."
+    },
+    {
+      "q": "Suppose you must output the spiral order as a singly‑linked list instead of a vector. How does the complexity change?",
+      "a": "You can build the list on the fly while traversing, appending each visited value to the tail in O(1) amortized time. The overall time remains O(m·n) and the extra space is still O(1) besides the output list nodes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> spiralOrder(vector<vector<int>>& matrix) {\n        int m = matrix.size();\n        int n = matrix[0].size();\n        vector<int> res;\n        res.reserve(m * n);\n        \n        int top = 0, bottom = m - 1;\n        int left = 0, right = n - 1;\n        \n        while (top <= bottom && left <= right) {\n            // top row\n            for (int j = left; j <= right; ++j) res.push_back(matrix[top][j]);\n            ++top;\n            // right column\n            for (int i = top; i <= bottom; ++i) res.push_back(matrix[i][right]);\n            --right;\n            // bottom row (if still valid)\n            if (top <= bottom) {\n                for (int j = right; j >= left; --j) res.push_back(matrix[bottom][j]);\n                --bottom;\n            }\n            // left column (if still valid)\n            if (left <= right) {\n                for (int i = bottom; i >= top; --i) res.push_back(matrix[i][left]);\n                ++left;\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

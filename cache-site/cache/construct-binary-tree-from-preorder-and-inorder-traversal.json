@@ -1,0 +1,39 @@
+{
+  "slug": "construct-binary-tree-from-preorder-and-inorder-traversal",
+  "title": "Construct Binary Tree from Preorder and Inorder Traversal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Divide and Conquer with Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> pos: up to n entries → O(n)  \n- recursion depth: up to n (skewed tree) → O(n)  \n- not counted: input vectors, returned tree",
+  "approach": "The first element of the preorder traversal is always the root of the current (sub)tree, and its position in the inorder traversal splits the left and right subtrees. By storing every value’s index in the inorder array in a hash map we can locate this split in O(1). Recursively build the left part, then the right part while moving a pointer through the preorder list. This divide‑and‑conquer construction visits each node once, guaranteeing correctness because the two traversals uniquely define the tree.",
+  "hints": [
+    "What does the first element of the preorder list tell you about the tree?  \nAll node values are unique.",
+    "Use a hash map to retrieve each value’s index in the inorder array in O(1).  \nExample: for preorder = [3,9,20,15,7] the root is 3; the map tells us 3 is at index 1 in inorder = [9,3,15,20,7].",
+    "```\nbuild(l, r):\n    if l == r: return null\n    rootVal = preorder[nextPre]\n    nextPre++\n    i = map[rootVal]          // position in inorder\n    node = new TreeNode(rootVal)\n    node.left  = build(l, i)\n    node.right = build(i+1, r)\n    return node\n```",
+    "**Single node** - the tree consists of only one element.  \n`Input: preorder = [-1], inorder = [-1]` → `Expected: [-1]`  \n⚠️ Bug: returning nullptr for leaf → returns `[]`\n\n**Left skewed** - every node has only a left child.  \n`Input: preorder = [5,4,3,2,1], inorder = [1,2,3,4,5]` → `Expected: [5,4,3,2,1]` (left‑only chain)  \n⚠️ Bug: using wrong bounds when recursing → returns a right‑only chain\n\n**Right skewed** - every node has only a right child.  \n`Input: preorder = [1,2,3,4,5], inorder = [1,2,3,4,5]` → `Expected: [1,null,2,null,3,null,4,null,5]`  \n⚠️ Bug: decrementing the preorder index instead of incrementing → returns a left‑only chain\n\n**Negative values** - values can be negative.  \n`Input: preorder = [-10,-20,-30], inorder = [-30,-20,-10]` → `Expected: [-10,null,-20,null,-30]`  \n⚠️ Bug: assuming values are non‑negative and using them as array indices → out‑of‑bounds access"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree can contain duplicate values?",
+      "a": "The hash‑map approach no longer works because a value may appear at multiple positions. One must either store all positions (e.g., a vector per value) and pick the correct one during recursion, or fall back to an O(n²) algorithm that scans the inorder segment each time. Time becomes O(n²) in the worst case, space stays O(n)."
+    },
+    {
+      "q": "How would you avoid recursion depth overflow for n = 10⁵?",
+      "a": "Replace the recursive construction with an explicit stack that simulates the same divide‑and‑conquer process. Each stack frame stores the current inorder bounds and the node being processed, keeping the algorithm iterative while preserving O(n) time and O(n) auxiliary space."
+    },
+    {
+      "q": "Suppose you are not allowed to use extra O(n) memory besides the output tree.",
+      "a": "You can build the tree by repeatedly searching the root value in the inorder segment using linear scan (or binary search if the inorder array is sorted). This removes the hash map, increasing the time to O(n log n) (binary search) or O(n²) (linear scan) while using only O(1) extra space besides the recursion stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {\n        int n = preorder.size();\n        unordered_map<int,int> idx;\n        idx.reserve(n * 2);\n        for (int i = 0; i < n; ++i) idx[inorder[i]] = i;\n        int prePos = 0;\n        return build(preorder, 0, n, prePos, idx);\n    }\nprivate:\n    TreeNode* build(const vector<int>& preorder, int l, int r,\n                    int& prePos, const unordered_map<int,int>& idx) {\n        if (l >= r) return nullptr;\n        int rootVal = preorder[prePos++];\n        TreeNode* node = new TreeNode(rootVal);\n        int i = idx.at(rootVal);          // split point in inorder\n        node->left  = build(preorder, l, i, prePos, idx);\n        node->right = build(preorder, i + 1, r, prePos, idx);\n        return node;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

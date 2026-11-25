@@ -1,0 +1,39 @@
+{
+  "slug": "minimum-window-substring",
+  "title": "Minimum Window Substring",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Sliding Window",
+  "tc": "O(m + n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int need[128]: fixed size → O(1)  \n- int have[128]: fixed size → O(1)  \n- other variables (indices, counters): O(1)  \n- not counted: input strings, returned substring",
+  "approach": "Treat the problem as finding the smallest contiguous segment of **s** that satisfies a multiset requirement given by **t**.  \nMaintain the counts of needed characters and slide a window with two pointers, expanding until the window covers all required counts and then contracting from the left to shrink it as much as possible.  \nThe first window that fulfills the requirement gives a candidate; every time we shrink we update the best answer.  \nBecause each pointer moves at most |s| steps, the algorithm runs in linear time.",
+  "hints": [
+    "When a window of **s** is enlarged, which property tells us that it already contains every character of **t** the required number of times?  \nThe statement guarantees 1 ≤ |s|, |t| ≤ 10⁵.",
+    "Use an array (or unordered_map) that stores how many times each character is still needed.  \nExample: for s = \"ADOBECODEBANC\", t = \"ABC\" the array starts with A:1, B:1, C:1; after reading \"ADOBE\" the counts become A:0, B:1, C:1, so the window is still missing B and C.",
+    "```\nfill need[] with frequencies of t\nrequired = number of chars with need>0\nleft = 0, formed = 0\nfor right from 0 to s.length-1\n    add s[right] to have[]\n    if have[s[right]] == need[s[right]] then formed++\n    while formed == required\n        update best window\n        remove s[left] from have[]\n        if have[s[left]] < need[s[left]] then formed--\n        left++\n```",
+    "**Single character, exact match** - the whole string is the answer.  \n`Input: s = \"a\", t = \"a\"` → `Expected: \"a\"`  \n⚠️ Bug: returning empty string when `formed == required` is checked after the inner loop → returns `\"\"`.\n\n**t longer than s** - impossible to satisfy.  \n`Input: s = \"a\", t = \"aa\"` → `Expected: \"\"`  \n⚠️ Bug: using `required = t.length()` instead of distinct characters → may think a window is valid and return `\"a\"`.\n\n**All characters the same** - need to respect multiplicity.  \n`Input: s = \"aaaaa\", t = \"aaa\"` → `Expected: \"aaa\"`  \n⚠️ Bug: decreasing `formed` with `<` instead of `==` when contracting → returns `\"aaaa\"`.\n\n**Characters appear only at the ends** - window must stretch to the far side.  \n`Input: s = \"abbbbbc\", t = \"abc\"` → `Expected: \"abbbbbc\"`  \n⚠️ Bug: stopping contraction as soon as the leftmost needed char is removed, forgetting that later chars are still needed → returns `\"abbbbb\"`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the strings can contain any Unicode character, not just ASCII?",
+      "a": "Replace the fixed‑size 128 arrays with an unordered_map<char,int> (or unordered_map<char32_t,int> for full Unicode). The algorithmic steps stay the same; time remains O(m + n) and space becomes O(k) where k is the number of distinct characters in t."
+    },
+    {
+      "q": "How would you modify the solution to return only the length of the minimum window instead of the substring itself?",
+      "a": "Keep the same sliding‑window logic but store only the best length (and optionally the start index if reconstruction is later needed). The returned value becomes the integer bestLen, and the code avoids the final `substr` call, still O(m + n) time and O(1) extra space."
+    },
+    {
+      "q": "Suppose **s** is given as a stream that can be read only once and cannot be stored entirely in memory. Can the problem still be solved?",
+      "a": "Yes, by maintaining the same sliding window counters while reading characters one by one; we keep the left pointer index and a circular buffer of at most the current window size (which never exceeds the answer length). The algorithm stays linear in the number of streamed characters, using O(answer) additional memory."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        if (t.empty() || s.empty()) return \"\";\n        // frequency of characters needed from t\n        int need[128] = {0};\n        for (char c : t) ++need[(int)c];\n        int required = 0;\n        for (int i = 0; i < 128; ++i) if (need[i] > 0) ++required;\n\n        int have[128] = {0};\n        int formed = 0;\n        int left = 0, right = 0;\n        int bestLen = INT_MAX, bestStart = 0;\n\n        while (right < (int)s.size()) {\n            char c = s[right];\n            ++have[(int)c];\n            if (need[(int)c] > 0 && have[(int)c] == need[(int)c])\n                ++formed;\n\n            // try to shrink the window\n            while (left <= right && formed == required) {\n                if (right - left + 1 < bestLen) {\n                    bestLen = right - left + 1;\n                    bestStart = left;\n                }\n                char cl = s[left];\n                if (need[(int)cl] > 0 && have[(int)cl] == need[(int)cl])\n                    --formed;\n                --have[(int)cl];\n                ++left;\n            }\n            ++right;\n        }\n\n        if (bestLen == INT_MAX) return \"\";\n        return s.substr(bestStart, bestLen);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3"
+  }
+}

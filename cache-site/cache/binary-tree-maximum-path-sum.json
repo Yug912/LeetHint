@@ -1,0 +1,39 @@
+{
+  "slug": "binary-tree-maximum-path-sum",
+  "title": "Binary Tree Maximum Path Sum",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "DP on Trees (post‑order)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion depth: up to h → O(h)  \n- global variable `best`: O(1)  \n- not counted: input tree",
+  "approach": "The maximum‑sum path that can be extended upward from a node consists of the node’s value plus the larger of the two child gains (ignoring negative gains). The overall optimum is either such an extendable path or a path that passes through a node connecting both left and right gains. Perform a post‑order DFS, compute child gains, update a global maximum, and return the extendable gain.",
+  "hints": [
+    "What part of a path can be safely discarded when extending the path upward through a parent node?  \nThe tree may contain up to 3·10⁴ nodes.",
+    "Use a post‑order depth‑first recursion to gather information from children before processing a node.  \nExample: for root = [1,2,3] the left child returns gain = 2, the right child returns gain = 3, so the best path through the root is 2 + 1 + 3 = 6.",
+    "function dfs(node):\n    if node is null: return 0\n    left  = max(0, dfs(node.left))\n    right = max(0, dfs(node.right))\n    update global answer with node.val + left + right\n    return node.val + max(left, right)\n\ncall dfs(root) and return global answer",
+    "**Single negative node** - the tree consists of one node with value -5.  \n`Input: [-5]` → `Expected: -5`  \n⚠️ Bug: initializing global answer to 0 → returns 0.\n\n**All negative values** - every node value is negative, e.g. [-2,-1,null,-3].  \n`Input: [-2,-1,null,-3]` → `Expected: -1`  \n⚠️ Bug: discarding negative gains with `max(left,right)` but also using `max(0, ...)` for the return value only, while keeping global answer initialized to 0 → returns 0.\n\n**Skewed tree (linked‑list shape)** - a chain of 30 000 nodes all with value 1.  \n`Input: [1,1,null,1,null,1,...]` → `Expected: 30000`  \n⚠️ Bug: recursive depth exceeds default stack limit in some languages (not C++), but an iterative stack would be needed.\n\n**Mixed large positives and negatives** - root 10, left child -20, right child 30.  \n`Input: [10,-20,30]` → `Expected: 40` (30 + 10)  \n⚠️ Bug: using `max(left,right)` without adding node.val when updating global answer → returns 30."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the solution if the path were required to start at the root?",
+      "a": "Only the gain that can be extended upward matters, so the answer becomes the maximum gain returned by `dfs(root)`. The algorithm stays O(n) time and O(h) space, but we return the dfs result instead of the global maximum."
+    },
+    {
+      "q": "What if node values could be as large as 10⁹, making the sum exceed 32‑bit range?",
+      "a": "Change all intermediate sums and the global answer to 64‑bit (`long long`). The algorithmic complexity remains O(n) time and O(h) space."
+    },
+    {
+      "q": "Suppose the tree is given as a stream of parent‑child pairs and you cannot store the whole structure in memory.",
+      "a": "You would need to process the tree in a single pass using a post‑order traversal that writes partial results to disk or uses a union‑find‑like aggregation, but the classic recursive solution cannot be applied directly; a bottom‑up iterative approach with limited memory would be required, still O(n) time but O(k) space where k is the size of the current frontier."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    long long best;\n    long long dfs(TreeNode* node) {\n        if (!node) return 0;\n        long long left = max(0LL, dfs(node->left));\n        long long right = max(0LL, dfs(node->right));\n        best = max(best, node->val + left + right);\n        return node->val + max(left, right);\n    }\npublic:\n    int maxPathSum(TreeNode* root) {\n        best = LLONG_MIN;\n        dfs(root);\n        return static_cast<int>(best);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}
