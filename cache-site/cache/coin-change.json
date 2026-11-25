@@ -1,0 +1,39 @@
+{
+  "slug": "coin-change",
+  "title": "Coin Change",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Unbounded Knapsack DP",
+  "tc": "O(n · amount)",
+  "sc": "O(amount)",
+  "spaceBreakdown": "- vector<int> dp of size amount+1 → O(amount)  \n- recursion depth: none  \n- not counted: input vectors, returned int",
+  "approach": "The minimum number of coins for a given amount can be built from optimal solutions of smaller amounts because we may add one more coin of any denomination.  \nWe compute, for every value 0…amount, the smallest coin count achievable using a one‑dimensional DP array and update it with each coin (unbounded knapsack).  \nThe answer is the DP entry for *amount*; if it stayed at “infinite” the amount is unreachable.",
+  "hints": [
+    "If you could use any number of each coin, how does the optimal solution for a total X relate to the optimal solutions of smaller totals?  \nThe statement guarantees 0 ≤ amount ≤ 10⁴.",
+    "Use a one‑dimensional array to store the best answer for each sub‑amount.  \nExample: with coins [1,2,5] and amount 11, after processing coin 5 the entry for 10 becomes 2 (5+5).",
+    "dp[0] = 0  \nfor each coin c in coins:  \n for i from c to amount:  \n  dp[i] = min(dp[i], dp[i‑c] + 1)  \nreturn dp[amount] if finite else -1",
+    "**Zero amount** - amount is zero, the answer must be 0.  \n`Input: coins = [2,3], amount = 0` → `Expected: 0`  \n⚠️ Bug: returning -1 because the loop never updates dp[0].\n\n**Coin larger than amount** - all coin values exceed the target, no combination exists.  \n`Input: coins = [5,7], amount = 3` → `Expected: -1`  \n⚠️ Bug: accessing dp[i‑c] with a negative index causes undefined behaviour.\n\n**Duplicate coins** - the list may contain repeats, but they must not affect the result.  \n`Input: coins = [1,2,2], amount = 3` → `Expected: 2` (1+2)  \n⚠️ Bug: removing duplicates before DP can change the iteration order and miss optimal sub‑structures.\n\n**Greedy fails** - picking the largest possible coin each step is not optimal.  \n`Input: coins = [1,3,4], amount = 6` → `Expected: 2` (3+3)  \n⚠️ Bug: greedy algorithm returns 3 (4+1+1).\n\n**Maximum amount with coin 1** - ensures DP handles large counts without overflow.  \n`Input: coins = [1], amount = 10000` → `Expected: 10000`  \n⚠️ Bug: using a 16‑bit integer for dp entries overflows and yields a negative result."
+  ],
+  "followUps": [
+    {
+      "q": "What if amount can be as large as 10⁹ while the number of coin types stays small?",
+      "a": "We can run Dijkstra’s algorithm on a graph of residues modulo the smallest coin value; each edge adds a coin and moves to a new residue with cost +1. This runs in O(minCoin · log minCoin) time and O(minCoin) space."
+    },
+    {
+      "q": "How would you modify the solution to also return one possible set of coins achieving the minimum count?",
+      "a": "Keep a predecessor array prev[i] storing the coin that led to the optimal dp[i]. After DP finishes, backtrack from amount using prev to reconstruct the coin list. Time stays O(n·amount); extra O(amount) space for prev."
+    },
+    {
+      "q": "Suppose the memory limit only allows O(√amount) extra space. Can the problem still be solved?",
+      "a": "Yes, by applying a BFS on the state space of amounts but pruning to keep only the smallest √amount states (e.g., using a sliding‑window DP that processes amounts in blocks). The time becomes O(n·amount) while the auxiliary memory is reduced to O(√amount)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        const int INF = amount + 1;                 // larger than any possible answer\n        vector<int> dp(amount + 1, INF);\n        dp[0] = 0;\n        for (int c : coins) {\n            if (c > amount) continue;\n            for (int i = c; i <= amount; ++i) {\n                dp[i] = min(dp[i], dp[i - c] + 1);\n            }\n        }\n        return dp[amount] == INF ? -1 : dp[amount];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3"
+  }
+}

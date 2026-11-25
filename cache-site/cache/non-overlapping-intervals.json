@@ -1,0 +1,39 @@
+{
+  "slug": "non-overlapping-intervals",
+  "title": "Non-overlapping Intervals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Greedy Interval Scheduling",
+  "tc": "O(n log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- sort(): in‑place quick/introsort, uses O(log n) recursion stack → O(log n) (dominant auxiliary space)  \n- other variables (cnt, prev_end, loop index): O(1)  \n- not counted: input vector, returned integer",
+  "approach": "Sort the intervals by their ending coordinate and then greedily keep an interval only if its start is not before the end of the last kept interval. This maximizes the number of non‑overlapping intervals, so the minimum removals equal total intervals minus the kept count. The greedy choice is optimal because picking the earliest finishing interval leaves the largest possible space for the remaining ones.",
+  "hints": [
+    "Which interval should we keep when two intervals overlap so that we leave room for the most future intervals?  \nn ≤ 10^5 rules out checking every subset.",
+    "Sort the intervals by their end point.  \nExample: [[1,3],[2,4],[3,5]] → after sorting → [[1,3],[2,4],[3,5]] (ends 3,4,5).",
+    "sort intervals by end ascending  \ncnt = 0, prev_end = -∞  \nfor each interval (s,e) in sorted list:  \n if s ≥ prev_end: cnt++, prev_end = e  \nanswer = total - cnt",
+    "**Single interval** - only one interval, nothing to remove  \n`Input: [[-5,0]]` → `Expected: 0`  \n⚠️ Bug: using `s > prev_end` instead of `s >= prev_end` → returns 1  \n\n**All overlapping with same start** - every interval shares the same start, only one can stay  \n`Input: [[1,4],[1,3],[1,5]]` → `Expected: 2`  \n⚠️ Bug: sorting by start instead of end → may keep the longest and return 1  \n\n**Touching intervals** - intervals that only meet at a point are allowed together  \n`Input: [[1,2],[2,3],[3,4]]` → `Expected: 0`  \n⚠️ Bug: using `s > prev_end` treats touching as overlap → returns 2  \n\n**Negative coordinates** - intervals can start negative, algorithm must handle them  \n`Input: [[-10,-5],[-6,-1],[-4,0]]` → `Expected: 0`  \n⚠️ Bug: initializing `prev_end` to 0 instead of a very small value → may discard the first interval"
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the solution to also return the list of intervals that need to be removed?",
+      "a": "After the greedy pass, store the intervals that fail the `s ≥ prev_end` test in a separate vector and return it. The pass is still O(n log n) time and O(k) extra space, where k is the number of removed intervals."
+    },
+    {
+      "q": "What if the intervals arrive as a stream and you cannot store them all at once?",
+      "a": "Keep a min‑heap (or priority queue) of the current interval’s end; when a new interval arrives, compare its start with the smallest end seen so far and decide to keep or discard it, updating the count accordingly. This yields O(log m) per interval where m is the size of the heap (at most the number of kept intervals), and O(m) memory, which is optimal for streaming."
+    },
+    {
+      "q": "Suppose each interval has a weight and you must remove intervals of minimum total weight to achieve a non‑overlapping set.",
+      "a": "The problem becomes a weighted interval scheduling problem; it can be solved with DP after sorting by end, using binary search to find the previous non‑overlapping interval. Time O(n log n), space O(n) for the DP table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int eraseOverlapIntervals(vector<vector<int>>& intervals) {\n        sort(intervals.begin(), intervals.end(),\n             [](const vector<int>& a, const vector<int>& b) {\n                 return a[1] < b[1];\n             });\n        int kept = 0;\n        int prev_end = INT_MIN;               // smaller than any possible start\n        for (const auto& iv : intervals) {\n            if (iv[0] >= prev_end) {\n                ++kept;\n                prev_end = iv[1];\n            }\n        }\n        return static_cast<int>(intervals.size()) - kept;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3"
+  }
+}

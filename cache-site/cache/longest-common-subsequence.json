@@ -1,0 +1,39 @@
+{
+  "slug": "longest-common-subsequence",
+  "title": "Longest Common Subsequence",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "DP on Strings",
+  "tc": "O(n · m)",
+  "sc": "O(min(n,m))",
+  "spaceBreakdown": "- vector<int> prev: size (m+1) → O(min(n,m))  \n- vector<int> cur: size (m+1) → O(min(n,m))  \n- recursion depth: none  \n- not counted: input strings, return value",
+  "approach": "The longest common subsequence can be built incrementally: for every prefix of `text1` and every prefix of `text2` we store the best length seen so far. This leads to a classic DP where `dp[i][j]` depends only on `dp[i‑1][j‑1]`, `dp[i‑1][j]` and `dp[i][j‑1]`. Keeping only two rows reduces memory to O(min(n,m)) while preserving correctness.",
+  "hints": [
+    "If you compare the LCS length of the prefixes `text1[0..i]` and `text2[0..j]` with the LCS length of the prefixes that are one character shorter, what relationship must hold?  \nBoth strings have length ≤ 1000.",
+    "Use a 2‑D DP table (implemented with two 1‑D rows).  \nFor `text1 = \"abcde\"` and `text2 = \"ace\"`, after processing the first three characters of `text1` the DP row becomes `[0,1,1,2]`.",
+    "```\nlet n = length of text1, m = length of text2\nif m > n swap strings so that m ≤ n\nprev[0..m] = 0\nfor i = 1 .. n\n    cur[0] = 0\n    for j = 1 .. m\n        if text1[i‑1] == text2[j‑1]\n            cur[j] = prev[j‑1] + 1\n        else\n            cur[j] = max(prev[j], cur[j‑1])\n    swap(prev, cur)\nreturn prev[m]\n```",
+    "**Single character, no match** - the strings share no letters.  \n`Input: \"a\",\"b\"` → `Expected: 0`  \n⚠️ Bug: returning `prev[j]` instead of `max(prev[j],cur[j‑1])` when characters differ → returns `1`.\n\n**All characters equal** - both strings are identical.  \n`Input: \"aaaa\",\"aaaa\"` → `Expected: 4`  \n⚠️ Bug: using a single 1‑D array and updating it left‑to‑right overwrites needed values → returns `3`.\n\n**One string is a prefix of the other** - the shorter string is completely contained at the start.  \n`Input: \"abc\",\"abcd\"` → `Expected: 3`  \n⚠️ Bug: initializing DP rows with size `m+1` but iterating `j` up to `n` when `n>m` → out‑of‑bounds access.\n\n**Repeated characters with interleaving** - characters repeat and are interleaved.  \n`Input: \"ababa\",\"babab\"` → `Expected: 4`  \n⚠️ Bug: using recursion without memoization → exponential time, times out."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the solution to also return one actual longest common subsequence string?",
+      "a": "While filling the DP table keep a predecessor direction (diag, up, left) for each cell, then backtrack from `dp[n][m]` to reconstruct the sequence. Time stays O(n · m); space becomes O(n · m) for the direction matrix or O(min(n,m)) if you recompute on the fly."
+    },
+    {
+      "q": "If the lengths could be up to 10⁵, what alternative approach could achieve O(n · log σ) time where σ is alphabet size?",
+      "a": "Use the Hunt‑Szymanski algorithm: map each character of `text2` to the list of its positions, then scan `text1` and build a longest increasing subsequence over those position lists using a binary‑search‑based patience sorting. Time O((n + m) log σ), space O(m)."
+    },
+    {
+      "q": "Suppose the strings are streamed and you can only store O(1) extra memory besides the input characters seen so far. Is an exact solution possible?",
+      "a": "No; computing the exact LCS length requires remembering the whole DP frontier, which is Θ(min(n,m)) bits. With O(1) extra memory only approximation algorithms (e.g., using sketching) are feasible."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestCommonSubsequence(string text1, string text2) {\n        // Ensure text2 is the shorter one to minimise memory\n        if (text2.size() > text1.size()) swap(text1, text2);\n        int n = text1.size();\n        int m = text2.size();\n        vector<int> prev(m + 1, 0), cur(m + 1, 0);\n        for (int i = 1; i <= n; ++i) {\n            cur[0] = 0;\n            for (int j = 1; j <= m; ++j) {\n                if (text1[i - 1] == text2[j - 1])\n                    cur[j] = prev[j - 1] + 1;\n                else\n                    cur[j] = max(prev[j], cur[j - 1]);\n            }\n            swap(prev, cur);\n        }\n        return prev[m];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3"
+  }
+}

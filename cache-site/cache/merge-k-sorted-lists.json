@@ -1,0 +1,39 @@
+{
+  "slug": "merge-k-sorted-lists",
+  "title": "Merge k Sorted Lists",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Heap Merge",
+  "tc": "O(N log k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- priority_queue storing at most one node per list: up to k entries → O(k)  \n- dummy head and a few pointers: O(1)  \n- recursion depth: none  \n- not counted: input lists, returned merged list",
+  "approach": "The smallest node among the current heads of all non‑empty lists must be the next node of the merged list. By keeping those heads in a min‑heap we can extract the minimum in O(log k) and then insert the next node of that list, repeating until all nodes are processed. This greedy choice is safe because each list is already sorted, so no later node can be smaller than the current head of its list.",
+  "hints": [
+    "When each list is already sorted, what can you say about the smallest element among the current front nodes of all lists?  \nEach list’s elements appear in non‑decreasing order.",
+    "Use a **min‑heap (priority queue)** that always gives the smallest front node.  \nExample: with heads 1, 1, 2 the heap lets you pick the first 1, then you push its successor 4, etc.",
+    "```\npush every non‑null list head into a min‑heap\ncreate a dummy node as the start of the answer\nwhile heap not empty\n    node = pop smallest from heap\n    attach node to answer\n    if node->next exists push it into heap\nreturn dummy->next\n```",
+    "**Empty input** - no list at all  \n`Input: []` → `Expected: []`  \n⚠️ Bug: returning nullptr without checking → returns nullptr (still correct) but many implementations crash when iterating over an empty vector.\n\n**All lists empty** - vector contains empty lists  \n`Input: [[]]` → `Expected: []`  \n⚠️ Bug: pushing a null pointer into the heap → heap contains nullptr, pop leads to dereference crash.\n\n**Duplicate values** - many equal heads  \n`Input: [[2,2],[2],[2,2,2]]` → `Expected: [2,2,2,2,2,2]`  \n⚠️ Bug: using `>` instead of `<` in comparator → produces descending order `[2,2,2,2,2,2]` reversed.\n\n**Negative numbers** - lists contain negatives  \n`Input: [[-3,-1],[ -2,0]]` → `Expected: [-3,-2,-1,0]`  \n⚠️ Bug: initializing min‑heap with `int max` sentinel and comparing to it → smallest negative is ignored, output starts at `-1`.\n\n**Single long list** - k = 1, length = 10⁴  \n`Input: [[1,2,3,…,10000]]` → `Expected: [1,2,3,…,10000]`  \n⚠️ Bug: forgetting to push the next node after popping → only the first element appears in output."
+  ],
+  "followUps": [
+    {
+      "q": "How would you merge the k lists without using extra heap memory, i.e., in O(1) auxiliary space?",
+      "a": "Repeatedly merge pairs of lists using the classic two‑list merge (divide‑and‑conquer). This performs O(N log k) time and only O(1) extra pointers because the merge is done in‑place."
+    },
+    {
+      "q": "If the node values are guaranteed to be in the range [-10⁴, 10⁴] and the total number of nodes can be up to 10⁶, can you achieve linear time?",
+      "a": "Yes. Count the occurrences of each possible value in a fixed‑size array of size 20 001, then rebuild the merged list by iterating over the array. This runs in O(N + range) = O(N) time and O(range) = O(1) extra space."
+    },
+    {
+      "q": "Suppose the lists are provided as streams and you cannot store all nodes simultaneously; what is the best you can do?",
+      "a": "Keep a min‑heap of size at most k containing the current head of each stream. Each incoming node is processed in O(log k) time, and the memory usage stays O(k), which is optimal because you must at least remember one node per active list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    struct Compare {\n        bool operator()(ListNode* a, ListNode* b) const {\n            return a->val > b->val; // min‑heap\n        }\n    };\n    \n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        priority_queue<ListNode*, vector<ListNode*>, Compare> pq;\n        for (auto node : lists) {\n            if (node) pq.push(node);\n        }\n        ListNode dummy(0);\n        ListNode* tail = &dummy;\n        while (!pq.empty()) {\n            ListNode* cur = pq.top(); pq.pop();\n            tail->next = cur;\n            tail = cur;\n            if (cur->next) pq.push(cur->next);\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3"
+  }
+}

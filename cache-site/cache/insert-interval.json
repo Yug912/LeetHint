@@ -1,0 +1,39 @@
+{
+  "slug": "insert-interval",
+  "title": "Insert Interval",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Linear Scan Merge",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> res: up to n+1 intervals → O(n)  \n- not counted: input intervals, newInterval, returned vector",
+  "approach": "Because the given intervals are already sorted and non‑overlapping, we can walk through them once, placing all intervals that end before the new one, merging every interval that overlaps the new one, then appending the rest. The merge is done by expanding the new interval’s start to the minimum start and its end to the maximum end of all overlapping intervals. The single linear pass guarantees the result stays sorted and non‑overlapping.",
+  "hints": [
+    "Given that the intervals are already sorted and non‑overlapping, which part of the list can a new interval affect?  \nThe array length can be up to 10⁴.",
+    "Use a single dynamic array (vector) to build the answer while scanning the input.  \nExample: for intervals = [[1,3],[6,9]] and newInterval = [2,5], we first copy [1,3] (overlap), merge to [1,5], then copy [6,9].",
+    "i ← 0  \nwhile i < n and intervals[i].end < new.start: add intervals[i] to result, i++  \nwhile i < n and intervals[i].start ≤ new.end: new.start ← min(new.start, intervals[i].start); new.end ← max(new.end, intervals[i].end); i++  \nadd new to result  \nwhile i < n: add intervals[i] to result, i++",
+    "**Empty list** - inserting into an empty array returns only the new interval.  \n`Input: [] , [4,8]` → `Expected: [[4,8]]`  \n⚠️ Bug: returning an empty vector without adding newInterval → returns `[]`.  \n\n**Before all** - new interval lies completely before the first interval.  \n`Input: [[5,7],[9,12]] , [1,3]` → `Expected: [[1,3],[5,7],[9,12]]`  \n⚠️ Bug: using `while intervals[i].end <= new.start` (≤) instead of `<` → treats touching intervals as non‑overlapping and would output `[[1,3],[5,7],[9,12]]` correctly, but for touching case it would merge incorrectly (see next).  \n\n**Touching merge** - intervals that just touch must be merged because they share a point.  \n`Input: [[1,2],[3,5]] , [2,3]` → `Expected: [[1,5]]`  \n⚠️ Bug: using `<` instead of `≤` in the overlap check (`intervals[i].start < new.end`) → would keep them separate and output `[[1,2],[2,3],[3,5]]`."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the algorithm if the input intervals were not guaranteed to be sorted?",
+      "a": "First sort the intervals by their start coordinate (O(n log n)), then apply the same linear‑scan merge. The overall complexity becomes O(n log n) time and O(n) space."
+    },
+    {
+      "q": "Suppose the intervals are given as a stream that cannot be stored entirely in memory. How can you output the merged result?",
+      "a": "Keep only the current merged interval and the last interval read; for each incoming interval, either output the previous merged interval (if it ends before the new one starts) or expand the merged interval. This uses O(1) extra memory and O(n) time."
+    },
+    {
+      "q": "If the coordinates could be as large as 10¹⁸, what changes are needed in the implementation?",
+      "a": "Replace `int` with `long long` for all start/end values to avoid overflow; the algorithmic steps remain identical, still O(n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> insert(vector<vector<int>>& intervals, vector<int>& newInterval) {\n        vector<vector<int>> result;\n        int n = intervals.size();\n        int i = 0;\n\n        // Add all intervals that end before the new interval starts\n        while (i < n && intervals[i][1] < newInterval[0]) {\n            result.push_back(intervals[i]);\n            ++i;\n        }\n\n        // Merge all overlapping intervals with the new interval\n        while (i < n && intervals[i][0] <= newInterval[1]) {\n            newInterval[0] = min(newInterval[0], intervals[i][0]);\n            newInterval[1] = max(newInterval[1], intervals[i][1]);\n            ++i;\n        }\n        result.push_back(newInterval);\n\n        // Append the remaining intervals\n        while (i < n) {\n            result.push_back(intervals[i]);\n            ++i;\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

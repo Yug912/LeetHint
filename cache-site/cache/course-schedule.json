@@ -1,0 +1,39 @@
+{
+  "slug": "course-schedule",
+  "title": "Course Schedule",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-25",
+  "pattern": "Topological Sort (BFS)",
+  "tc": "O(V + E)",
+  "sc": "O(V + E)",
+  "spaceBreakdown": "- vector<vector<int>> adj: up to V + E entries → O(V + E)  \n- vector<int> indeg: V entries → O(V)  \n- queue<int> q: at most V entries → O(V)  \n- not counted: input parameters, return value",
+  "approach": "The prerequisite pairs form a directed graph where a course points to the courses that depend on it.  \nIf the graph contains a directed cycle no topological ordering exists, so we cannot finish all courses.  \nWe compute indegrees, repeatedly remove vertices with indegree 0 (Kahn’s BFS topological sort), and check whether all vertices are removed.",
+  "hints": [
+    "If a course must be taken before another, what kind of relationship does that create between the two courses?  \n`numCourses ≤ 2000` limits the size of the structure we can build.",
+    "Use a queue to repeatedly process courses whose indegree (number of remaining prerequisites) is zero.  \nExample: for `numCourses = 2, prerequisites = [[1,0]]` the queue starts with course 0, we remove it, decrease indegree of 1 to 0, then remove 1 - all courses are processed.",
+    "```\nbuild adjacency list and indegree array\npush all vertices with indegree 0 into queue\nwhile queue not empty:\n    v = pop queue\n    for each neighbor u of v:\n        indegree[u]--\n        if indegree[u] == 0: push u\n    count++\nreturn count == numCourses\n```",
+    "**Single course, no edges** - the only course has no prerequisite.  \n`Input: numCourses = 1, prerequisites = []` → `Expected: true`  \n⚠️ Bug: initializing indegree array with size 0 → out‑of‑bounds access → crashes  \n\n**Two‑course mutual dependency** - a simple directed cycle.  \n`Input: numCourses = 2, prerequisites = [[0,1],[1,0]]` → `Expected: false`  \n⚠️ Bug: forgetting to decrement indegree for neighbor 0 → queue never empties → returns true  \n\n**Disconnected graph with a hidden cycle** - one component is a chain, another is a cycle.  \n`Input: numCourses = 4, prerequisites = [[1,0],[2,1],[0,2],[3,2]]` → `Expected: false`  \n⚠️ Bug: processing only the component that starts with indegree 0 (course 3) and then returning true because visited ≠ numCourses is not checked → returns true  \n\n**Long linear chain** - tests that the algorithm works on a skewed graph.  \n`Input: numCourses = 5, prerequisites = [[4,3],[3,2],[2,1],[1,0]]` → `Expected: true`  \n⚠️ Bug: using recursion depth proportional to V (DFS) may hit stack limit for larger V; BFS avoids this."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the solution to also return one possible order in which to take the courses?",
+      "a": "Keep a vector<int> order and push each course when it is removed from the queue. After the loop, if order.size() == numCourses return order; otherwise return an empty vector. Time stays O(V + E) and extra space becomes O(V + E)."
+    },
+    {
+      "q": "What changes, if any, are needed when `numCourses` and `prerequisites.length` can be as large as 10⁵?",
+      "a": "No changes are required; the BFS topological sort still runs in O(V + E) time and uses O(V + E) memory, which fits the limits for 10⁵ vertices and edges."
+    },
+    {
+      "q": "Suppose you must answer the question using only O(V) extra memory (you cannot store the full adjacency list). How could you adapt the algorithm?",
+      "a": "Store only the indegree array (size V) and keep the original edge list. In each iteration, scan the edge list to find outgoing edges of the current zero‑indegree vertex, decrement the corresponding indegrees, and mark those edges as processed (e.g., by a boolean flag). This uses O(V) extra space but increases time to O(V·E) in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n        vector<vector<int>> adj(numCourses);\n        vector<int> indeg(numCourses, 0);\n        for (const auto& p : prerequisites) {\n            int a = p[0], b = p[1];\n            adj[b].push_back(a);   // b must come before a\n            ++indeg[a];\n        }\n        queue<int> q;\n        for (int i = 0; i < numCourses; ++i)\n            if (indeg[i] == 0) q.push(i);\n        int visited = 0;\n        while (!q.empty()) {\n            int v = q.front(); q.pop();\n            ++visited;\n            for (int u : adj[v]) {\n                if (--indeg[u] == 0) q.push(u);\n            }\n        }\n        return visited == numCourses;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}
