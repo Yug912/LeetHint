@@ -1,54 +1,61 @@
 #!/bin/bash
-# tools/prefill-nightly.sh — one night of pre-filling, then publish it.
+# tools/prefill-nightly.sh — one morning of pre-filling, then publish it.
 #
-# Starts a local Worker (dev key in backend/.dev.vars), runs tools/prefill.mjs
-# until the free AI limits stop it (3 rate-limited problems in a row), then
-# commits ONLY cache-site/ and tools/needs-review.txt and pushes to main.
-# Cloudflare Pages redeploys https://leethint.pages.dev on the push.
+# Starts a local Worker that uses ONLY the dev Groq key in backend/.dev.vars
+# (--local --var PROVIDER_ORDER:groq: no Cloudflare login needed, and never
+# Workers AI / Gemini on Yug's account, which live users share), runs tools/prefill.mjs inside its window (05:00–06:00 IST,
+# tools/prefill.config.json), publishes ONLY the new hint files (and
+# tools/needs-review.txt) to main with tools/publish-cache.mjs — Cloudflare Pages (project leethint)
+# redeploys https://leethint.pages.dev on the push — and then checks that the
+# new files are live (prefill.mjs --verify).
 #
-#   bash tools/prefill-nightly.sh            # by hand
-#   bash tools/prefill-nightly.sh --limit 50 # extra flags go to prefill.mjs
+#   bash tools/prefill-nightly.sh                 # by hand (only inside the window)
+#   bash tools/prefill-nightly.sh --until 09:00   # a longer one-off run; extra flags go to prefill.mjs
 #
-# Nightly on a Mac: tools/com.leethint.prefill.plist (see tools/README.md).
-# The log goes to tools/prefill.log (gitignored). Never prints an API key.
+# Scheduled by ~/Library/LaunchAgents/com.leethint.prefill.plist (tools/README.md).
+# Logs: logs/prefill-YYYY-MM-DD.log (prefill.mjs) and logs/launchd.log (this
+# script). Never prints an API key.
 
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="$HOME/.local/node/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 cd "$ROOT" || exit 1
-echo "=== $(date '+%Y-%m-%d %H:%M') prefill-nightly ==="
+mkdir -p logs
+echo "=== $(date '+%Y-%m-%d %H:%M %Z') prefill-nightly $* ==="
 
 if [ ! -s backend/.dev.vars ]; then
   echo "backend/.dev.vars is missing — put a dev GROQ_API_KEY in it"; exit 1
 fi
 
-# Start from the latest main (the weekly sync Action also writes cache-site/)
-git pull --rebase --autostash -q origin main || echo "git pull failed — continuing with the local copy"
+# Another pre-fill (a long manual run) already going → leave it alone
+if pgrep -f "node tools/prefill.mjs" > /dev/null; then
+  echo "A pre-fill is already running — not starting a second one."; exit 0
+fi
+
+# Files the weekly sync Action published count as done (never touches the branch)
+node tools/publish-cache.mjs --pull-only || echo "Could not fetch origin/main — continuing with the local files"
 
 # Local Worker on :8787, unless one is already running
 STARTED=""
 if ! curl -s -m 3 -o /dev/null http://localhost:8787/health; then
-  (cd backend && npx wrangler dev --port 8787 > "$ROOT/tools/wrangler-dev.log" 2>&1) &
+  (cd backend && npx wrangler dev --local --port 8787 --var PROVIDER_ORDER:groq > "$ROOT/logs/wrangler-dev.log" 2>&1) &
   STARTED=$!
   for _ in $(seq 1 60); do curl -s -m 3 -o /dev/null http://localhost:8787/health && break; sleep 2; done
 fi
 stop_worker() {
-  [ -n "$STARTED" ] && { pkill -P "$STARTED" 2>/dev/null; kill "$STARTED" 2>/dev/null; pkill -f "wrangler dev --port 8787" 2>/dev/null; }
+  [ -n "$STARTED" ] && { pkill -P "$STARTED" 2>/dev/null; kill "$STARTED" 2>/dev/null; pkill -f "wrangler dev.*--port 8787" 2>/dev/null; }
 }
 trap stop_worker EXIT
 
-# Generation log lines from the client are noise here; keep the ✓ / ✗ lines
+# The client's own "LeetHint: ..." lines are noise here; the full log is in logs/
 node tools/prefill.mjs "$@" 2>&1 | grep -v '^LeetHint:'
 stop_worker; STARTED=""
 
-# Publish: commit only the pre-fill output, whatever else is in the folder
-PATHS=(cache-site); [ -e tools/needs-review.txt ] && PATHS+=(tools/needs-review.txt)
-NEW=$(git status --porcelain -- "${PATHS[@]}" | wc -l | tr -d ' ')
-if [ "$NEW" = "0" ]; then echo "Nothing new to publish."; exit 0; fi
-git add -- "${PATHS[@]}"
-COUNT=$(git diff --cached --name-only -- cache-site/cache | wc -l | tr -d ' ')
-git commit -q -m "Pre-fill: $COUNT hint file(s) ($(date +%Y-%m-%d))" -- "${PATHS[@]}" \
-  && git pull --rebase --autostash -q origin main \
-  && git push -q origin main \
-  && echo "Pushed $COUNT file(s) to main." \
-  || echo "Commit/push failed — the files are still in cache-site/, run the script again or push by hand."
+# Publish: a commit of ONLY the new hint files on top of origin/main, made in a
+# temporary worktree (tools/publish-cache.mjs) — local code changes are never pushed
+if node tools/publish-cache.mjs; then
+  # Pages takes ~1 min; wait up to 10 min for every new file to be live
+  node tools/prefill.mjs --verify --wait 600 2>&1 | grep -v '^LeetHint:'
+else
+  echo "Publish failed — the files are still in cache-site/; run: node tools/publish-cache.mjs"
+fi

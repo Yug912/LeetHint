@@ -231,7 +231,7 @@ function parseHintsJSON(rawText) {
 // ─────────────────────────────────────────────
 
 // Only the fields the server uses — keeps requests small
-function problemPayload(p) {
+export function problemPayload(p) {
   return {
     slug: p.slug, title: p.title, problemNumber: String(p.problemNumber || ''),
     difficulty: p.difficulty, description: p.description, cppSnippet: p.cppSnippet || '',
