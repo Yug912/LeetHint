@@ -1,0 +1,39 @@
+{
+  "slug": "binary-tree-right-side-view",
+  "title": "Binary Tree Right Side View",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Breadth‑First Search (level order)",
+  "tc": "O(n)",
+  "sc": "O(w)",
+  "spaceBreakdown": "- std::queue<TreeNode*> q: up to w pointers → O(w)  \n- std::vector<int> res: stores one value per level → O(h) (not counted as extra)  \n- recursion depth: none",
+  "approach": "The node that is visible from the right at a certain depth is the last node visited when we traverse the tree level by level from left to right. Performing a breadth‑first search (BFS) gives us the nodes of each depth in order, so we can record the value of the last node of every level. This yields the right‑side view in linear time and uses only the queue needed for BFS.",
+  "hints": [
+    "When you look at the tree from the right side, which node of a particular depth blocks all the others?  \nThe tree contains at most 100 nodes.",
+    "Use a **queue** to traverse the tree level by level.  \nExample: for root = [1,2,3,null,5,null,4] the queue holds 1 → then 2,3 → then 5,4; the last element of each level (1, 3, 4) forms the answer.",
+    "```\nif root is null return empty list\npush root into queue\nwhile queue not empty\n    size = queue size\n    for i = 0 … size‑1\n        node = pop front\n        if i == size‑1 add node.val to answer\n        push node.left if exists\n        push node.right if exists\nreturn answer\n```",
+    "**Empty tree** - the input has no nodes.  \n`Input: []` → `Expected: []`  \n⚠️ Bug: returning a vector with a single zero because of default‑initialised result → returns `[0]`\n\n**Skewed left tree** - every node only has a left child, so the right view is just the top node of each depth.  \n`Input: [1,2,null,3]` → `Expected: [1,2,3]`  \n⚠️ Bug: using DFS that records the first node of each depth (leftmost) → returns `[1,2,3]` (correct) but if the implementation mistakenly records the *first* node while traversing right child before left, it would miss deeper left nodes → returns `[1]`.\n\n**Skewed right tree** - every node only has a right child, the view is the whole tree.  \n`Input: [1,null,2,null,3]` → `Expected: [1,2,3]`  \n⚠️ Bug: forgetting to push the right child into the queue → returns `[1]`.\n\n**Mixed children where rightmost node appears before leftmost in the queue** - if you process right child before left, the “last” node of the level is not the rightmost one.  \n`Input: [1,2,3]` → `Expected: [1,3]`  \n⚠️ Bug: enqueue right child first, then left → level 2 order becomes 3, 2, so the last node recorded is 2 → returns `[1,2]`."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the algorithm to obtain the left‑side view of the tree?",
+      "a": "Record the **first** node of each level instead of the last while performing the same BFS. The rest of the traversal stays unchanged, giving O(n) time and O(w) space."
+    },
+    {
+      "q": "If the tree could contain up to 10⁵ nodes, what change would you make to avoid recursion depth limits?",
+      "a": "Keep the iterative BFS implementation (which already uses a queue) and do not switch to a recursive DFS, because the recursion stack could reach O(n) and overflow. The time and space complexities remain O(n) and O(w)."
+    },
+    {
+      "q": "Suppose you are required to use only O(1) extra space besides the output vector. How can you achieve the right‑side view?",
+      "a": "Perform a depth‑first search that traverses the right child before the left child, keeping a single integer for the current depth. Whenever the current depth exceeds the size of the result vector, push the node’s value. This uses only the recursion stack (or an explicit stack) and the output vector, giving O(n) time and O(h) auxiliary space, where h is the tree height."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> rightSideView(TreeNode* root) {\n        vector<int> ans;\n        if (!root) return ans;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int sz = q.size();\n            for (int i = 0; i < sz; ++i) {\n                TreeNode* node = q.front();\n                q.pop();\n                if (i == sz - 1) ans.push_back(node->val);\n                if (node->left)  q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4"
+  }
+}
