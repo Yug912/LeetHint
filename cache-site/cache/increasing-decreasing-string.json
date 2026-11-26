@@ -2,40 +2,39 @@
   "slug": "increasing-decreasing-string",
   "title": "Increasing Decreasing String",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Counting Sort‑style Sweep",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Frequency Array / Counting",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- int cnt[26]: fixed size 26 → O(1)  \n- string res: stores the answer, not counted as extra space per LeetCode convention  \n- no recursion or dynamic containers",
-  "approach": "The process only cares about how many of each letter are still present, not their original positions. By counting frequencies of the 26 lowercase letters we can repeatedly emit the smallest existing character, then the next larger, and after reaching the largest emit them in reverse order. Repeating these two sweeps until all counts are zero produces exactly the required ordering.",
+  "spaceBreakdown": "- int cnt[26]: fixed 26 entries → O(1)\n- string result: returned output, not counted\n- no recursion, no other containers",
+  "approach": "Count the frequency of each of the 26 lowercase letters in a fixed-size array. Repeatedly scan 'a'→'z' (ascending) then 'z'→'a' (descending), appending any character whose count is still positive and decrementing it. Continue until the result reaches the input length. Scanning in sorted order directly yields the smallest (or largest) available character each step, exactly simulating the algorithm.",
   "hints": [
-    "Which character is always removed first from the current multiset of letters?  \nNotice that after each full forward‑then‑backward pass you only need to know how many of each letter remain, and the constraints say 1 ≤ s.length ≤ 500.",
-    "Use an array of length 26 to store the frequency of each letter.  \nExample: for s = \"rat\" the array becomes [0,…,1 at ‘a’,1 at ‘r’,1 at ‘t’,…].",
-    "while result length < n:\n    for c from 'a' to 'z':\n        if count[c] > 0: append c, decrement count[c]\n    for c from 'z' down to 'a':\n        if count[c] > 0: append c, decrement count[c]",
-    "**Single character** - only one letter, the algorithm should return it.  \n`Input: \"z\"` → `Expected: \"z\"`  \n⚠️ Bug: stopping after the first forward sweep only → returns `\"\"`.\n\n**All equal** - every character identical, the result must be the same string.  \n`Input: \"aaaaa\"` → `Expected: \"aaaaa\"`  \n⚠️ Bug: using a set of distinct chars → returns `\"a\"`.\n\n**Ascending** - string already in increasing order.  \n`Input: \"abc\"` → `Expected: \"abc\"`  \n⚠️ Bug: omitting the backward sweep → returns `\"ab\"`.\n\n**Descending** - string in decreasing order.  \n`Input: \"cba\"` → `Expected: \"abc\"`  \n⚠️ Bug: only performing the forward sweep → returns `\"cba\"`.\n\n**Mixed duplicates** - duplicates cause several passes.  \n`Input: \"aaabbb\"` → `Expected: \"abbaab\"`  \n⚠️ Bug: terminating after one forward‑and‑backward cycle → returns `\"abba\"`."
+    "The string contains only 26 distinct lowercase letters. What property of this small, fixed alphabet lets you find the \"next smallest\" or \"next largest\" available character without scanning the string each time?",
+    "Use a frequency array of size 26. For s = \"aaaabbbbcccc\", counts are a:4, b:4, c:4. One ascending pass from 'a' to 'z' appends 'a','b','c' giving \"abc\", leaving a:3, b:3, c:3.",
+    "```\ncount frequency of each character\nwhile result length < n:\n    for i from 0 to 25:\n        if count[i] > 0:\n            append char('a' + i), decrement count[i]\n    for i from 25 down to 0:\n        if count[i] > 0:\n            append char('a' + i), decrement count[i]\nreturn result\n```",
+    "**Single character** - n = 1, only one character exists\n`Input: s = \"a\"` → `Expected: \"a\"`\n⚠️ Bug: using `cnt[i] > 1` instead of `cnt[i] > 0` → skips characters with count 1, returns \"\"\n\n**Unequal counts** - two characters with different frequencies\n`Input: s = \"aab\"` → `Expected: \"aba\"`\n⚠️ Bug: using `cnt[i] >= 0` instead of `cnt[i] > 0` → appends zero-count characters, returns \"abba\"\n\n**Alphabet boundaries** - characters at both ends of the alphabet\n`Input: s = \"aazz\"` → `Expected: \"azza\"`\n⚠️ Bug: ascending loop `for (int i = 0; i < 25; i++)` (skips 'z') → returns \"azaz\"\n\n**Multiple rounds needed** - input requires both ascending and descending passes\n`Input: s = \"aabbcc\"` → `Expected: \"abccba\"`\n⚠️ Bug: omitting the descending pass → returns \"abcabc\""
   ],
   "followUps": [
     {
-      "q": "What if the input length can be up to 10⁵ instead of 500?",
-      "a": "The same counting‑array solution still runs in O(n) time and O(1) extra space, so it easily handles the larger limit."
+      "q": "What if the string could contain any ASCII character, not just lowercase letters?",
+      "a": "Use an array of size 128 instead of 26. Scan 0 to 127 ascending, then 127 to 0 descending. Time complexity stays O(n) since the alphabet size is still constant."
     },
     {
-      "q": "How would the solution change if the string could contain any Unicode character?",
-      "a": "We would replace the fixed‑size array with an ordered map (e.g., std::map<char,int>) to keep counts while preserving order; the algorithmic idea stays the same, giving O(n log σ) time where σ is the number of distinct characters."
+      "q": "What if s.length could be up to 10^7?",
+      "a": "The current O(n) approach already handles this. Call `result.reserve(n)` upfront to avoid repeated string reallocations during appending. Space remains O(1) for the frequency array."
     },
     {
-      "q": "Suppose we must output the reordered string as a stream without storing the whole result in memory.",
-      "a": "We can emit each character immediately when it is selected in the two sweeps, keeping only the 26‑element count array; this uses O(1) auxiliary memory and still processes the input in O(n) time."
+      "q": "What if you must process the string as a single-pass stream with no random access?",
+      "a": "Make one streaming pass to populate the 26-entry frequency array, then generate output by scanning the array in alternating directions as before. This is still two logical passes but only O(1) working memory beyond the frequency array."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    string sortString(string s) {\n        int cnt[26] = {0};\n        for (char c : s) cnt[c - 'a']++;\n        string res;\n        res.reserve(s.size());\n        int n = s.size();\n        while ((int)res.size() < n) {\n            for (int i = 0; i < 26; ++i) {\n                if (cnt[i] > 0) {\n                    res.push_back('a' + i);\n                    --cnt[i];\n                }\n            }\n            for (int i = 25; i >= 0; --i) {\n                if (cnt[i] > 0) {\n                    res.push_back('a' + i);\n                    --cnt[i];\n                }\n            }\n        }\n        return res;\n    }\n};",
-    "java": "class Solution {\n    public String sortString(String s) {\n        int[] cnt = new int[26];\n        for (char c : s.toCharArray()) {\n            cnt[c - 'a']++;\n        }\n        StringBuilder res = new StringBuilder(s.length());\n        int n = s.length();\n        while (res.length() < n) {\n            for (int i = 0; i < 26; i++) {\n                if (cnt[i] > 0) {\n                    res.append((char) ('a' + i));\n                    cnt[i]--;\n                }\n            }\n            for (int i = 25; i >= 0; i--) {\n                if (cnt[i] > 0) {\n                    res.append((char) ('a' + i));\n                    cnt[i]--;\n                }\n            }\n        }\n        return res.toString();\n    }\n}",
-    "python3": "class Solution:\n    def sortString(self, s: str) -> str:\n        cnt = [0] * 26\n        for c in s:\n            cnt[ord(c) - ord('a')] += 1\n\n        res = []\n        n = len(s)\n        while len(res) < n:\n            for i in range(26):\n                if cnt[i] > 0:\n                    res.append(chr(ord('a') + i))\n                    cnt[i] -= 1\n            for i in range(25, -1, -1):\n                if cnt[i] > 0:\n                    res.append(chr(ord('a') + i))\n                    cnt[i] -= 1\n        return ''.join(res)",
-    "javascript": "/**\n * @param {string} s\n * @return {string}\n */\nvar sortString = function(s) {\n    // Count frequency of each lowercase letter\n    const cnt = new Array(26).fill(0);\n    for (const ch of s) {\n        cnt[ch.charCodeAt(0) - 97]++;\n    }\n\n    const res = [];\n    const n = s.length;\n\n    // Repeat until all characters are used\n    while (res.length < n) {\n        // Ascending pass: from 'a' to 'z'\n        for (let i = 0; i < 26; i++) {\n            if (cnt[i] > 0) {\n                res.push(String.fromCharCode(97 + i));\n                cnt[i]--;\n            }\n        }\n        // Descending pass: from 'z' to 'a'\n        for (let i = 25; i >= 0; i--) {\n            if (cnt[i] > 0) {\n                res.push(String.fromCharCode(97 + i));\n                cnt[i]--;\n            }\n        }\n    }\n\n    return res.join('');\n};"
+    "cpp": "class Solution {\npublic:\n    string sortString(string s) {\n        int cnt[26] = {0};\n        for (char c : s) {\n            cnt[c - 'a']++;\n        }\n        string result;\n        result.reserve(s.size());\n        int n = (int)s.size();\n        while ((int)result.size() < n) {\n            for (int i = 0; i < 26; i++) {\n                if (cnt[i] > 0) {\n                    result += (char)('a' + i);\n                    cnt[i]--;\n                }\n            }\n            for (int i = 25; i >= 0; i--) {\n                if (cnt[i] > 0) {\n                    result += (char)('a' + i);\n                    cnt[i]--;\n                }\n            }\n        }\n        return result;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": true
   }
 }

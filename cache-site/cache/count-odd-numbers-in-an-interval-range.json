@@ -2,40 +2,39 @@
   "slug": "count-odd-numbers-in-an-interval-range",
   "title": "Count Odd Numbers in an Interval Range",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Arithmetic Counting",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Math / Closed-Form Formula",
   "tc": "O(1)",
   "sc": "O(1)",
-  "spaceBreakdown": "- long long intermediate variables: constant amount → O(1)\n- not counted: input parameters, returned int",
-  "approach": "The amount of odd numbers up to any x is ⌊(x+1)/2⌋. Subtract the count up to low‑1 from the count up to high to obtain the answer. This uses only O(1) arithmetic and works for the whole allowed range, because we use 64‑bit intermediate values.",
+  "spaceBreakdown": "- no containers, no recursion, no heap/stack allocations → O(1)\n- not counted: input parameters, returned int",
+  "approach": "The count of odd numbers in [0, n] is (n+1)/2 (integer division). To get the count in [low, high], subtract the count in [0, low-1] from the count in [0, high]: (high+1)/2 - low/2. This is a closed-form O(1) formula, correct because consecutive integers alternate parity, so the odd count in any prefix [0, n] is exactly ceil((n+1)/2) = (n+1)/2 with integer division.",
   "hints": [
-    "Is the length of the interval `high - low + 1` even or odd?  \nThe constraint guarantees `0 ≤ low ≤ high ≤ 10^9`, so the length fits in 32‑bit.",
-    "Use a constant‑time arithmetic formula.  \nExample: `low = 3, high = 7` → `(7+1)/2 - 3/2 = 4 - 1 = 3` odds.",
-    "```\noddUpTo(x) = (x + 1) // 2          // integer division\nanswer = oddUpTo(high) - oddUpTo(low - 1)\nreturn answer\n```",
-    "**Single element, odd** - low and high are the same odd number.  \n`Input: low = 5, high = 5` → `Expected: 1`  \n⚠️ Bug: returning `(high - low + 1) / 2` → returns `0`.\n\n**Single element, even** - low and high are the same even number.  \n`Input: low = 4, high = 4` → `Expected: 0`  \n⚠️ Bug: adding `(low % 2)` when length is odd → returns `1`.\n\n**Zero at start** - interval starts at 0.  \n`Input: low = 0, high = 1` → `Expected: 1`  \n⚠️ Bug: using `low/2` instead of `(low-1)/2` for the subtraction → returns `0`.\n\n**Maximum range** - test the upper bound.  \n`Input: low = 0, high = 1000000000` → `Expected: 500000000`  \n⚠️ Bug: computing `(high+1)` in a 32‑bit `int` overflows to negative → wrong result."
+    "In any two consecutive integers, exactly one is odd. How does the parity of the range length (high - low + 1) together with the parity of low decide how many odds fall inside [low, high]?",
+    "Use the prefix-count trick: the number of odd integers in [0, n] is (n + 1) / 2. For [3, 7]: odds in [0,7] = (7+1)/2 = 4, odds in [0,2] = (2+1)/2 = 1, so answer = 4 − 1 = 3.",
+    "odds_up_to(n) = (n + 1) / 2\nreturn odds_up_to(high) - odds_up_to(low - 1)",
+    "**Single even number** - range of length 1, even endpoint\n`low = 0, high = 0` → `Expected: 0`\n⚠️ Bug: using `(high - low + 1) / 2` blindly → returns 0 (correct here, but see next case)\n\n**Single odd number** - range of length 1, odd endpoint\n`low = 1, high = 1` → `Expected: 1`\n⚠️ Bug: using `(high - low + 1) / 2` → returns 0, wrong (length 1, integer division drops the extra odd)\n\n**Both endpoints odd** - odd-length range starting and ending odd\n`low = 3, high = 7` → `Expected: 3`\n⚠️ Bug: using `(high - low) / 2` → returns 2, wrong (off by one because both ends are odd)\n\n**Both endpoints even** - odd-length range starting and ending even\n`low = 8, high = 10` → `Expected: 1`\n⚠️ Bug: using `(high - low) / 2 + 1` → returns 2, wrong (the +1 only applies when endpoints are odd)\n\n**Maximum range** - high = 10^9, low = 0\n`low = 0, high = 1000000000` → `Expected: 500000000`\n⚠️ Bug: looping i from low to high incrementing a counter → TLE on 10^9 iterations"
   ],
   "followUps": [
     {
-      "q": "What if `low` and `high` can be as large as 10¹⁸?",
-      "a": "The same formula works, but we must store the intermediate values in 64‑bit (`long long`) to avoid overflow. Time stays O(1) and space O(1)."
+      "q": "Generalize to count integers in [low, high] divisible by a given k.",
+      "a": "Count multiples of k in [0, n] is n / k (integer division). Answer = high / k - (low - 1) / k. TC O(1), SC O(1)."
     },
     {
-      "q": "How would you count the even numbers in the same interval?",
-      "a": "The total count is `high - low + 1`; subtract the odd count computed above. This also runs in O(1) time and O(1) space."
+      "q": "Count prime numbers in [low, high] where high can be up to 10^9 but high - low ≤ 10^5.",
+      "a": "Sieve all primes up to sqrt(10^9) ≈ 31623, then mark composites in the segment [low, high] using those primes. TC O(sqrt(high) + (high - low) log log high), SC O(sqrt(high) + (high - low))."
     },
     {
-      "q": "Suppose you receive up to 10⁵ queries, each with its own `low` and `high`.",
-      "a": "Apply the O(1) formula to each query independently; the overall complexity becomes O(Q) time and O(1) extra space."
+      "q": "Answer many count-odds queries online with low, high up to 10^9 and up to 10^7 queries.",
+      "a": "The closed form (high + 1) / 2 - low / 2 is already O(1) per query, so just apply it per query with no preprocessing. TC O(q), SC O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int countOdds(int low, int high) {\n        long long oddUpToHigh = (static_cast<long long>(high) + 1) / 2;\n        long long oddUpToLowMinusOne = static_cast<long long>(low) / 2;\n        return static_cast<int>(oddUpToHigh - oddUpToLowMinusOne);\n    }\n};",
-    "java": "class Solution {\n    public int countOdds(int low, int high) {\n        long oddUpToHigh = (long) (high + 1) / 2;\n        long oddUpToLowMinusOne = (long) low / 2;\n        return (int) (oddUpToHigh - oddUpToLowMinusOne);\n    }\n}",
-    "python3": "class Solution:\n    def countOdds(self, low: int, high: int) -> int:\n        # Number of odd integers from 0 to high inclusive\n        odd_up_to_high = (high + 1) // 2\n        # Number of odd integers from 0 to low-1 inclusive\n        odd_up_to_low_minus_one = low // 2\n        return odd_up_to_high - odd_up_to_low_minus_one",
-    "javascript": "/**\n * @param {number} low\n * @param {number} high\n * @return {number}\n */\nvar countOdds = function(low, high) {\n    const oddUpToHigh = Math.floor((high + 1) / 2);\n    const oddUpToLowMinusOne = Math.floor(low / 2);\n    return oddUpToHigh - oddUpToLowMinusOne;\n};"
+    "cpp": "class Solution {\npublic:\n    int countOdds(int low, int high) {\n        return (high + 1) / 2 - low / 2;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
   }
 }

@@ -2,40 +2,39 @@
   "slug": "concatenation-of-array",
   "title": "Concatenation of Array",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Simple Replication",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Array Simulation",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- vector<int> ans(2*n): output, not counted  \n- loop index i: O(1)  \n- not counted: input vector nums, returned vector ans",
-  "approach": "The result consists of the original array followed immediately by the same sequence again. By allocating a new array of size 2·n we can copy each element of nums into the first half and the same element into the second half in a single linear pass. This direct placement guarantees the required order.",
+  "spaceBreakdown": "- vector<int> ans: 2n entries - this is the returned output, not counted per LeetCode convention\n- no other containers, no recursion, no auxiliary data structures\n- SC = O(1)",
+  "approach": "The output is simply `nums` repeated twice. Create a vector of size `2n`, then in a single pass assign `nums[i]` to both `ans[i]` and `ans[i + n]`. This directly implements the definition `ans[i] == nums[i]` and `ans[i + n] == nums[i]` for all `0 <= i < n`.",
   "hints": [
-    "What part of the desired array appears twice, exactly as it is in nums?  \nSince n ≤ 1000, you can afford to store another copy without any clever tricks.",
-    "Use a **vector** of length 2·n and write each nums[i] to two positions.  \nExample: for nums = [1,2,1] write 1 to indices 0 and 3, 2 to 1 and 4, 1 to 2 and 5.",
-    "```\nn ← length of nums\ncreate ans of size 2*n\nfor i from 0 to n‑1 do\n    ans[i]      ← nums[i]\n    ans[i + n]  ← nums[i]\nreturn ans\n```",
-    "**Single element** - the smallest allowed size.  \n`Input: [7]` → `Expected: [7,7]`  \n⚠️ Bug: allocating ans with size n instead of 2·n → returns `[7]`.\n\n**All equal** - every value is the same.  \n`Input: [5,5,5]` → `Expected: [5,5,5,5,5,5]`  \n⚠️ Bug: using `push_back` for the first half then assigning `ans[i+n]` → second half stays default‑initialized, e.g. `[5,5,5,0,0,0]`.\n\n**Maximum values** - each element is 1000, the largest allowed.  \n`Input: [1000,1000,1000,1000]` → `Expected: [1000,1000,1000,1000,1000,1000,1000,1000]`  \n⚠️ Bug: storing sums instead of copies (e.g., `ans[i] = ans[i] + nums[i]`) → doubles each value, e.g. `[2000,…]`."
+    "For each index `j` in the `2n`-length output, which single index of `nums` determines its value?",
+    "Use a `vector<int>` of size `2n`. For `nums = [1,2,1]` with `n = 3`, one iteration sets `ans[0] = ans[3] = nums[0] = 1`.",
+    "```\nn = length(nums)\nans = array of size 2 * n\nfor i = 0 to n - 1:\n    ans[i] = nums[i]\n    ans[i + n] = nums[i]\nreturn ans\n```",
+    "**Smallest input** - `n = 1`, only one element to duplicate\n`Input: nums = [5]` → `Expected: [5,5]`\n⚠️ Bug: loop `for (i = 1; i < n; i++)` (starting at 1 instead of 0) → returns `[0,0]`\n\n**All elements equal** - every value is identical, so both halves look the same\n`Input: nums = [7,7,7]` → `Expected: [7,7,7,7,7,7]`\n⚠️ Bug: only assigning `ans[i] = nums[i]` and forgetting `ans[i + n]` → returns `[7,7,7,0,0,0]`\n\n**Duplicates in input** - repeated values must appear in both halves\n`Input: nums = [1,2,1]` → `Expected: [1,2,1,1,2,1]`\n⚠️ Bug: calling `ans.push_back(nums[i])` once per iteration on an empty vector → returns `[1,2,1]`\n\n**Boundary indices** - last element of each half must be set\n`Input: nums = [1,3,2,1]` → `Expected: [1,3,2,1,1,3,2,1]`\n⚠️ Bug: loop `for (i = 0; i < n - 1; i++)` (stopping one early) → returns `[1,3,2,0,1,3,2,0]`"
   ],
   "followUps": [
     {
-      "q": "What if n can be as large as 10⁵ instead of 10³?",
-      "a": "The same O(n) algorithm still works because it performs only a constant amount of work per element; memory usage grows linearly with n, which is acceptable for 10⁵ elements."
+      "q": "What if you need to concatenate `nums` `k` times instead of 2?",
+      "a": "Allocate an array of size `k * n` and assign `ans[i] = nums[i % n]` for `0 <= i < k * n`. TC: O(k·n), SC: O(1) auxiliary."
     },
     {
-      "q": "How would you modify the solution if you were required to output the concatenated array without storing it entirely in memory?",
-      "a": "Iterate over nums twice, printing each element during the first pass and again during the second pass (or streaming to a writer). Time stays O(n) while auxiliary space drops to O(1)."
+      "q": "What if `nums` arrives as a forward-only iterator with unknown length, and you must output the concatenation?",
+      "a": "Buffer all elements into a vector as they arrive, then iterate over that vector twice to produce output. TC: O(n), SC: O(n) for the buffer."
     },
     {
-      "q": "Suppose the input array is read from a read‑only source and you must return a new array but cannot modify nums. Does the current approach still satisfy the constraints?",
-      "a": "Yes; the algorithm only reads from nums and writes into a freshly allocated vector, leaving the original data untouched. Time is O(n) and extra space remains O(1) aside from the required output."
+      "q": "What if `n` is up to 10^9 and you only need to answer point queries \"what is `ans[j]`?\" without materializing the array?",
+      "a": "Store `n` and answer each query as `nums[j % n]` directly. TC: O(1) per query, SC: O(1) auxiliary (the input array is already in memory)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    vector<int> getConcatenation(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> ans(2 * n);\n        for (int i = 0; i < n; ++i) {\n            ans[i] = nums[i];\n            ans[i + n] = nums[i];\n        }\n        return ans;\n    }\n};",
-    "java": "class Solution {\n    public int[] getConcatenation(int[] nums) {\n        int n = nums.length;\n        int[] ans = new int[2 * n];\n        for (int i = 0; i < n; ++i) {\n            ans[i] = nums[i];\n            ans[i + n] = nums[i];\n        }\n        return ans;\n    }\n}",
-    "python3": "class Solution:\n    def getConcatenation(self, nums: list[int]) -> list[int]:\n        n = len(nums)\n        ans = [0] * (2 * n)\n        for i in range(n):\n            ans[i] = nums[i]\n            ans[i + n] = nums[i]\n        return ans",
-    "javascript": "/**\n * @param {number[]} nums\n * @return {number[]}\n */\nvar getConcatenation = function(nums) {\n    const n = nums.length;\n    const ans = new Array(2 * n);\n    for (let i = 0; i < n; ++i) {\n        ans[i] = nums[i];\n        ans[i + n] = nums[i];\n    }\n    return ans;\n};"
+    "cpp": "class Solution {\npublic:\n    vector<int> getConcatenation(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> ans(2 * n);\n        for (int i = 0; i < n; i++) {\n            ans[i] = nums[i];\n            ans[i + n] = nums[i];\n        }\n        return ans;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
   }
 }

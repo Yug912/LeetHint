@@ -2,40 +2,39 @@
   "slug": "determine-whether-matrix-can-be-obtained-by-rotation",
   "title": "Determine Whether Matrix Can Be Obtained By Rotation",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Brute‑Force Rotation Check",
-  "tc": "O(n²)",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Matrix Rotation",
+  "tc": "O(n^2)",
   "sc": "O(1)",
-  "spaceBreakdown": "- No additional containers are allocated; all work is done in place with index calculations.",
-  "approach": "Check the matrix against the target after 0°, 90°, 180°, and 270° rotations.  \nA single rotation can be simulated by index mapping, so we only need to compare up to four times.  \nIf any rotated version matches, return true; otherwise return false.",
+  "spaceBreakdown": "- bool variables r0, r90, r180, r270: O(1)\n- loop counters i, j, n: O(1)\n- not counted: input mat, target",
+  "approach": "The key insight is that a square matrix has only 4 distinct orientations when rotated in 90-degree increments (0, 90, 180, and 270 degrees). Instead of physically rotating the matrix multiple times, we can use direct index-based comparison. For each of the 4 possible rotations, we check if every element `mat[i][j]` maps to the corresponding expected position in `target`. If any of the 4 mappings fully match, we return true; otherwise, false. This achieves O(n²) time and O(1) auxiliary space.",
   "hints": [
-    "Since n ≤ 10, you can afford to try every 90° rotation.  \nInstead of physically rotating the matrix, compare elements using a formula that maps indices.",
-    "Use a simple index mapping: for a 90° clockwise rotation, element (i, j) moves to (j, n-1-i).  \nFor example, in a 2×2 matrix, (0,1) → (1,1).",
-    "for k in 0..3:\n    match = true\n    for i in 0..n-1:\n        for j in 0..n-1:\n            if mat[rotated(i,j,k)] != target[i][j]:\n                match = false; break\n    if match: return true\nreturn false",
-    "**Single Element** - Only one cell, always matches after 0° rotation.  \n`Input: mat=[[1]], target=[[1]]` → `Expected: true`  \n⚠️ Bug: comparing only the first element and returning true → correct output, but fails if target differs.  \n\n**All Zeros vs All Ones** - No rotation can change values.  \n`Input: mat=[[0,0],[0,0]], target=[[1,1],[1,1]]` → `Expected: false`  \n⚠️ Bug: using `==` instead of `!=` in the inner loop → returns true incorrectly.  \n\n**Already Matched After 180°** - Must check all rotations, not just 90°.  \n`Input: mat=[[1,0],[0,1]], target=[[1,0],[0,1]]` → `Expected: true`  \n⚠️ Bug: stopping after first rotation check → returns false if 0° is not checked."
+    "How many distinct orientations can an n x n matrix have if you only rotate it in 90-degree increments?\nThe constraints state n <= 10.",
+    "Direct index-based comparison.\nIn Example 1, `mat[0][0]` is 0, which should map to `target[0][1]` (also 0) for a 90-degree clockwise rotation. Check this index mapping directly without modifying the matrix.",
+    "for each of the 4 possible rotations:\n  assume it matches\n  for i from 0 to n-1:\n    for j from 0 to n-1:\n      if mat[i][j] != target[rotated_i][rotated_j]:\n        it does not match\n  if it matches:\n    return true\nreturn false",
+    "**Smallest input** - n = 1, a single element matrix.\n`Input: mat = [[0]], target = [[0]]` → `Expected: true`\n⚠️ Bug: Using `n - i` instead of `n - 1 - i` for the rotated index → returns `false`.\n\n**Already equal** - mat is already equal to target without any rotation.\n`Input: mat = [[0,1],[1,0]], target = [[0,1],[1,0]]` → `Expected: true`\n⚠️ Bug: Only checking 90, 180, and 270 degree rotations and skipping the 0 degree check → returns `false`.\n\n**No valid rotation** - mat cannot be rotated to match target.\n`Input: mat = [[0,1],[1,1]], target = [[1,0],[0,1]]` → `Expected: false`\n⚠️ Bug: Returning true as soon as one element matches the rotated index, instead of checking all elements → returns `true`."
   ],
   "followUps": [
     {
-      "q": "What if n could be up to 10⁵?",
-      "a": "We would need an O(n²) algorithm to compare all rotations, which is infeasible. Instead, we could hash each rotation and compare hashes in O(n²) time but with O(n²) space, or use a more clever invariant."
+      "q": "What if the matrices were not square (m x n)?",
+      "a": "A 90-degree rotation of an m x n matrix results in an n x m matrix. We would first check if dimensions match the rotated dimensions, then apply the index mapping `mat[i][j] == target[j][m - 1 - i]`."
     },
     {
-      "q": "How would you solve this if the matrix were not square?",
-      "a": "For rectangular matrices, rotations change dimensions; we would need to compare against the appropriately transposed target for each rotation, increasing complexity to O(n·m)."
+      "q": "What if you had to find the minimum number of rotations instead of just returning true/false?",
+      "a": "Instead of checking all 4 rotations simultaneously, check them in order of 0, 90, 180, and 270 degrees. Return the index of the first matching rotation. Time complexity remains O(n^2) and space O(1)."
     },
     {
-      "q": "Suppose we could only rotate the matrix in place without extra memory.",
-      "a": "We would perform an in‑place 90° rotation algorithm (cyclically swapping elements) four times, each O(n²), and compare after each rotation, keeping space O(1)."
+      "q": "What if the matrix could be rotated by any angle, not just 90-degree increments?",
+      "a": "We would need to check if the matrix has rotational symmetry for the given angle, or if the target is a valid rotation of the matrix. Since pixels are discrete, only 90-degree increments map grid cells to grid cells perfectly."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    bool findRotation(vector<vector<int>>& mat, vector<vector<int>>& target) {\n        int n = mat.size();\n        for (int rot = 0; rot < 4; ++rot) {\n            bool ok = true;\n            for (int i = 0; i < n && ok; ++i) {\n                for (int j = 0; j < n; ++j) {\n                    int x, y;\n                    if (rot == 0) { x = i; y = j; }\n                    else if (rot == 1) { x = n - 1 - j; y = i; }\n                    else if (rot == 2) { x = n - 1 - i; y = n - 1 - j; }\n                    else { x = j; y = n - 1 - i; }\n                    if (mat[x][y] != target[i][j]) { ok = false; break; }\n                }\n            }\n            if (ok) return true;\n        }\n        return false;\n    }\n};",
-    "java": "class Solution {\n    public boolean findRotation(int[][] mat, int[][] target) {\n        int n = mat.length;\n        for (int rot = 0; rot < 4; ++rot) {\n            boolean ok = true;\n            for (int i = 0; i < n && ok; ++i) {\n                for (int j = 0; j < n; ++j) {\n                    int x, y;\n                    if (rot == 0) {\n                        x = i;\n                        y = j;\n                    } else if (rot == 1) {\n                        x = n - 1 - j;\n                        y = i;\n                    } else if (rot == 2) {\n                        x = n - 1 - i;\n                        y = n - 1 - j;\n                    } else {\n                        x = j;\n                        y = n - 1 - i;\n                    }\n                    if (mat[x][y] != target[i][j]) {\n                        ok = false;\n                        break;\n                    }\n                }\n            }\n            if (ok) return true;\n        }\n        return false;\n    }\n}",
-    "python3": "class Solution:\n    def findRotation(self, mat: list[list[int]], target: list[list[int]]) -> bool:\n        n = len(mat)\n        for rot in range(4):\n            ok = True\n            for i in range(n):\n                if not ok:\n                    break\n                for j in range(n):\n                    if rot == 0:\n                        x, y = i, j\n                    elif rot == 1:\n                        x, y = n - 1 - j, i\n                    elif rot == 2:\n                        x, y = n - 1 - i, n - 1 - j\n                    else:  # rot == 3\n                        x, y = j, n - 1 - i\n                    if mat[x][y] != target[i][j]:\n                        ok = False\n                        break\n            if ok:\n                return True\n        return False",
-    "javascript": "/**\n * @param {number[][]} mat\n * @param {number[][]} target\n * @return {boolean}\n */\nvar findRotation = function(mat, target) {\n    const n = mat.length;\n    for (let rot = 0; rot < 4; ++rot) {\n        let ok = true;\n        for (let i = 0; i < n && ok; ++i) {\n            for (let j = 0; j < n; ++j) {\n                let x, y;\n                if (rot === 0) {\n                    x = i; y = j;\n                } else if (rot === 1) {\n                    x = n - 1 - j; y = i;\n                } else if (rot === 2) {\n                    x = n - 1 - i; y = n - 1 - j;\n                } else { // rot === 3\n                    x = j; y = n - 1 - i;\n                }\n                if (mat[x][y] !== target[i][j]) {\n                    ok = false;\n                    break;\n                }\n            }\n        }\n        if (ok) return true;\n    }\n    return false;\n};"
+    "cpp": "class Solution {\npublic:\n    bool findRotation(vector<vector<int>>& mat, vector<vector<int>>& target) {\n        int n = mat.size();\n        bool r0 = true, r90 = true, r180 = true, r270 = true;\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < n; j++) {\n                if (mat[i][j] != target[i][j]) r0 = false;\n                if (mat[i][j] != target[j][n - 1 - i]) r90 = false;\n                if (mat[i][j] != target[n - 1 - i][n - 1 - j]) r180 = false;\n                if (mat[i][j] != target[n - 1 - j][i]) r270 = false;\n            }\n        }\n        return r0 || r90 || r180 || r270;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": true
   }
 }

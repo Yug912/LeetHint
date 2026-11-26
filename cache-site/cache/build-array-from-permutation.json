@@ -2,40 +2,39 @@
   "slug": "build-array-from-permutation",
   "title": "Build Array from Permutation",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Array Simulation",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "In-place Encoding (Quotient/Remainder Packing)",
   "tc": "O(n)",
-  "sc": "O(n)",
-  "spaceBreakdown": "- vector<int> ans: n integers → O(n)  \n- recursion depth: none  \n- not counted: input `nums`, returned vector `ans`",
-  "approach": "Because `nums` is a zero‑based permutation, each `nums[i]` is itself a valid index into the array. We can therefore read the value at that index and store it in a new array. A single linear scan computes `ans[i] = nums[nums[i]]` for every position, which directly follows the definition.",
+  "sc": "O(1)",
+  "spaceBreakdown": "- no extra containers allocated; nums is modified in place and returned\n- recursion depth: none\n- not counted: input/returned vector (same object)",
+  "approach": "Since every value in nums is a distinct integer in [0, n-1], we can pack both the original value and the new value `nums[nums[i]]` into a single cell using base-n encoding: `nums[i] = nums[i] + n * (nums[nums[i]] % n)`. The `% n` recovers the original value of `nums[nums[i]]` even if that cell was already modified in a previous iteration (because original values are all < n). A second pass divides each cell by n to extract the answer, all in place.",
   "hints": [
-    "What property of a permutation guarantees that `nums[i]` is always a legal index to read from?  \nUse that fact to replace each element with the element found at its own value.  \nConstraint: `1 ≤ nums.length ≤ 1000`.",
-    "Use a simple array (`vector<int>`) to hold the result.  \nFor the first example, `ans[3] = nums[ nums[3] ] = nums[5] = 4`.",
-    "```\nn ← length of nums\ncreate ans of size n\nfor i from 0 to n‑1\n    ans[i] ← nums[ nums[i] ]\nreturn ans\n```",
-    "**Single element** - the smallest allowed size.  \n`Input: [0]` → `Expected: [0]`  \n⚠️ Bug: returning an empty vector → returns `[]`.\n\n**Two‑element reverse** - checks correct handling of both indices.  \n`Input: [1,0]` → `Expected: [0,1]`  \n⚠️ Bug: modifying `nums` in‑place before all reads → returns `[1,0]`.\n\n**In‑place misuse** - demonstrates why a separate output array is needed.  \n`Input: [2,0,1]` → `Expected: [1,2,0]`  \n⚠️ Bug: `nums[i] = nums[ nums[i] ]` directly → after i=0 the array becomes `[1,0,1]` and final result is `[1,0,1]`."
+    "Every value in nums is an integer from 0 to n-1. If you add a multiple of n to one of these values, what does taking the result modulo n recover, and what does dividing by n recover?",
+    "Use in-place base-n packing: store `nums[i] + n * (nums[nums[i]] % n)` in pass 1, then divide by n in pass 2. For nums = [0,2,1,5,3,4] with n=6, at i=1: nums[1] = 2 + 6*(nums[2]%6) = 2 + 6*1 = 8, holding old value 2 (=8%6) and new value 1 (=8/6).",
+    "n = length(nums)\nfor i in 0..n-1:\n    nums[i] = nums[i] + n * (nums[nums[i]] mod n)\nfor i in 0..n-1:\n    nums[i] = nums[i] / n\nreturn nums",
+    "**Standard case (example 1)** - nums[i] points to both earlier and later cells.\n`Input: nums = [0,2,1,5,3,4]` → `Expected: [0,1,2,4,5,3]`\n⚠️ Bug: omitting `% n` when reading nums[nums[i]] → at i=2 reads already-encoded nums[1]=8 → nums[2]=1+6*8=49, final /6 gives 8 instead of 2 → returns [0,1,8,4,29,177].\n\n**Cyclic shift (example 2)** - each element points to the previous index.\n`Input: nums = [5,0,1,2,3,4]` → `Expected: [4,5,0,1,2,3]`\n⚠️ Bug: encoding and dividing in a single pass → at i=1 reads already-divided nums[0]=4 instead of original 5 → nums[1]=0+6*4=24, /6=4 instead of 5 → returns [4,4,4,4,4,4].\n\n**Reverse permutation** - nums[i] = n-1-i, so nums[i] < i for i > 0.\n`Input: nums = [3,2,1,0]` → `Expected: [0,1,2,3]`\n⚠️ Bug: omitting `% n` → at i=2 reads already-encoded nums[1]=6 → nums[2]=1+4*6=25, /4=6 instead of 2 → returns [0,1,6,3].\n\n**Single cycle** - every index is part of one cycle, so reads hit encoded cells.\n`Input: nums = [1,2,3,0]` → `Expected: [2,3,0,1]`\n⚠️ Bug: encoding and dividing in one pass → at i=3 reads already-divided nums[0]=2 instead of original 1 → nums[3]=0+4*2=8, /4=2 instead of 1 → returns [2,3,0,2]."
   ],
   "followUps": [
     {
-      "q": "How can we achieve O(1) extra space while still returning the correct result?",
-      "a": "Encode both old and new values in the same array by storing `nums[i] + n * (newValue)`; after the first pass, divide each entry by `n` to retrieve the new values. This runs in O(n) time and O(1) auxiliary space."
+      "q": "What if nums is not guaranteed to be a permutation (values may repeat or exceed n-1)?",
+      "a": "The base-n packing breaks because `% n` no longer isolates the original value. Allocate a separate answer vector of size n and set ans[i] = nums[nums[i]] directly, giving O(n) time and O(n) extra space."
     },
     {
-      "q": "If the input size were increased to 10⁵, does the same algorithm still meet the limits?",
-      "a": "Yes, the algorithm remains O(n) time and O(n) extra space, which easily fits within typical limits for 10⁵ elements."
+      "q": "What if nums arrives as a forward-only stream you can traverse once?",
+      "a": "You cannot compute nums[nums[i]] without random access, so buffer the entire stream into a vector first (O(n) space), then run the same two-pass in-place encoding."
     },
     {
-      "q": "Suppose the array is provided as a read‑only stream and we cannot allocate another O(n) array. What strategy could we use?",
-      "a": "We could output each `nums[nums[i]]` immediately as we read `nums[i]`, but this requires random access to previously read elements, so we would need to store the whole permutation anyway; thus the problem cannot be solved under a strict read‑only, O(1)‑memory model without additional passes or external storage."
+      "q": "What if each value can be up to 10^9 instead of < n?",
+      "a": "Packing fails since values exceed the base n. Use a separate ans array with ans[i] = nums[nums[i]]; values up to 10^9 fit in int, so O(n) time and O(n) extra space with no overflow."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    vector<int> buildArray(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> ans(n);\n        for (int i = 0; i < n; ++i) {\n            ans[i] = nums[nums[i]];\n        }\n        return ans;\n    }\n};",
-    "java": "class Solution {\n    public int[] buildArray(int[] nums) {\n        int n = nums.length;\n        int[] ans = new int[n];\n        for (int i = 0; i < n; ++i) {\n            ans[i] = nums[nums[i]];\n        }\n        return ans;\n    }\n}",
-    "python3": "class Solution:\n    def buildArray(self, nums: list[int]) -> list[int]:\n        n = len(nums)\n        ans = [0] * n\n        for i in range(n):\n            ans[i] = nums[nums[i]]\n        return ans",
-    "javascript": "/**\n * @param {number[]} nums\n * @return {number[]}\n */\nvar buildArray = function(nums) {\n    const n = nums.length;\n    const ans = new Array(n);\n    for (let i = 0; i < n; ++i) {\n        ans[i] = nums[nums[i]];\n    }\n    return ans;\n};"
+    "cpp": "class Solution {\npublic:\n    vector<int> buildArray(vector<int>& nums) {\n        int n = nums.size();\n        for (int i = 0; i < n; i++) {\n            nums[i] = nums[i] + n * (nums[nums[i]] % n);\n        }\n        for (int i = 0; i < n; i++) {\n            nums[i] /= n;\n        }\n        return nums;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": true
   }
 }
