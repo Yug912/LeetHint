@@ -1,0 +1,38 @@
+{
+  "slug": "lru-cache",
+  "title": "LRU Cache",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Hash‑Map + Doubly‑Linked List (LRU Cache)",
+  "tc": "O(1)",
+  "sc": "O(capacity)",
+  "spaceBreakdown": "- unordered_map<int, list<pair<int,int>>::iterator> mp: up to capacity entries → O(capacity)  \n- list<pair<int,int>> dll: up to capacity nodes → O(capacity)  \n- recursion depth: none  \n- not counted: input, returned values",
+  "approach": "Maintain the usage order in a doubly‑linked list where the front is the most recently used and the back is the least recently used.  \nA hash map stores, for each key, an iterator to its node in the list.  \n`get` moves the accessed node to the front; `put` either updates and moves an existing node or inserts a new front node and evicts the back node when the size exceeds capacity.  \nAll operations are O(1) average because list splicing and hash look‑ups are constant time.",
+  "hints": [
+    "When a key is accessed, how should its position change relative to other keys?  \nThe cache must handle up to 2 × 10⁵ operations while capacity never exceeds 3000.",
+    "Use a hash map together with a doubly linked list.  \nExample: after `put(1,1)`, `put(2,2)`, the list is `[2,2] → [1,1]`; `get(1)` moves key 1 to the front, making the list `[1,1] → [2,2]`.",
+    "```\nget(key):\n    if key not in map: return -1\n    node = map[key]\n    move node to front of list\n    return node.value\n\nput(key, value):\n    if key in map:\n        node = map[key]\n        node.value = value\n        move node to front\n    else:\n        insert (key,value) at front\n        map[key] = iterator to new node\n        if size > capacity:\n            tail = back of list\n            erase map[tail.key]\n            remove tail from list\n```",
+    "**Capacity = 1** - only one entry can stay alive.  \n`Input: [\"LRUCache\",\"put\",\"put\",\"get\",\"put\",\"get\"] [[1],[1,10],[2,20],[1],[3,30],[2]] → Expected: [null,null,null,-1,null,-1]`  \n⚠️ Bug: using a vector and erasing the front on overflow removes the most recent instead of the least recent → returns 10 for the second `get`.\n\n**Update existing key** - `put` on an existing key must not increase size.  \n`Input: [\"LRUCache\",\"put\",\"put\",\"put\",\"get\"] [[2],[1,1],[2,2],[1,10],[1]] → Expected: [null,null,null,null,10]`  \n⚠️ Bug: forgetting to move the updated node to the front keeps it at the back, so a later eviction would drop it incorrectly.\n\n**Many operations** - 2 × 10⁵ calls stress O(1) requirement.  \n`Input: [\"LRUCache\",\"put\",\"get\",\"put\",\"get\",...]` with 200 000 alternating calls → Expected: all `get` results correct.  \n⚠️ Bug: using `list::remove` (linear) for each access makes the total O(n²) and times out."
+  ],
+  "followUps": [
+    {
+      "q": "What if the cache must support a `remove(key)` operation in O(1) time?",
+      "a": "The same structure already supports it: locate the iterator via the hash map, erase the node from the list, and erase the map entry, all O(1). The overall complexity remains O(1) per operation and space stays O(capacity)."
+    },
+    {
+      "q": "How would the solution change if the capacity could be up to 10⁵ and memory usage had to be minimized?",
+      "a": "The current design already uses O(capacity) memory, which is optimal; we would keep the same hash map and doubly linked list but might reserve space in the unordered_map to avoid rehashing overhead. Time complexity stays O(1)."
+    },
+    {
+      "q": "Suppose we need to serialize the cache state to a file and later restore it.",
+      "a": "Serialize the list from front to back (key‑value pairs) and the capacity; on restore, rebuild the list and repopulate the hash map with iterators to the newly created nodes. This adds O(capacity) time and space for the temporary serialization buffer, while the core operations remain O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class LRUCache {\npublic:\n    LRUCache(int capacity) : cap(capacity) {}\n\n    int get(int key) {\n        auto it = mp.find(key);\n        if (it == mp.end()) return -1;\n        // move the accessed node to the front\n        dll.splice(dll.begin(), dll, it->second);\n        return it->second->second;\n    }\n\n    void put(int key, int value) {\n        auto it = mp.find(key);\n        if (it != mp.end()) {\n            // key exists: update value and move to front\n            it->second->second = value;\n            dll.splice(dll.begin(), dll, it->second);\n        } else {\n            // insert new node at front\n            dll.emplace_front(key, value);\n            mp[key] = dll.begin();\n            if ((int)mp.size() > cap) {\n                // evict least recently used (back)\n                auto del = dll.back();\n                mp.erase(del.first);\n                dll.pop_back();\n            }\n        }\n    }\n\nprivate:\n    int cap;\n    // list of (key, value); front = most recent\n    list<pair<int,int>> dll;\n    // map key -> iterator of its node in the list\n    unordered_map<int, list<pair<int,int>>::iterator> mp;\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}

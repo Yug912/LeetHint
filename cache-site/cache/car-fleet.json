@@ -1,0 +1,39 @@
+{
+  "slug": "car-fleet",
+  "title": "Car Fleet",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,double>> cars: up to n entries → O(n)  \n- recursion depth of std::sort: O(log n) (not counted as extra memory)  \n- not counted: input vectors, returned int",
+  "approach": "The only thing that matters for a car is the time it needs to reach the target.  \nIf we process cars from the one closest to the target backwards, a car can start a new fleet only when its arrival time is larger than any time seen so far; otherwise it will catch up to the fleet ahead.  \nSorting by starting position and then scanning while keeping the maximal time seen yields the fleet count.",
+  "hints": [
+    "When you look at the cars starting nearest to the target and move backwards, what single quantity tells you whether the current car will join the fleet ahead or start a new one?  \nThe problem guarantees n ≤ 10⁵.",
+    "Use a stack‑like scan (a single variable is enough) after sorting the cars by position descending.  \nExample: target = 12, positions = [10,8,0,5,3] → times = [1,1,12,7,3]; scanning gives fleets = 3.",
+    "```\ncompute time[i] = (target - position[i]) / speed[i]   // as double\nsort cars by position descending\nfleets = 0\nmaxTime = -infinity\nfor each car in sorted order:\n    if car.time > maxTime:\n        fleets += 1\n        maxTime = car.time\nreturn fleets\n```",
+    "**Single car** - only one car exists.  \n`Input: target = 10, position = [3], speed = [3]` → `Expected: 1`  \n⚠️ Bug: using integer division for time → returns 0 → `Expected: 1`.\n\n**All cars same speed, decreasing positions** - no car can catch another.  \n`Input: target = 100, position = [90,70,50], speed = [10,10,10]` → `Expected: 3`  \n⚠️ Bug: comparing with `>=` instead of `>` merges equal‑time cars → returns 2.\n\n**Equal arrival times** - cars arriving together must be counted as one fleet.  \n`Input: target = 12, position = [10,8], speed = [2,4]` → `Expected: 1`  \n⚠️ Bug: using `<` instead of `>` treats equal times as new fleet → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if the cars are given in a stream and you cannot store all of them at once?",
+      "a": "Keep only the current maximal arrival time while reading each car, but you still need the cars ordered by position. This forces you to sort offline; with a stream you would need an external sort or a priority queue limited to O(k) memory where k is the number of distinct positions you keep."
+    },
+    {
+      "q": "How would the solution change if cars could overtake each other?",
+      "a": "The fleet concept disappears; each car reaches the target independently, so the answer is simply n. The algorithm reduces to O(1) work per car, total O(n) time and O(1) extra space."
+    },
+    {
+      "q": "Suppose the target distance is up to 10¹⁸ and speeds up to 10⁹, requiring exact rational comparison without floating‑point errors.",
+      "a": "Store each car’s numerator = target − position and denominator = speed, and compare fractions by cross‑multiplication using 128‑bit integers. The rest of the algorithm stays the same, with O(n log n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int carFleet(int target, vector<int>& position, vector<int>& speed) {\n        int n = position.size();\n        vector<pair<int, double>> cars;\n        cars.reserve(n);\n        for (int i = 0; i < n; ++i) {\n            double t = static_cast<double>(target - position[i]) / speed[i];\n            cars.emplace_back(position[i], t);\n        }\n        sort(cars.begin(), cars.end(),\n             [](const auto& a, const auto& b) { return a.first > b.first; });\n        \n        int fleets = 0;\n        double maxTime = -1.0;               // no car has negative time\n        for (const auto& car : cars) {\n            if (car.second > maxTime) {\n                ++fleets;\n                maxTime = car.second;\n            }\n        }\n        return fleets;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3"
+  }
+}

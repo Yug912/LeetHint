@@ -1,0 +1,38 @@
+{
+  "slug": "design-add-and-search-words-data-structure",
+  "title": "Design Add and Search Words Data Structure",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Trie with backtracking",
+  "tc": "O(L)",
+  "sc": "O(N)",
+  "spaceBreakdown": "- Trie node (bool end + array<Node*,26>): O(1) per node → up to N nodes → O(N)  \n- recursion depth: at most word length L ≤ 25 → O(L) stack (constant)  \n- not counted: input strings, returned bool",
+  "approach": "Store all added words in a prefix tree (Trie).  \nWhen searching, walk the Trie character by character; a normal letter forces the walk to the matching child, while a ‘.’ forces a branch to every existing child.  \nBecause a query contains at most two ‘.’, the back‑tracking explores at most 26² branches, so the search is fast.",
+  "hints": [
+    "When a query contains a ‘.’, what does that character allow you to do with the set of stored words?  \nThe statement guarantees at most 2 dots in any search.",
+    "Use a **Trie** (prefix tree) to store the words.  \nFor the query “b..” the search walks to the child ‘b’, then recursively tries every possible second and third letter.",
+    "function add(word):\n    node = root\n    for c in word:\n        if node.child[c] is null: create it\n        node = node.child[c]\n    node.isWord = true\n\nfunction search(word, idx, node):\n    if idx == word.length: return node.isWord\n    if word[idx] != '.':\n        return node.child[word[idx]] != null && search(word, idx+1, node.child[word[idx]])\n    else:\n        for each child in node.children:\n            if child != null && search(word, idx+1, child): return true\n        return false",
+    "**All dots** - query “..” should match any two‑letter word.  \n`Input: addWord(\"ab\"); search(\"..\")` → `Expected: true`  \n⚠️ Bug: stopping after the first child when encountering ‘.’ → returns false.  \n\n**Different lengths** - query length must match stored word length.  \n`Input: addWord(\"abc\"); search(\"ab\")` → `Expected: false`  \n⚠️ Bug: returning true when a prefix is a word (checking node.isWord before idx==len).  \n\n**Duplicate insert** - adding the same word twice must not break searches.  \n`Input: addWord(\"test\"); addWord(\"test\"); search(\"test\")` → `Expected: true`  \n⚠️ Bug: overwriting node.isWord with false on second insert → returns false.  \n\n**No dot, no match** - plain letters that do not exist.  \n`Input: addWord(\"cat\"); search(\"bat\")` → `Expected: false`  \n⚠️ Bug: using ‘||’ instead of ‘&&’ when traversing children → may return true."
+  ],
+  "followUps": [
+    {
+      "q": "What if the number of ‘.’ in a query is no longer bounded (could be up to the word length)?",
+      "a": "The same Trie approach still works, but the worst‑case time becomes O(26^L), which is exponential. To keep it polynomial you would need additional indexing (e.g., storing all words of each length) or a different algorithm such as a DAWG with memoisation."
+    },
+    {
+      "q": "How would you modify the structure to support deletion of a word?",
+      "a": "Keep a counter in each node indicating how many words pass through it and another flag for word termination. When deleting, decrement the counters along the path and clear a node only when its counter reaches zero, preserving shared prefixes. All operations stay O(L)."
+    },
+    {
+      "q": "Suppose memory is extremely limited and you cannot store a full 26‑pointer array per node.",
+      "a": "Replace the fixed array with a compact container such as `unordered_map<char,Node*>` or a sorted vector of pairs; this reduces memory at the cost of a logarithmic (or average‑constant) child lookup. Time complexities remain the same asymptotically."
+    }
+  ],
+  "code": {
+    "cpp": "class WordDictionary {\nprivate:\n    struct Node {\n        bool isWord;\n        Node* child[26];\n        Node() : isWord(false) {\n            for (int i = 0; i < 26; ++i) child[i] = nullptr;\n        }\n    };\n    Node* root;\n\n    bool dfs(Node* node, const string& word, int idx) const {\n        if (!node) return false;\n        if (idx == (int)word.size()) return node->isWord;\n        char c = word[idx];\n        if (c != '.') {\n            return dfs(node->child[c - 'a'], word, idx + 1);\n        } else {\n            for (int i = 0; i < 26; ++i) {\n                if (node->child[i] && dfs(node->child[i], word, idx + 1))\n                    return true;\n            }\n            return false;\n        }\n    }\n\npublic:\n    WordDictionary() {\n        root = new Node();\n    }\n\n    void addWord(string word) {\n        Node* cur = root;\n        for (char c : word) {\n            int id = c - 'a';\n            if (!cur->child[id]) cur->child[id] = new Node();\n            cur = cur->child[id];\n        }\n        cur->isWord = true;\n    }\n\n    bool search(string word) {\n        return dfs(root, word, 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}

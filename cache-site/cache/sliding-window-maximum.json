@@ -1,0 +1,39 @@
+{
+  "slug": "sliding-window-maximum",
+  "title": "Sliding Window Maximum",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Monotonic Queue",
+  "tc": "O(n)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- std::deque<int> dq: holds at most k indices → O(k)  \n- std::vector<int> ans: stores n‑k+1 results → O(n) (output, not counted)  \n- other variables: O(1)",
+  "approach": "When the window moves one step, only the newest element can become the new maximum and the oldest element may become irrelevant.  \nMaintain a deque of indices whose values are in decreasing order; the front always holds the current window’s maximum.  \nEach index is inserted and removed at most once, giving linear time.",
+  "hints": [
+    "When the window slides one position to the right, which previously seen element can no longer influence any future maximum?  \nk can be as large as n.",
+    "Use a double‑ended queue (deque) that stores indices of elements in decreasing value order.  \nExample: for nums = [1,3,-1,…] and k = 3, after processing the first three elements the deque holds indices [1] (value 3) at the front.",
+    "for i = 0 … n‑1\n    while deque not empty and deque.front ≤ i‑k          pop front\n    while deque not empty and nums[i] ≥ nums[deque.back] pop back\n    push i to back\n    if i ≥ k‑1                                            output nums[deque.front]",
+    "**Single element** - the array contains only one number.  \n`Input: [5],1` → `Expected: [5]`  \n⚠️ Bug: forgetting the “i ≥ k‑1” check → returns `[]`.\n\n**All decreasing** - the values strictly drop, so the maximum is always the leftmost element of the window.  \n`Input: [9,8,7,6,5],3` → `Expected: [9,8,7]`  \n⚠️ Bug: using a max‑heap without lazy deletion keeps stale indices → returns `[9,9,9]`.\n\n**Increasing sequence** - the values strictly rise, the maximum is always the newest element.  \n`Input: [1,2,3,4,5],3` → `Expected: [3,4,5]`  \n⚠️ Bug: maintaining the deque in increasing order (pop while nums[i] <= nums[back]) → returns `[1,2,3]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if many queries ask for different window sizes k on the same static array?",
+      "a": "Pre‑process the array with a Sparse Table for Range Maximum Queries in O(n log n) time and O(n log n) space; each query then answers in O(1) time."
+    },
+    {
+      "q": "How would you adapt the algorithm when the numbers arrive as a stream and you can only keep O(k) extra memory?",
+      "a": "The deque solution is already online and uses at most k indices, so it works directly on a stream without storing the whole array, still O(1) amortized work per element."
+    },
+    {
+      "q": "Suppose you also need to output the minimum of each window in addition to the maximum, still in linear time.",
+      "a": "Maintain a second deque that stores indices in increasing order (monotonic increasing queue) alongside the decreasing one; each step updates both deques and records front values, keeping O(n) time and O(k) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maxSlidingWindow(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<int> ans;\n        ans.reserve(n - k + 1);\n        deque<int> dq;               // stores indices, values decreasing\n\n        for (int i = 0; i < n; ++i) {\n            // Remove indices that are out of the current window\n            if (!dq.empty() && dq.front() <= i - k)\n                dq.pop_front();\n\n            // Preserve decreasing order: discard smaller (or equal) values\n            while (!dq.empty() && nums[i] >= nums[dq.back()])\n                dq.pop_back();\n\n            dq.push_back(i);\n\n            // Record the maximum for windows that are fully formed\n            if (i >= k - 1)\n                ans.push_back(nums[dq.front()]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

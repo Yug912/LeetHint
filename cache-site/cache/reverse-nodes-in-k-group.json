@@ -1,0 +1,39 @@
+{
+  "slug": "reverse-nodes-in-k-group",
+  "title": "Reverse Nodes in k-Group",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "In‑place Group Reversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- dummy ListNode: constant → O(1)  \n- a few pointer variables (prevGroup, kth, cur, prev, tmp): constant → O(1)  \n- recursion depth: none  \n- not counted: input list, returned list",
+  "approach": "Group the list into consecutive blocks of k nodes. For each complete block reverse the pointers in‑place and reconnect the block with the previous and next parts of the list. A dummy (sentinel) node before the head lets us treat the first block exactly like the others, giving a linear‑time O(1)‑space solution.",
+  "hints": [
+    "When the list is viewed as consecutive groups of k nodes, how does the relative order of nodes inside each full group change?  \nk ≤ n is guaranteed.",
+    "Use a dummy (sentinel) node together with a few pointers (prevGroup, cur, next).  \nExample: for head = [1,2,3,4,5] and k = 2, the dummy points to 1; after reversing the first two nodes the list becomes dummy→2→1→3→4→5.",
+    "```\ndummy.next = head\nprevGroup = dummy\nwhile true\n    kth = prevGroup\n    move kth k steps forward\n    if kth is null break\n    nextGroup = kth.next\n    reverse nodes from prevGroup.next up to kth\n    connect prevGroup.next to kth\n    prevGroup = tail of reversed part (old head)\nreturn dummy.next\n```",
+    "**Single node** - only one element, any k = 1 leaves the list unchanged.  \n`Input: [7], k = 1` → `Expected: [7]`  \n⚠️ Bug: using a loop that expects at least k nodes before checking → returns null.\n\n**k equals length** - the whole list is reversed.  \n`Input: [1,2,3,4], k = 4` → `Expected: [4,3,2,1]`  \n⚠️ Bug: forgetting to reconnect the tail after reversal → results in a cycle or truncated list.\n\n**Left‑over nodes** - nodes at the end that do not form a full group stay as‑is.  \n`Input: [1,2,3,4,5], k = 3` → `Expected: [3,2,1,4,5]`  \n⚠️ Bug: reversing even when fewer than k nodes remain → output becomes [3,2,1,5,4].\n\n**Incorrect pointer update** - using `prevGroup = prevGroup->next` after reversal instead of moving to the original head of the block.  \n`Input: [1,2,3,4], k = 2` → `Expected: [2,1,4,3]`  \n⚠️ Bug: advances `prevGroup` to the wrong node → produces [2,1,3,4]."
+  ],
+  "followUps": [
+    {
+      "q": "How would you implement the same functionality recursively?",
+      "a": "The recursive version first checks that there are k nodes ahead; if not, it returns the head unchanged. Otherwise it recursively processes the remainder of the list, then reverses the first k nodes and attaches the processed remainder. Time stays O(n) and extra space becomes O(n/k) call‑stack frames."
+    },
+    {
+      "q": "If the list length n and k can both be up to 10⁵, does the iterative solution still meet the constraints?",
+      "a": "Yes. The algorithm visits each node a constant number of times, so the O(n) time bound holds for any n ≤ 10⁵, and the O(1) auxiliary space is unaffected by larger k."
+    },
+    {
+      "q": "Suppose the list is provided as a stream and you may only keep O(k) extra nodes in memory. Can you still solve the problem?",
+      "a": "By buffering exactly k nodes at a time, you can reverse each full buffer before emitting it, and simply output the remaining nodes unchanged when the stream ends. This yields O(n) time, O(k) memory, and works because reversal never needs more than one group at once."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* reverseKGroup(ListNode* head, int k) {\n        if (k == 1 || !head) return head;\n        ListNode dummy(0);\n        dummy.next = head;\n        ListNode* prevGroup = &dummy;\n\n        while (true) {\n            // Find the k-th node from prevGroup\n            ListNode* kth = prevGroup;\n            for (int i = 0; i < k && kth; ++i) {\n                kth = kth->next;\n            }\n            if (!kth) break;               // not enough nodes left\n\n            ListNode* nextGroup = kth->next; // node after the k-group\n            // Reverse the k nodes\n            ListNode* prev = nextGroup;\n            ListNode* cur = prevGroup->next;\n            while (cur != nextGroup) {\n                ListNode* tmp = cur->next;\n                cur->next = prev;\n                prev = cur;\n                cur = tmp;\n            }\n            // Connect reversed group with previous part\n            ListNode* tail = prevGroup->next; // original head becomes tail\n            prevGroup->next = kth;            // kth is new head of this group\n            prevGroup = tail;                 // move prevGroup to the tail for next iteration\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

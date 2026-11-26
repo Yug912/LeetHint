@@ -1,0 +1,39 @@
+{
+  "slug": "generate-parentheses",
+  "title": "Generate Parentheses",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Backtracking",
+  "tc": "O(Cₙ)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- recursion depth: at most n → O(n)  \n- current string (passed by reference and modified in‑place): length ≤ 2n → O(n)  \n- not counted: input `n`, returned `vector<string>` containing all results",
+  "approach": "Observe that while we write a parenthesis string from left to right, at any prefix the number of '(' can never be smaller than the number of ')'.  Using this invariant we backtrack: at each step we may add '(' if we still have some left, and we may add ')' only when it would not violate the invariant.  The recursion stops when the string length reaches 2·n, producing one well‑formed combination.  Because every recursive call respects the invariant, all generated strings are valid and each valid string is generated exactly once.",
+  "hints": [
+    "While constructing a parenthesis string from left to right, what must be true about the count of '(' compared to ')' at every position?  \nThe constraint is 1 ≤ n ≤ 8.",
+    "Use a depth‑first recursion (call stack) to try the two possible next characters.  \nFor n = 3 the first few calls are: \"\" → \"(\" → \"((\" → \"(((\" → \"((()\" → ….",
+    "function dfs(open, close, current):\n    if length(current) == 2*n: add current to answer\n    if open < n:               // we can still place '('\n        dfs(open+1, close, current + '(')\n    if close < open:           // we can place ')' without breaking validity\n        dfs(open, close+1, current + ')')",
+    "**Minimum n** - the smallest allowed input.  \n`Input: n = 1` → `Expected: [\"()\"]`  \n⚠️ Bug: allowing ')' whenever `close < n` (instead of `close < open`) → returns `[\"()\", \")(\"]`.\n\n**Maximum n** - the largest allowed input.  \n`Input: n = 8` → `Expected: 1430 strings, each of length 16`  \n⚠️ Bug: using an iterative loop that generates all 2^(2n) strings and then filters → exponential time, TLE.\n\n**Missing backtrack cleanup** - forgetting to remove the last character after a recursive call.  \n`Input: n = 2` → `Expected: [\"(())\",\"()()\"]`  \n⚠️ Bug: not erasing the appended character → returns `[\"((()))\", \"((()))\", …]` (duplicates).\n\n**Incorrect closing condition** - using `close <= open` instead of `<`.  \n`Input: n = 3` → `Expected: [\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]`  \n⚠️ Bug: condition `close <= open` allows a trailing ')' when `open == close == n` → adds an extra ')' producing strings of length 2n+1."
+  ],
+  "followUps": [
+    {
+      "q": "How would you generate the k‑th valid parenthesis sequence in lexicographic order without enumerating all of them?",
+      "a": "Compute the number of sequences that start with '(' using the Catalan recurrence, skip whole subtrees until the count exceeds k, and descend recursively.  This runs in O(n) time and O(n) space."
+    },
+    {
+      "q": "If n were increased to 15 (so the output size grows to 9694845 strings), how could you avoid recursion‑stack overflow?",
+      "a": "Replace the recursive DFS with an explicit stack that stores the state (open, close, current string).  The algorithmic complexity stays the same, and the iterative version guarantees a bounded stack size."
+    },
+    {
+      "q": "Suppose the interview asks you to output the sequences one by one as they are generated, without storing them all in memory.",
+      "a": "Turn the backtracking routine into a generator (e.g., using a callback or yielding each completed string).  Time remains O(Cₙ) and auxiliary space stays O(n) because only the current path is kept."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> generateParenthesis(int n) {\n        vector<string> ans;\n        string cur;\n        cur.reserve(2 * n);\n        dfs(n, 0, 0, cur, ans);\n        return ans;\n    }\nprivate:\n    void dfs(int n, int open, int close, string &cur, vector<string> &ans) {\n        if (open == n && close == n) {\n            ans.push_back(cur);\n            return;\n        }\n        if (open < n) {\n            cur.push_back('(');\n            dfs(n, open + 1, close, cur, ans);\n            cur.pop_back();\n        }\n        if (close < open) {\n            cur.push_back(')');\n            dfs(n, open, close + 1, cur, ans);\n            cur.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

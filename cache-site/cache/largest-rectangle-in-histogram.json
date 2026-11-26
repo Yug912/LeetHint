@@ -1,0 +1,39 @@
+{
+  "slug": "largest-rectangle-in-histogram",
+  "title": "Largest Rectangle in Histogram",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- stack<int> st: up to n indices → O(n)  \n- long long maxArea: O(1)  \n- not counted: input vector, returned int",
+  "approach": "Fix a bar as the shortest one in a rectangle; the rectangle can extend left and right until a lower bar appears. By scanning the histogram once while maintaining a monotonic increasing stack of indices, we can compute the maximal area for every bar when it becomes the first lower bar on the right. This yields the optimal rectangle because every maximal rectangle has a unique shortest bar that will be processed exactly once.",
+  "hints": [
+    "If you choose one bar to be the minimum height of a rectangle, how far can you stretch the rectangle to the left and right while staying at least that tall?  \nThe constraint n ≤ 10⁵ makes an O(n²) enumeration impossible.",
+    "Use a **monotonic increasing stack** of indices.  \nExample: for heights = [2,1,5,6,2,3], when the second 1 is read the stack forces us to pop 6 and 5, computing areas 6×1 and 5×2.",
+    "```\npush sentinel index -1 onto stack\nfor i = 0 … n\n    cur = (i == n) ? 0 : heights[i]\n    while stack not empty and cur < heights[stack.top()]\n        h = heights[stack.pop()]\n        left = stack.top()\n        width = i - left - 1\n        update answer with h * width\n    push i onto stack\nreturn answer\n```",
+    "**Single zero** - only one bar of height 0  \n`Input: [0]` → `Expected: 0`  \n⚠️ Bug: initializing answer with `heights[0]` and never updating when all heights are 0 → returns 0 (still correct) - a more harmful bug is using `while (cur <= heights[st.top()])`, which would never pop and leave answer 0.  \n\n**All equal** - every bar has the same height  \n`Input: [3,3,3,3]` → `Expected: 12`  \n⚠️ Bug: using `while (cur <= heights[st.top()])` (≤) instead of `<` pops too early, giving max 9.  \n\n**Decreasing** - heights strictly decreasing  \n`Input: [5,4,3,2,1]` → `Expected: 9`  \n⚠️ Bug: forgetting the sentinel 0 at the end → the last bar never gets popped, answer becomes 8.  \n\n**Maximum limits** - n = 10⁵, each height = 10⁴  \n`Input: [10000 repeated 100000 times]` → `Expected: 1000000000`  \n⚠️ Bug: storing area in a 32‑bit `int` before the multiplication may overflow in languages where intermediate multiplication is done in 32‑bit; using `long long` avoids it."
+  ],
+  "followUps": [
+    {
+      "q": "What changes if `heights[i]` can be as large as 10⁹ and `n` up to 10⁶?",
+      "a": "The same monotonic‑stack algorithm still runs in O(n) time, but the area must be stored in a 64‑bit integer (`long long`) because the product can reach 10¹⁵, exceeding 32‑bit range."
+    },
+    {
+      "q": "How would you modify the solution to also return the left and right indices of the maximal rectangle?",
+      "a": "While computing an area, keep the current left index (`left + 1`) and right index (`i - 1`). When a new maximum is found, store these three values. The overall complexity stays O(n) and extra space remains O(1)."
+    },
+    {
+      "q": "Suppose the histogram is given as a stream and you cannot store the whole array (only O(1) extra memory). Can you still solve it?",
+      "a": "With only one pass and O(1) extra memory the classic stack method is impossible because future bars are needed to know when a bar’s rectangle ends. One would need a two‑pass algorithm (first pass to find the global maximum height, second pass to compute widths) or external memory techniques, which increase time or require additional storage; thus the O(n) / O(n) stack solution cannot be directly applied under a strict O(1) memory streaming constraint."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestRectangleArea(vector<int>& heights) {\n        int n = heights.size();\n        stack<int> st;\n        long long maxArea = 0;\n        for (int i = 0; i <= n; ++i) {\n            int cur = (i == n) ? 0 : heights[i];\n            while (!st.empty() && cur < heights[st.top()]) {\n                int h = heights[st.top()];\n                st.pop();\n                int left = st.empty() ? -1 : st.top();\n                long long width = i - left - 1;\n                maxArea = max(maxArea, (long long)h * width);\n            }\n            st.push(i);\n        }\n        return (int)maxArea;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2"
+  }
+}

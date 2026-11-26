@@ -1,0 +1,38 @@
+{
+  "slug": "find-median-from-data-stream",
+  "title": "Find Median from Data Stream",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Two Heaps",
+  "tc": "O(log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- max‑heap (priority_queue<int>) storing at most ⌈n/2⌉ elements → O(n)  \n- min‑heap (priority_queue<int,vector<int>,greater<int>>) storing at most ⌊n/2⌋ elements → O(n)  \n- recursion depth: none  \n- not counted: input, returned double",
+  "approach": "Maintain the lower half of the numbers in a max‑heap and the upper half in a min‑heap.  \nKeep the two heaps balanced so that the max‑heap never has more than one element more than the min‑heap.  \nThe median is then either the top of the max‑heap (odd count) or the average of the two tops (even count).",
+  "hints": [
+    "If we split the stream into two groups, what condition must those groups satisfy so that the median can be read directly from the “border” between them?  \nThere are at most 5·10⁴ calls to the methods.",
+    "Use a max‑heap for the lower half and a min‑heap for the upper half.  \nAfter inserting 1, 2, 3 the max‑heap holds {2, 1} (top 2) and the min‑heap holds {3} (top 3), so the median is 2.",
+    "```\naddNum(x):\n    if lower empty or x ≤ top(lower): push x into lower\n    else: push x into upper\n    // rebalance\n    if size(lower) > size(upper) + 1:\n        move top(lower) to upper\n    else if size(upper) > size(lower):\n        move top(upper) to lower\n\nfindMedian():\n    if sizes equal: return (top(lower) + top(upper)) / 2.0\n    else: return top(lower) as double\n```",
+    "**Single element** - only one number has been added.  \n`Input: [\"MedianFinder\",\"addNum\",\"findMedian\"], [[],[42],[]]` → `Expected: 42.0`  \n⚠️ Bug: returning 0 when one heap is empty → returns 0.0  \n\n**All equal values** - many identical numbers.  \n`Input: [\"MedianFinder\",\"addNum\",\"addNum\",\"addNum\",\"findMedian\"], [[],[5],[5],[5],[]]` → `Expected: 5.0`  \n⚠️ Bug: using `<` instead of `<=` when deciding the heap → upper heap gets a 5, lower gets two 5s, median becomes (5+5)/2 = 5.0 still correct, but with odd count it may pick wrong side and give 5.0; the bug shows instability in other cases.  \n\n**Negative and positive mix** - numbers cross zero.  \n`Input: [\"MedianFinder\",\"addNum\",\"addNum\",\"addNum\",\"findMedian\"], [[],[-2],[3],[0],[]]` → `Expected: 0.0`  \n⚠️ Bug: computing average with integer division `(a+b)/2` → returns 0 instead of 0.0 when a+b is odd.  \n\n**Alternating insert causing rebalance** - sequence forces moves each step.  \n`Input: [\"MedianFinder\",\"addNum\",\"addNum\",\"addNum\",\"addNum\",\"findMedian\"], [[],[10],[1],[2],[9],[]]` → `Expected: 5.5`  \n⚠️ Bug: forgetting the second rebalance condition (upper larger) → median becomes 6.0."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the structure if the numbers are guaranteed to be in the small range [0, 100]?",
+      "a": "Use a counting array of size 101 to store frequencies. Adding a number is O(1); finding the median scans the counts until the middle position, which is O(100) = O(1)."
+    },
+    {
+      "q": "What if 99 % of the numbers are in [0, 100] but a few outliers exist?",
+      "a": "Keep the counting array for the dense range and a separate balanced BST (or two heaps) for the outliers. Most operations stay O(1) for the common case, with O(log k) for the few outliers, where k is the number of outliers."
+    },
+    {
+      "q": "Suppose the stream is so large that you cannot store all elements in memory, but you only need an approximate median with error ≤ 1.0.",
+      "a": "Use a streaming quantile algorithm such as the GK‑sketch or a fixed‑size reservoir that maintains a sorted sample; both use O(1/ε · log (1/δ)) memory and give a median approximation within the required error."
+    }
+  ],
+  "code": {
+    "cpp": "class MedianFinder {\n    priority_queue<int> lower; // max‑heap\n    priority_queue<int, vector<int>, greater<int>> upper; // min‑heap\npublic:\n    MedianFinder() = default;\n    \n    void addNum(int num) {\n        if (lower.empty() || num <= lower.top()) {\n            lower.push(num);\n        } else {\n            upper.push(num);\n        }\n        // rebalance sizes\n        if (lower.size() > upper.size() + 1) {\n            upper.push(lower.top());\n            lower.pop();\n        } else if (upper.size() > lower.size()) {\n            lower.push(upper.top());\n            upper.pop();\n        }\n    }\n    \n    double findMedian() {\n        if (lower.size() == upper.size()) {\n            // both non‑empty because at least one element exists before call\n            return (static_cast<double>(lower.top()) + static_cast<double>(upper.top())) / 2.0;\n        }\n        // lower has one more element\n        return static_cast<double>(lower.top());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true
+  }
+}
