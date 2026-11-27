@@ -1,0 +1,40 @@
+{
+  "slug": "delete-and-earn",
+  "title": "Delete and Earn",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "House Robber DP",
+  "tc": "O(n + max(nums))",
+  "sc": "O(max(nums))",
+  "spaceBreakdown": "- vector<long long> points: up to max(nums) + 1 entries → O(max(nums))\n- recursion depth: none\n- not counted: input nums",
+  "approach": "If you take a value v, you should take all copies of v since deleting v only removes v-1 and v+1, not other copies of v. This reduces the problem to choosing which values to take, where taking v forbids taking v-1 and v+1 - exactly the House Robber pattern on an array indexed by value. Build a points array where points[v] = v × count(v), then apply dp[i] = max(dp[i-1], dp[i-2] + points[i]) over the range 1 to max(nums).",
+  "hints": [
+    "If you choose to delete a number v, what happens to every other copy of v still in the array? The values in nums range from 1 to 10^4.",
+    "Use an array indexed by value (summing duplicates) and apply the House Robber DP. For nums = [2,2,3,3,3,4], build points = [0,0,4,9,4], then the recurrence max(prev1, prev2+points[i]) over i=2..4 yields 9.",
+    "```\npoints[v] += v for each v in nums\nprev2 = 0\nprev1 = points[1]\nfor i = 2 to maxVal:\n    curr = max(prev1, prev2 + points[i])\n    prev2 = prev1\n    prev1 = curr\nreturn prev1\n```",
+    "**Single element** - only one value exists, so the answer is that value itself.\n`Input: nums = [1]` → `Expected: 1`\n⚠️ Bug: initializing `prev1 = 0` instead of `prev1 = points[1]` → returns 0\n\n**All duplicates** - every element has the same value, so all are taken together.\n`Input: nums = [3,3,3]` → `Expected: 9`\n⚠️ Bug: using `points[x] = x` instead of `points[x] += x` → returns 3\n\n**Consecutive values** - must choose between adjacent values, cannot take all.\n`Input: nums = [1,2,3]` → `Expected: 4`\n⚠️ Bug: using `dp[i] = max(dp[i-1], dp[i-1] + points[i])` instead of `dp[i] = max(dp[i-1], dp[i-2] + points[i])` → returns 6\n\n**Gap in values** - non-adjacent values can all be taken.\n`Input: nums = [1,3,5]` → `Expected: 9`\n⚠️ Bug: iterating only over present values with the house robber recurrence without accounting for gaps → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^9?",
+      "a": "Replace the points array with a hash map. Sort the distinct values, then apply the same recurrence with an adjacency check: if consecutive sorted values differ by more than 1, both can be taken without conflict. TC: O(n + d log d) where d is the number of distinct values, SC: O(d)."
+    },
+    {
+      "q": "What if you can perform at most k delete operations?",
+      "a": "Add a second dimension to the DP: dp[i][j] = max points considering values up to i with at most j picks. Transition: dp[i][j] = max(dp[i-1][j], dp[i-2][j-1] + points[i]). TC: O(max(nums) × k), SC: O(k) with a rolling array."
+    },
+    {
+      "q": "What if memory is limited to O(1) beyond the input?",
+      "a": "Sort nums in place, then scan runs of equal values. Apply the house robber recurrence with an adjacency check between consecutive runs: if values differ by more than 1, add both. TC: O(n log n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int deleteAndEarn(vector<int>& nums) {\n        int maxVal = 0;\n        for (int x : nums) maxVal = max(maxVal, x);\n        \n        vector<long long> points(maxVal + 1, 0);\n        for (int x : nums) points[x] += x;\n        \n        long long prev2 = 0, prev1 = points[1];\n        for (int i = 2; i <= maxVal; i++) {\n            long long curr = max(prev1, prev2 + points[i]);\n            prev2 = prev1;\n            prev1 = curr;\n        }\n        \n        return (int)prev1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

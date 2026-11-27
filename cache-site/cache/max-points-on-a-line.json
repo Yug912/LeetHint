@@ -1,0 +1,40 @@
+{
+  "slug": "max-points-on-a-line",
+  "title": "Max Points on a Line",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map + GCD Slope Normalization",
+  "tc": "O(n² log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long, int> cnt: up to n−1 slope entries per anchor iteration → O(n)\n- recursion depth: none\n- not counted: input vector, return value",
+  "approach": "For each point used as an anchor, every other point on a line through it shares the same slope. We represent each slope as a reduced fraction (dy/gcd, dx/gcd) to avoid floating-point errors, normalize the sign so opposite directions map to the same key, and count occurrences in a hash map. The maximum count for any anchor plus one (the anchor itself) gives the best line through that anchor; we track the global maximum across all anchors.",
+  "hints": [
+    "Given n ≤ 300, what complexity budget is comfortable? If you fix one point as a reference, what single geometric property is shared by every other point that lies on the same straight line through it?",
+    "Use a hash map keyed by the reduced-fraction slope (dy/gcd, dx/gcd) from the anchor point. From (1,1), both (2,2) and (3,3) yield slope (1,1), so that key's count reaches 2.",
+    "```\nfor each point i:\n    map = empty\n    for each point j after i:\n        dx, dy = j − i\n        g = gcd(|dx|, |dy|)\n        reduce (dx, dy) by g\n        normalize sign so dx ≥ 0 (or dy > 0 if dx = 0)\n        map[(dx, dy)] += 1\n    best = max(best, max(map values) + 1)\nreturn best\n```",
+    "**Vertical line** - dx = 0, dy can be positive or negative\n`Input: [[0,0],[0,1],[0,-1]]` → `Expected: 3`\n⚠️ Bug: only normalizing sign when dx < 0, not when dx == 0 and dy < 0 → (0,1) and (0,-1) map to different keys → returns 2\n\n**Opposite directions** - same line, points on opposite sides of the anchor\n`Input: [[0,0],[1,1],[-1,-1]]` → `Expected: 3`\n⚠️ Bug: not normalizing sign of the reduced fraction at all → (-1,-1) and (1,1) map to different keys → returns 2\n\n**Forgetting the anchor** - not counting the reference point itself\n`Input: [[1,1],[2,2],[3,3]]` → `Expected: 3`\n⚠️ Bug: returning localMax instead of localMax + 1 → returns 2\n\n**Single point** - n = 1, no pairs exist\n`Input: [[5,5]]` → `Expected: 1`\n⚠️ Bug: using `ans = max(ans, localMax)` without the +1 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if duplicate points are allowed in the input?",
+      "a": "First count the frequency of each distinct point. For each distinct anchor, add its duplicate count to every slope bucket. Also handle the all-identical case where the answer is n. Time complexity stays O(n²) with a preprocessing pass to deduplicate."
+    },
+    {
+      "q": "How would you extend this to 3D points?",
+      "a": "A line in 3D is determined by a direction vector, so use two reduced ratios as the hash key: (dy/gcd, dx/gcd) and (dz/gcd, dx/gcd), with special handling when dx = 0. The key becomes a pair of reduced fractions. Time complexity remains O(n²) with a larger constant."
+    },
+    {
+      "q": "Instead of returning the count, return the line equation ax + by + c = 0 with integer coefficients.",
+      "a": "Track the anchor point and reduced (dx, dy) alongside the maximum count. When a bucket wins, compute a = dy, b = −dx, c = dx·y₀ − dy·x₀ using the anchor (x₀, y₀). Time and space complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int gcd(int a, int b) {\n        if (a < 0) a = -a;\n        if (b < 0) b = -b;\n        while (b) {\n            int t = a % b;\n            a = b;\n            b = t;\n        }\n        return a;\n    }\npublic:\n    int maxPoints(vector<vector<int>>& points) {\n        int n = points.size();\n        if (n <= 2) return n;\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            unordered_map<long long, int> cnt;\n            int localMax = 0;\n            for (int j = i + 1; j < n; j++) {\n                int dx = points[j][0] - points[i][0];\n                int dy = points[j][1] - points[i][1];\n                int g = gcd(dx, dy);\n                dx /= g;\n                dy /= g;\n                if (dx < 0 || (dx == 0 && dy < 0)) {\n                    dx = -dx;\n                    dy = -dy;\n                }\n                long long key = (long long)dx * 40001 + (dy + 20000);\n                cnt[key]++;\n                localMax = max(localMax, cnt[key]);\n            }\n            ans = max(ans, localMax + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

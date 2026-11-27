@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-points-you-can-obtain-from-cards",
+  "title": "Maximum Points You Can Obtain from Cards",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, windowSize, total, windowSum, minWindow: scalar variables → O(1)\n- loop index i: scalar → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input vector cardPoints",
+  "approach": "The key insight is that picking k cards from the two ends leaves a contiguous subarray of length n−k in the middle. To maximize the score (sum of picked cards), we minimize the sum of that middle subarray. We use a sliding window of size n−k: compute the sum of the first window, then slide it across the array, tracking the minimum window sum. The answer is total − minWindowSum. When k = n, the window size is 0 and the answer is simply the total.",
+  "hints": [
+    "If you take k cards from the two ends, what can you say about the cards that remain in the row? The array can have up to 10^5 elements, so trying all 2^k ways to pick left or right is infeasible.",
+    "Sliding window of size n−k to find the minimum-sum contiguous subarray. For [1,2,3,4,5,6,1] with k=3, window size is 4; the first window [1,2,3,4] sums to 10, total is 22, so the score is 22−10=12.",
+    "```\ntotal = sum(cardPoints)\nwindowSize = n - k\nif windowSize == 0: return total\nwindowSum = sum of first windowSize elements\nminWindow = windowSum\nfor i from windowSize to n-1:\n    windowSum += cardPoints[i] - cardPoints[i - windowSize]\n    minWindow = min(minWindow, windowSum)\nreturn total - minWindow\n```",
+    "**k equals n** - window size is 0, every card must be taken\n`Input: cardPoints = [9,7,7,9,7,7,9], k = 7` → `Expected: 55`\n⚠️ Bug: using `i <= windowSize` instead of `i < windowSize` in the initial sum loop → sums cardPoints[0]=9, minWindow=9, returns 55−9=46\n\n**Missing first window** - the initial window sum is never considered as a minimum candidate\n`Input: cardPoints = [1,2,3,4,5,6,1], k = 3` → `Expected: 12`\n⚠️ Bug: initializing minWindow to INT_MAX and only updating inside the sliding loop → first window [1,2,3,4]=10 is skipped, minWindow becomes 14, returns 22−14=8\n\n**All equal values** - every window has the same sum\n`Input: cardPoints = [2,2,2], k = 2` → `Expected: 4`\n⚠️ Bug: initializing minWindow to 0 instead of the first window sum → min stays 0, returns 6−0=6\n\n**Wrong window size** - off-by-one in computing the window length\n`Input: cardPoints = [1,2,3,4,5,6,1], k = 3` → `Expected: 12`\n⚠️ Bug: computing windowSize = n−k−1 = 3 instead of 4 → minWindow = 6 (sum of [1,2,3]), returns 22−6=16"
+  ],
+  "followUps": [
+    {
+      "q": "What if cardPoints can contain negative values?",
+      "a": "The sliding window approach still works unchanged - we minimize the middle window sum, which may now be negative. A negative window means the excluded cards hurt, so excluding them increases the score. TC remains O(n), SC O(1)."
+    },
+    {
+      "q": "What if memory is limited to O(k) extra space?",
+      "a": "Instead of the n−k window, compute prefix sums of the first k elements and suffix sums of the last k elements. The answer is max(prefix[i] + suffix[k−i]) for i from 0 to k. TC O(n), SC O(k)."
+    },
+    {
+      "q": "What if you can take at most k cards instead of exactly k?",
+      "a": "With all values positive (as constrained), taking exactly k is always optimal, so the solution is unchanged. If negatives were allowed, you would minimize over all window sizes from 0 to n−k using an amortized sliding window. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxScore(vector<int>& cardPoints, int k) {\n        int n = cardPoints.size();\n        int windowSize = n - k;\n        int total = 0;\n        for (int i = 0; i < n; i++) total += cardPoints[i];\n        if (windowSize == 0) return total;\n        int windowSum = 0;\n        for (int i = 0; i < windowSize; i++) windowSum += cardPoints[i];\n        int minWindow = windowSum;\n        for (int i = windowSize; i < n; i++) {\n            windowSum += cardPoints[i] - cardPoints[i - windowSize];\n            if (windowSum < minWindow) minWindow = windowSum;\n        }\n        return total - minWindow;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

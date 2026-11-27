@@ -1,0 +1,40 @@
+{
+  "slug": "ransom-note",
+  "title": "Ransom Note",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Counting",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[26]: fixed 26 ints → O(1)\n- recursion depth: none\n- not counted: input strings ransomNote, magazine",
+  "approach": "Count how many of each lowercase letter the magazine provides. Then walk through ransomNote, decrementing the corresponding count for each character; if any count would drop below zero, magazine cannot supply that letter and we return false. Because there are only 26 lowercase letters, a fixed-size int[26] array suffices. Correctness follows from the fact that construction is possible exactly when, for every letter, its frequency in ransomNote is ≤ its frequency in magazine.",
+  "hints": [
+    "For ransomNote to be buildable from magazine, what must be true about how many times each individual letter appears in ransomNote versus in magazine? The strings can be up to 10^5 characters long.",
+    "Use a fixed-size frequency array of 26 ints indexed by `c - 'a'`. For example, with magazine = \"aab\", the array holds a→2, b→1; scanning ransomNote = \"aa\" decrements a twice, leaving a→0, so it succeeds.",
+    "```\ncount[26] = {0}\nfor c in magazine:\n    count[c - 'a'] += 1\nfor c in ransomNote:\n    count[c - 'a'] -= 1\n    if count[c - 'a'] < 0:\n        return false\nreturn true\n```",
+    "**Count underflow** - ransomNote needs more of a letter than magazine has.\n`Input: ransomNote = \"aa\", magazine = \"ab\"` → `Expected: false`\n⚠️ Bug: checking `--count[c-'a'] <= 0` (using `<=` instead of `<`) → returns `false` here, but on `ransomNote = \"a\", magazine = \"a\"` it decrements to 0 and wrongly returns `false`.\n\n**Set membership instead of counting** - ignoring how many copies exist.\n`Input: ransomNote = \"aa\", magazine = \"ab\"` → `Expected: false`\n⚠️ Bug: storing magazine letters in a set and only testing membership → returns `true` because 'a' is present, ignoring that only one copy exists.\n\n**Length-only check** - assuming equal length implies feasibility.\n`Input: ransomNote = \"ab\", magazine = \"cd\"` → `Expected: false`\n⚠️ Bug: returning `ransomNote.length() <= magazine.length()` → returns `true`.\n\n**Single character, mismatched** - smallest valid input.\n`Input: ransomNote = \"a\", magazine = \"b\"` → `Expected: false`\n⚠️ Bug: initialising the count array with garbage (e.g., `int count[26];` without `= {0}`) → returns nondeterministic results."
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet were all Unicode code points instead of just 26 lowercase letters?",
+      "a": "Replace the fixed `int[26]` with an unordered_map<char,int> and otherwise keep the same decrement-and-check logic. Time becomes O(n + m) expected, space O(min(m, alphabet size actually used))."
+    },
+    {
+      "q": "What if magazine arrives as an unbounded stream you cannot store entirely?",
+      "a": "First count ransomNote's needs in one pass (stored, since you control it), then consume the magazine stream decrementing needs; return true once all needs hit zero, false if the stream ends with unmet needs. Space is O(alphabet size) for the needs map."
+    },
+    {
+      "q": "What if you must also return which magazine index supplies each ransomNote character?",
+      "a": "Store, per letter, a queue of indices seen in magazine during a first pass, then pop one index per ransomNote character; if any queue is empty, return false. Time O(n + m), space O(m) for the index queues."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canConstruct(string ransomNote, string magazine) {\n        int count[26] = {0};\n        for (char c : magazine) {\n            count[c - 'a']++;\n        }\n        for (char c : ransomNote) {\n            if (--count[c - 'a'] < 0) {\n                return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

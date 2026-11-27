@@ -1,0 +1,40 @@
+{
+  "slug": "remove-k-digits",
+  "title": "Remove K Digits",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (top, i, start, k): O(1)\n- input string modified in place: not counted\n- returned string via substr: not counted (output)",
+  "approach": "Use a monotonic increasing stack simulated in-place on the input string via a write pointer (`top`). For each digit, while removals remain and the previously written digit is larger than the current one, undo that write (decrement `top`) and consume one removal - this greedily eliminates \"peak\" digits that inflate the number. After the pass, if removals remain, truncate from the tail (the written portion is non-decreasing). Strip leading zeros; if nothing remains, return `\"0\"`.",
+  "hints": [
+    "If you could remove just one digit from \"1432219\", which single position yields the smallest result - and how does that digit compare to its right neighbor?",
+    "Use a monotonic increasing stack, simulated in-place with a write pointer. For \"1432219\" with k=3: write 1, write 4, then 3 < 4 so pop 4 (k→2), write 3, then 2 < 3 so pop 3 (k→1), write 2, write 2, then 1 < 2 so pop 2 (k→0), write 1, write 9 → \"1219\".",
+    "```\ntop = 0\nfor each digit c in num:\n    while k > 0 and top > 0 and num[top-1] > c:\n        top -= 1; k -= 1\n    num[top] = c; top += 1\ntop -= k          // consume leftover removals from tail\nstrip leading zeros from num[0 .. top-1]\nif result empty: return \"0\"\n```",
+    "**All digits removed** - k equals the string length\n`Input: num = \"10\", k = 2` → `Expected: \"0\"`\n⚠️ Bug: returning the empty substring without a zero-check → returns \"\"\n\n**Leading zeros exposed** - removing a high digit leaves zeros at the front\n`Input: num = \"10200\", k = 1` → `Expected: \"200\"`\n⚠️ Bug: skipping the leading-zero strip step → returns \"0200\"\n\n**No pop triggered** - digits are non-decreasing, so k is consumed from the tail\n`Input: num = \"12345\", k = 2` → `Expected: \"123\"`\n⚠️ Bug: omitting `top -= k` after the loop → returns \"12345\"\n\n**Result is all zeros** - every surviving digit is '0'\n`Input: num = \"100\", k = 1` → `Expected: \"0\"`\n⚠️ Bug: stripping zeros but not checking if the stripped result is empty → returns \"\""
+  ],
+  "followUps": [
+    {
+      "q": "What if you must remove k digits to form the largest possible number instead of the smallest?",
+      "a": "Flip the comparison to a monotonic decreasing stack: pop when the previous written digit is smaller than the current one. The in-place write-pointer structure, tail truncation, and leading-zero handling all stay identical. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if num has up to 10^6 digits arriving as a stream (one character at a time, no random access)?",
+      "a": "The algorithm is already single-pass and only needs the current character and the stack top, so streaming is natural. Since you cannot modify a stream in place, maintain a growable buffer for the stack. TC: O(n), SC: O(n) for the buffer."
+    },
+    {
+      "q": "What if instead of removing k digits you must keep exactly m digits (m = n − k)?",
+      "a": "Set k = n − m and run the same algorithm unchanged. The only extra check is that m ≤ n; if m ≤ 0, return \"0\". TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string removeKdigits(string num, int k) {\n        int n = num.size();\n        int top = 0;\n        for (int i = 0; i < n; i++) {\n            while (k > 0 && top > 0 && num[top - 1] > num[i]) {\n                top--;\n                k--;\n            }\n            num[top++] = num[i];\n        }\n        top -= k;\n        int start = 0;\n        while (start < top && num[start] == '0') start++;\n        if (start == top) return \"0\";\n        return num.substr(start, top - start);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

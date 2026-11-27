@@ -1,0 +1,39 @@
+{
+  "slug": "maximum-frequency-stack",
+  "title": "Maximum Frequency Stack",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map + Bucket Stacks",
+  "tc": "O(1)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n distinct values → O(n)\n- unordered_map<int, stack<int>> group: total n entries across all stacks → O(n)\n- int maxFreq: O(1)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Maintain a frequency map (val → count) and a \"group\" map (frequency → stack of values that reached that frequency, in push order). On push, increment the value's frequency and push it onto the stack for that new frequency level, updating maxFreq. On pop, take the top of the stack at maxFreq (which is the most-recently-pushed value among those tied at the maximum frequency), decrement its frequency, and lower maxFreq if that group is now empty. This works because each value appears once at every frequency level from 1 up to its current count, so the top of group[maxFreq] is exactly the most recent push that achieved the maximum frequency.",
+  "hints": [
+    "When multiple elements share the maximum frequency, what single property picks the winner, and how does the push sequence create that property?",
+    "Use a hash map from frequency level to a stack of values that reached that level. After pushing 5 three times, freq[5]=3 and 5 sits on top of the stack for frequency level 3.",
+    "```\npush(val):\n    f = ++freq[val]\n    group[f].push(val)\n    maxFreq = max(maxFreq, f)\n\npop():\n    val = group[maxFreq].top()\n    group[maxFreq].pop()\n    freq[val] -= 1\n    if group[maxFreq] is empty: maxFreq -= 1\n    return val\n```",
+    "**Single element** - only one value has been pushed\n`[\"FreqStack\",\"push\",\"pop\"], [[],[42],[]]` → `[null,null,42]`\n⚠️ Bug: leaving maxFreq uninitialized (e.g. garbage value) → pop reads group[garbage] and returns undefined / crashes\n\n**All equal values** - same value pushed repeatedly, maxFreq must descend\n`[\"FreqStack\",\"push\",\"push\",\"push\",\"pop\",\"pop\"], [[],[5],[5],[5],[],[]]` → `[null,null,null,null,5,5]`\n⚠️ Bug: not decrementing maxFreq when group[maxFreq] becomes empty → second pop calls top() on an empty stack and crashes\n\n**Tie at max frequency** - two values each at frequency 2, most recent push wins\n`[\"FreqStack\",\"push\",\"push\",\"push\",\"push\",\"pop\"], [[],[5],[7],[5],[7],[]]` → `[null,null,null,null,null,7]`\n⚠️ Bug: using a queue (FIFO) instead of a stack for group[f] → returns 5 instead of 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if pop must return the LEAST frequent element, ties broken by closest to top?",
+      "a": "Track minFreq the same way, but pushes always create frequency-1 entries, so minFreq resets to 1 whenever any new value is pushed. Maintain a count of distinct values at each frequency level to know when minFreq can rise. Time stays O(1) amortized; space stays O(n)."
+    },
+    {
+      "q": "What if a remove(val) operation must delete the most recent occurrence of a given value?",
+      "a": "Use lazy deletion: mark stack entries as removed via a parallel set or generation counter, and skip dead entries during pop. Pop becomes O(1) amortized; remove is O(1). Space grows by the number of lazy tombstones, bounded by total operations O(n)."
+    },
+    {
+      "q": "What if the stream is unbounded and you may only keep O(k) memory for the k highest-frequency values?",
+      "a": "Evict entries whose frequency falls below the k-th highest, recomputing the threshold periodically with a min-heap of size k. Pop is still O(1) for retained values; evicted values are no longer poppable. Space becomes O(k); time per push is O(log k) for heap maintenance."
+    }
+  ],
+  "code": {
+    "cpp": "class FreqStack {\n    unordered_map<int,int> freq;\n    unordered_map<int, stack<int>> group;\n    int maxFreq;\npublic:\n    FreqStack() {\n        maxFreq = 0;\n    }\n    \n    void push(int val) {\n        int f = ++freq[val];\n        group[f].push(val);\n        if (f > maxFreq) maxFreq = f;\n    }\n    \n    int pop() {\n        int val = group[maxFreq].top();\n        group[maxFreq].pop();\n        freq[val]--;\n        if (group[maxFreq].empty()) maxFreq--;\n        return val;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

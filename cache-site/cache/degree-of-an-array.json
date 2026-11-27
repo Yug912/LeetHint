@@ -1,0 +1,40 @@
+{
+  "slug": "degree-of-an-array",
+  "title": "Degree of an Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Frequency Tracking",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> count: up to n entries → O(n)\n- unordered_map<int,int> first: up to n entries → O(n)\n- unordered_map<int,int> last: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "The degree is the maximum frequency of any element. For any element appearing k times, the shortest subarray containing all k occurrences spans from its first to its last index. So we record, for each value, its count, first index, and last index in one pass; the answer is the minimum (last − first + 1) over all values whose count equals the degree.",
+  "hints": [
+    "For an element that appears k times in the array, what is the shortest contiguous subarray that still contains all k of its occurrences?",
+    "Use a hash map per value storing count, first index, and last index. In Example 1, value 2 has count 2, first index 1, last index 2, so its span length is 2−1+1 = 2.",
+    "```\nfor i in 0..n-1:\n    v = nums[i]\n    count[v] += 1\n    if first[v] not set: first[v] = i\n    last[v] = i\n    degree = max(degree, count[v])\nans = n\nfor each v with count[v] == degree:\n    ans = min(ans, last[v] - first[v] + 1)\nreturn ans\n```",
+    "**Smallest input** - only one element, degree is 1.\n`Input: nums = [7]` → `Expected: 1`\n⚠️ Bug: initialising `ans = 0` instead of `ans = n` → returns 0.\n\n**All elements equal** - the single value spans the whole array.\n`Input: nums = [5,5,5]` → `Expected: 3`\n⚠️ Bug: updating `first[v]` on every iteration instead of only the first → last−first+1 = 1, returns 1.\n\n**All distinct** - degree is 1, every span has length 1.\n`Input: nums = [1,2,3,4]` → `Expected: 1`\n⚠️ Bug: requiring `count[v] == degree` with `degree` computed as `count[v]` after the loop without taking the max → may skip all values and return `n` = 4.\n\n**Tie for max frequency** - two values share the degree; pick the shorter span.\n`Input: nums = [1,2,2,3,1]` → `Expected: 2`\n⚠️ Bug: returning the first qualifying span instead of the minimum → returns 5 for value 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is a streaming input too large to store, and you can only keep O(distinct values) memory?",
+      "a": "Keep the same three maps (count, first, last) but process elements as they arrive; the maps already use O(distinct values) space, so the streaming version is unchanged in time and space: O(n) time, O(d) space where d is the number of distinct values seen."
+    },
+    {
+      "q": "What if you must support queries asking for the shortest degree-matching subarray after each prefix of the array?",
+      "a": "After inserting each new element, update its count/first/last and recompute the degree and the minimum span among max-frequency values; each update is O(1) amortized, so total time stays O(n) and space stays O(d)."
+    },
+    {
+      "q": "What if values can be updated in place (point updates) between queries?",
+      "a": "Switch to an order-statistics structure keyed by value storing (count, first, last); point updates change one value's count and possibly its first/last, then you query the minimum span among values whose count equals the current max count, giving O(log d) per update and O(log d) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findShortestSubArray(vector<int>& nums) {\n        unordered_map<int,int> count, first, last;\n        int degree = 0;\n        int n = (int)nums.size();\n        for (int i = 0; i < n; i++) {\n            int v = nums[i];\n            count[v]++;\n            if (first.find(v) == first.end()) first[v] = i;\n            last[v] = i;\n            if (count[v] > degree) degree = count[v];\n        }\n        int ans = n;\n        for (auto& p : count) {\n            if (p.second == degree) {\n                int v = p.first;\n                int len = last[v] - first[v] + 1;\n                if (len < ans) ans = len;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

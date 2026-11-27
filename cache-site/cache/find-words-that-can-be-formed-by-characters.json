@@ -1,0 +1,40 @@
+{
+  "slug": "find-words-that-can-be-formed-by-characters",
+  "title": "Find Words That Can Be Formed by Characters",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Counting",
+  "tc": "O(n·m + c)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26]: fixed 26 ints for chars frequency → O(1)\n- int wc[26]: fixed 26 ints, reused per word → O(1)\n- int ans, bool ok, loop indices: scalars → O(1)\n- recursion depth: none\n- not counted: input vector<string>& words, string chars",
+  "approach": "Count how many times each of the 26 lowercase letters appears in `chars` using a fixed-size array. For each word, build the same per-letter count and check that no letter's count in the word exceeds its count in `chars`. If the word passes, add its length to the answer. This works because each character in `chars` can be used at most once per word, so the per-letter supply must cover the per-letter demand.",
+  "hints": [
+    "Each letter in `chars` can be used at most once per word. What must hold for every letter that appears in a word, compared to that same letter in `chars`?",
+    "Use a 26-element integer frequency array for `chars`; for each word, build the same array and compare element-wise. Example: `chars = \"atach\"` gives a=2, c=1, h=1, t=1; `\"cat\"` needs a=1, c=1, t=1 - all ≤, so it is good.",
+    "```\nfreq = count of each letter in chars\nans = 0\nfor each word w:\n    wfreq = count of each letter in w\n    good = true\n    for each letter i in 0..25:\n        if wfreq[i] > freq[i]:\n            good = false\n    if good:\n        ans += length of w\nreturn ans\n```",
+    "**Single character** - smallest valid input\n`Input: words = [\"a\"], chars = \"a\"` → `Expected: 1`\n⚠️ Bug: declaring `int cnt[26];` without `= {0}` (uninitialized garbage) → returns 0\n\n**Duplicate letters exceed supply** - word needs more copies of a letter than `chars` provides\n`Input: words = [\"aaa\"], chars = \"aa\"` → `Expected: 0`\n⚠️ Bug: checking set membership (letter exists in chars) instead of comparing counts → returns 3\n\n**Same length, different distribution** - word length ≤ chars length but a letter count is insufficient\n`Input: words = [\"aab\"], chars = \"abc\"` → `Expected: 0`\n⚠️ Bug: comparing only word length to chars length (3 ≤ 3) without per-letter check → returns 3\n\n**All words formable** - every word passes the check\n`Input: words = [\"a\",\"b\"], chars = \"ab\"` → `Expected: 2`\n⚠️ Bug: using `wfreq[i] < freq[i]` as the rejection condition (rejecting when word has fewer of a letter) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if `chars` can be up to 10^9 characters long?",
+      "a": "The frequency array approach still works - count `chars` once in O(|chars|), then each word check is O(|word|). The per-word cost is unchanged; only the one-time preprocessing grows. TC: O(|chars| + total word length), SC: O(1)."
+    },
+    {
+      "q": "What if words arrive as a stream and you must answer each immediately?",
+      "a": "Precompute the `chars` frequency array once. For each incoming word, build its frequency array and compare in O(|word|) time with no buffering. TC: O(|chars|) preprocessing, O(|word|) per query, SC: O(1)."
+    },
+    {
+      "q": "What if `chars` can be modified (add or remove a letter) between word queries?",
+      "a": "Maintain the frequency array incrementally - increment one slot on add, decrement on remove, each in O(1). Each word check remains O(|word|). TC: O(1) per chars update, O(|word|) per word check, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countCharacters(vector<string>& words, string chars) {\n        int cnt[26] = {0};\n        for (char c : chars) cnt[c - 'a']++;\n        int ans = 0;\n        for (const string& w : words) {\n            int wc[26] = {0};\n            for (char c : w) wc[c - 'a']++;\n            bool ok = true;\n            for (int i = 0; i < 26; i++) {\n                if (wc[i] > cnt[i]) { ok = false; break; }\n            }\n            if (ok) ans += (int)w.size();\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "range-sum-query-2d-immutable",
+  "title": "Range Sum Query 2D - Immutable",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "2D Prefix Sum",
+  "tc": "O(m·n)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- vector<vector<int>> pref: (m+1)×(n+1) ints → O(m·n)\n- recursion depth: none\n- not counted: input matrix",
+  "approach": "Precompute a 2D prefix-sum table `pref[i+1][j+1]` equal to the sum of all cells in `matrix[0..i][0..j]`, with an extra top row and left column of zeros to avoid boundary checks. Any rectangular sum from `(row1,col1)` to `(row2,col2)` is then the inclusion-exclusion of four prefix values: `pref[row2+1][col2+1] − pref[row1][col2+1] − pref[row2+1][col1] + pref[row1][col1]`. Construction is O(m·n); each query is O(1). The maximum possible sum is 200·200·10^4 = 4·10^8, which fits in a 32-bit int.",
+  "hints": [
+    "sumRegion must run in O(1), yet a query rectangle can cover up to 200×200 = 40,000 cells. What relationship between rectangles lets you express any query rectangle as a combination of a few rectangles that all share a common corner?",
+    "Use a 2D prefix-sum table `pref[i+1][j+1]` = sum of `matrix[0..i][0..j]`. For `sumRegion(2,1,4,3)` on the example, return `pref[5][4] − pref[2][4] − pref[5][1] + pref[2][1] = 8`.",
+    "```\nbuild pref with one extra row and column of zeros:\n  pref[i+1][j+1] = matrix[i][j] + pref[i][j+1] + pref[i+1][j] - pref[i][j]\nquery(r1,c1,r2,c2):\n  return pref[r2+1][c2+1] - pref[r1][c2+1] - pref[r2+1][c1] + pref[r1][c1]\n```",
+    "**Single cell** - the smallest valid rectangle is one element.\n`Input: matrix=[[5]], sumRegion(0,0,0,0)` → `Expected: 5`\n⚠️ Bug: sizing `pref` as m×n (no guard row/col) and indexing `pref[r2+1][c2+1]` → out-of-bounds read, returns garbage.\n\n**Top-left corner query** - the query starts at (0,0), so any `r1-1`/`c1-1` index is -1.\n`Input: matrix=[[3,0,1,4,2],[5,6,3,2,1],...], sumRegion(0,0,1,1)` → `Expected: 14`\n⚠️ Bug: using `pref[r2][c2] - pref[r1-1][c2] - pref[r2][c1-1] + pref[r1-1][c1-1]` with no guard row → reads `pref[-1][...]`, returns garbage.\n\n**All negatives** - every cell is negative, so prefix sums decrease as the region grows.\n`Input: matrix=[[-1,-2],[-3,-4]], sumRegion(0,0,1,1)` → `Expected: -10`\n⚠️ Bug: initializing a query accumulator to 0 and only adding cell values ≥ 0 → returns 0 instead of -10.\n\n**Full-matrix query** - the rectangle spans the entire grid, the largest possible region.\n`Input: matrix=[[3,0,1,4,2],[5,6,3,2,1],[1,2,0,1,5],[4,1,0,1,7],[1,0,3,0,5]], sumRegion(0,0,4,4)` → `Expected: 58`\n⚠️ Bug: allocating `pref` as m×n and accessing `pref[5][5]` → out-of-bounds, returns garbage."
+  ],
+  "followUps": [
+    {
+      "q": "What if matrix elements can be updated between queries?",
+      "a": "Replace the static prefix table with a 2D Fenwick (BIT) tree. Both point updates and region queries become O(log m · log n), trading O(1) queries for logarithmic updates."
+    },
+    {
+      "q": "What if only row-wise prefix sums are stored to simplify construction?",
+      "a": "Each query iterates rows row1..row2, doing two row-prefix lookups per row. Query time becomes O(row2−row1+1) ≤ O(m); space stays O(m·n) but construction is simpler."
+    },
+    {
+      "q": "What if the matrix is 10^5 × 10^5 but sparse, with few non-zero cells?",
+      "a": "Store only non-zero cells in a hash map keyed by (i,j), or apply 2D coordinate compression on their positions. A region sum iterates only over non-zero cells inside the rectangle, giving O(k) per query where k is the count of such cells."
+    }
+  ],
+  "code": {
+    "cpp": "class NumMatrix {\n    vector<vector<int>> pref;\npublic:\n    NumMatrix(vector<vector<int>>& matrix) {\n        int m = matrix.size();\n        int n = matrix[0].size();\n        pref.assign(m + 1, vector<int>(n + 1, 0));\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                pref[i + 1][j + 1] = matrix[i][j]\n                    + pref[i][j + 1]\n                    + pref[i + 1][j]\n                    - pref[i][j];\n            }\n        }\n    }\n    \n    int sumRegion(int row1, int col1, int row2, int col2) {\n        return pref[row2 + 1][col2 + 1]\n             - pref[row1][col2 + 1]\n             - pref[row2 + 1][col1]\n             + pref[row1][col1];\n    }\n};\n\n/**\n * Your NumMatrix object will be instantiated and called as such:\n * NumMatrix* obj = new NumMatrix(matrix);\n * int param_1 = obj->sumRegion(row1,col1,row2,col2);\n */"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

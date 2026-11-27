@@ -1,0 +1,40 @@
+{
+  "slug": "slowest-key",
+  "title": "Slowest Key",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with Running Maximum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int maxDur, char ans: scalars → O(1)\n- loop index i: scalar → O(1)\n- not counted: input vector<int>& and string",
+  "approach": "Each keypress's duration is the difference between consecutive release times (with the first being `releaseTimes[0]`). In a single left-to-right pass, keep a running maximum duration and the corresponding key. Update when a strictly larger duration appears, or when an equal duration comes with a lexicographically larger key. This is correct because the answer depends only on the best keypress seen so far, and the tie-break rule is local to each comparison.",
+  "hints": [
+    "Each keypress's duration depends only on two adjacent release times. What must you remember about the best keypress seen so far to decide the final answer after one full pass through the array?",
+    "Linear scan keeping a running maximum of (duration, key). On Example 1, index 2 gives duration 20 for 'c', tying index 1's 20 for 'b' - since 'c' > 'b', the answer updates to 'c'.",
+    "```\nans = key[0]\nbest = releaseTimes[0]\nfor i from 1 to n-1:\n    d = releaseTimes[i] - releaseTimes[i-1]\n    if d > best or (d == best and key[i] > ans):\n        best = d\n        ans = key[i]\nreturn ans\n```",
+    "**Tie with larger key later** - two keypresses share the max duration; the lexicographically larger key wins.\n`Input: releaseTimes = [9,29,49,50], keysPressed = \"cbcd\"` → `Expected: \"c\"`\n⚠️ Bug: updating only on strict `>` without comparing keys → returns \"b\"\n\n**First key is the answer** - the 0th keypress has the longest duration.\n`Input: releaseTimes = [100,101,102], keysPressed = \"abc\"` → `Expected: \"a\"`\n⚠️ Bug: initializing best to 0 and looping from i=1, skipping the 0th keypress → returns \"c\"\n\n**All equal durations, largest key not first** - every duration is equal, so the lexicographically largest key overall must win.\n`Input: releaseTimes = [1,2,3], keysPressed = \"abz\"` → `Expected: \"z\"`\n⚠️ Bug: updating only on strict `>` (no tie-break) → returns \"a\"\n\n**Minimum input** - n = 2, the smallest allowed size.\n`Input: releaseTimes = [5,10], keysPressed = \"xy\"` → `Expected: \"y\"`\n⚠️ Bug: returning keysPressed[0] unconditionally when n == 2 → returns \"x\""
+  ],
+  "followUps": [
+    {
+      "q": "If releaseTimes arrives as an unbounded stream and cannot be stored, how do you still find the slowest key?",
+      "a": "Keep the previous release time and the running (max duration, key) pair. Each new event updates the pair in O(1), so time stays O(n) and space drops to O(1) beyond the two scalars."
+    },
+    {
+      "q": "Instead of the single slowest key, return the k slowest keypresses sorted by duration descending.",
+      "a": "Maintain a min-heap of size k keyed by duration (and key for tie-breaks). Each of the n keypresses is pushed and possibly popped, giving O(n log k) time and O(k) space."
+    },
+    {
+      "q": "If multiple presses of the same key should have their durations summed before picking the slowest key, how does the approach change?",
+      "a": "First aggregate durations per key using a hash map (at most 26 lowercase keys), then scan the map for the maximum total with the lexicographic tie-break. Time stays O(n), space O(26) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    char slowestKey(vector<int>& releaseTimes, string keysPressed) {\n        int n = releaseTimes.size();\n        int maxDur = releaseTimes[0];\n        char ans = keysPressed[0];\n        for (int i = 1; i < n; i++) {\n            int dur = releaseTimes[i] - releaseTimes[i - 1];\n            if (dur > maxDur || (dur == maxDur && keysPressed[i] > ans)) {\n                maxDur = dur;\n                ans = keysPressed[i];\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

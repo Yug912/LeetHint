@@ -1,0 +1,40 @@
+{
+  "slug": "longest-palindromic-subsequence",
+  "title": "Longest Palindromic Subsequence",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n entries → O(n)\n- scalar variables (n, i, j, prev, temp): O(1)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "The longest palindromic subsequence of s[i..j] depends on whether s[i] and s[j] match: if they do, it is 2 plus the answer for s[i+1..j-1]; otherwise it is the max of the answers for s[i+1..j] and s[i..j-1]. By iterating the start index i from right to left and keeping a single 1D array where dp[j] holds the answer for the substring from the current i to j, only the previous row's values are needed - a `prev` variable preserves the diagonal value dp[i+1][j-1] before it is overwritten. This reduces space from O(n²) to O(n) while keeping O(n²) time.",
+  "hints": [
+    "Which pairs of positions in the string could serve as the outermost matching characters of a palindromic subsequence, and what does the answer for the region between them depend on?\nThe string length is at most 1000.",
+    "Use a 1D dynamic programming array where dp[j] stores the longest palindromic subsequence length for the substring from the current start index i to j; a `prev` variable holds the diagonal value (inner substring) before it gets overwritten.\nFor s = \"bbbab\", when i=2 and j=4, s[2]='b' matches s[4]='b', so dp[4] = prev + 2 = 1 + 2 = 3.",
+    "```\nfor i from n-1 down to 0:\n    dp[i] = 1\n    prev = 0\n    for j from i+1 to n-1:\n        temp = dp[j]\n        if s[i] == s[j]:\n            dp[j] = prev + 2\n        else:\n            dp[j] = max(dp[j], dp[j-1])\n        prev = temp\nreturn dp[n-1]\n```",
+    "**Single character** - the minimum input size.\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: omitting `dp[i] = 1` inside the outer loop and relying on zero-initialization → returns 0\n\n**Two identical characters** - both endpoints match, exercising the +2 base case.\n`Input: s = \"bb\"` → `Expected: 2`\n⚠️ Bug: initializing `prev` to 1 instead of 0 → dp[1] = 1 + 2 = 3, returns 3\n\n**All characters equal** - maximum palindrome, tests accumulation across the full string.\n`Input: s = \"aaaa\"` → `Expected: 4`\n⚠️ Bug: setting `prev = dp[j]` after updating dp[j] instead of saving the old value in `temp` first → returns 6\n\n**Mixed characters from the problem example** - tests correct outer-loop direction.\n`Input: s = \"cbbd\"` → `Expected: 2`\n⚠️ Bug: iterating the outer loop `i` from 0 upward instead of `n-1` downward → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also return one actual longest palindromic subsequence, not just its length?",
+      "a": "Keep a companion 2D table recording which transition each state chose (match both ends, drop left, or drop right). After computing the lengths, backtrack from (0, n-1): if the endpoints matched, prepend/append the character and move diagonally; otherwise move toward the larger neighbor. Time remains O(n²); space grows to O(n²) for the back-pointer table."
+    },
+    {
+      "q": "What if s can be up to 10^5 characters?",
+      "a": "The longest palindromic subsequence of s equals the longest common subsequence of s and reverse(s). With only 26 lowercase letters, bit-parallel LCS algorithms process 64 characters per word operation, giving O(n²/64) time - about 1.6 × 10^8 operations for n = 10^5, which is feasible. Space stays O(n) with a rolling array."
+    },
+    {
+      "q": "What if you must count how many distinct longest palindromic subsequences exist?",
+      "a": "Maintain a parallel count table alongside the length table. When two transitions yield the same maximum length, add their counts; when one dominates, take its count alone; when matching endpoints produce the best length, use the inner substring's count. Use modular arithmetic if counts can overflow. Time stays O(n²); space becomes O(n²) for the count table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestPalindromeSubseq(string s) {\n        int n = s.size();\n        vector<int> dp(n, 0);\n        for (int i = n - 1; i >= 0; --i) {\n            dp[i] = 1;\n            int prev = 0;\n            for (int j = i + 1; j < n; ++j) {\n                int temp = dp[j];\n                if (s[i] == s[j]) {\n                    dp[j] = prev + 2;\n                } else {\n                    dp[j] = max(dp[j], dp[j - 1]);\n                }\n                prev = temp;\n            }\n        }\n        return dp[n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

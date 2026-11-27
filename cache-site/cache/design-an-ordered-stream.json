@@ -1,0 +1,39 @@
+{
+  "slug": "design-an-ordered-stream",
+  "title": "Design an Ordered Stream",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Pointer Sweep with Direct-Indexed Array",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<string> stream: n+1 entries → O(n)\n- vector<string> result: returned, not counted\n- int ptr: O(1)",
+  "approach": "Store values in a 1-indexed array of size n+1 and keep a pointer `ptr` (starting at 1) marking the next expected id. On each insert, place the value at its id slot, then walk forward from `ptr` collecting every non-empty slot into the result chunk, advancing `ptr` each time, stopping at the first empty slot. Because each value enters the result exactly once across all calls and `ptr` only moves forward, the total work over n inserts is O(n).",
+  "hints": [
+    "After each insertion, what determines which values can be returned as a chunk - is it every value inserted so far, or only those forming an unbroken run starting from one specific position?",
+    "Use a 1-indexed array of size n+1 plus an integer pointer starting at 1. Inserting (3,\"ccccc\") with n=5 sets arr[3]; since arr[1] is still empty, the chunk is [].",
+    "```\nptr = 1\ninsert(id, val):\n    arr[id] = val\n    chunk = []\n    while ptr < size and arr[ptr] is not empty:\n        chunk.append(arr[ptr])\n        ptr = ptr + 1\n    return chunk\n```",
+    "**Smallest input** - n=1, only one insertion ever happens.\n`OrderedStream(1); insert(1,\"aaaaa\")` → `[\"aaaaa\"]`\n⚠️ Bug: initializing ptr to 0 → checks arr[0] (empty) → returns `[]`\n\n**Reverse order insertion** - ids arrive from n down to 1.\n`OrderedStream(3); insert(3,\"ccccc\"); insert(2,\"bbbbb\"); insert(1,\"aaaaa\")` → `[], [], [\"aaaaa\",\"bbbbb\",\"ccccc\"]`\n⚠️ Bug: returning all currently inserted values instead of only the consecutive run from ptr → first insert returns `[\"ccccc\"]`\n\n**Gap in sequence** - a later id is filled while an earlier slot is still empty.\n`OrderedStream(3); insert(1,\"aaaaa\"); insert(3,\"ccccc\")` → `[\"aaaaa\"], []`\n⚠️ Bug: collecting every non-empty entry from ptr to n without stopping at the first gap → second insert returns `[\"ccccc\"]`\n\n**Array sizing** - using an array of size n with 1-based ids.\n`OrderedStream(5); insert(5,\"eeeee\")` → `[]`\n⚠️ Bug: declaring `vector<string> stream(n)` and indexing by idKey → out-of-bounds write at index 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be as large as 10^9 but only k ≤ 10^5 insertions occur?",
+      "a": "Replace the dense array with a hash map from id to value; the pointer sweep checks map.count(ptr) and advances. Time becomes O(k) total, space O(k), since only inserted ids are stored."
+    },
+    {
+      "q": "What if a delete(id) operation is added that removes a value?",
+      "a": "Deletion only matters if it creates a gap at or before ptr; if the deleted id is < ptr it is already consumed and ignored, otherwise mark the slot empty and do not move ptr backward. Each insert still does an amortized O(1) forward sweep, so total time stays O(n + d)."
+    },
+    {
+      "q": "What if the same id can be re-inserted with a new value?",
+      "a": "Overwrite the slot; if the id is already < ptr it has been emitted and the update is silently ignored, if it is ≥ ptr and now fills the next gap, the sweep emits the updated value. Time and space bounds are unchanged at O(n) total and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class OrderedStream {\n    vector<string> stream;\n    int ptr;\npublic:\n    OrderedStream(int n) {\n        stream.assign(n + 1, \"\");\n        ptr = 1;\n    }\n    \n    vector<string> insert(int idKey, string value) {\n        stream[idKey] = value;\n        vector<string> result;\n        while (ptr < (int)stream.size() && !stream[ptr].empty()) {\n            result.push_back(stream[ptr]);\n            ptr++;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

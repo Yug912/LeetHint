@@ -1,0 +1,40 @@
+{
+  "slug": "cinema-seat-allocation",
+  "title": "Cinema Seat Allocation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map + Bitmask",
+  "tc": "O(m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- unordered_map<int,int> rowMask: up to m entries (distinct rows) → O(m)\n- recursion depth: none\n- not counted: input reservedSeats, returned int",
+  "approach": "Rows with no reservations always fit 2 groups (seats 2-5 and 6-9). Only rows appearing in `reservedSeats` need individual analysis. For each such row, encode reserved seats as a bitmask, then check the three candidate blocks (2-5, 4-7, 6-9) via bitwise AND. If both the left (2-5) and right (6-9) blocks are free, place 2 groups; otherwise, if any block is free, place 1. Sum contributions from reserved rows and add 2 per unreserved row.",
+  "hints": [
+    "With n up to 10^9 but at most 10^4 reserved seats, which rows can you skip examining individually, and how many groups fit in each of those rows?",
+    "Use a hash map from row number to a bitmask of reserved seats. For row 1 in Example 1 (reserved seats 2,3,8), the mask is `0b100001100`; AND-ing with the block 2-5 mask `0b00111100` is nonzero, so that block is blocked.",
+    "```\ngroup reserved seats by row -> map: row -> bitmask\nans = 2 * (n - number of distinct rows in map)\nfor each (row, mask) in map:\n    left   = (mask & block_2_to_5)   == 0\n    middle = (mask & block_4_to_7)   == 0\n    right  = (mask & block_6_to_9)   == 0\n    if left and right: ans += 2\n    else if left or middle or right: ans += 1\nreturn ans\n```",
+    "**Huge n, few reservations** - n can be 10^9 but only a handful of rows have reservations.\n`Input: n = 1000000000, reservedSeats = [[1,5]]` → `Expected: 1999999999`\n⚠️ Bug: iterating over all n rows instead of using `2 * (n - map.size())` → TLE\n\n**All ten seats reserved in one row** - every block is blocked.\n`Input: n = 1, reservedSeats = [[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7],[1,8],[1,9],[1,10]]` → `Expected: 0`\n⚠️ Bug: always adding 1 when any single block check is skipped → returns 1\n\n**Reservations only at seats 1 and 10** - both left and right blocks are free.\n`Input: n = 1, reservedSeats = [[1,1],[1,10]]` → `Expected: 2`\n⚠️ Bug: checking `left || right` instead of `left && right` for the 2-group case → returns 1\n\n**Single row, no reservations** - the map is empty.\n`Input: n = 1, reservedSeats = []` → `Expected: 2`\n⚠️ Bug: only looping over the map and never adding `2 * (n - map.size())` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if groups can be 2, 3, or 4 people and you want to maximize total people seated?",
+      "a": "For each row, run a small DP over seat positions 1-10: state is the current seat index, and at each free seat you either skip it or place a group of size k (2-4) if the next k seats are free. Rows with no reservations always yield the same optimal layout. TC: O(m * 10 * 3), SC: O(10)."
+    },
+    {
+      "q": "What if the row is circular (seat 10 is adjacent to seat 1)?",
+      "a": "Additional wrap-around blocks like seats 9,10,1,2 must be checked. The bitmask approach extends naturally by testing circular masks formed by OR-ing the high and low bit portions. TC stays O(m), SC stays O(m)."
+    },
+    {
+      "q": "What if reservations arrive as a stream and you must report the current answer after each one?",
+      "a": "Maintain the hash map incrementally. For each new reservation, update that row's mask, subtract its previous contribution, recompute it, and add the new contribution. TC: O(1) per update, SC: O(m) where m is the number of distinct rows seen so far."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxNumberOfFamilies(int n, vector<vector<int>>& reservedSeats) {\n        unordered_map<int, int> rowMask;\n        for (auto& rs : reservedSeats) {\n            rowMask[rs[0]] |= (1 << rs[1]);\n        }\n        int ans = 2 * (n - (int)rowMask.size());\n        for (auto& [row, mask] : rowMask) {\n            bool left   = !(mask & 0x3C);   // seats 2,3,4,5\n            bool middle = !(mask & 0xF0);  // seats 4,5,6,7\n            bool right  = !(mask & 0x3C0);  // seats 6,7,8,9\n            if (left && right) {\n                ans += 2;\n            } else if (left || middle || right) {\n                ans += 1;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

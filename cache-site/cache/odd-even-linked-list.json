@@ -1,0 +1,40 @@
+{
+  "slug": "odd-even-linked-list",
+  "title": "Odd Even Linked List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-Place Linked List Relinking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- Pointers odd, even, evenHead: 3 pointers, constant → O(1)\n- No containers, no recursion, no auxiliary arrays\n- Modifying input list in place (not counted)",
+  "approach": "Use two pointers to split the list in place: `odd` chains together all odd-indexed nodes, `even` chains all even-indexed nodes. On each iteration, the odd pointer links to the node after the current even node (the next odd), then the even pointer links to the node after that new odd (the next even). After the loop, connect the tail of the odd chain to the saved head of the even chain. This is correct because odd and even indices strictly alternate, so `even->next` is always the next odd and `odd->next` (after relinking) is always the next even.",
+  "hints": [
+    "With nodes alternating odd/even/odd/even by index, what two separate sequences naturally form if you follow only the odd-indexed positions, then only the even-indexed positions?",
+    "Use two pointers walking in lockstep: one chains odd-indexed nodes, the other chains even-indexed nodes. For [1,2,3,4,5]: odd=1 links to 3, even=2 links to 4, then link odd-tail (5) to even-head (2).",
+    "```\nif head is null or head.next is null: return head\nodd = head\neven = head.next\nevenHead = even\nwhile even != null and even.next != null:\n    odd.next = even.next\n    odd = odd.next\n    even.next = odd.next\n    even = even.next\nodd.next = evenHead\nreturn head\n```",
+    "**Empty list** - head is null, no nodes exist\n`Input: head = []` → `Expected: []`\n⚠️ Bug: accessing head->next without null check → null pointer dereference\n\n**Single node** - only one node, no even node exists\n`Input: head = [1]` → `Expected: [1]`\n⚠️ Bug: accessing head->next->next without checking head->next first → null pointer dereference\n\n**Two nodes** - even pointer's next is immediately null\n`Input: head = [1,2]` → `Expected: [1,2]`\n⚠️ Bug: loop condition `while even != null` instead of `while even != null and even.next != null` → accesses even.next when even is the last even node, linking garbage\n\n**Even-length list** - even chain ends at a node whose next is null\n`Input: head = [1,2,3,4]` → `Expected: [1,3,2,4]`\n⚠️ Bug: setting odd->next = evenHead inside the loop instead of after → breaks even chain before it is fully built, producing [1,3,2,4] but with 4 pointing into the odd chain incorrectly"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must group nodes by value parity (odd/even values) instead of index parity?",
+      "a": "Same two-pointer approach, but the split condition checks `node->val % 2` instead of position. Walk once, appending each node to the odd-valued chain or even-valued chain, then link the two chains. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if the list is circular (tail links back to head)?",
+      "a": "First break the cycle by finding the node whose next is head, save the tail, then apply the same relinking. Reconnect the last even node to the original tail to preserve circularity. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if you must group every k-th index together (generalized grouping into k chains)?",
+      "a": "Use k tail pointers, one per residue class mod k. Walk the list once, appending each node to its group's tail, then concatenate all k chains in order. TC O(n), SC O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* oddEvenList(ListNode* head) {\n        if (head == nullptr || head->next == nullptr) {\n            return head;\n        }\n        ListNode* odd = head;\n        ListNode* even = head->next;\n        ListNode* evenHead = even;\n        while (even != nullptr && even->next != nullptr) {\n            odd->next = even->next;\n            odd = odd->next;\n            even->next = odd->next;\n            even = even->next;\n        }\n        odd->next = evenHead;\n        return head;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

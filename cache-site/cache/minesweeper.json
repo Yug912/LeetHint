@@ -1,0 +1,40 @@
+{
+  "slug": "minesweeper",
+  "title": "Minesweeper",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Flood Fill DFS",
+  "tc": "O(m*n)",
+  "sc": "O(m*n)",
+  "spaceBreakdown": "- recursion call stack: up to m*n frames in worst-case snake-shaped cascade → O(m*n)\n- board: modified in place, not counted",
+  "approach": "The key insight is that revealing a blank square (no adjacent mines) triggers a flood-fill cascade: all 8-connected unrevealed empty squares must also be revealed, stopping only at squares that have at least one adjacent mine (which become digits). We use DFS starting from the click position. If the click hits a mine, change it to 'X' and return immediately. Otherwise, for each 'E' cell, count adjacent 'M' cells: if zero, mark 'B' and recurse on all 8 neighbors; if nonzero, mark the digit and stop. Each cell is processed at most once since we change 'E' to 'B' or a digit before recursing, preventing revisits.",
+  "hints": [
+    "When you click an empty square with zero adjacent mines, what must happen to the squares around it? What property of a square determines whether the cascade continues or stops there?",
+    "Use DFS (or BFS) to flood-fill from the click. In Example 1, clicking (3,0) finds 0 adjacent mines, sets it to 'B', and recurses on all 8 neighbors; cells adjacent to the mine at (1,2) become digits and stop the spread.",
+    "```\nfunction reveal(r, c):\n    if out of bounds or board[r][c] != 'E': return\n    count = number of 'M' in 8 neighbors\n    if count > 0:\n        board[r][c] = digit(count)\n    else:\n        board[r][c] = 'B'\n        for each of 8 neighbors:\n            reveal(neighbor)\n```",
+    "**Mine click** - Click directly on an unrevealed mine, game ends immediately\n`board = [[\"M\"]], click = [0,0]` → `[[\"X\"]]`\n⚠️ Bug: calling DFS without first checking if the clicked cell is 'M' → DFS returns immediately (cell is not 'E'), mine stays unrevealed → returns [[\"M\"]]\n\n**Single empty cell** - 1×1 board with no mines anywhere\n`board = [[\"E\"]], click = [0,0]` → `[[\"B\"]]`\n⚠️ Bug: not bounds-checking neighbor access when counting mines → reads out-of-bounds memory → crash or wrong digit like [[\"1\"]]\n\n**Full cascade** - Board with no mines, every cell must become 'B'\n`board = [[\"E\",\"E\"],[\"E\",\"E\"]], click = [0,0]` → `[[\"B\",\"B\"],[\"B\",\"B\"]]`\n⚠️ Bug: recursing on neighbors before marking current cell as 'B' → neighbor sees current cell still as 'E', recurses back → infinite recursion, stack overflow\n\n**Eight directions** - Must check all 8 neighbors, not just 4 cardinal directions\n`board = [[\"E\",\"E\",\"E\"],[\"E\",\"M\",\"E\"],[\"E\",\"E\",\"E\"]], click = [0,0]` → `[[\"1\",\"E\",\"E\"],[\"E\",\"M\",\"E\"],[\"E\",\"E\",\"E\"]]`\n⚠️ Bug: using 4-directional neighbors instead of 8 → misses diagonal mine at (1,1), count=0, sets 'B' and cascades → returns [[\"B\",\"1\",\"E\"],[\"1\",\"M\",\"E\"],[\"E\",\"E\",\"E\"]]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the board can be up to 10^4 × 10^4? How do you avoid stack overflow?",
+      "a": "Replace DFS with iterative BFS using a queue. Same flood-fill logic: mark 'B' before enqueuing neighbors, stop at digit cells. Time stays O(m*n), space is O(m*n) for the queue instead of the recursion stack, avoiding stack overflow on large inputs."
+    },
+    {
+      "q": "What if you need to process k clicks in sequence and return the board after all clicks?",
+      "a": "Process each click independently on the current board state. A click on 'X' or an already-revealed cell does nothing (constraints guarantee clicks land on 'M' or 'E'). Each click is O(m*n) worst case, so total time is O(k * m * n)."
+    },
+    {
+      "q": "What if the board is too large to store in memory and is given as a list of mine coordinates?",
+      "a": "Store mine coordinates in a hash set. For each click, compute adjacent mine count by checking the 8 neighbors against the set. Use BFS to reveal only the connected component of zero-mine cells reachable from the click. Time is O(revealed cells + 8 per cell), space is O(revealed cells) for the queue and visited set."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<char>> updateBoard(vector<vector<char>>& board, vector<int>& click) {\n        int r = click[0], c = click[1];\n        int m = board.size(), n = board[0].size();\n        \n        if (board[r][c] == 'M') {\n            board[r][c] = 'X';\n            return board;\n        }\n        \n        dfs(board, r, c, m, n);\n        return board;\n    }\n    \nprivate:\n    void dfs(vector<vector<char>>& board, int r, int c, int m, int n) {\n        if (r < 0 || r >= m || c < 0 || c >= n) return;\n        if (board[r][c] != 'E') return;\n        \n        int count = 0;\n        for (int dr = -1; dr <= 1; dr++) {\n            for (int dc = -1; dc <= 1; dc++) {\n                if (dr == 0 && dc == 0) continue;\n                int nr = r + dr, nc = c + dc;\n                if (nr >= 0 && nr < m && nc >= 0 && nc < n && board[nr][nc] == 'M') {\n                    count++;\n                }\n            }\n        }\n        \n        if (count > 0) {\n            board[r][c] = '0' + count;\n        } else {\n            board[r][c] = 'B';\n            for (int dr = -1; dr <= 1; dr++) {\n                for (int dc = -1; dc <= 1; dc++) {\n                    if (dr == 0 && dc == 0) continue;\n                    dfs(board, r + dr, c + dc, m, n);\n                }\n            }\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

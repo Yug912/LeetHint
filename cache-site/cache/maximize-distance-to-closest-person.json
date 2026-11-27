@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-distance-to-closest-person",
+  "title": "Maximize Distance to Closest Person",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, ans, first, last, prev, gap: all scalars → O(1)\n- no containers, no recursion, no heap/stack\n- not counted: input vector",
+  "approach": "The answer comes from one of three cases: (1) sitting at the leftmost seat (distance = index of first occupied seat), (2) sitting at the rightmost seat (distance = n−1 − index of last occupied seat), or (3) sitting in the middle of the largest gap between two consecutive occupied seats (distance = gap/2, integer division). We scan the array once to find the first and last occupied seats, then scan the interior to find the maximum gap between consecutive occupied seats, returning the maximum of all three quantities.",
+  "hints": [
+    "For an empty seat between two occupied seats, what seat position gives Alex the largest distance to the nearest person? How does the situation change when the empty seats are at the very beginning or end of the row with no person on one side?",
+    "Linear scan tracking occupied seat indices. For seats = [1,0,0,0,1,0,1], the gap between occupied seats at indices 0 and 4 is 4, giving a best distance of 4/2 = 2.",
+    "```\nfirst = index of first occupied seat\nlast = index of last occupied seat\nans = max(first, n - 1 - last)\nprev = first\nfor i from first+1 to last:\n    if seats[i] is occupied:\n        ans = max(ans, (i - prev) / 2)\n        prev = i\nreturn ans\n```",
+    "**Left edge** - Empty seats only before the first person.\n`Input: [0,0,0,1]` → `Expected: 3`\n⚠️ Bug: only computing gaps between consecutive occupied seats, ignoring edge distances → returns 0\n\n**Right edge** - Empty seats only after the last person.\n`Input: [1,0,0,0]` → `Expected: 3`\n⚠️ Bug: only computing gaps between consecutive occupied seats, ignoring edge distances → returns 0\n\n**Odd gap** - Gap of odd length between two people.\n`Input: [1,0,0,1]` → `Expected: 1`\n⚠️ Bug: using (gap+1)/2 instead of gap/2 → returns 2\n\n**Gap definition** - Gap measured as empty seat count vs index difference.\n`Input: [1,0,0,0,1]` → `Expected: 2`\n⚠️ Bug: computing gap as count of empty seats (3) instead of index difference (4), then dividing by 2 → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if multiple people arrive one at a time, each wanting to maximize their distance to the nearest person (including previously seated newcomers)?",
+      "a": "Each placement splits the current best gap into two smaller gaps. Maintain a max-heap of gap sizes; extract the largest, split it, and push the two halves back. Time: O(k log g) for k people and g gaps, Space: O(n)."
+    },
+    {
+      "q": "What if the seats form a circle instead of a row?",
+      "a": "The left and right edges merge into a single wrap-around gap from the last occupied seat to the first. Compute all gaps between consecutive occupied seats including the wrap-around, and return the maximum of gap/2. No special edge handling needed. Time: O(n), Space: O(1)."
+    },
+    {
+      "q": "What if the input is a stream of updates (people sit down or leave) and you must answer the best-seat query after each update?",
+      "a": "Maintain a sorted set of occupied positions and a max-heap of gap sizes with lazy deletion. On each update, remove the two gaps adjacent to the changed position and insert the new gap(s). Time: O(log n) per update, Space: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxDistToClosest(vector<int>& seats) {\n        int n = seats.size();\n        int ans = 0;\n\n        int first = -1;\n        for (int i = 0; i < n; i++) {\n            if (seats[i] == 1) {\n                first = i;\n                break;\n            }\n        }\n        ans = first;\n\n        int last = -1;\n        for (int i = n - 1; i >= 0; i--) {\n            if (seats[i] == 1) {\n                last = i;\n                break;\n            }\n        }\n        ans = max(ans, n - 1 - last);\n\n        int prev = first;\n        for (int i = first + 1; i <= last; i++) {\n            if (seats[i] == 1) {\n                int gap = i - prev;\n                ans = max(ans, gap / 2);\n                prev = i;\n            }\n        }\n\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
