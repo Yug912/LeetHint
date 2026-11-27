@@ -1,0 +1,40 @@
+{
+  "slug": "vertical-order-traversal-of-a-binary-tree",
+  "title": "Vertical Order Traversal of a Binary Tree",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Coordinate Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- `vector<NodeInfo> nodes`: up to n entries → O(n)\n- recursion call stack: worst case O(n) for a skewed tree, O(log n) for balanced → O(n)\n- `vector<int> colNodes`: at most n entries in a single column → O(n), but part of output construction\n- `sort()`: introsort uses O(log n) stack → O(log n)\n- not counted: input tree, returned `vector<vector<int>> result`",
+  "approach": "Each node's position in the output is fully determined by three numbers: its column, its row, and its value (for tie-breaking when two nodes share the same row and column). We traverse the tree once (DFS), recording a `(col, row, val)` tuple for every node. We then sort all tuples lexicographically by `(col, row, val)`, which naturally groups nodes by column (left to right), orders them top-to-bottom within each column, and breaks ties by value. Finally, we walk the sorted list, grouping consecutive entries that share the same column into separate output lists.",
+  "hints": [
+    "Each node's final position in the output depends on exactly three numbers. Which three?",
+    "Collect a `(column, row, value)` tuple for every node via DFS, then sort all tuples lexicographically. In Example 2, nodes 5 and 6 both sit at `(row=2, col=0)`, so their tuples `(0, 2, 5)` and `(0, 2, 6)` place 5 before 6.",
+    "```\ndfs(node, row, col):\n    if node is null: return\n    record (col, row, node.val)\n    dfs(node.left,  row+1, col-1)\n    dfs(node.right, row+1, col+1)\n\nsort all recorded tuples by (col, row, val)\ngroup consecutive tuples sharing the same col\nappend each group's values as one list to the result\n```",
+    "**Single node** - n = 1, only the root exists\n`Input: [1]` → `Expected: [[1]]`\n⚠️ Bug: returning early when root has no children → returns `[]`\n\n**Tie at same position** - two nodes share identical row and column\n`Input: [1,2,3,4,6,5,7]` → `Expected: [[4],[2],[1,5,6],[3],[7]]`\n⚠️ Bug: sorting by `(col, row)` only, omitting `val` → returns `[[4],[2],[1,6,5],[3],[7]]`\n\n**Skewed left tree** - recursion depth equals n\n`Input: [1,2,null,3,null,4]` → `Expected: [[4],[3],[2],[1]]`\n⚠️ Bug: using BFS with a queue pre-sized to `log(n)` → drops nodes deeper than the queue capacity\n\n**All equal values** - tie-break by value is a no-op but must not deduplicate\n`Input: [5,5,5,5,5]` → `Expected: [[5],[5],[5,5],[5]]`\n⚠️ Bug: storing values per column in a `set` instead of a `vector` → returns `[[5],[5],[5],[5]]`"
+  ],
+  "followUps": [
+    {
+      "q": "If the tree is too large to fit in memory and you can only make k passes over it, how would you adapt?",
+      "a": "Instead of storing all tuples at once, make k passes. In each pass, collect only nodes whose column falls within a specific range, sort that batch, and append to the result. Each pass uses O(n/k) memory for tuples. Total time becomes O(k · n log(n/k))."
+    },
+    {
+      "q": "If ties at the same (row, col) should preserve left-to-right DFS traversal order instead of sorting by value, how would you change the solution?",
+      "a": "Add a global counter incremented during DFS as a fourth field, then sort by `(col, row, counter)` instead of `(col, row, val)`. Time and space complexity remain O(n log n) and O(n)."
+    },
+    {
+      "q": "If the output should list nodes bottom-to-top within each column, how would you adjust?",
+      "a": "Sort by `(col, -row, val)` so that larger row values come first within each column. The rest of the algorithm stays identical. TC remains O(n log n), SC remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct NodeInfo {\n        int col, row, val;\n    };\n    vector<NodeInfo> nodes;\n    void dfs(TreeNode* node, int row, int col) {\n        if (!node) return;\n        nodes.push_back({col, row, node->val});\n        dfs(node->left, row + 1, col - 1);\n        dfs(node->right, row + 1, col + 1);\n    }\npublic:\n    vector<vector<int>> verticalTraversal(TreeNode* root) {\n        nodes.clear();\n        dfs(root, 0, 0);\n        sort(nodes.begin(), nodes.end(), [](const NodeInfo& a, const NodeInfo& b) {\n            if (a.col != b.col) return a.col < b.col;\n            if (a.row != b.row) return a.row < b.row;\n            return a.val < b.val;\n        });\n        vector<vector<int>> result;\n        int i = 0;\n        int n = (int)nodes.size();\n        while (i < n) {\n            int col = nodes[i].col;\n            vector<int> colNodes;\n            while (i < n && nodes[i].col == col) {\n                colNodes.push_back(nodes[i].val);\n                ++i;\n            }\n            result.push_back(colNodes);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

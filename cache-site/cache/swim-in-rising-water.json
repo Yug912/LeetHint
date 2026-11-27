@@ -1,0 +1,40 @@
+{
+  "slug": "swim-in-rising-water",
+  "title": "Swim in Rising Water",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Union-Find with Counting Sort",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<int> order(N): N = n² entries → O(n²)\n- vector<int> parent(N): N entries → O(n²)\n- vector<int> rank_(N): N entries → O(n²)\n- vector<bool> active(N): N entries → O(n²)\n- find(): iterative, no recursion stack\n- not counted: input grid",
+  "approach": "The answer is the minimum water level t such that (0,0) and (n−1,n−1) are connected through cells with elevation ≤ t - a minimax path problem. Since all elevations are unique and in [0, n²), counting sort gives us cells in elevation order in O(n²) time. We process cells from lowest to highest elevation, marking each active and unioning it with already-active 4-neighbors via Union-Find. The first elevation at which start and end share a component is the answer.",
+  "hints": [
+    "As the water level t rises from 0, what property of the set of standable cells changes monotonically, and at what value of t does a path from (0,0) to (n−1,n−1) first exist? All elevations are unique integers in [0, n²).",
+    "Union-Find (Disjoint Set Union). Add cells in increasing elevation order, unioning each with its already-active 4-neighbors. In Example 1, at elevation 3, cell (1,1) joins and bridges (0,0) to (1,1) - answer is 3.",
+    "```\norder cells by elevation (counting sort, since unique in [0, n²))\nfor each elevation e from 0 to n²−1:\n    cell = order[e]\n    mark cell active\n    for each active 4-neighbor:\n        union(cell, neighbor)\n    if find(start) == find(end):\n        return e\n```",
+    "**Bridge cell** - the cell being added connects start to end in the same step.\n`Input: [[0,2],[3,1]]` → `Expected: 2`\n⚠️ Bug: checking find(start)==find(end) before unioning the new cell with its active neighbors → returns 3\n\n**Start is the bottleneck** - start cell has the highest elevation, so you must wait until the last step.\n`Input: [[8,0,1],[2,3,4],[5,6,7]]` → `Expected: 8`\n⚠️ Bug: returning grid[n−1][n−1] as the answer → returns 7\n\n**Position vs elevation confusion** - the position index and elevation differ.\n`Input: [[2,0],[3,1]]` → `Expected: 2`\n⚠️ Bug: returning the position index pos instead of the elevation e → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if elevations can repeat (not unique)?",
+      "a": "Bucket cells by elevation in counting sort. At each elevation e, mark all cells with that elevation active first, then union with active neighbors. The answer is the first e where start and end connect. Time stays O(n²), space O(n²)."
+    },
+    {
+      "q": "What if you need the minimax path between every pair of cells?",
+      "a": "The Union-Find processing already builds a minimum spanning forest. Store the tree, then answer each query by finding the maximum edge weight on the tree path between the two nodes using binary lifting. Preprocessing O(n² log n), each query O(log n)."
+    },
+    {
+      "q": "What if water rises at different rates per cell (cell i becomes submerged at time f(i))?",
+      "a": "Replace elevation with submersion time and sort cells by that time. The same Union-Find approach works: process cells in increasing submersion-time order, union with active neighbors, and return the first time start and end connect. Time O(n² log n) for the sort, space O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int find(vector<int>& parent, int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\npublic:\n    int swimInWater(vector<vector<int>>& grid) {\n        int n = grid.size();\n        int N = n * n;\n        vector<int> order(N);\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                order[grid[i][j]] = i * n + j;\n\n        vector<int> parent(N), rank_(N, 0);\n        for (int i = 0; i < N; i++) parent[i] = i;\n\n        vector<bool> active(N, false);\n        int target = N - 1;\n        int dx[] = {0, 0, 1, -1};\n        int dy[] = {1, -1, 0, 0};\n\n        for (int e = 0; e < N; e++) {\n            int pos = order[e];\n            int r = pos / n, c = pos % n;\n            active[pos] = true;\n            for (int d = 0; d < 4; d++) {\n                int nr = r + dx[d], nc = c + dy[d];\n                if (nr >= 0 && nr < n && nc >= 0 && nc < n) {\n                    int npos = nr * n + nc;\n                    if (active[npos]) {\n                        int px = find(parent, pos), py = find(parent, npos);\n                        if (px != py) {\n                            if (rank_[px] < rank_[py]) swap(px, py);\n                            parent[py] = px;\n                            if (rank_[px] == rank_[py]) rank_[px]++;\n                        }\n                    }\n                }\n            }\n            if (active[0] && active[target] && find(parent, 0) == find(parent, target))\n                return e;\n        }\n        return N - 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

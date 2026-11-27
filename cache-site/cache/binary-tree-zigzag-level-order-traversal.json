@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-zigzag-level-order-traversal",
+  "title": "Binary Tree Zigzag Level Order Traversal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Level Order",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: holds up to ~n/2 nodes at the widest level → O(n)\n- vector<int> level: transient, up to ~n/2 entries, moved into result → O(n) auxiliary\n- result: not counted (returned output)\n- recursion depth: none (iterative)",
+  "approach": "Use breadth-first traversal to visit nodes level by level. For each level, capture all node values into a vector; place each value at index `i` when going left-to-right, or at index `size-1-i` when going right-to-left, so no reversal pass is needed. Toggle direction after each level. This visits every node exactly once and produces the zigzag ordering directly.",
+  "hints": [
+    "What single property do all nodes that appear in the same output row share, and how could you visit the tree so that all nodes sharing that property are processed together?",
+    "Breadth-first traversal with a queue, processing one level per loop iteration. For root = [3,9,20,null,null,15,7], level 0 yields [3]; level 1 yields [9,20] which you place right-to-left as [20,9].",
+    "```\nq.push(root)\ndir = L->R\nwhile q not empty:\n    size = q.size()\n    level = array of size\n    for i in 0..size-1:\n        node = q.pop()\n        idx = dir==L->R ? i : size-1-i\n        level[idx] = node.val\n        if node.left:  q.push(node.left)\n        if node.right: q.push(node.right)\n    result.add(level)\n    dir = opposite(dir)\n```",
+    "**Empty tree** - root is null\n`Input: root = []` → `Expected: []`\n⚠️ Bug: pushing root without a null check then reading node->val → undefined behavior / crash\n\n**Single node** - root with no children\n`Input: root = [1]` → `Expected: [[1]]`\n⚠️ Bug: writing `while (q.size() > 1)` instead of `while (!q.empty())` → returns `[]`\n\n**Two-level tree** - root with two children\n`Input: root = [1,2,3]` → `Expected: [[1],[3,2]]`\n⚠️ Bug: never toggling direction after each level → returns `[[1],[2,3]]`\n\n**Full three-level tree** - 7 nodes\n`Input: root = [1,2,3,4,5,6,7]` → `Expected: [[1],[3,2],[4,5,6,7]]`\n⚠️ Bug: reversing every level including even-indexed ones → returns `[[1],[3,2],[7,6,5,4]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the levels bottom-up instead of top-down, still zigzag?",
+      "a": "Run the same BFS, then reverse the outer result vector at the end. TC stays O(n); SC stays O(n) auxiliary (the reversal is in place on the returned vector)."
+    },
+    {
+      "q": "What if the tree is too large to hold in memory and nodes arrive as a stream with parent pointers?",
+      "a": "Use two stacks alternating between levels - push children in opposite order on each stack so popping yields the zigzag order without reversing. TC O(n), SC O(w) where w is the maximum level width."
+    },
+    {
+      "q": "What if you only need the last node visible at each level under the zigzag direction?",
+      "a": "At each level, take the element at index size-1 when going left-to-right and index 0 when going right-to-left. TC O(n), SC O(w) for the queue."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    vector<vector<int>> zigzagLevelOrder(TreeNode* root) {\n        vector<vector<int>> result;\n        if (!root) return result;\n        queue<TreeNode*> q;\n        q.push(root);\n        bool leftToRight = true;\n        while (!q.empty()) {\n            int size = q.size();\n            vector<int> level(size);\n            for (int i = 0; i < size; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                int idx = leftToRight ? i : (size - 1 - i);\n                level[idx] = node->val;\n                if (node->left)  q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            result.push_back(level);\n            leftToRight = !leftToRight;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

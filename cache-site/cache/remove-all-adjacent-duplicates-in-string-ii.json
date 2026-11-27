@@ -1,0 +1,40 @@
+{
+  "slug": "remove-all-adjacent-duplicates-in-string-ii",
+  "title": "Remove All Adjacent Duplicates in String II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack with Run-Length Encoding",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<char,int>> st: up to n entries → O(n)\n- string res: returned output, not counted\n- recursion depth: none\n- not counted: input string s",
+  "approach": "Use a stack of (character, count) pairs. For each character in the string, if it matches the top of the stack, increment that pair's count; otherwise push a new pair (char, 1). Whenever any count reaches k, pop that pair - this naturally handles cascading removals because the next character will be compared against the new top. At the end, expand the remaining stack pairs into the result string. This is O(n) because each character is pushed and popped at most once.",
+  "hints": [
+    "When a block of k equal letters gets removed, what relationship forms between the characters that were separated by that block?",
+    "Use a stack of (character, count) pairs. For \"deeed\" with k=3: push d(1), e(1), e(2), e(3)→pop, then the next d matches the exposed top → d(2).",
+    "```\nfor each char c in s:\n    if stack not empty and stack.top.char == c:\n        stack.top.count += 1\n    else:\n        push (c, 1)\n    if stack.top.count == k:\n        pop\nbuild result by expanding each remaining (char, count) pair\n```",
+    "**All equal, exact multiple of k** - the entire string collapses to empty through cascading removals.\n`Input: s = \"aaaaaa\", k = 3` → `Expected: \"\"`\n⚠️ Bug: a single left-to-right pass that does not re-scan after a removal → returns \"aaa\"\n\n**Cascading removal across blocks** - removing one block creates a new removable block from previously separated characters.\n`Input: s = \"aabbaa\", k = 2` → `Expected: \"\"`\n⚠️ Bug: single pass that never revisits characters before the removal point → returns \"bbaa\"\n\n**No adjacent equal characters** - nothing should be removed at all.\n`Input: s = \"abab\", k = 2` → `Expected: \"abab\"`\n⚠️ Bug: counting consecutive characters without comparing their values (treating any run of length k as removable) → returns \"\"\n\n**k equals n, all same** - the whole string is one removable block.\n`Input: s = \"aaa\", k = 3` → `Expected: \"\"`\n⚠️ Bug: using `count > k` instead of `count == k` (count never exceeds k since it is checked every increment) → returns \"aaa\""
+  ],
+  "followUps": [
+    {
+      "q": "What if each character has its own removal threshold, given as an array k[i] for position i?",
+      "a": "Store (char, count, threshold) triples in the stack. When the top character matches, increment count and compare against that character's threshold instead of the global k. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the string arrives as a stream of characters and you must output the current state after each character?",
+      "a": "Maintain the stack incrementally - each new character is one push or one increment plus a possible pop. To output after each step, expand the stack into a string each time, or maintain a parallel string and track segment lengths for incremental updates. TC: O(n) amortized per character for the stack, O(n) per output if full expansion is needed. SC: O(n)."
+    },
+    {
+      "q": "What if you may choose any k ≥ 2 for each removal (not fixed) and want to minimize the final string length?",
+      "a": "Greedily remove any run as soon as its count reaches 2 - there is no benefit to waiting since removing earlier only exposes more adjacency opportunities. Use the same stack but pop whenever count ≥ 2. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string removeDuplicates(string s, int k) {\n        vector<pair<char, int>> st;\n        for (char c : s) {\n            if (!st.empty() && st.back().first == c) {\n                st.back().second++;\n            } else {\n                st.push_back({c, 1});\n            }\n            if (st.back().second == k) {\n                st.pop_back();\n            }\n        }\n        string res;\n        for (auto& p : st) {\n            res.append(p.second, p.first);\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "max-area-of-island",
+  "title": "Max Area of Island",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Flood Fill / Connected Components",
+  "tc": "O(m × n)",
+  "sc": "O(m × n)",
+  "spaceBreakdown": "- recursion call-stack depth: up to m × n in worst case (snake-shaped island) → O(m × n)\n- in-place grid modification: O(1) (LeetCode convention)\n- no other containers allocated",
+  "approach": "Treat the grid as an implicit graph where each land cell (1) is a node connected to its 4-directional land neighbors. Iterate over every cell; when an unvisited land cell is found, run DFS to flood-fill the entire island, marking visited cells in-place by setting them to 0, and count the area. Track the maximum area across all islands. This is correct because each cell is visited exactly once, and DFS fully explores each connected component.",
+  "hints": [
+    "If you pick any land cell, what determines which other land cells belong to the same island as it? The grid is at most 50 × 50.",
+    "Use depth-first search (DFS) from each unvisited land cell, marking visited cells in-place by setting them to 0. Starting from grid[3][8]=1 in Example 1, DFS explores all 4-directionally connected 1's and counts 6 cells.",
+    "```\nfor each cell (i, j) in grid:\n    if grid[i][j] == 1:\n        area = dfs(i, j)\n        maxArea = max(maxArea, area)\n\ndfs(i, j):\n    if out of bounds or grid[i][j] != 1: return 0\n    grid[i][j] = 0\n    return 1 + dfs(i+1,j) + dfs(i-1,j) + dfs(i,j+1) + dfs(i,j-1)\n```",
+    "**Single land cell** - grid has exactly one cell, and it is land.\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: returning `dfs(neighbors)` without `1 +` → returns 0\n\n**All water** - no land cells anywhere in the grid.\n`Input: [[0,0,0,0,0,0,0,0]]` → `Expected: 0`\n⚠️ Bug: initializing maxArea to 1 instead of 0 → returns 1\n\n**All land row** - single row entirely filled with 1's.\n`Input: [[1,1,1]]` → `Expected: 3`\n⚠️ Bug: only recursing up and down (omitting left/right neighbors) → returns 1\n\n**Disconnected islands** - two separate single-cell islands in one row.\n`Input: [[1,0,1]]` → `Expected: 1`\n⚠️ Bug: summing all 1's in the grid without checking connectivity → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "If the grid is too large to fit in memory and arrives row-by-row as a stream, how would you adapt?",
+      "a": "Keep only the current and previous row in memory. Use a union-find structure indexed by column position; when a new land cell arrives, union it with land cells directly above and to the left. Track component sizes in the union-find array. TC: O(m × n × α(n)), SC: O(n)."
+    },
+    {
+      "q": "What if diagonal connections also count as part of the same island (8-directional)?",
+      "a": "Add four more recursive calls for the diagonal neighbors (i±1, j±1). The rest of the algorithm stays identical. TC: O(m × n), SC: O(m × n)."
+    },
+    {
+      "q": "What if you need to return the number of distinct island shapes (accounting for translations but not rotations)?",
+      "a": "During each DFS, record the sequence of moves taken (e.g., 'U', 'D', 'L', 'R') as a path signature, prepend a marker for backtracking, and store each signature in a set. The answer is the set size. TC: O(m × n), SC: O(m × n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxAreaOfIsland(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int maxArea = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 1) {\n                    int area = dfs(grid, i, j, m, n);\n                    if (area > maxArea) maxArea = area;\n                }\n            }\n        }\n        return maxArea;\n    }\nprivate:\n    int dfs(vector<vector<int>>& grid, int i, int j, int m, int n) {\n        if (i < 0 || i >= m || j < 0 || j >= n || grid[i][j] != 1) return 0;\n        grid[i][j] = 0;\n        return 1 + dfs(grid, i + 1, j, m, n)\n                 + dfs(grid, i - 1, j, m, n)\n                 + dfs(grid, i, j + 1, m, n)\n                 + dfs(grid, i, j - 1, m, n);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

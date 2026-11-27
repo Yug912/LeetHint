@@ -2,40 +2,39 @@
   "slug": "single-number",
   "title": "Single Number",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Bitwise XOR",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bit Manipulation (XOR)",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- int ans: one accumulator → O(1)  \n- not counted: input vector, returned value",
-  "approach": "We XOR every element; pairs cancel because x ^ x = 0 and 0 ^ y = y. The remaining value after processing the whole array is the single number. This needs only one accumulator variable, giving linear time and constant extra space.",
+  "spaceBreakdown": "- int result: single scalar → O(1)\n- loop variable x: single scalar → O(1)\n- not counted: input vector nums, returned int",
+  "approach": "XOR all elements together. Since `a ^ a = 0`, `a ^ 0 = a`, and XOR is commutative/associative, every value that appears twice cancels itself out, leaving only the value that appears once. This is linear time and uses a single accumulator, satisfying the constant-space requirement.",
   "hints": [
-    "All numbers except one appear exactly twice - what operation makes a value disappear when applied twice?  \nConsider the constraint “1 ≤ nums.length ≤ 3 × 10⁴”.",
-    "Use the bitwise XOR (^) operator.  \nExample: for nums = [4,1,2,1,2] → 4 ^ 1 ^ 2 ^ 1 ^ 2 = 4.",
-    "result ← 0  \nfor each x in nums:  \n    result ← result XOR x  \nreturn result",
-    "**Single element** - the array contains only the unique number.  \n`Input: [1]` → `Expected: 1`  \n⚠️ Bug: returning nums[0] without checking → works here but fails when n > 1.  \n\n**Negative value** - the unique number can be negative.  \n`Input: [-2, -2, -5]` → `Expected: -5`  \n⚠️ Bug: using unsigned int for accumulator → wraps and returns a large positive number.  \n\n**Maximum size** - n = 3 × 10⁴, values at limits.  \n`Input: [30000, -30000, 30000]` → `Expected: -30000`  \n⚠️ Bug: summing all elements in an int and dividing by 2 → overflow and wrong answer.  \n\n**Unique at ends** - unique element at first or last position.  \n`Input: [7, 3, 3, 5, 5]` → `Expected: 7`  \n⚠️ Bug: scanning only middle part of array → returns 0."
+    "Every value except one appears an even number of times - what operation applied across the whole array would make each paired value vanish while leaving the unpaired one intact?",
+    "Use XOR (`^`): `a ^ a = 0` and `a ^ 0 = a`, and XOR is commutative/associative. For `[2,2,1]`: `2 ^ 2 = 0`, then `0 ^ 1 = 1`.",
+    "result = 0\nfor each x in nums:\n    result = result ^ x\nreturn result",
+    "**Single element** - n = 1, no pairs exist to cancel.\n`Input: [1]` → `Expected: 1`\n⚠️ Bug: using `|` (bitwise OR) instead of `^` → returns 1 (1 | nothing else = 1), coincidentally right here but breaks elsewhere.\n\n**Negative single value** - the unique element is negative.\n`Input: [-1,-1,-2]` → `Expected: -2`\n⚠️ Bug: using `|` instead of `^` → returns -1 | -1 | -2 = -1, wrong.\n\n**Zero as the answer** - the unique value is 0.\n`Input: [0,1,1]` → `Expected: 0`\n⚠️ Bug: initializing `result = 1` instead of `0` → returns 1 ^ 0 ^ 1 ^ 1 = 1, wrong.\n\n**Unique element first** - the single value sits at index 0.\n`Input: [4,1,2,1,2]` → `Expected: 4`\n⚠️ Bug: starting the loop at `i = 1` with `result = 0` (skipping `nums[0]`) → returns 0 ^ 1 ^ 2 ^ 1 ^ 2 = 0, wrong."
   ],
   "followUps": [
     {
-      "q": "What if every element appears three times except one that appears once?",
-      "a": "Count bits at each position across all numbers; the remainder modulo 3 gives the bits of the unique number. Time O(n·w) and space O(1), where w is the word size."
+      "q": "Every element appears three times except one, which appears once. Find it in O(n) time and O(1) space.",
+      "a": "Count how many times each of the 32 bit positions is set across all numbers; modulo 3, the remaining bits are the unique value. Time O(32n) = O(n), space O(1)."
     },
     {
-      "q": "How would you adapt the solution for 64‑bit integers?",
-      "a": "Use a 64‑bit accumulator (long long) and apply the same XOR loop; the algorithmic complexity stays O(n) time and O(1) space."
+      "q": "Exactly two elements appear once and all others appear twice. Find both in O(n) time and O(1) space.",
+      "a": "XOR everything to get `x = a ^ b`. Pick any set bit of `x` (e.g. `x & -x`); it differs between `a` and `b`. Partition numbers by that bit and XOR each group separately to recover `a` and `b`. Time O(n), space O(1)."
     },
     {
-      "q": "Suppose the array is provided as a stream that cannot be stored entirely in memory.",
-      "a": "Keep a running XOR accumulator while reading each element from the stream; after the stream ends, the accumulator holds the answer. Still O(n) time and O(1) extra space."
+      "q": "The array arrives as a stream of unknown length; you can only keep a few variables. Find the single number.",
+      "a": "The XOR accumulator is naturally streaming: maintain `result ^= x` as each value arrives, never storing the array. Time O(n), space O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int singleNumber(vector<int>& nums) {\n        int ans = 0;\n        for (int x : nums) {\n            ans ^= x;\n        }\n        return ans;\n    }\n};",
-    "java": "class Solution {\n    public int singleNumber(int[] nums) {\n        int ans = 0;\n        for (int x : nums) {\n            ans ^= x;\n        }\n        return ans;\n    }\n}",
-    "python3": "class Solution:\n    def singleNumber(self, nums: list[int]) -> int:\n        ans = 0\n        for x in nums:\n            ans ^= x\n        return ans",
-    "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar singleNumber = function(nums) {\n    let ans = 0;\n    for (const x of nums) {\n        ans ^= x;\n    }\n    return ans;\n};"
+    "cpp": "class Solution {\npublic:\n    int singleNumber(vector<int>& nums) {\n        int result = 0;\n        for (int x : nums) {\n            result ^= x;\n        }\n        return result;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

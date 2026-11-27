@@ -1,0 +1,40 @@
+{
+  "slug": "min-cost-climbing-stairs",
+  "title": "Min Cost Climbing Stairs",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Bottom-Up DP",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int next1, next2, cur, i: constant number of scalars → O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "The key insight is optimal substructure: the minimum cost to finish from step *i* depends only on *i* (not on how you arrived), and equals `cost[i] + min(dp[i+1], dp[i+2])` where `dp[i]` is the minimum cost to reach the top from step *i*. We iterate backward from the last step to step 0, keeping only two rolling variables for `dp[i+1]` and `dp[i+2]` (both initialized to 0, since being at or past the top costs nothing). The answer is `min(dp[0], dp[1])` because we may start at either index 0 or index 1.",
+  "hints": [
+    "The cheapest path from step *i* to the top is the same no matter how you reached step *i*. In what order would you process the steps so each step's result reuses results from steps you've already handled?",
+    "Use bottom-up dynamic programming with two rolling variables tracking the next two steps' minimum finish-costs. For `cost = [10,15,20]`: `dp[2]=20+min(0,0)=20`, `dp[1]=15+min(20,0)=15`, `dp[0]=10+min(15,20)=25`, answer `= min(25,15) = 15`.",
+    "```\nnext1 = 0, next2 = 0\nfor i from n-1 down to 0:\n    cur = cost[i] + min(next1, next2)\n    next2 = next1\n    next1 = cur\nreturn min(next1, next2)\n```",
+    "**Smallest input** - n = 2, the minimum allowed size.\n`Input: cost = [5,3]` → `Expected: 3`\n⚠️ Bug: returning `next1` alone instead of `min(next1, next2)` → returns 5\n\n**Free first step** - starting at index 0 with a two-step climb costs nothing.\n`Input: cost = [0,999]` → `Expected: 0`\n⚠️ Bug: hardcoding the start at index 1 → returns 999\n\n**All equal values** - both starting positions are equally costly.\n`Input: cost = [7,7]` → `Expected: 7`\n⚠️ Bug: summing all costs from index 0 one step at a time → returns 14\n\n**Two-step skip advantage** - a cheap path exists only via two-step climbs.\n`Input: cost = [10,1,1,1]` → `Expected: 2`\n⚠️ Bug: only allowing one-step climbs → returns 13"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could climb 1, 2, or 3 steps at a time?",
+      "a": "Extend the recurrence to `dp[i] = cost[i] + min(dp[i+1], dp[i+2], dp[i+3])` and keep three rolling variables instead of two. TC stays O(n), SC stays O(1)."
+    },
+    {
+      "q": "What if the cost array arrives as a streaming input too large to store?",
+      "a": "Reformulate forward: let `f[i]` be the min cost to *reach* step *i*, with `f[0] = f[1] = 0` and `f[i] = min(f[i-1]+cost[i-1], f[i-2]+cost[i-2])`. Process left to right, keeping two past values. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if each step *i* has its own list of allowed climb lengths `jumps[i]`?",
+      "a": "At each step, `dp[i] = cost[i] + min(dp[i+k] for k in jumps[i])`. Keep a rolling window of the maximum jump size. TC: O(n · K) where K is the max jump length, SC: O(K)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCostClimbingStairs(vector<int>& cost) {\n        int n = cost.size();\n        int next1 = 0; // dp[i+1], initially dp[n] = 0\n        int next2 = 0; // dp[i+2], initially dp[n+1] = 0\n        for (int i = n - 1; i >= 0; i--) {\n            int cur = cost[i] + min(next1, next2);\n            next2 = next1;\n            next1 = cur;\n        }\n        return min(next1, next2);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "palindrome-linked-list",
+  "title": "Palindrome Linked List",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Fast/Slow Pointer + In-Place Reversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- slow, fast, prev, curr, next, first, second: 7 pointers, constant → O(1)\n- no containers, no recursion → O(1)\n- not counted: input list (modified in place)",
+  "approach": "Use a fast/slow pointer pair to find the middle of the list in one pass. Reverse the second half in place (starting from the slow pointer). Then walk two pointers - one from the head, one from the head of the reversed second half - comparing values. If all match, the list is a palindrome. This works because a palindrome's second half is the reverse of its first half, and for odd-length lists the middle node naturally becomes the tail of the reversed half (its next is set to null during reversal), so it is excluded from comparison.",
+  "hints": [
+    "If you could only walk forward through this list, what relationship between the front portion and the back portion of a palindrome would you need to verify? The list has up to 10^5 nodes, so storing every value is wasteful.",
+    "Use the fast/slow pointer technique to locate the middle, then reverse the second half in place and compare it node-by-node against the first half. For [1,2,2,1], the slow pointer lands on the second 2; reversing from there yields 1→2, which matches the first half 1→2.",
+    "```\nslow = fast = head\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\nprev = null\ncurr = slow\nwhile curr:\n    next = curr.next\n    curr.next = prev\n    prev = curr\n    curr = next\nfirst = head\nsecond = prev\nwhile second:\n    if first.val != second.val: return false\n    first = first.next\n    second = second.next\nreturn true\n```",
+    "**Single node** - only one element exists\n`Input: [1]` → `Expected: true`\n⚠️ Bug: initializing `fast = head->next` to start the middle search → null dereference crash\n\n**Two nodes, not palindrome** - smallest non-palindrome\n`Input: [1,2]` → `Expected: false`\n⚠️ Bug: reversing from `slow->next` instead of `slow` → second half is null, comparison loop skipped, returns true\n\n**Even-length palindrome** - no shared middle node between halves\n`Input: [1,2,2,1]` → `Expected: true`\n⚠️ Bug: using `while (first != second)` (pointer equality) as the loop condition → first and second never meet in even-length lists, null dereference crash\n\n**Odd-length palindrome** - middle element has no mirror\n`Input: [1,2,1]` → `Expected: true`\n⚠️ Bug: comparing first half values directly against second half values without reversing → compares 1 vs 2 → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "Can you solve it while leaving the input list unmodified?",
+      "a": "Copy the first half's values into a small array as you find the middle with slow/fast pointers, then walk the second half comparing against the array in reverse order. TC stays O(n) but SC becomes O(n/2) = O(n) for the buffer."
+    },
+    {
+      "q": "How would you handle a doubly linked list?",
+      "a": "Walk one pointer forward from the head and another backward from the tail, comparing values until they meet or cross. No reversal is needed. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the list is a forward-only stream of unknown length, too large to store entirely?",
+      "a": "Use slow/fast pointers to find the middle while buffering the first half's values in an array, then compare the buffer (read backward) against the second half as it streams in. TC: O(n), SC: O(n/2) = O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isPalindrome(ListNode* head) {\n        if (!head || !head->next) return true;\n\n        ListNode* slow = head;\n        ListNode* fast = head;\n        while (fast && fast->next) {\n            slow = slow->next;\n            fast = fast->next->next;\n        }\n\n        ListNode* prev = nullptr;\n        ListNode* curr = slow;\n        while (curr) {\n            ListNode* next = curr->next;\n            curr->next = prev;\n            prev = curr;\n            curr = next;\n        }\n\n        ListNode* first = head;\n        ListNode* second = prev;\n        while (second) {\n            if (first->val != second->val) return false;\n            first = first->next;\n            second = second->next;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

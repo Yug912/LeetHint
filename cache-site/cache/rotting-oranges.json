@@ -1,0 +1,40 @@
+{
+  "slug": "rotting-oranges",
+  "title": "Rotting Oranges",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Multi-Source BFS",
+  "tc": "O(m*n)",
+  "sc": "O(m*n)",
+  "spaceBreakdown": "- queue<pair<int,int>> q: up to m*n cells → O(m*n)\n- dx/dy arrays: O(1)\n- not counted: input grid (modified in place), returned int",
+  "approach": "Multi-source BFS: enqueue every initially rotten orange at time 0, then expand level by level. Each BFS level corresponds to one minute of elapsed time. Track the count of fresh oranges; whenever a fresh orange is reached, mark it rotten and decrement the count. If fresh count reaches 0, return the elapsed minutes; if the queue empties with fresh oranges remaining, return -1. Correctness follows because BFS from multiple sources simultaneously computes the minimum distance from any source to each cell, which is exactly the minute at which that orange rots.",
+  "hints": [
+    "For a single fresh orange, what determines the minute at which it first rots - and which other oranges must already be rotten by then?",
+    "Use multi-source breadth-first search: push every rotten orange into a queue at time 0, then process the queue level by level, where each level is one minute. In Example 1, the rotten orange at (0,0) rots (0,1) and (1,0) during minute 1.",
+    "```\ncount fresh oranges; enqueue all rotten oranges\nminutes = 0\nwhile queue not empty:\n    size = queue.size()\n    rotted_any = false\n    for i in 0..size:\n        (x,y) = pop front\n        for each neighbor (nx,ny):\n            if grid[nx][ny] == 1:\n                grid[nx][ny] = 2\n                fresh--\n                push (nx,ny)\n                rotted_any = true\n    if rotted_any: minutes++\nreturn fresh == 0 ? minutes : -1\n```",
+    "**No fresh oranges** - grid already contains only 0s and 2s.\n`Input: [[0,2]]` → `Expected: 0`\n⚠️ Bug: incrementing minutes once before checking the queue → returns 1.\n\n**Single fresh orange, no rotten** - nothing can start the spread.\n`Input: [[1]]` → `Expected: -1`\n⚠️ Bug: returning 0 whenever the queue is initially empty without checking fresh count → returns 0.\n\n**Isolated fresh orange** - fresh orange surrounded by empty cells or grid edges.\n`Input: [[2,1,1],[0,1,1],[1,0,1]]` → `Expected: -1`\n⚠️ Bug: returning minutes whenever the queue empties without verifying fresh == 0 → returns 3.\n\n**Single rotten, no fresh** - one cell, already rotten.\n`Input: [[2]]` → `Expected: 0`\n⚠️ Bug: incrementing minutes for the initial rotten cell's level → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if rotting could also spread diagonally (8-directional)?",
+      "a": "Add the four diagonal offsets to the neighbor array; the rest of the BFS is unchanged. Time stays O(m*n), space O(m*n)."
+    },
+    {
+      "q": "What if each fresh orange had a \"resistance\" value and took that many minutes of adjacency before rotting?",
+      "a": "Replace the boolean visited check with a per-cell counter decremented each minute it touches a rotten neighbor; rot it when the counter hits 0. Time becomes O(m*n * max_resistance), space O(m*n)."
+    },
+    {
+      "q": "What if the grid is streamed row by row and you cannot store the whole matrix?",
+      "a": "Keep a sliding window of two rows plus a queue of rotten cells with their row index; emit minutes by processing the queue in row order. Time O(m*n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int orangesRotting(vector<vector<int>>& grid) {\n        int m = (int)grid.size();\n        int n = (int)grid[0].size();\n        queue<pair<int,int>> q;\n        int fresh = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 2) q.push({i, j});\n                else if (grid[i][j] == 1) fresh++;\n            }\n        }\n        if (fresh == 0) return 0;\n        int minutes = 0;\n        int dx[4] = {0, 0, 1, -1};\n        int dy[4] = {1, -1, 0, 0};\n        while (!q.empty()) {\n            int sz = (int)q.size();\n            bool rotted = false;\n            for (int i = 0; i < sz; i++) {\n                int x = q.front().first;\n                int y = q.front().second;\n                q.pop();\n                for (int d = 0; d < 4; d++) {\n                    int nx = x + dx[d];\n                    int ny = y + dy[d];\n                    if (nx >= 0 && nx < m && ny >= 0 && ny < n && grid[nx][ny] == 1) {\n                        grid[nx][ny] = 2;\n                        fresh--;\n                        q.push({nx, ny});\n                        rotted = true;\n                    }\n                }\n            }\n            if (rotted) minutes++;\n        }\n        return fresh == 0 ? minutes : -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

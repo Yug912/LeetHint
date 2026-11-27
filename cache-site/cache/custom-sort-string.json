@@ -1,0 +1,40 @@
+{
+  "slug": "custom-sort-string",
+  "title": "Custom Sort String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Counting (Counting Sort variant)",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26]: fixed 26 entries → O(1)\n- string res: this is the returned output, not counted (LeetCode convention)\n- recursion depth: none",
+  "approach": "Count the frequency of each character in `s` using a fixed-size array of 26 integers. Then build the result by iterating through `order` and appending each character as many times as it appeared in `s`. Finally, append any characters from `s` that were not in `order` (their counts remain after the first pass). This works because `order` defines a total precedence for its characters, and characters outside `order` are unconstrained, so placing them last is always valid.",
+  "hints": [
+    "Given that `order` already fixes the relative positions of its characters, what must you track about `s` to place each character the correct number of times? The constraints limit `order` to at most 26 unique lowercase letters.",
+    "Use a frequency array of size 26. For `order = \"cba\"`, `s = \"abcd\"`: counts are a=1, b=1, c=1, d=1; emit c, b, a from `order`, then emit d (leftover) → \"cbad\".",
+    "```\ncount[char] for each char in s\nresult = \"\"\nfor c in order:\n    append c, count[c] times, to result\n    set count[c] = 0\nfor c in 'a'..'z':\n    append c, count[c] times, to result\nreturn result\n```",
+    "**Char in s not in order** - `s` contains a character `order` never mentions.\n`Input: order = \"a\", s = \"b\"` → `Expected: \"b\"`\n⚠️ Bug: only emitting characters found in `order` (skipping the leftover loop) → returns `\"\"`\n\n**Duplicates in s** - a character appears multiple times.\n`Input: order = \"abc\", s = \"aabbcc\"` → `Expected: \"aabbcc\"`\n⚠️ Bug: using a set to track which characters appeared instead of a count → returns `\"abc\"`\n\n**Order char absent from s** - `order` lists a character that `s` does not contain.\n`Input: order = \"abc\", s = \"d\"` → `Expected: \"d\"`\n⚠️ Bug: appending each `order` character exactly once regardless of its count → returns `\"abcd\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if `order` could contain duplicate characters and you must respect the first occurrence's position?",
+      "a": "Record the index of each character's first appearance in `order`, then sort `s` by that index (characters not in `order` get index infinity and keep stable order). Time becomes O(n log n) due to sorting; space O(1) for the 26-entry index map."
+    },
+    {
+      "q": "What if `s` arrives as a streaming input too large to store, but `order` is small?",
+      "a": "Maintain only the 26-entry frequency array as the stream flows, then emit the result in `order`-sequence plus leftovers. Time O(n), space O(1) - you never hold `s` in memory, only the fixed counts."
+    },
+    {
+      "q": "What if multiple custom orders are given and the output must satisfy all of them simultaneously?",
+      "a": "Build a precedence graph: for each adjacent pair in each order, add a directed edge. Run a topological sort, then emit characters of `s` in topological order (ties broken arbitrarily). Time O(V + E) with V ≤ 26 and E ≤ total order length; space O(V + E)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string customSortString(string order, string s) {\n        int cnt[26] = {0};\n        for (char c : s) {\n            cnt[c - 'a']++;\n        }\n        string res;\n        res.reserve(s.size());\n        for (char c : order) {\n            int idx = c - 'a';\n            while (cnt[idx] > 0) {\n                res.push_back(c);\n                cnt[idx]--;\n            }\n        }\n        for (int i = 0; i < 26; i++) {\n            while (cnt[i] > 0) {\n                res.push_back(static_cast<char>('a' + i));\n                cnt[i]--;\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

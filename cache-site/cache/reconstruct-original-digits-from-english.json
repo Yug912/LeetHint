@@ -1,0 +1,40 @@
+{
+  "slug": "reconstruct-original-digits-from-english",
+  "title": "Reconstruct Original Digits from English",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Frequency Elimination",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26]: fixed 26 entries → O(1)\n- int digit[10]: fixed 10 entries → O(1)\n- string result: returned output, not counted → O(1) auxiliary\n- recursion depth: none",
+  "approach": "Each English digit word (zero-nine) has at least one letter that appears in a predictable subset of the ten words. By counting all letter frequencies first, we extract digit counts in a specific order: start with digits that have a unique letter (z→0, w→2, u→4, x→6, g→8), then subtract those known counts from shared letters to resolve the remaining digits (h→3, f→5, s→7, i→9, n→1). Finally, append digits 0-9 in ascending order, each repeated by its computed count.",
+  "hints": [
+    "Among the letters used to spell \"zero\" through \"nine\", which letters appear in exactly one of those ten words?",
+    "Count letter frequencies in a fixed array of size 26. Since 'z' appears only in \"zero\", the count of 'z' directly gives the number of 0s; for letters shared by multiple digits, subtract already-resolved counts.",
+    "```\ncount frequency of each letter in s\nzeros = freq[z]\ntwos = freq[w]\nfours = freq[u]\nsixes = freq[x]\neights = freq[g]\nthrees = freq[h] - eights\nfives = freq[f] - fours\nsevens = freq[s] - sixes\nnines = freq[i] - fives - sixes - eights\nones = freq[n] - sevens - 2*nines\nappend each digit d, count[d] times, in order 0..9\n```",
+    "**Nine's double n** - \"nine\" contains two n's, so the n-count is not simply ones + sevens\n`Input: \"nnei\"` → `Expected: \"9\"`\n⚠️ Bug: `ones = freq[n] - sevens` (omitting `2*nines`) → freq[n]=2, sevens=0, ones=2 → returns \"29\"\n\n**Shared letter 'i'** - five, six, eight, and nine all contain the letter 'i'\n`Input: \"efiv\"` → `Expected: \"5\"`\n⚠️ Bug: `nines = freq[i]` without subtracting fives, sixes, eights → nines=1 → returns \"59\"\n\n**Ascending output** - extraction order (0,2,4,6,8,3,5,7,9,1) differs from ascending order\n`Input: \"owoztneoer\"` → `Expected: \"012\"`\n⚠️ Bug: appending digits in extraction order instead of 0..9 → returns \"021\"\n\n**Repeated digit** - the same digit appears multiple times\n`Input: \"sixsix\"` → `Expected: \"66\"`\n⚠️ Bug: appending each digit once instead of count[d] times → returns \"6\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the input could use digit words from another language (e.g., French \"zéro\" through \"neuf\")?",
+      "a": "The same approach applies-find letters unique to each digit word in that language, then resolve shared letters by subtraction. The extraction order and formulas change, but the algorithm structure stays identical. TC remains O(n), SC remains O(1)."
+    },
+    {
+      "q": "What if the string represents numbers 0-99 using compound words (e.g., \"twentythree\")?",
+      "a": "This is much harder because compound words share many letters and the word boundaries are lost. You would need to try matching known word fragments and backtrack, making it closer to a parsing/search problem. TC could rise to O(n · W) where W is the number of word templates."
+    },
+    {
+      "q": "What if the string arrives as a stream too large to fit in memory?",
+      "a": "You only need letter counts, so process characters one at a time, incrementing a fixed-size count array. After the stream ends, run the same subtraction formulas and emit the result. TC stays O(n), SC stays O(1) since the count array is fixed at 26 entries."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string originalDigits(string s) {\n        int cnt[26] = {0};\n        for (char c : s) cnt[c - 'a']++;\n        \n        int digit[10];\n        digit[0] = cnt['z' - 'a'];\n        digit[2] = cnt['w' - 'a'];\n        digit[4] = cnt['u' - 'a'];\n        digit[6] = cnt['x' - 'a'];\n        digit[8] = cnt['g' - 'a'];\n        digit[3] = cnt['h' - 'a'] - digit[8];\n        digit[5] = cnt['f' - 'a'] - digit[4];\n        digit[7] = cnt['s' - 'a'] - digit[6];\n        digit[9] = cnt['i' - 'a'] - digit[5] - digit[6] - digit[8];\n        digit[1] = cnt['n' - 'a'] - digit[7] - 2 * digit[9];\n        \n        string result;\n        for (int d = 0; d <= 9; d++) {\n            for (int i = 0; i < digit[d]; i++) {\n                result += ('0' + d);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

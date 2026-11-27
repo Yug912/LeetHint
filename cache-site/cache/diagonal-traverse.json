@@ -1,0 +1,40 @@
+{
+  "slug": "diagonal-traverse",
+  "title": "Diagonal Traverse",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Diagonal Traversal",
+  "tc": "O(m * n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> result: m*n entries → O(m*n), but this is the returned output (not counted)\n- No recursion, no auxiliary containers, no stack/queue\n- not counted: input matrix, returned vector",
+  "approach": "Every cell on the same diagonal shares the same value of `i + j`. We iterate over diagonal sums `d` from `0` to `m + n - 2`. Even-indexed diagonals are traversed bottom-to-top (up-right), starting from the lowest valid row `min(d, m-1)`. Odd-indexed diagonals are traversed top-to-bottom (down-left), starting from the rightmost valid column `min(d, n-1)`. Each cell is visited exactly once, giving linear time with constant auxiliary space.",
+  "hints": [
+    "What value is the same for every cell that lies on the same diagonal of the matrix? The constraints allow m*n up to 10^4, so each cell should be visited at most once.",
+    "Simulate diagonal traversal keyed on `i + j = d`. For d=0 in `[[1,2,3],[4,5,6],[7,8,9]]`, only cell (0,0) with value 1 lies on it; for d=1, cells (0,1) and (1,0) lie on it.",
+    "```\nfor d from 0 to m + n - 2:\n    if d is even:\n        r = min(d, m - 1), c = d - r\n        while r >= 0 and c < n:\n            append mat[r][c]\n            r--, c++\n    else:\n        c = min(d, n - 1), r = d - c\n        while c >= 0 and r < m:\n            append mat[r][c]\n            r++, c--\n```",
+    "**Single element** - 1×1 matrix, the diagonal loop must execute exactly once\n`Input: [[5]]` → `Expected: [5]`\n⚠️ Bug: loop condition `d < m + n - 2` instead of `d <= m + n - 2` → returns `[]`\n\n**Single row** - one row, multiple columns, every diagonal has exactly one element\n`Input: [[1,2,3]]` → `Expected: [1,2,3]`\n⚠️ Bug: starting row for even diagonals `r = min(d, m)` instead of `min(d, m - 1)` → at d=2, sets r=1, accesses `mat[1][1]` out of bounds\n\n**Wide non-square** - more columns than rows, starting points must clamp to both dimensions\n`Input: [[1,2,3,4],[5,6,7,8]]` → `Expected: [1,2,5,6,3,4,7,8]`\n⚠️ Bug: swapping even/odd direction (even diagonals go down-left) → returns `[1,5,2,3,6,7,4,8]`\n\n**Tall non-square** - more rows than columns, column clamp must use n-1\n`Input: [[1,2],[3,4],[5,6]]` → `Expected: [1,2,3,5,4,6]`\n⚠️ Bug: starting column for odd diagonals `c = d` without `min(d, n - 1)` → at d=3, sets c=3, accesses `mat[0][3]` out of bounds"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to return elements grouped by diagonal without alternating direction (all diagonals top-right to bottom-left)?",
+      "a": "Remove the even/odd check and always traverse each diagonal in the same direction. The loop structure stays identical; just pick one direction for every d. TC stays O(m*n), SC stays O(1)."
+    },
+    {
+      "q": "What if the matrix arrives as a stream of rows and is too large to store entirely in memory?",
+      "a": "Buffer a sliding window of rows and emit diagonal elements as soon as a diagonal is complete. You need at most min(m, n) rows buffered at once. TC: O(m*n), SC: O(min(m, n)) for the row buffer."
+    },
+    {
+      "q": "What if you must sort each diagonal in place (LeetCode 1329)?",
+      "a": "Group cells by i+j sum, collect each diagonal into a temporary array, sort it, then write values back to the matrix in traversal order. TC: O(m*n*log(min(m,n))), SC: O(min(m,n)) for the temporary array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findDiagonalOrder(vector<vector<int>>& mat) {\n        int m = mat.size();\n        int n = mat[0].size();\n        vector<int> result;\n        result.reserve(m * n);\n        \n        for (int d = 0; d <= m + n - 2; d++) {\n            if (d % 2 == 0) {\n                int r = min(d, m - 1);\n                int c = d - r;\n                while (r >= 0 && c < n) {\n                    result.push_back(mat[r][c]);\n                    r--;\n                    c++;\n                }\n            } else {\n                int c = min(d, n - 1);\n                int r = d - c;\n                while (c >= 0 && r < m) {\n                    result.push_back(mat[r][c]);\n                    r++;\n                    c--;\n                }\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

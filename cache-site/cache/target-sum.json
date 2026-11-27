@@ -1,0 +1,40 @@
+{
+  "slug": "target-sum",
+  "title": "Target Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Subset Sum DP (0/1 Knapsack)",
+  "tc": "O(n * S)",
+  "sc": "O(S)",
+  "spaceBreakdown": "- vector<int> dp(S+1): up to 1001 integers → O(S)\n- recursion depth: none (iterative)\n- not counted: input nums, returned int",
+  "approach": "Partition nums into positive group P and negative group N. Since sum(P) - sum(N) = target and sum(P) + sum(N) = total, we get sum(P) = (target + total) / 2. The problem reduces to counting subsets of nums that sum to S = (target + total) / 2. If (target + total) is odd or S < 0, no valid partition exists. We solve this with a 0/1 knapsack DP over the sum range [0, S], iterating elements and updating counts in reverse to avoid reuse.",
+  "hints": [
+    "Every element is either added or subtracted. If the total sum of all elements is fixed, what single quantity about the '+' group determines whether the expression equals the target? The total sum of nums is at most 1000.",
+    "Use 0/1 knapsack DP to count subsets summing to S = (target + total) / 2. For nums = [1,1,1,1,1], target = 3: total = 5, S = 4, and there are C(5,4) = 5 subsets summing to 4.",
+    "```\ntotal = sum(nums)\nif (target + total) is odd: return 0\nS = (target + total) / 2\nif S < 0: return 0\ndp[0..S] = 0; dp[0] = 1\nfor each x in nums:\n    for j from S down to x:\n        dp[j] += dp[j - x]\nreturn dp[S]\n```",
+    "**Parity mismatch** - target + total is odd, so no integer subset sum exists\n`Input: nums = [1], target = 0` → `Expected: 0`\n⚠️ Bug: computing S = (target + total) / 2 with integer division, skipping parity check → returns 1\n\n**Negative target** - S = (target + total) / 2 is negative\n`Input: nums = [1], target = -5` → `Expected: 0`\n⚠️ Bug: not checking S < 0 before allocating dp → `vector<int>(-1)` crashes\n\n**Zeros in array** - each zero doubles the count since +0 and -0 are distinct assignments\n`Input: nums = [0,0], target = 0` → `Expected: 4`\n⚠️ Bug: skipping elements equal to 0 with `if (x == 0) continue;` → returns 1\n\n**Single element** - smallest valid input\n`Input: nums = [1], target = 1` → `Expected: 1`\n⚠️ Bug: initializing dp[0] = 0 instead of 1 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "If n grows to 10^5 but sum stays ≤ 1000, does the solution still work?",
+      "a": "Yes. Time is O(n * sum) = O(10^5 * 1000) = O(10^8), which is feasible. Space remains O(sum) = O(1000). No algorithmic change needed."
+    },
+    {
+      "q": "If nums[i] can be negative, how does the approach change?",
+      "a": "The transformation sum(P) = (target + total) / 2 still holds, but subset elements can be negative so the DP sum range shifts. Replace the array with a hash map keyed by reachable sums, or offset indices by the minimum possible sum. Time becomes O(n * range) where range is the spread of reachable sums."
+    },
+    {
+      "q": "If you must answer multiple target queries on the same array, how do you optimize?",
+      "a": "Precompute the full dp table once over all possible subset sums [0, total]. Each query then checks parity and looks up dp[S] in O(1). Preprocessing is O(n * total), each query O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findTargetSumWays(vector<int>& nums, int target) {\n        int total = 0;\n        for (int x : nums) total += x;\n        if ((target + total) % 2 != 0) return 0;\n        int S = (target + total) / 2;\n        if (S < 0) return 0;\n        vector<int> dp(S + 1, 0);\n        dp[0] = 1;\n        for (int x : nums) {\n            for (int j = S; j >= x; --j) {\n                dp[j] += dp[j - x];\n            }\n        }\n        return dp[S];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "valid-number",
+  "title": "Valid Number",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Finite State Machine",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bool seenDigit, seenDot, seenExponent: three scalars → O(1)\n- int n, int i, char c: loop control scalars → O(1)\n- no containers, no recursion, no dynamic allocation",
+  "approach": "The string follows a strict grammar: an optional sign, then either an integer or decimal (with at most one dot), then an optional exponent (e/E + signed integer). Each character's legality depends only on what appeared before it - specifically whether we've already seen a digit, a dot, or an exponent. We scan left to right with three boolean flags (`seenDigit`, `seenDot`, `seenExponent`), rejecting any character that violates the grammar. After seeing an exponent, we reset `seenDigit` to `false` to enforce that digits must follow. At the end, `seenDigit` must be `true` (ensuring at least one digit exists, and if an exponent appeared, digits followed it).",
+  "hints": [
+    "At each position in the string, what information about the characters seen so far determines whether the current character is legal?",
+    "A single-pass scanner with boolean flags (a simplified finite state machine). For \"53.5e93\": scan digit→digit→dot→digit→e→digit→digit, updating flags at each step.",
+    "```\nseenDigit = seenDot = seenExp = false\nfor each char c in s:\n    if c is digit: seenDigit = true\n    elif c is sign: reject unless at index 0 or preceded by e/E\n    elif c is '.': reject if seenDot or seenExp; set seenDot\n    elif c is e/E: reject if seenExp or not seenDigit; set seenExp, reset seenDigit\n    else: reject\nreturn seenDigit\n```",
+    "**Dot only** - no digits anywhere in the string\n`Input: \".\"` → `Expected: false`\n⚠️ Bug: returning true whenever no invalid character is found → returns true\n\n**Exponent at end** - exponent with no following digits\n`Input: \"1e\"` → `Expected: false`\n⚠️ Bug: not resetting seenDigit to false after seeing e/E → returns true\n\n**Decimal in exponent** - dot appearing after exponent\n`Input: \"99e2.5\"` → `Expected: false`\n⚠️ Bug: not checking seenExponent when encountering a dot → returns true\n\n**Exponent with no preceding digits** - exponent at the start\n`Input: \"e3\"` → `Expected: false`\n⚠️ Bug: not checking that digits appeared before the exponent → returns true\n\n**Trailing dot before exponent** - decimal \"46.\" followed by exponent\n`Input: \"46.e3\"` → `Expected: true`\n⚠️ Bug: requiring digits after the dot in every decimal → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string could also contain leading/trailing whitespace and underscores as digit separators (e.g., \" 1_000.5 \")?",
+      "a": "Skip leading/trailing whitespace before scanning, and allow underscores only between two digits. The same flag-based scanner extends naturally with an additional check. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if you must also return the parsed value as a double, clamping on overflow?",
+      "a": "After validation, split on e/E into mantissa and exponent, parse each separately, and combine with overflow checks using long double intermediate. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if the input arrives as an unbounded character stream (one char at a time, unknown length)?",
+      "a": "The scanner already processes one character at a time with O(1) state, so it works as-is - maintain the three flags across calls and report validity when the stream signals end. O(1) space, O(1) per character."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isNumber(string s) {\n        bool seenDigit = false;\n        bool seenDot = false;\n        bool seenExponent = false;\n        int n = s.size();\n        \n        for (int i = 0; i < n; i++) {\n            char c = s[i];\n            if (c >= '0' && c <= '9') {\n                seenDigit = true;\n            } else if (c == '+' || c == '-') {\n                if (i > 0 && s[i - 1] != 'e' && s[i - 1] != 'E') {\n                    return false;\n                }\n            } else if (c == '.') {\n                if (seenDot || seenExponent) {\n                    return false;\n                }\n                seenDot = true;\n            } else if (c == 'e' || c == 'E') {\n                if (seenExponent || !seenDigit) {\n                    return false;\n                }\n                seenExponent = true;\n                seenDigit = false;\n            } else {\n                return false;\n            }\n        }\n        \n        return seenDigit;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

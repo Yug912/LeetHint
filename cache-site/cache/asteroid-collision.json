@@ -1,0 +1,40 @@
+{
+  "slug": "asteroid-collision",
+  "title": "Asteroid Collision",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack Simulation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> st: up to n entries (serves as both working stack and returned result) → O(n)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Collisions only occur when a right-moving asteroid (positive) is immediately followed by a left-moving asteroid (negative). We process asteroids left to right using a stack: positive asteroids are pushed directly, while a negative asteroid resolves collisions against the stack top in a loop - it may destroy several smaller positive asteroids before being stopped or exhausting the stack. Each asteroid is pushed and popped at most once, so the total work is linear.",
+  "hints": [
+    "When a new asteroid appears on the right end, which of the already-seen asteroids can it actually collide with - and once those are resolved, can any asteroid further left still be affected?",
+    "Use a stack. Process left to right; when the current asteroid is negative and the stack top is positive, they collide. Example: stack = [5, 10], next = -5 → 10 vs -5, 10 wins, -5 is gone, stack stays [5, 10].",
+    "```\nfor each asteroid a:\n    destroyed = false\n    while stack not empty and top > 0 and a < 0:\n        if top < |a|: pop\n        elif top == |a|: pop, destroyed = true, break\n        else: destroyed = true, break\n    if not destroyed: push a\nreturn stack\n```",
+    "**Equal magnitude** - both asteroids explode, neither survives\n`Input: [8,-8]` → `Expected: []`\n⚠️ Bug: using strict `<` without an equality branch → returns `[8]`\n\n**Multiple consecutive collisions** - one negative asteroid can destroy several positives in a row\n`Input: [3,5,-6,2,-1,4]` → `Expected: [-6,2,4]`\n⚠️ Bug: using `if` instead of `while` for the collision loop → returns `[3,-6,2,4]`\n\n**All positive** - no collisions since all move right\n`Input: [5,10]` → `Expected: [5,10]`\n⚠️ Bug: comparing absolute values without checking that the top is positive and current is negative → returns `[10]`\n\n**Negative then positive** - they move apart, no collision\n`Input: [-5,10]` → `Expected: [-5,10]`\n⚠️ Bug: colliding on any sign difference without verifying left-positive/right-negative order → returns `[10]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if asteroids arrive as a streaming input and you cannot store the entire array?",
+      "a": "The stack-based approach is already online - each new asteroid is processed against only the current stack, so you handle elements one at a time as they arrive. TC remains O(n) amortized, SC is O(n) in the worst case (all same direction)."
+    },
+    {
+      "q": "Return the total number of collisions that occur.",
+      "a": "Increment a counter each time an asteroid is popped or destroyed inside the while loop. No extra data structures are needed. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if each asteroid has its own speed (given as a second array), so collision order depends on time-to-contact?",
+      "a": "You must compute pairwise collision times and process them in chronological order using a priority queue, re-checking neighbors after each event (similar to merging intervals by time). TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> asteroidCollision(vector<int>& asteroids) {\n        vector<int> st;\n        for (int a : asteroids) {\n            bool destroyed = false;\n            while (!st.empty() && st.back() > 0 && a < 0) {\n                if (st.back() < -a) {\n                    st.pop_back();\n                } else if (st.back() == -a) {\n                    st.pop_back();\n                    destroyed = true;\n                    break;\n                } else {\n                    destroyed = true;\n                    break;\n                }\n            }\n            if (!destroyed) {\n                st.push_back(a);\n            }\n        }\n        return st;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

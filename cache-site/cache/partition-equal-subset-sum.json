@@ -1,0 +1,40 @@
+{
+  "slug": "partition-equal-subset-sum",
+  "title": "Partition Equal Subset Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "0/1 Knapsack (bitset-optimized subset sum)",
+  "tc": "O(n * target / 64)",
+  "sc": "O(target)",
+  "spaceBreakdown": "- bitset<10001> dp: 10001 bits ≈ 1570 bytes → O(target)\n- int total, target, loop index x: O(1)\n- not counted: input vector nums, returned bool",
+  "approach": "If the array can be split into two equal-sum subsets, the total sum must be even and each subset must sum to total/2. This reduces the problem to 0/1 knapsack: can we pick a subset of nums that sums exactly to target = total/2? We track all reachable subset sums using a bitset, shifting by each element. The maximum possible target is 200×100/2 = 10000, so a fixed bitset<10001> fits.",
+  "hints": [
+    "If the array splits into two groups with equal sums, what must be true about the total sum of all elements? There are at most 200 elements, each at most 100.",
+    "Use a 0/1 knapsack bitset of reachable subset sums. For nums=[1,5,11,5], total=22, target=11: dp starts {0}, after 1 → {0,1}, after 5 → {0,1,5,6}, after 11 → {0,1,5,6,11,12,16,17}, and 11 is reachable → true.",
+    "```\ntotal = sum(nums)\nif total is odd: return false\ntarget = total / 2\ndp = {0}\nfor x in nums:\n    dp = dp ∪ {s + x for s in dp}\n    if target in dp: return true\nreturn false\n```",
+    "**Single element** - n=1, cannot form two non-empty equal subsets\n`Input: nums = [2]` → `Expected: false`\n⚠️ Bug: returning true whenever total is even without any subset-sum check → returns true\n\n**Odd total** - sum not divisible by 2\n`Input: nums = [1,2,3,5]` → `Expected: false`\n⚠️ Bug: skipping the odd check and using integer-division target = 11/2 = 5 → finds {2,3} → returns true\n\n**All equal elements** - duplicates are needed to build the partition\n`Input: nums = [2,2,2,2]` → `Expected: true`\n⚠️ Bug: deduplicating nums into {2} before processing → can only reach {0,2} → returns false\n\n**Largest input** - total=20000, target=10000\n`Input: nums = [100,100,...,100]` (200 times) → `Expected: true`\n⚠️ Bug: sizing the bitset too small, e.g. bitset<1000> → bits above index 999 are dropped → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums may contain negative numbers?",
+      "a": "The bitset shift trick fails because reachable sums can go negative. Use an unordered_set of reachable sums (or shift all values by the minimum to make them non-negative with an offset). TC becomes O(n * S) where S is the spread of reachable sums; SC O(S)."
+    },
+    {
+      "q": "Return the actual two subsets instead of a boolean.",
+      "a": "Alongside the bitset, store for each reachable sum a witness: the previous sum and the element that produced it. Reconstruct by walking back from target to 0. TC stays O(n * target); SC grows to O(n * target) to hold witnesses."
+    },
+    {
+      "q": "nums arrives as a streaming input of unknown length; report the answer after each new element.",
+      "a": "Keep the bitset and a running total; on each new element x, update total, recompute target = total/2 when total is even, then do dp |= dp << x and check dp[target]. TC O(n * target / 64) amortized, SC O(target) - same as batch, just online."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canPartition(vector<int>& nums) {\n        int total = 0;\n        for (int x : nums) total += x;\n        if (total & 1) return false;\n        int target = total / 2;\n        bitset<10001> dp;\n        dp[0] = 1;\n        for (int x : nums) {\n            dp |= dp << x;\n            if (dp[target]) return true;\n        }\n        return dp[target];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

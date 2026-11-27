@@ -1,0 +1,40 @@
+{
+  "slug": "gas-station",
+  "title": "Gas Station",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Greedy Single Pass",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int total, tank, start, n: scalars → O(1)\n- no containers, no recursion\n- not counted: input vectors gas, cost",
+  "approach": "The key insight is that if total gas ≥ total cost, a unique solution always exists. To find it, scan left to right tracking a running tank (gas[i] − cost[i]). Whenever the tank drops below 0, no station between the current start and i can be a valid start (they would all run out before reaching i+1), so reset the start to i+1 and the tank to 0. After one pass, if total ≥ 0 the recorded start is the answer; otherwise return −1.",
+  "hints": [
+    "If the car runs out of gas somewhere between station i and station j, which starting stations between i and j could still possibly reach j? Also, n ≤ 10^5 rules out simulating a full lap from every station.",
+    "Greedy single pass with a running tank: when the tank goes negative, abandon the current start and restart at i+1. On gas=[1,2,3,4,5], cost=[3,4,5,1,2], starting at 0 the tank becomes 1−3=−2, so restart at 1.",
+    "total = 0, tank = 0, start = 0\nfor i in 0..n-1:\n    diff = gas[i] - cost[i]\n    total += diff\n    tank += diff\n    if tank < 0:\n        start = i + 1\n        tank = 0\nreturn total >= 0 ? start : -1",
+    "**Single station, valid** - n=1 with enough gas.\n`gas = [5], cost = [3]` → `Expected: 0`\n⚠️ Bug: returning −1 whenever any diff is negative without checking total → returns -1\n\n**Single station, invalid** - n=1 with insufficient gas.\n`gas = [2], cost = [5]` → `Expected: -1`\n⚠️ Bug: returning start (which becomes 1) without the total ≥ 0 guard → returns 1\n\n**All equal** - every diff is 0.\n`gas = [3,3,3], cost = [3,3,3]` → `Expected: 0`\n⚠️ Bug: requiring tank > 0 instead of tank >= 0 in the reset condition → returns 1\n\n**No valid answer** - total gas less than total cost.\n`gas = [2,3,4], cost = [3,4,3]` → `Expected: -1`\n⚠️ Bug: returning start without verifying total ≥ 0 → returns 2\n\n**Solution at last index** - only the final station works.\n`gas = [1,1,1,5], cost = [2,2,2,1]` → `Expected: 3`\n⚠️ Bug: resetting start to i instead of i+1 after a negative tank → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the car may travel either clockwise or counterclockwise and you must report a direction + start, or −1?",
+      "a": "Run the same greedy pass forward for clockwise and a mirrored pass (reverse the arrays, swap roles) for counterclockwise. If either yields total ≥ 0, return that direction and start; otherwise −1. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if stations can be inserted or deleted online and you must answer queries repeatedly?",
+      "a": "Maintain the prefix sums of (gas[i]−cost[i]) in a balanced BST or Fenwick tree so you can recompute total and find the minimum prefix in O(log n). The valid start is the index after the global minimum prefix. Each update is O(log n), each query O(log n); space O(n)."
+    },
+    {
+      "q": "What if the tank has a fixed capacity C and excess gas at a station is discarded?",
+      "a": "The greedy reset no longer suffices because capacity can force a spill that breaks a later segment. You must simulate with a bounded tank (min(tank+diff, C)) and, on failure, restart; worst case degrades to O(n²) unless you precompute reachable ranges with a sliding-window maximum, giving O(n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int canCompleteCircuit(vector<int>& gas, vector<int>& cost) {\n        int total = 0;\n        int tank = 0;\n        int start = 0;\n        int n = (int)gas.size();\n        for (int i = 0; i < n; i++) {\n            int diff = gas[i] - cost[i];\n            total += diff;\n            tank += diff;\n            if (tank < 0) {\n                start = i + 1;\n                tank = 0;\n            }\n        }\n        return total >= 0 ? start : -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

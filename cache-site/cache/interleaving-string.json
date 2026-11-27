@@ -1,0 +1,40 @@
+{
+  "slug": "interleaving-string",
+  "title": "Interleaving String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "2D DP with Space Optimization",
+  "tc": "O(n*m)",
+  "sc": "O(min(n,m))",
+  "spaceBreakdown": "- vector<bool> dp: m+1 entries where m = min(n,m) → O(min(n,m))\n- recursion depth: none\n- not counted: input strings s1, s2, s3",
+  "approach": "Use dynamic programming: dp[i][j] is true if the first i+j characters of s3 can be formed by interleaving the first i characters of s1 with the first j characters of s2. The recurrence is dp[i][j] = (dp[i-1][j] && s1[i-1]==s3[i+j-1]) || (dp[i][j-1] && s2[j-1]==s3[i+j-1]). We compress the 2D table into a single row rolled over i, and swap s1/s2 so s2 is the shorter string, achieving O(min(n,m)) space.",
+  "hints": [
+    "For each prefix of s3, what do you need to know about prefixes of s1 and s2 to decide if that prefix is reachable? The constraints allow lengths up to 100.",
+    "Use a boolean DP table where dp[i][j] means \"the first i+j characters of s3 interleave the first i of s1 with the first j of s2\"; compress to one row for O(min(n,m)) space. Example: dp[1][0] = true because s1[0]='a' matches s3[0]='a' and dp[0][0]=true.",
+    "```\nif len(s1) + len(s2) != len(s3): return false\nswap so s2 is the shorter string\ndp[0] = true\nfor j in 1..m: dp[j] = dp[j-1] and s2[j-1] == s3[j-1]\nfor i in 1..n:\n    dp[0] = dp[0] and s1[i-1] == s3[i-1]\n    for j in 1..m:\n        dp[j] = (dp[j] and s1[i-1] == s3[i+j-1]) or (dp[j-1] and s2[j-1] == s3[i+j-1])\nreturn dp[m]\n```",
+    "**Length mismatch** - s1 and s2 lengths don't sum to s3's length\n`Input: s1 = \"a\", s2 = \"b\", s3 = \"abc\"` → `Expected: false`\n⚠️ Bug: skipping the length check (n+m != s3.size()) → returns true (the trailing 'c' is never examined)\n\n**Both empty** - all three strings are empty\n`Input: s1 = \"\", s2 = \"\", s3 = \"\"` → `Expected: true`\n⚠️ Bug: initializing dp[0] = false instead of true → returns false\n\n**One string empty, character mismatch** - s2 is empty, s3 must equal s1 exactly\n`Input: s1 = \"abc\", s2 = \"\", s3 = \"abd\"` → `Expected: false`\n⚠️ Bug: not updating dp[0] inside the i-loop (leaving it true from init) → returns true\n\n**Duplicate characters, single valid path** - both strings share a prefix character, only one ordering works\n`Input: s1 = \"ab\", s2 = \"ac\", s3 = \"aacb\"` → `Expected: true`\n⚠️ Bug: using && instead of || in the recurrence → returns false (dp[1][2] stays false, blocking the only valid path)"
+  ],
+  "followUps": [
+    {
+      "q": "What if s3 arrives as a stream, one character at a time, and you must answer after each character whether the prefix so far could be an interleaving?",
+      "a": "Keep the 1D dp array for the current prefix length. On each new character of s3 at position k, recompute dp[j] for all j using the same recurrence with s3[k-1]. Each step costs O(m), total O(|s3|·m) time and O(m) space."
+    },
+    {
+      "q": "What if you must also return one valid interleaving (the sequence of choices) instead of just true/false?",
+      "a": "Store a parent pointer per (i,j) indicating whether the transition came from (i-1,j) or (i,j-1). Backtrack from (n,m) to (0,0) to recover the choice sequence. Time stays O(n*m); space rises to O(n*m) for the full parent table."
+    },
+    {
+      "q": "What if instead of checking existence, you must count the number of distinct interleavings?",
+      "a": "Replace the boolean dp with an integer dp counting paths: dp[j] = (dp[j] if s1 matches) + (dp[j-1] if s2 matches). Use 64-bit integers or modular arithmetic since counts grow combinatorially. Time stays O(n*m), space O(min(n,m))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isInterleave(string s1, string s2, string s3) {\n        int n = s1.size(), m = s2.size();\n        if (n + m != (int)s3.size()) return false;\n        if (n < m) { swap(s1, s2); swap(n, m); }\n        vector<bool> dp(m + 1, false);\n        dp[0] = true;\n        for (int j = 1; j <= m; j++)\n            dp[j] = dp[j-1] && s2[j-1] == s3[j-1];\n        for (int i = 1; i <= n; i++) {\n            dp[0] = dp[0] && s1[i-1] == s3[i-1];\n            for (int j = 1; j <= m; j++) {\n                dp[j] = (dp[j] && s1[i-1] == s3[i+j-1]) ||\n                        (dp[j-1] && s2[j-1] == s3[i+j-1]);\n            }\n        }\n        return dp[m];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

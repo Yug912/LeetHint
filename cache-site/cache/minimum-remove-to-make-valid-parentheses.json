@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-remove-to-make-valid-parentheses",
+  "title": "Minimum Remove to Make Valid Parentheses",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass In-Place",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, write_idx, balance, new_len, write_idx2): O(1)\n- string s: modified in place, not counted as auxiliary space\n- return s.substr(...): returned output, not counted",
+  "approach": "The algorithm uses two passes to remove invalid parentheses in-place. In the first pass (left-to-right), it removes any extra ')' that do not have a matching '(' before them by tracking a balance counter. In the second pass (right-to-left), it removes any extra '(' that do not have a matching ')' after them. This guarantees the minimum removals because only impossible-to-match parentheses are dropped, and it uses O(1) extra space by overwriting the string in place.",
+  "hints": [
+    "If you read the string from left to right, when does a closing parenthesis become impossible to match with an earlier opening one? The string length can be up to 10^5.",
+    "Two-pass in-place string modification using balance counters.\nFor s = \"a)b(c)d\", the first left-to-right pass skips the ')' at index 1 because the balance of '(' is 0, yielding \"ab(c)d\".",
+    "balance = 0, write = 0\nfor i = 0 to n-1:\n    if s[i] is '(' or letter: keep it, if '(' then balance++\n    if s[i] is ')' and balance > 0: keep it, balance--\nnew_len = write\nbalance = 0, write = new_len - 1\nfor i = new_len - 1 down to 0:\n    if s[i] is ')' or letter: keep it, if ')' then balance++\n    if s[i] is '(' and balance > 0: keep it, balance--\nreturn substring from write+1 to new_len-1",
+    "**Smallest input** - Input has length 1.\n`Input: s = \"(\"` → `Expected: \"\"`\n⚠️ Bug: Returning the string after the first pass without the second pass → returns `\"(\"`\n\n**All open parentheses** - Input has only '(' characters.\n`Input: s = \"(((\"` → `Expected: \"\"`\n⚠️ Bug: Only doing a left-to-right pass to remove extra ')' → returns `\"(((\"`\n\n**All close parentheses** - Input has only ')' characters.\n`Input: s = \")))\"` → `Expected: \"\"`\n⚠️ Bug: Using `balance >= 0` instead of `balance > 0` to decide whether to keep ')' → returns `\")))\"`\n\n**Already valid** - Input is already a valid parentheses string.\n`Input: s = \"ab(c)d\"` → `Expected: \"ab(c)d\"`\n⚠️ Bug: Running the second pass left-to-right instead of right-to-left → returns `\"abc)d\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string contains multiple types of brackets, like '[]' and '{}'?",
+      "a": "The balance counter approach no longer works because different bracket types interact. You would need a stack to track the exact type of each unmatched opening bracket, increasing space complexity to O(n)."
+    },
+    {
+      "q": "What if you are given a stream of characters and cannot store the entire string?",
+      "a": "You can still use the two-pass approach if you can seek backwards, but for a true forward-only stream, you'd need to buffer potential closing brackets or use a stack of indices for opening brackets, requiring O(n) space in the worst case."
+    },
+    {
+      "q": "What if you need to return the minimum number of removals instead of the string?",
+      "a": "The number of removals is simply the number of unmatched parentheses. You can count this in a single pass: track `open` and `close` counts, and the answer is `open + close` where `close` is the number of ')' encountered when `open == 0`. This takes O(n) time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string minRemoveToMakeValid(string s) {\n        int n = s.length();\n        int write_idx = 0;\n        int balance = 0;\n        \n        // Pass 1: remove extra ')'\n        for (int i = 0; i < n; i++) {\n            char c = s[i];\n            if (c == '(') {\n                balance++;\n                s[write_idx++] = c;\n            } else if (c == ')') {\n                if (balance > 0) {\n                    balance--;\n                    s[write_idx++] = c;\n                }\n            } else {\n                s[write_idx++] = c;\n            }\n        }\n        \n        int new_len = write_idx;\n        int write_idx2 = new_len - 1;\n        balance = 0;\n        \n        // Pass 2: remove extra '('\n        for (int i = new_len - 1; i >= 0; i--) {\n            char c = s[i];\n            if (c == ')') {\n                balance++;\n                s[write_idx2--] = c;\n            } else if (c == '(') {\n                if (balance > 0) {\n                    balance--;\n                    s[write_idx2--] = c;\n                }\n            } else {\n                s[write_idx2--] = c;\n            }\n        }\n        \n        return s.substr(write_idx2 + 1, new_len - 1 - write_idx2);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

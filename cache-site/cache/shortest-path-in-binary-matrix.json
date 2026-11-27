@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-path-in-binary-matrix",
+  "title": "Shortest Path in Binary Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Breadth-First Search",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- queue<pair<int,int>> q: up to O(n²) entries in worst case → O(n²)\n- dx[8], dy[8]: 16 ints → O(1)\n- scalar locals (n, dist, sz, i, d, nx, ny, x, y): O(1)\n- grid modified in place: not counted (input)",
+  "approach": "The grid is an unweighted graph where each 0-cell is a node and 8-directional adjacency defines edges. In an unweighted graph, the first time BFS reaches a cell is via a shortest path, so a level-by-level BFS from (0,0) to (n-1, n-1) gives the optimal answer. We mark cells visited by setting them to 1 in-place (no extra visited array needed), and return the current level count when we dequeue the destination.",
+  "hints": [
+    "When every step from one cell to an adjacent cell adds exactly 1 to the path length, what can you say about the first time each cell is reached compared to all later times it could be reached? The grid has at most 100 × 100 = 10,000 cells.",
+    "Use breadth-first search (BFS) with a queue, processing all cells at distance d before any at distance d+1. In Example 1, starting at (0,0) with distance 1, the only reachable 0-cell neighbor is (1,1), so distance 2 is returned immediately.",
+    "```\nif start or end is blocked: return -1\nenqueue (0,0), mark visited, dist = 1\nwhile queue not empty:\n    for each cell in current level:\n        if cell is (n-1, n-1): return dist\n        for each of 8 neighbors:\n            if in bounds and unvisited and == 0:\n                mark visited, enqueue\n    dist = dist + 1\nreturn -1\n```",
+    "**Blocked start cell** - the top-left cell itself is a 1\n`Input: [[1,0,0],[1,1,0],[1,1,0]]` → `Expected: -1`\n⚠️ Bug: skipping the `grid[0][0] == 1` check and starting BFS anyway → returns 4\n\n**Single cell grid** - n = 1 and the only cell is 0\n`Input: [[0]]` → `Expected: 1`\n⚠️ Bug: not handling `n == 1` as a special case before the BFS loop → returns -1\n\n**All-zero 2×2 grid** - a diagonal move is available\n`Input: [[0,0],[0,0]]` → `Expected: 2`\n⚠️ Bug: using only 4 directions instead of 8 → returns 3\n\n**No valid path** - 0-cells exist but start and end are disconnected\n`Input: [[0,1,0],[1,1,1],[0,1,0]]` → `Expected: -1`\n⚠️ Bug: not returning -1 when the queue empties without reaching the destination → returns 0 or an uninitialized value"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is 10^6 × 10^6 and cannot be loaded entirely in memory?",
+      "a": "Use A* search with an admissible heuristic like Chebyshev distance (max of row/col differences) to the destination. This prunes most of the grid and only explores cells likely on the shortest path. Worst-case time and space remain O(V) but are dramatically better in practice when a path exists."
+    },
+    {
+      "q": "What if each cell has a positive traversal weight instead of uniform cost?",
+      "a": "Replace BFS with Dijkstra's algorithm using a min-heap keyed by cumulative distance. Each cell is processed once when dequeued with its minimum cost. Time complexity becomes O(V log V) due to heap operations; space remains O(V)."
+    },
+    {
+      "q": "What if you must return the actual path (list of cells) instead of just its length?",
+      "a": "Store a parent pointer for each visited cell during BFS. After reaching the destination, backtrack from (n-1, n-1) to (0, 0) following parent pointers, then reverse the list. Time and space complexity remain O(n²); the parent array adds O(n²) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int shortestPathBinaryMatrix(vector<vector<int>>& grid) {\n        int n = grid.size();\n        if (grid[0][0] == 1 || grid[n - 1][n - 1] == 1) return -1;\n        if (n == 1) return 1;\n\n        int dx[8] = {-1, -1, -1, 0, 0, 1, 1, 1};\n        int dy[8] = {-1, 0, 1, -1, 1, -1, 0, 1};\n\n        queue<pair<int, int>> q;\n        q.push({0, 0});\n        grid[0][0] = 1;\n        int dist = 1;\n\n        while (!q.empty()) {\n            int sz = q.size();\n            dist++;\n            for (int i = 0; i < sz; i++) {\n                auto [x, y] = q.front();\n                q.pop();\n                for (int d = 0; d < 8; d++) {\n                    int nx = x + dx[d];\n                    int ny = y + dy[d];\n                    if (nx < 0 || nx >= n || ny < 0 || ny >= n) continue;\n                    if (grid[nx][ny] == 1) continue;\n                    if (nx == n - 1 && ny == n - 1) return dist;\n                    grid[nx][ny] = 1;\n                    q.push({nx, ny});\n                }\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

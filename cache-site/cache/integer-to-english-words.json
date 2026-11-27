@@ -1,0 +1,40 @@
+{
+  "slug": "integer-to-english-words",
+  "title": "Integer to English Words",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Digit Grouping",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<string> ones: 20 fixed entries → O(1)\n- vector<string> tens: 10 fixed entries → O(1)\n- long long scales[4]: 4 fixed entries → O(1)\n- string scaleNames[4]: 4 fixed entries → O(1)\n- string result: output, not counted\n- recursion depth: none (iterative)\n- not counted: input, returned string",
+  "approach": "The key insight is to group the number into chunks of three digits (thousands), each with a scale name (Thousand, Million, Billion). Process chunks from most significant to least significant, appending each non-zero chunk's words and scale name to the result string. A helper function converts any number less than 1000 to words using lookup arrays for ones (0-19) and tens (20-90). Zero chunks are skipped entirely. Processing most-significant-first and appending (not prepending) keeps each string operation O(1) amortized, yielding O(log n) total time.",
+  "hints": [
+    "If you write out the words for 123 and 123000 side by side, what part stays the same and what part changes? The constraint 0 ≤ num ≤ 2^31 − 1 means the number has at most 10 digits.",
+    "Use a helper function that converts a number below 1000 to words, then iterate over three-digit groups from most significant to least, appending each group's words plus its scale name. For 1234567: group 1 → \"One Million\", group 234 → \"Two Hundred Thirty Four Thousand\", group 567 → \"Five Hundred Sixty Seven\".",
+    "```\nif num == 0: return \"Zero\"\nfor scale in [Billion, Million, Thousand, \"\"]:\n    chunk = (num / scale_value) % 1000\n    if chunk > 0:\n        append helper(chunk) to result\n        if scale != \"\": append \" \" + scale\nreturn result\n```",
+    "**Zero input** - the only case producing a single word with no scale\n`Input: 0` → `Expected: \"Zero\"`\n⚠️ Bug: relying on the loop without special-casing zero → returns \"\" (empty string)\n\n**Middle chunk is zero** - a 000 group in the middle must be skipped entirely\n`Input: 1000010` → `Expected: \"One Million Ten\"`\n⚠️ Bug: appending the scale name even when chunk is 0 → returns \"One Million Thousand Ten\"\n\n**Exact thousand** - trailing zero chunks must not produce extra words or spaces\n`Input: 1000` → `Expected: \"One Thousand\"`\n⚠️ Bug: not checking chunk > 0 before appending → returns \"One Thousand \" (trailing space)\n\n**Teens** - numbers 10-19 use unique words, not tens+ones\n`Input: 15` → `Expected: \"Fifteen\"`\n⚠️ Bug: treating 15 as tens[1] + ones[5] → returns \"Five\" or \"Ten Five\" instead of \"Fifteen\""
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle negative numbers?",
+      "a": "Add a check at the start: if num < 0, prepend \"Negative \" and convert the absolute value. Use `long long` to handle INT_MIN since -INT_MIN overflows int. Time and space complexity remain O(log n) and O(1)."
+    },
+    {
+      "q": "How would you convert words back to an integer (English Words to Integer)?",
+      "a": "Split the input by spaces, then process tokens left to right. Maintain a current value for the current chunk and a total result. When you encounter a scale word (Thousand/Million/Billion), multiply the current chunk value and add to total. When you encounter \"Hundred\", multiply current by 100. Numbers like \"Twenty\" add 20 to current. Time O(n) where n is the number of words, space O(1)."
+    },
+    {
+      "q": "How would you extend this to support numbers up to 10^18 (quintillions)?",
+      "a": "Add more scale names (Quadrillion, Trillion, Quintillion) to the scales array and extend the loop to iterate over 6 scales instead of 4. Use `long long` for the input and divisors. Time remains O(log n) with a larger constant, space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string numberToWords(int num) {\n        if (num == 0) return \"Zero\";\n        \n        vector<string> ones = {\"\", \"One\", \"Two\", \"Three\", \"Four\", \"Five\", \"Six\", \"Seven\", \"Eight\", \"Nine\",\n                               \"Ten\", \"Eleven\", \"Twelve\", \"Thirteen\", \"Fourteen\", \"Fifteen\", \"Sixteen\",\n                               \"Seventeen\", \"Eighteen\", \"Nineteen\"};\n        vector<string> tens = {\"\", \"\", \"Twenty\", \"Thirty\", \"Forty\", \"Fifty\", \"Sixty\", \"Seventy\", \"Eighty\", \"Ninety\"};\n        \n        string result;\n        long long scales[] = {1000000000LL, 1000000LL, 1000LL, 1LL};\n        string scaleNames[] = {\"Billion\", \"Million\", \"Thousand\", \"\"};\n        \n        for (int i = 0; i < 4; i++) {\n            int chunk = (num / scales[i]) % 1000;\n            if (chunk > 0) {\n                if (!result.empty()) result += \" \";\n                result += helper(chunk, ones, tens);\n                if (!scaleNames[i].empty()) {\n                    result += \" \" + scaleNames[i];\n                }\n            }\n        }\n        \n        return result;\n    }\n    \nprivate:\n    string helper(int num, vector<string>& ones, vector<string>& tens) {\n        string result;\n        if (num >= 100) {\n            result += ones[num / 100] + \" Hundred\";\n            num %= 100;\n        }\n        if (num >= 20) {\n            if (!result.empty()) result += \" \";\n            result += tens[num / 10];\n            num %= 10;\n        }\n        if (num > 0) {\n            if (!result.empty()) result += \" \";\n            result += ones[num];\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

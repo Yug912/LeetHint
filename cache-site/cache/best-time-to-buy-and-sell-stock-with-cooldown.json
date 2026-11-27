@@ -1,0 +1,40 @@
+{
+  "slug": "best-time-to-buy-and-sell-stock-with-cooldown",
+  "title": "Best Time to Buy and Sell Stock with Cooldown",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "State Machine DP",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int hold, sold, rest: 3 scalar variables → O(1)\n- int newHold, newSold, newRest: 3 scalar temporaries → O(1)\n- loop index i: 1 scalar → O(1)\n- no containers, no recursion",
+  "approach": "Model each day as being in one of three states: holding a stock, just sold (in cooldown), or resting (no stock, not in cooldown). Transitions: holding persists or is entered from resting by buying; just-sold is reached only from holding by selling; resting persists or is entered from just-sold after cooldown. Since each day's values depend only on the previous day, we keep three rolling variables for O(1) space. The answer is the max of the sold and rest states on the final day (never hold at the end).",
+  "hints": [
+    "What are all the distinct situations you can be in on any given day regarding the stock, and how does each one limit what you can do the next day?",
+    "Use a state-machine DP with three states: holding, just-sold (cooldown), and resting. For [1,2,3,0,2] on day 1 (price 2): holding stays at max(-1, 0-2) = -1, selling gives -1+2 = 1, resting stays at max(0, 0) = 0.",
+    "```\nhold = -prices[0], sold = 0, rest = 0\nfor i from 1 to n-1:\n    new_hold = max(hold, rest - prices[i])\n    new_sold = hold + prices[i]\n    new_rest = max(rest, sold)\n    hold, sold, rest = new_hold, new_sold, new_rest\nreturn max(sold, rest)\n```",
+    "**Single day** - only one price, no buy-sell cycle is possible\n`Input: [1]` → `Expected: 0`\n⚠️ Bug: returning hold instead of max(sold, rest) → returns -1\n\n**All decreasing** - prices only fall, best strategy is never buying\n`Input: [5,4,3,2,1]` → `Expected: 0`\n⚠️ Bug: initializing hold to 0 instead of -prices[0] → returns 4\n\n**Cooldown gap** - selling on day 2 blocks buying on day 3 at the lowest price\n`Input: [1,2,4,0,2]` → `Expected: 3`\n⚠️ Bug: using sold instead of rest in the buy transition (hold = max(hold, sold - prices[i])) → returns 5\n\n**Update order** - rest must use yesterday's sold, not today's\n`Input: [1,2,3,0,2]` → `Expected: 3`\n⚠️ Bug: updating rest = max(rest, sold) before computing new hold and sold → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if each sell incurs a fixed transaction fee?",
+      "a": "Subtract the fee in the sell transition: new_sold = hold + prices[i] - fee. The three-state machine and all transitions stay identical. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you may complete at most k transactions instead of unlimited?",
+      "a": "Add a transaction-count dimension: hold[j] and sold[j] for j = 0..k, where hold[j] = max(hold[j], rest[j] - prices[i]) and sold[j] = hold[j-1] + prices[i]. TC: O(nk), SC: O(k) with rolling arrays."
+    },
+    {
+      "q": "What if prices arrive one at a time in a stream and you must answer after each price?",
+      "a": "The rolling-variable DP already processes prices sequentially - update hold, sold, rest for each incoming price and return max(sold, rest) on demand. TC: O(1) per price, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        int hold = -prices[0];\n        int sold = 0;\n        int rest = 0;\n        for (int i = 1; i < (int)prices.size(); i++) {\n            int newHold = max(hold, rest - prices[i]);\n            int newSold = hold + prices[i];\n            int newRest = max(rest, sold);\n            hold = newHold;\n            sold = newSold;\n            rest = newRest;\n        }\n        return max(sold, rest);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

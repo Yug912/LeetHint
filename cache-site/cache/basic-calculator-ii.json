@@ -1,0 +1,40 @@
+{
+  "slug": "basic-calculator-ii",
+  "title": "Basic Calculator II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long result, last, num: three scalars → O(1)\n- char op, int n, int i: scalars → O(1)\n- recursion depth: none\n- not counted: input string",
+  "approach": "The key insight is that `*` and `/` bind tighter than `+` and `-`, so we can evaluate in a single left-to-right pass by maintaining a running `result` (sum of completed terms) and a `last` term that may still be modified by a future `*` or `/`. When we encounter `+` or `-`, the previous term is final-fold it into `result` and start a new term (positive or negative). When we encounter `*` or `/`, immediately combine `last` with the current number. At the end, fold the final `last` into `result`. C++ integer division already truncates toward zero, satisfying the requirement.",
+  "hints": [
+    "When scanning \"3+2*2\" left to right, at which point can you be certain a number will no longer be modified by a later operator?",
+    "Single-pass scan maintaining a running total and a deferred \"last term.\" For \"3+2*2\": read '3+' → last=3; read '2*' → total=3, last=2; read final '2' → last=2*2=4; answer=total+last=7.",
+    "```\ntotal = 0, last = 0, num = 0, op = '+'\nfor each char c in s:\n    if c is digit: num = num*10 + digit(c)\n    if c is operator or last position:\n        if op is + or -: total += last; last = ±num\n        if op is * or /: last = last op= num\n        op = c; num = 0\nreturn total + last\n```",
+    "**Single number, no operators** - no operator character appears in the string\n`Input: \"42\"` → `Expected: 42`\n⚠️ Bug: applying the pending operation only when an operator character is seen, with no end-of-string check → returns 0\n\n**Trailing spaces after last number** - spaces follow the final digit\n`Input: \" 3/2 \"` → `Expected: 1`\n⚠️ Bug: skipping space characters without checking if the current index is the last position → returns 3\n\n**Negative intermediate from subtraction before division** - a '-' produces a negative `last`, then '/' divides it\n`Input: \"1-3/2\"` → `Expected: 0`\n⚠️ Bug: using floor division (e.g., `(int)floor((double)last/num)`) instead of C++ truncation toward zero → returns -1\n\n**Subtraction then addition** - a negative term is followed by a positive term\n`Input: \"1-2+3\"` → `Expected: 2`\n⚠️ Bug: for the '-' operator, setting `last = num` instead of `last = -num` → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "Add support for parentheses, e.g., \"(1+2)*3\"?",
+      "a": "When encountering '(', recursively evaluate the subexpression starting at the next index and return both the result and the position of the matching ')'. The rest of the single-pass logic stays unchanged. TC: O(n), SC: O(n) for recursion depth in deeply nested expressions."
+    },
+    {
+      "q": "The input arrives as a character stream (one char at a time) with no ability to buffer the full string?",
+      "a": "The algorithm already processes one character at a time, so it works directly. Maintain `result`, `last`, `num`, and `op` as persistent state across stream callbacks. On stream-end signal, apply the pending operation and return `result + last`. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "Add a right-associative exponentiation operator '^' with highest precedence (e.g., 2^3^2 = 2^9 = 512)?",
+      "a": "Right-associativity breaks the single deferred-term model because the right operand of '^' must be fully evaluated first. When '^' is seen, recursively evaluate the exponent subexpression before applying the power. This mirrors the parenthesis approach. TC: O(n), SC: O(n) for recursion depth."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int calculate(string s) {\n        long long result = 0;\n        long long last = 0;\n        long long num = 0;\n        char op = '+';\n        int n = s.size();\n        for (int i = 0; i < n; i++) {\n            char c = s[i];\n            if (c >= '0' && c <= '9') {\n                num = num * 10 + (c - '0');\n            }\n            if (((c < '0' || c > '9') && c != ' ') || i == n - 1) {\n                if (op == '+') {\n                    result += last;\n                    last = num;\n                } else if (op == '-') {\n                    result += last;\n                    last = -num;\n                } else if (op == '*') {\n                    last = last * num;\n                } else if (op == '/') {\n                    last = last / num;\n                }\n                op = c;\n                num = 0;\n            }\n        }\n        result += last;\n        return (int)result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "subarray-sum-equals-k",
+  "title": "Subarray Sum Equals K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum + Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long,int> seen: up to n+1 distinct prefix sums → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Use a running prefix sum. A subarray ending at index j sums to k iff some earlier prefix sum equals (current prefix − k). Maintain a hash map from each seen prefix sum to its frequency; for each new element, add the frequency of (prefix − k) to the answer, then record the current prefix. This counts every valid subarray exactly once in a single left-to-right pass.",
+  "hints": [
+    "For a fixed ending index, what property of an earlier index would make the slice between them sum to k? The array may contain negatives, so the running total is not monotonic.",
+    "Use a hash map from prefix sum to its frequency. For nums=[1,1,1], k=2: at index 1 the running sum is 2; the map already holds sum 0 with frequency 1, so 2−2=0 contributes one subarray.",
+    "```\nseen = {0: 1}\nprefix = 0\ncount = 0\nfor x in nums:\n    prefix += x\n    count += seen[prefix - k]\n    seen[prefix] += 1\nreturn count\n```",
+    "**All zeros** - every contiguous slice sums to 0\n`Input: nums = [0,0,0], k = 0` → `Expected: 6`\n⚠️ Bug: initializing the map empty instead of seeding seen[0]=1 → returns 3\n\n**Single element match** - n=1, the only subarray is the element itself\n`Input: nums = [5], k = 5` → `Expected: 1`\n⚠️ Bug: incrementing seen[prefix] before reading seen[prefix−k] → returns 0\n\n**No valid subarray** - k larger than any achievable sum\n`Input: nums = [1,2,3], k = 100` → `Expected: 0`\n⚠️ Bug: using .at() instead of operator[] for the lookup → throws out_of_range\n\n**Negatives canceling** - negative values create subarrays summing to 0\n`Input: nums = [-1,-1,1], k = 0` → `Expected: 1`\n⚠️ Bug: assuming monotonic sums and using a two-pointer window → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual subarrays (start/end indices) instead of just the count.",
+      "a": "Store, for each prefix sum, a list of indices where it occurred. When (prefix−k) is found, emit every stored index paired with the current index. Time stays O(n) amortized; space becomes O(n) for the index lists, O(n²) in the worst case if all prefix sums coincide (e.g., all zeros)."
+    },
+    {
+      "q": "The array arrives as an unbounded stream; you cannot store all prefix sums forever.",
+      "a": "Keep a bounded LRU-style cache of recent prefix sums with their frequencies, counting only subarrays ending within the last W elements. This gives exact counts for subarrays of length ≤ W and O(W) space; for exact global counts you must either bound subarray length or accept approximation."
+    },
+    {
+      "q": "Count subarrays whose sum is divisible by k (k > 0).",
+      "a": "Replace the prefix sum key with prefix mod k (adjusted to [0, k−1]); a subarray is divisible by k iff two prefix mods are equal. Same single-pass hash-map pattern, O(n) time, O(min(n, k)) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int subarraySum(vector<int>& nums, int k) {\n        unordered_map<long long, int> seen;\n        seen[0] = 1;\n        long long prefix = 0;\n        int count = 0;\n        for (int x : nums) {\n            prefix += x;\n            count += seen[prefix - k];\n            seen[prefix]++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "lowest-common-ancestor-of-a-binary-tree",
+  "title": "Lowest Common Ancestor of a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS Recursion",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call-stack depth: up to h (tree height), worst case O(n) for skewed tree, O(log n) for balanced\n- no containers or arrays allocated\n- not counted: input tree, returned node",
+  "approach": "The LCA is the node where p and q diverge into different subtrees, or where one of them is the node itself. Recurse on both children: if the current node is null, p, or q, return it immediately. If both children return non-null, the current node is the LCA. Otherwise, propagate the non-null child upward. This works because the first node where both p and q are found in different subtrees (or one is the node itself) is the lowest common ancestor.",
+  "hints": [
+    "What property must the LCA node satisfy regarding where p and q are located relative to it? The tree has up to 10^5 nodes, so visiting each node once is affordable.",
+    "Use recursive depth-first search. In Example 1, at node 3 the left subtree returns node 5 and the right returns node 1; since both are non-null, node 3 is the LCA.",
+    "```\nfunction LCA(node, p, q):\n    if node is null or node == p or node == q:\n        return node\n    left = LCA(node.left, p, q)\n    right = LCA(node.right, p, q)\n    if left and right:\n        return node\n    return left if left else right\n```",
+    "**Smallest input** - only two nodes, root is one of the targets\n`Input: root = [1,2], p = 1, q = 2` → `Expected: 1`\n⚠️ Bug: not checking `root == p || root == q` before recursing into children → returns 2\n\n**Both in different subtrees** - LCA is an internal node with one target per child\n`Input: root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 1` → `Expected: 3`\n⚠️ Bug: returning the left result immediately when non-null, before checking the right subtree → returns 5\n\n**p is ancestor of q** - a node is its own descendant per the definition\n`Input: root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 4` → `Expected: 5`\n⚠️ Bug: returning NULL when only one child subtree yields a match, instead of propagating that result upward → returns NULL\n\n**Non-BST tree** - value ordering does not reflect tree structure\n`Input: root = [3,5,1,6,2,0,8,null,null,7,4], p = 6, q = 4` → `Expected: 5`\n⚠️ Bug: using BST-style value comparison to decide which child to visit → returns NULL"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to answer many LCA queries on the same tree?",
+      "a": "Preprocess the tree with binary lifting: store each node's 2^k-th ancestor for all k up to log n. Each query then brings both nodes to the same depth and jumps them up together in O(log n). Preprocessing is O(n log n) time and space."
+    },
+    {
+      "q": "What if each node has a parent pointer but no child pointers?",
+      "a": "Walk from p up to the root, storing every ancestor in a hash set. Then walk from q upward; the first ancestor already in the set is the LCA. This takes O(h) time and O(h) space, where h is the tree height."
+    },
+    {
+      "q": "What if p or q might not exist in the tree?",
+      "a": "Modify the recursion to return a count of how many of p and q were found alongside the candidate node. Only return a non-null LCA when the count reaches 2. The time and space complexity remain O(n) and O(h) respectively."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        if (!root || root == p || root == q) return root;\n        TreeNode* left = lowestCommonAncestor(root->left, p, q);\n        TreeNode* right = lowestCommonAncestor(root->right, p, q);\n        if (left && right) return root;\n        return left ? left : right;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

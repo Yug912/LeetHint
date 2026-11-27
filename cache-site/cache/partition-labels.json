@@ -1,0 +1,40 @@
+{
+  "slug": "partition-labels",
+  "title": "Partition Labels",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Greedy Last-Occurrence Expansion",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int last[26]: fixed 26 entries → O(1)\n- vector<int> result: returned output → not counted\n- recursion depth: none",
+  "approach": "A partition containing character `c` must extend at least to the last position where `c` appears, otherwise `c` would leak into a later part. In a first pass, record `last[c]` for every character. Then scan left to right, maintaining the current partition's required end as the running maximum of `last[s[i]]` over all characters seen so far in the partition. When the scan reaches that end, every character inside has all its occurrences contained, so we can safely cut - and cutting as early as possible maximizes the number of parts.",
+  "hints": [
+    "Look at the first partition in Example 1, \"ababcbaca\" - what is true about the last position of every letter inside it, compared to the rest of the string?",
+    "Use a fixed array `last[26]` storing the final index of each letter. In Example 1, `last['a'] = 8`, so any partition containing `'a'` must extend at least to index 8.",
+    "```\nrecord last[c] for every character c in s\nstart = 0, end = 0\nfor i from 0 to n-1:\n    end = max(end, last[s[i]])\n    if i == end:\n        emit (end - start + 1)\n        start = i + 1\n```",
+    "**Single character** - n = 1, only one partition is possible.\n`Input: s = \"a\"` → `Expected: [1]`\n⚠️ Bug: computing size as `end - start` instead of `end - start + 1` → returns `[0]`.\n\n**Non-contiguous character occurrences** - a letter appears at two distant positions.\n`Input: s = \"abac\"` → `Expected: [4]`\n⚠️ Bug: closing when `last[s[i]-'a'] == i` instead of tracking the running max `end` → returns `[2, 1, 1]`, splitting `'a'` across the first and second partitions.\n\n**Entire string is one partition** - every character's range overlaps with another's.\n`Input: s = \"abacbd\"` → `Expected: [5, 1]`\n⚠️ Bug: setting `end = last[s[start]-'a']` only once at partition start and never updating it during the scan → returns `[3, 1, 1, 1]`, splitting `'b'` across partitions.\n\n**Boundary: last character** - the final partition closes exactly at index n−1.\n`Input: s = \"ababcbacadefegdehijhklij\"` → `Expected: [9, 7, 8]`\n⚠️ Bug: loop condition `i < n - 1` instead of `i < n` → never closes the last partition, returns `[9, 7]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if `s` contains any Unicode character, not just lowercase English letters?",
+      "a": "Replace the fixed `int last[26]` array with a hash map keyed by the character. The algorithm is unchanged: two passes, O(n) time, O(min(n, |Σ|)) space where |Σ| is the alphabet size."
+    },
+    {
+      "q": "What if each partition must also contain at most `k` distinct characters?",
+      "a": "While expanding the current partition, track the set of distinct characters seen so far; when the next character would push the count above `k`, close the partition before it. Still O(n) time, O(|Σ|) space for the last-occurrence map plus O(k) for the distinct-character set."
+    },
+    {
+      "q": "What if `s` arrives as a single-pass stream and you cannot store the whole string?",
+      "a": "You cannot solve it exactly in one pass, because a partition's end depends on the last occurrence of every character inside it, which may appear later in the stream. You need a first pass to record last occurrences, then a second pass to emit partitions - so exact solving requires O(|Σ|) metadata and the ability to re-read the input."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> partitionLabels(string s) {\n        int last[26] = {};\n        int n = (int)s.size();\n        for (int i = 0; i < n; i++) {\n            last[s[i] - 'a'] = i;\n        }\n        vector<int> result;\n        int start = 0, end = 0;\n        for (int i = 0; i < n; i++) {\n            if (last[s[i] - 'a'] > end) {\n                end = last[s[i] - 'a'];\n            }\n            if (i == end) {\n                result.push_back(end - start + 1);\n                start = i + 1;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

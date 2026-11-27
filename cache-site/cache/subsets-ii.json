@@ -1,0 +1,40 @@
+{
+  "slug": "subsets-ii",
+  "title": "Subsets II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Backtracking with Duplicate Skipping",
+  "tc": "O(n · 2^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> path: up to n elements → O(n)\n- recursion call stack: up to n deep → O(n)\n- sort(): O(log n) stack\n- not counted: input nums, returned result",
+  "approach": "Sort the array so duplicates become adjacent, then use backtracking to generate subsets. At each recursion level, iterate from the current start index and skip any element that equals the previous element at the same level (i > start && nums[i] == nums[i-1]). This ensures that among identical values, we only ever pick a contiguous prefix from left to right, which uniquely identifies each distinct subset and avoids generating duplicates.",
+  "hints": [
+    "With n ≤ 10, the total number of subsets is at most 1024. What arrangement of the array would make duplicate values easy to identify and avoid generating the same subset twice?",
+    "Sort the array and use backtracking. At each recursion level, skip nums[i] when i > start and nums[i] == nums[i-1]. For [1,2,2], at start=0 you pick 1 and 2 but skip the second 2 at the top level.",
+    "```\nfunction backtrack(start, path):\n    add copy of path to result\n    for i from start to n-1:\n        if i > start and nums[i] == nums[i-1]:\n            skip\n        add nums[i] to path\n        backtrack(i+1, path)\n        remove last from path\nsort nums\nbacktrack(0, empty)\n```",
+    "**All elements equal** - every element is the same value\n`Input: [2,2,2]` → `Expected: [[],[2],[2,2],[2,2,2]]`\n⚠️ Bug: removing the `if i > start && nums[i] == nums[i-1]` check → returns 8 subsets: [[],[2],[2,2],[2,2,2],[2,2],[2],[2,2],[2]]\n\n**Single element** - minimum input size\n`Input: [0]` → `Expected: [[],[0]]`\n⚠️ Bug: looping from start+1 instead of start → returns only [[]]\n\n**Negatives with duplicates** - duplicate negative values\n`Input: [-1,-1,0]` → `Expected: [[],[-1],[-1,-1],[-1,-1,0],[-1,0],[0]]`\n⚠️ Bug: using `i > 0` instead of `i > start` in the skip condition → skips valid picks at deeper levels, returns [[],[-1],[-1,-1],[-1,0],[0]] missing [-1,-1,0]\n\n**Already sorted with duplicates** - input is already in sorted order\n`Input: [1,2,2]` → `Expected: [[],[1],[1,2],[1,2,2],[2],[2,2]]`\n⚠️ Bug: using `i > 0` instead of `i > start` → returns [[],[1],[1,2],[2]] missing [1,2,2] and [2,2]"
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 40, listing all subsets is infeasible. How would you return just the count of distinct subsets?",
+      "a": "After sorting, count the frequency of each distinct value. The number of distinct subsets is the product of (frequency + 1) over all distinct values, since each value can appear 0 to frequency times. TC: O(n log n), SC: O(n) for the frequency map."
+    },
+    {
+      "q": "What if the array elements are strings instead of small integers?",
+      "a": "The same backtracking approach works unchanged after sorting - the duplicate-skipping logic only relies on equality comparison, which works for any comparable type. TC and SC remain O(n · 2^n) and O(n)."
+    },
+    {
+      "q": "What if you need to enumerate only subsets of exactly size k with no duplicates?",
+      "a": "Add a size parameter to the backtrack function and only add to the result when path.size() == k. The duplicate-skipping condition stays the same. TC: O(C(n,k) · k), SC: O(k) for the path plus O(n) recursion depth."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> subsetsWithDup(vector<int>& nums) {\n        vector<vector<int>> result;\n        vector<int> path;\n        sort(nums.begin(), nums.end());\n        backtrack(nums, 0, path, result);\n        return result;\n    }\nprivate:\n    void backtrack(vector<int>& nums, int start, vector<int>& path, vector<vector<int>>& result) {\n        result.push_back(path);\n        int n = nums.size();\n        for (int i = start; i < n; i++) {\n            if (i > start && nums[i] == nums[i - 1]) continue;\n            path.push_back(nums[i]);\n            backtrack(nums, i + 1, path, result);\n            path.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

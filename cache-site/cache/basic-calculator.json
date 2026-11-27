@@ -1,0 +1,40 @@
+{
+  "slug": "basic-calculator",
+  "title": "Basic Calculator",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack-Based Evaluation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- stack<int> st: up to n/2 entries for deeply nested parentheses → O(n)\n- int result, sign, num: O(1)\n- not counted: input string s",
+  "approach": "Use a single left-to-right scan with a stack to handle parentheses. Maintain a running `result`, a `sign` (+1 or −1), and a `num` being built digit-by-digit. On `'('`, push the current result and sign onto the stack, then reset both; on `')'`, finalize the inner result, multiply by the saved sign, and add the saved result. Unary minus is handled naturally because `sign` starts at +1 and flips to −1 before any operand or `'('`. The final `result += sign * num` captures any trailing number.",
+  "hints": [
+    "When you enter a parenthesized sub-expression, what two pieces of information from the outer computation must you set aside so you can correctly resume once the sub-expression finishes?\nThe string can be up to 3·10⁵ characters, so a single left-to-right pass is needed.",
+    "Use a stack of integers. On `'('` push the accumulated result and the pending sign; on `')'` multiply the inner result by the popped sign and add the popped result. In `\"(1+(4+5+2)-3)+(6+8)\"`, at the inner `')'` the inner result 11 is multiplied by the saved sign +1 and added to the saved result 1, yielding 12.",
+    "```\nresult = 0, sign = 1, num = 0\nfor each char c in s:\n    if c is digit:\n        num = num * 10 + (c - '0')\n    else if c == '+' or c == '-':\n        result += sign * num\n        num = 0\n        sign = 1 if c == '+' else -1\n    else if c == '(':\n        push result; push sign\n        result = 0; sign = 1\n    else if c == ')':\n        result += sign * num\n        num = 0\n        result *= pop()\n        result += pop()\nresult += sign * num\nreturn result\n```",
+    "**Single number, no operator** - the entire expression is one multi-digit number with no `+`, `-`, or `()`.\n`Input: \"42\"` → `Expected: 42`\n⚠️ Bug: omitting the final `result += sign * num` → returns 0\n\n**Unary minus before parenthesis** - expression starts with `-` immediately before `(`.\n`Input: \"-(2+3)\"` → `Expected: -5`\n⚠️ Bug: on `'('` pushing only the result but not the sign, then on `')'` only adding the popped result → returns 5\n\n**Nested unary minus** - a minus sign applies to a sub-expression that itself contains a minus.\n`Input: \"1-(2-(3))\"` → `Expected: 2`\n⚠️ Bug: on `')'` adding the popped result without first multiplying by the popped sign → returns 6\n\n**Multi-digit number** - numbers can have more than one digit.\n`Input: \"123+456\"` → `Expected: 579`\n⚠️ Bug: treating each digit as a separate operand instead of accumulating with `num = num*10 + digit` → returns 21"
+  ],
+  "followUps": [
+    {
+      "q": "How would you extend the calculator to support `*` and `/` with standard operator precedence?",
+      "a": "Keep the same stack for parentheses, but add a second stack (or a value stack) for operands. When you see `*` or `/`, immediately apply it to the next number and the top of the value stack before pushing back. `+` and `-` still defer to the end of the current parenthesis level. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the expression arrives as a character stream you can only read once, with no known length?",
+      "a": "The algorithm already processes left-to-right in a single pass with no lookahead, so it works unchanged on a stream. You read one character at a time and maintain the same `result`, `sign`, `num`, and stack. TC: O(n), SC: O(n) for the stack."
+    },
+    {
+      "q": "How would you add variable assignment and lookup, e.g. `x = 1 + 2` then `x + 3`?",
+      "a": "Use an unordered_map<string,int> to store variable values. When you encounter an identifier, look it up in the map and treat the value as the current `num`. For assignment, detect the `=` token, evaluate the RHS using the same stack logic, then store the result in the map. TC: O(n), SC: O(n + v) where v is the number of distinct variables."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int calculate(string s) {\n        stack<int> st;\n        int result = 0;\n        int sign = 1;\n        int num = 0;\n        for (char c : s) {\n            if (c >= '0' && c <= '9') {\n                num = num * 10 + (c - '0');\n            } else if (c == '+') {\n                result += sign * num;\n                num = 0;\n                sign = 1;\n            } else if (c == '-') {\n                result += sign * num;\n                num = 0;\n                sign = -1;\n            } else if (c == '(') {\n                st.push(result);\n                st.push(sign);\n                result = 0;\n                sign = 1;\n            } else if (c == ')') {\n                result += sign * num;\n                num = 0;\n                result *= st.top();\n                st.pop();\n                result += st.top();\n                st.pop();\n            }\n        }\n        result += sign * num;\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

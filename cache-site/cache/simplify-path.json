@@ -1,0 +1,40 @@
+{
+  "slug": "simplify-path",
+  "title": "Simplify Path",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack (In-Place Output)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: the returned output, not counted (LeetCode convention)\n- int n, i, start, len, j: O(1) total\n- no recursion, no auxiliary containers",
+  "approach": "Build the canonical path directly in the output string, scanning the input left to right. Extract each component between slashes: for a regular name, append it followed by '/'; for '.', skip; for '..', pop characters back to the previous '/' (never past root). Finally strip the trailing '/'. The output string doubles as the component stack, so no separate container is needed - each character is pushed and popped at most once for O(n) time with O(1) auxiliary space.",
+  "hints": [
+    "When you encounter \"..\" during a left-to-right scan, what is its relationship to the most recently written directory name in the output? The path always begins with '/'.",
+    "Build the answer string directly and use it as the component collection. On \"..\", pop characters back to the last '/'. For \"/home/user/../\", after \"home\" and \"user\" the string is \"/home/user/\", then \"..\" truncates it to \"/home/\".",
+    "```\nresult = \"/\"\ni = 1\nwhile i < n:\n    skip consecutive '/'\n    if at end: break\n    start = i\n    advance i until '/' or end\n    if component is \"..\":\n        if result length > 1:\n            pop trailing '/', then pop until back at '/'\n    elif component is \".\":\n        skip\n    else:\n        append component, then '/'\nif result length > 1: remove trailing '/'\nreturn result\n```",
+    "**Root only** - the input is just the root slash.\n`Input: path = \"/\"` → `Expected: \"/\"`\n⚠️ Bug: unconditionally calling pop_back() at the end → returns \"\"\n\n**Parent of root** - \"..\" at root level must stay at root.\n`Input: path = \"/../\"` → `Expected: \"/\"`\n⚠️ Bug: popping without checking result.size() > 1 → returns \"\" or out-of-bounds access\n\n**Trailing slash** - a single directory with a trailing slash.\n`Input: path = \"/home/\"` → `Expected: \"/home\"`\n⚠️ Bug: not stripping the trailing '/' after the main loop → returns \"/home/\"\n\n**Consecutive slashes** - multiple slashes must collapse to one.\n`Input: path = \"/home//foo/\"` → `Expected: \"/home/foo\"`\n⚠️ Bug: not filtering empty components between consecutive slashes → returns \"/home//foo\"\n\n**Triple dots** - \"...\" is a valid directory name, not \"..\".\n`Input: path = \"/.../a/../b/c/../d/./\"` → `Expected: \"/.../b/d\"`\n⚠️ Bug: checking only path[start]=='.' && path[start+1]=='.' without verifying length==2 → treats \"...\" as \"..\", returns \"/b/d\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the path could be relative (not starting with '/')?",
+      "a": "The algorithm stays the same, but the initial result would be empty instead of \"/\". A leading \"..\" in a relative path must be preserved since there is no root to stop at, so the pop-back guard changes from \"result length > 1\" to \"result is not empty.\" Time and space remain O(n) and O(1)."
+    },
+    {
+      "q": "What if the path can contain symbolic links that must be resolved against the actual filesystem?",
+      "a": "String simplification becomes a preprocessing step. After canonicalizing the string, walk each component and resolve symlinks via filesystem calls such as readlink, which adds I/O latency. The string algorithm itself is unchanged - O(n) time, O(1) space."
+    },
+    {
+      "q": "What if the input arrives as a stream too large to fit in memory?",
+      "a": "Process character by character, buffering only the current component and the output. Since we only append and truncate at the last '/', we never need random access to the input. The output buffer can also be streamed, though truncation on \"..\" requires keeping the unflushed portion in memory - O(max component depth) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string simplifyPath(string path) {\n        string result;\n        result.push_back('/');\n        int n = (int)path.size();\n        int i = 1;\n        while (i < n) {\n            while (i < n && path[i] == '/') i++;\n            if (i >= n) break;\n            int start = i;\n            while (i < n && path[i] != '/') i++;\n            int len = i - start;\n            if (len == 2 && path[start] == '.' && path[start + 1] == '.') {\n                if (result.size() > 1) {\n                    result.pop_back();\n                    while (result.size() > 1 && result.back() != '/') {\n                        result.pop_back();\n                    }\n                }\n            } else if (len == 1 && path[start] == '.') {\n                // current directory, skip\n            } else {\n                for (int j = start; j < i; j++) {\n                    result.push_back(path[j]);\n                }\n                result.push_back('/');\n            }\n        }\n        if (result.size() > 1) {\n            result.pop_back();\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "5/5",
+    "reviewed": 2
+  }
+}

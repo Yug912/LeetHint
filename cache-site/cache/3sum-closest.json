@@ -1,0 +1,40 @@
+{
+  "slug": "3sum-closest",
+  "title": "3Sum Closest",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n²)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): introsort recursion stack → O(log n)\n- no other containers allocated\n- not counted: input vector (modified in place), returned int",
+  "approach": "Sort the array, then fix each index `i` as the first element and use two pointers (`l = i+1`, `r = n-1`) to scan pairs. If the current sum is below target, move `l` right to increase it; if above, move `r` left to decrease it. Track the closest sum seen. An exact match (`sum == target`) allows an early return. Sorting is what makes the two-pointer greedy movement correct: when the sum is too small, advancing `l` is the only move that can increase it, and vice versa.",
+  "hints": [
+    "If you fix one of the three numbers, what does the relative order of the other two tell you about which one to adjust when the current sum is too large or too small? The array has at most 500 elements.",
+    "Sort the array, then for each index `i` use two pointers `l = i+1` and `r = n-1`. With sorted `[-4,-1,1,2]` and target 1, fixing `i=0`: sum = -4 + (-1) + 2 = -3, below 1, so advance `l`.",
+    "```\nsort nums\nbest = nums[0] + nums[1] + nums[2]\nfor i = 0 to n-3:\n    l = i+1, r = n-1\n    while l < r:\n        s = nums[i] + nums[l] + nums[r]\n        if |s - target| < |best - target|: best = s\n        if s < target: l = l+1\n        else if s > target: r = r-1\n        else: return target\nreturn best\n```",
+    "**Wrong initialization** - All triplets are far from a target of 0, so a zero-initialized best never updates.\n`Input: nums = [100,200,300], target = 0` → `Expected: 600`\n⚠️ Bug: initializing `best = 0` instead of `nums[0]+nums[1]+nums[2]` → returns 0\n\n**No sorting** - Two-pointer movement assumes ascending order; without it, advancing `l` does not guarantee a larger sum.\n`Input: nums = [1,5,2,3], target = 6` → `Expected: 6`\n⚠️ Bug: skipping `sort()` and running two pointers on `[1,5,2,3]` → returns 8\n\n**Index reuse** - Using `<=` lets `l` and `r` coincide, reusing one element at two distinct indices.\n`Input: nums = [0,1,2], target = 4` → `Expected: 3`\n⚠️ Bug: `while (l <= r)` instead of `while (l < r)` → reuses index 2, returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to k-Sum Closest: find k integers whose sum is closest to target.",
+      "a": "Recursively reduce k: fix one element, then solve (k-1)-Sum Closest on the remainder. The base case k = 2 uses the same two-pointer scan on the sorted array. TC: O(n^(k-1)), SC: O(log n) for sort plus O(k) recursion depth."
+    },
+    {
+      "q": "What if the array is too large to sort in memory and arrives as a stream?",
+      "a": "Maintain a sorted container (e.g., a balanced BST or sorted multiset) of seen elements. For each new element as the third, run the two-pointer closest-pair query on the sorted structure for the first two. TC: O(n² log n) overall, SC: O(n) for the sorted structure."
+    },
+    {
+      "q": "Return the three indices (not the sum) of the closest triplet.",
+      "a": "Store (value, original_index) pairs and sort by value so the two-pointer logic is unchanged. When updating `best`, also record the three stored indices. TC: O(n²), SC: O(n) for the index array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int threeSumClosest(vector<int>& nums, int target) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        int best = nums[0] + nums[1] + nums[2];\n        for (int i = 0; i < n - 2; i++) {\n            int l = i + 1, r = n - 1;\n            while (l < r) {\n                int sum = nums[i] + nums[l] + nums[r];\n                if (abs(sum - target) < abs(best - target)) {\n                    best = sum;\n                }\n                if (sum < target) {\n                    l++;\n                } else if (sum > target) {\n                    r--;\n                } else {\n                    return target;\n                }\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

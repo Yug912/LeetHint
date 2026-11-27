@@ -1,0 +1,40 @@
+{
+  "slug": "distinct-subsequences",
+  "title": "Distinct Subsequences",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Dynamic Programming (1D space-optimized)",
+  "tc": "O(n * m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- vector<long long> dp: m+1 entries → O(m)\n- recursion depth: none\n- not counted: input strings s, t",
+  "approach": "Use dynamic programming where dp[j] = number of ways to form t[0..j-1] from the prefix of s processed so far. For each character s[i-1], scan j from m down to 1: if s[i-1] == t[j-1], then dp[j] += dp[j-1] (we can either skip s[i-1], keeping dp[j] as is, or use it to extend a match of t[0..j-2]). Scanning right-to-left ensures dp[j-1] still holds the previous row's value. Base case dp[0] = 1 (empty t is always formable once).",
+  "hints": [
+    "If using s[i] to match t[j] reduces the problem to matching t[0..j-1] from s[0..i-1], what family of partial results do you need to maintain as you scan s left to right?",
+    "Use 1D dynamic programming: dp[j] tracks how many ways the s-prefix seen so far forms t[0..j-1]. For each s[i-1], scan j from m down to 1; if s[i-1]==t[j-1], dp[j] += dp[j-1]. In Example 1, the second 'b' (s[3]) updates dp[3] from 1 to 2 by adding dp[2]=1 (the one way to form \"ra\").",
+    "```\ndp[0..m] = 0\ndp[0] = 1\nfor i = 1 to n:\n    for j = m down to 1:\n        if s[i-1] == t[j-1]:\n            dp[j] = dp[j] + dp[j-1]\nreturn dp[m]\n```",
+    "**Minimum input** - both strings are a single identical character.\n`Input: s = \"a\", t = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing dp[0] to 0 instead of 1 → returns 0\n\n**Same character repeated** - multiple position choices create a combinatorial count.\n`Input: s = \"aaa\", t = \"aa\"` → `Expected: 3`\n⚠️ Bug: using `dp[j] = dp[j-1]` (assignment) instead of `dp[j] += dp[j-1]` → returns 1\n\n**Update order** - dp[j] depends on dp[j-1] from the previous row, not the current row.\n`Input: s = \"aa\", t = \"aa\"` → `Expected: 1`\n⚠️ Bug: iterating j from 1 to m (left-to-right) so dp[j-1] is already updated → returns 3\n\n**t longer than s** - no subsequence of s can equal t.\n`Input: s = \"a\", t = \"ab\"` → `Expected: 0`\n⚠️ Bug: allocating dp with size min(n,m)+1 instead of m+1 → out-of-bounds access on dp[2]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the answer must be returned modulo 10^9 + 7?",
+      "a": "Apply modulo at each update: dp[j] = (dp[j] + dp[j-1]) % MOD. This prevents overflow for arbitrarily large counts. Time stays O(n*m), space stays O(m)."
+    },
+    {
+      "q": "What if s arrives as a streaming input (too large to store) while t is small?",
+      "a": "The 1D DP already processes s one character at a time with only O(m) memory. Read each character, update dp right-to-left, then discard the character. Time O(n*m), space O(m), no need to store s."
+    },
+    {
+      "q": "What if you must answer many queries with different t strings against the same fixed s?",
+      "a": "Precompute a table next[i][c] giving, for each position i in s and each character c, the number of ways to extend matches. Then process each query t in O(m) time using this table. Preprocessing is O(n * |alphabet|), space O(n * |alphabet|)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numDistinct(string s, string t) {\n        int n = s.size(), m = t.size();\n        vector<long long> dp(m + 1, 0);\n        dp[0] = 1;\n        for (int i = 1; i <= n; i++) {\n            for (int j = m; j >= 1; j--) {\n                if (s[i - 1] == t[j - 1]) {\n                    dp[j] += dp[j - 1];\n                }\n            }\n        }\n        return (int)dp[m];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

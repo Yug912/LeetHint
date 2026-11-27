@@ -1,0 +1,40 @@
+{
+  "slug": "longest-increasing-path-in-a-matrix",
+  "title": "Longest Increasing Path in a Matrix",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "DFS with Memoization",
+  "tc": "O(m*n)",
+  "sc": "O(m*n)",
+  "spaceBreakdown": "- vector<vector<int>> memo: m × n entries → O(m*n)\n- recursion call-stack depth: up to m*n in worst case (snake-shaped path) → O(m*n)\n- dr, dc direction arrays: fixed size 4 each → O(1)\n- not counted: input matrix",
+  "approach": "Since every step must move to a strictly larger value, the graph of valid moves forms a DAG with no cycles. For each cell, the longest increasing path starting from it is 1 plus the maximum of the longest paths from its larger neighbors. We use DFS with memoization: compute each cell's answer once, cache it, and reuse it when the cell is reached from different starting points. This gives O(m×n) time since each cell is computed exactly once and each computation checks only 4 neighbors.",
+  "hints": [
+    "Since every step must move to a strictly larger value, can any path ever revisit a cell it has already been to? The matrix can be up to 200 × 200.",
+    "Use DFS with memoization: for each cell, cache the longest path starting there. In Example 1, cell (2,1)=1 has larger neighbors (2,0)=2 and (1,1)=6, so its answer is 1 + max(dfs(2,0), dfs(1,1)) = 1 + max(3, 2) = 4.",
+    "```\nfor each cell (i, j):\n    answer = max(answer, dfs(i, j))\n\ndfs(i, j):\n    if memo[i][j] computed: return it\n    best = 1\n    for each in-bounds neighbor (ni, nj) with matrix[ni][nj] > matrix[i][j]:\n        best = max(best, 1 + dfs(ni, nj))\n    memo[i][j] = best\n    return best\n```",
+    "**Single cell** - only one cell, no moves possible.\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: initializing `best = 0` instead of `best = 1` → returns 0\n\n**Reverse sorted row** - longest path goes right-to-left.\n`Input: [[3,2,1]]` → `Expected: 3`\n⚠️ Bug: only checking right and down neighbors → returns 1 (misses the leftward path 1→2→3)\n\n**Two-cell increasing path** - simplest multi-cell path.\n`Input: [[1,2]]` → `Expected: 2`\n⚠️ Bug: using `best = max(best, dfs(ni, nj))` instead of `best = max(best, 1 + dfs(ni, nj))` → returns 1\n\n**Snake path covering all cells** - longest path visits every cell.\n`Input: [[1,2,3],[6,5,4],[7,8,9]]` → `Expected: 9`\n⚠️ Bug: omitting memoization, recomputing overlapping subproblems → TLE on 200×200 input"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual longest increasing path, not just its length.",
+      "a": "During DFS, store which neighbor gave the maximum in a separate `next` array. After finding the starting cell with the largest memo value, follow the `next` pointers to reconstruct the path. Time and space complexity remain O(m×n)."
+    },
+    {
+      "q": "What if diagonal moves are also allowed (8 directions total)?",
+      "a": "Add four more direction vectors: (-1,-1), (-1,1), (1,-1), (1,1). The algorithm is unchanged since strictly increasing values still prevent cycles. Time complexity stays O(m×n), space stays O(m×n)."
+    },
+    {
+      "q": "Find the longest path that is either strictly increasing or strictly decreasing.",
+      "a": "Run the same algorithm twice: once with the condition `matrix[ni][nj] > matrix[i][j]` and once with `matrix[ni][nj] < matrix[i][j]`. Return the maximum of both runs. Time complexity O(m×n), space O(m×n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestIncreasingPath(vector<vector<int>>& matrix) {\n        int m = matrix.size();\n        int n = matrix[0].size();\n        vector<vector<int>> memo(m, vector<int>(n, 0));\n        int result = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                result = max(result, dfs(matrix, memo, i, j, m, n));\n            }\n        }\n        return result;\n    }\nprivate:\n    int dfs(vector<vector<int>>& matrix, vector<vector<int>>& memo, int i, int j, int m, int n) {\n        if (memo[i][j] != 0) return memo[i][j];\n        int best = 1;\n        int dr[] = {-1, 1, 0, 0};\n        int dc[] = {0, 0, -1, 1};\n        for (int d = 0; d < 4; d++) {\n            int ni = i + dr[d];\n            int nj = j + dc[d];\n            if (ni >= 0 && ni < m && nj >= 0 && nj < n && matrix[ni][nj] > matrix[i][j]) {\n                best = max(best, 1 + dfs(matrix, memo, ni, nj, m, n));\n            }\n        }\n        memo[i][j] = best;\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

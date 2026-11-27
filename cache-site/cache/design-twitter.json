@@ -1,0 +1,39 @@
+{
+  "slug": "design-twitter",
+  "title": "Design Twitter",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Merge k Sorted Lists with Max-Heap",
+  "tc": "O(F log F)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<pair<int,int>>> tweets: up to n tweet entries total → O(n)\n- unordered_map<int, unordered_set<int>> following: up to n follow relationships → O(n)\n- int timestamp: O(1)\n- priority_queue in getNewsFeed: up to 501 entries → O(1) (bounded constant, temporary)\n- unordered_set followees in getNewsFeed: up to 501 entries → O(1) (bounded constant, temporary)\n- not counted: returned vector<int> result",
+  "approach": "Store each user's tweets as a list of (globalTimestamp, tweetId) pairs, using a monotonically increasing counter as the timestamp. Maintain each user's set of followees. For getNewsFeed, treat the user and all followees as k sorted lists (newest-first) and merge them with a max-heap: push each source's most recent tweet, then repeatedly pop the newest, add it to the result, and push that source's next-oldest tweet, until 10 tweets are collected or the heap is empty.",
+  "hints": [
+    "If each user's tweets are already stored in time order, which specific tweets are the only candidates for being the next most recent one in the merged feed? The feed needs at most 10 tweets, and userIds range from 1 to 500.",
+    "Use a max-heap to merge k sorted tweet lists. After user 1 follows user 2 and user 2 posts tweet 6, the heap holds user 1's tweet 5 (ts=0) and user 2's tweet 6 (ts=1); pop tweet 6 first, then tweet 5.",
+    "```\npostTweet(userId, tweetId):\n    append (counter++, tweetId) to tweets[userId]\n\ngetNewsFeed(userId):\n    sources = following[userId] ∪ {userId}\n    push each source's newest tweet onto max-heap\n    while heap not empty and result < 10:\n        pop newest, add to result\n        if that source has older tweets, push next one\n    return result\n```",
+    "**Self-tweets only** - User posts but follows nobody.\n`postTweet(1, 5); getNewsFeed(1)` → `Expected: [5]`\n⚠️ Bug: Iterating only over following[userId] without inserting userId → returns `[]`\n\n**More than 10 tweets** - Feed must cap at 10.\n`postTweet(1,1); postTweet(1,2); postTweet(1,3); postTweet(1,4); postTweet(1,5); postTweet(1,6); postTweet(1,7); postTweet(1,8); postTweet(1,9); postTweet(1,10); postTweet(1,11); getNewsFeed(1)` → `Expected: [11,10,9,8,7,6,5,4,3,2]`\n⚠️ Bug: Loop condition `result.size() <= 10` instead of `< 10` → returns `[11,10,9,8,7,6,5,4,3,2,1]`\n\n**Duplicate follow** - Same followee added twice.\n`follow(1, 2); follow(1, 2); postTweet(2, 6); getNewsFeed(1)` → `Expected: [6]`\n⚠️ Bug: Using vector<int> for following list → tweet 6 appears twice, returns `[6, 6]`\n\n**Empty feed** - No tweets, no follows.\n`getNewsFeed(1)` → `Expected: []`\n⚠️ Bug: Accessing tweets[f].back() without checking emptiness → undefined behavior / crash"
+  ],
+  "followUps": [
+    {
+      "q": "How would you scale getNewsFeed to millions of users each following thousands of others?",
+      "a": "Switch to fan-out-on-write: when a user posts, push the tweet ID into each follower's pre-materialized feed (capped at the most recent N). getNewsFeed becomes O(1) - just read the pre-built list. postTweet becomes O(F) where F is the follower count."
+    },
+    {
+      "q": "If each user can accumulate millions of historical tweets, how do you bound memory?",
+      "a": "Since getNewsFeed never needs more than the 10 newest tweets from any single user, store only the most recent 10-20 tweets per user in a ring buffer. Older tweets are evicted automatically. SC drops to O(U × 10) for tweet storage where U is the user count."
+    },
+    {
+      "q": "How would you support deleteTweet(tweetId) so deleted tweets vanish from all feeds?",
+      "a": "Store tweets in a global map keyed by tweetId with a \"deleted\" flag. When popping from the heap in getNewsFeed, skip any tweet whose flag is set and continue pulling from that source. TC becomes O((F + 10 + D) log F) where D is deleted tweets skipped."
+    }
+  ],
+  "code": {
+    "cpp": "class Twitter {\n    int timestamp;\n    unordered_map<int, vector<pair<int,int>>> tweets;\n    unordered_map<int, unordered_set<int>> following;\npublic:\n    Twitter() : timestamp(0) {}\n    \n    void postTweet(int userId, int tweetId) {\n        tweets[userId].push_back({timestamp++, tweetId});\n    }\n    \n    vector<int> getNewsFeed(int userId) {\n        priority_queue<pair<int, pair<int,int>>> pq;\n        \n        unordered_set<int> followees;\n        auto it = following.find(userId);\n        if (it != following.end()) {\n            followees = it->second;\n        }\n        followees.insert(userId);\n        \n        for (int f : followees) {\n            auto tit = tweets.find(f);\n            if (tit != tweets.end() && !tit->second.empty()) {\n                int idx = tit->second.size() - 1;\n                pq.push({tit->second[idx].first, {f, idx}});\n            }\n        }\n        \n        vector<int> result;\n        while (!pq.empty() && result.size() < 10) {\n            auto top = pq.top();\n            pq.pop();\n            int uid = top.second.first;\n            int idx = top.second.second;\n            result.push_back(tweets[uid][idx].second);\n            if (idx > 0) {\n                idx--;\n                pq.push({tweets[uid][idx].first, {uid, idx}});\n            }\n        }\n        return result;\n    }\n    \n    void follow(int followerId, int followeeId) {\n        following[followerId].insert(followeeId);\n    }\n    \n    void unfollow(int followerId, int followeeId) {\n        auto it = following.find(followerId);\n        if (it != following.end()) {\n            it->second.erase(followeeId);\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

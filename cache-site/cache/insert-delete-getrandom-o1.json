@@ -1,0 +1,39 @@
+{
+  "slug": "insert-delete-getrandom-o1",
+  "title": "Insert Delete GetRandom O(1)",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map + Array Swap-Remove",
+  "tc": "O(1)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> vals: up to n stored elements → O(n)\n- unordered_map<int,int> idx: up to n value→index entries → O(n)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Store all elements in a dynamic array so getRandom can index a uniformly random position in O(1). Keep a hash map from each value to its array index so insert/remove can locate a value in O(1) average. On remove, swap the target element with the last array element, fix the swapped element's index in the map, then pop the back and erase the target - this avoids shifting and keeps removal O(1) average.",
+  "hints": [
+    "What does a plain array give you for free that a value-keyed set does not, and what does a value-keyed set give you that a plain array does not? The constraint requires every one of insert, remove, and getRandom in average O(1).",
+    "Use a dynamic array plus a hash map from value → array index. Example: vals=[1,2], map={1:0,2:1}; remove(1) swaps vals[0] with vals[1], sets map[2]=0, pops the back, erases map[1] → vals=[2], map={2:0}.",
+    "```\ninsert(val):\n  if val in map: return false\n  map[val] = len(vals)\n  vals.append(val); return true\n\nremove(val):\n  if val not in map: return false\n  i = map[val]; last = vals[-1]\n  vals[i] = last; map[last] = i\n  vals.pop(); map.erase(val); return true\n\ngetRandom():\n  return vals[rand() % len(vals)]\n```",
+    "**Removing the last element itself** - val equals the only/last array element.\n`Input: insert(5), remove(5)` → `Expected: true, set empty`\n⚠️ Bug: erasing val from the map *before* updating map[last] when val==last → re-inserts a stale entry, leaving the set non-empty.\n\n**Duplicate insert** - inserting a value already present.\n`Input: insert(1), insert(1)` → `Expected: false`\n⚠️ Bug: skipping the map.count(val) check → appends a duplicate, making getRandom biased toward 1.\n\n**Negative values** - constraint allows val as low as -2^31.\n`Input: insert(-5), getRandom()` → `Expected: -5`\n⚠️ Bug: using val directly as an array index → out-of-bounds access / crash.\n\n**Single-element getRandom** - only one element stored.\n`Input: insert(7), getRandom()` → `Expected: 7`\n⚠️ Bug: computing rand() % (vals.size()-1) instead of rand() % vals.size() → modulo by zero / wrong index."
+  ],
+  "followUps": [
+    {
+      "q": "Support duplicate values (a multiset) with insert, remove (one copy), and uniform getRandom, all O(1) average.",
+      "a": "Keep the same array, but map each value to a set (or small list) of its indices. On remove, take any index from that value's set, swap-remove as before, and update the swapped element's index set. getRandom stays a single array index. TC O(1) average, SC O(n)."
+    },
+    {
+      "q": "Each element has a positive weight; getRandom must return elements proportional to weight.",
+      "a": "Store (value, weight) in the array and maintain a prefix-sum array of weights. Pick a random integer in [0, totalWeight) and binary-search the prefix sums to find the owner. Insert/remove need prefix-sum updates - O(n) naively, O(log n) with a Fenwick tree. TC O(log n) per op, SC O(n)."
+    },
+    {
+      "q": "Elements arrive in a stream of unknown length; store only O(k) elements and support uniform getRandom over all seen elements.",
+      "a": "Use reservoir sampling (Algorithm R): keep a reservoir of size k; for the i-th element with i > k, keep it with probability k/i, evicting a uniformly random slot. After the stream the reservoir is a uniform sample. TC O(n) over the stream, SC O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class RandomizedSet {\n    vector<int> vals;\n    unordered_map<int,int> idx;\npublic:\n    RandomizedSet() {}\n    \n    bool insert(int val) {\n        if (idx.count(val)) return false;\n        idx[val] = (int)vals.size();\n        vals.push_back(val);\n        return true;\n    }\n    \n    bool remove(int val) {\n        auto it = idx.find(val);\n        if (it == idx.end()) return false;\n        int i = it->second;\n        int last = vals.back();\n        vals[i] = last;\n        idx[last] = i;\n        vals.pop_back();\n        idx.erase(it);\n        return true;\n    }\n    \n    int getRandom() {\n        return vals[rand() % vals.size()];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

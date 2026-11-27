@@ -1,0 +1,40 @@
+{
+  "slug": "letter-combinations-of-a-phone-number",
+  "title": "Letter Combinations of a Phone Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Backtracking",
+  "tc": "O(4^n · n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<string> mapping: 10 fixed strings → O(1)\n- string current: at most n characters → O(n)\n- recursion call-stack depth: at most n → O(n)\n- not counted: input string, returned vector<string> result",
+  "approach": "Each digit maps to a set of letters; the answer is the Cartesian product of those sets, one letter chosen per digit. We build combinations recursively: at each position, try every letter mapped to the current digit, append it, recurse to the next digit, then backtrack. When we reach the end of the input, the accumulated string is a complete combination.",
+  "hints": [
+    "For each digit you pick exactly one of its letters. How does the full set of answers relate to the choices available at each of the digit positions? (digits.length ≤ 4)",
+    "Use backtracking with a recursive helper. For \"23\": fix 'a' from digit '2', recurse into digit '3' appending 'd','e','f' to get \"ad\",\"ae\",\"af\", then backtrack and try 'b'.",
+    "```\nbacktrack(index, current):\n    if index == len(digits):\n        add current to result\n        return\n    for each letter in mapping[digits[index]]:\n        append letter to current\n        backtrack(index + 1, current)\n        remove last letter\n```",
+    "**Single digit** - only one digit, so each combination is one character.\n`Input: \"2\"` → `Expected: [\"a\",\"b\",\"c\"]`\n⚠️ Bug: starting the recursion loop at index 1 instead of 0 → returns []\n\n**All four-letter digits** - digits 7 and 9 each map to 4 letters.\n`Input: \"9999\"` → `Expected: 256 combinations (4^4)`\n⚠️ Bug: hard-coding 3 letters per digit (e.g., `letters.substr(0,3)`) → returns 81 combinations, missing every 'z'\n\n**Empty string** - no digits to process.\n`Input: \"\"` → `Expected: []`\n⚠️ Bug: skipping the empty-input guard and recursing immediately → returns [\"\"] (one empty string)"
+  ],
+  "followUps": [
+    {
+      "q": "What if digits can include '1' which maps to no letters - how should the output change?",
+      "a": "Treat '1' as a position with zero choices: if any '1' appears, the result is empty. In the backtracking loop, if the mapped letter string is empty, return without adding anything, so the whole product collapses to zero combinations. TC stays O(4^n · n), SC O(n)."
+    },
+    {
+      "q": "What if digits.length can be up to 15 - can you still enumerate all combinations?",
+      "a": "Worst case 4^15 ≈ 10^9 combinations, far too many to store. You would switch to a generator/iterator that yields one combination at a time instead of materializing a vector, so memory becomes O(n) for the current string plus O(n) recursion depth. Time is still proportional to the number of combinations produced."
+    },
+    {
+      "q": "What if you must return combinations sorted lexicographically?",
+      "a": "Since each digit's letter mapping is already in alphabetical order and we iterate digits left to right, the natural backtracking order already produces lexicographic output - no extra sort needed. If mappings were unsorted, sort each digit's letter string once before recursing. TC unchanged, SC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> letterCombinations(string digits) {\n        if (digits.empty()) return {};\n        vector<string> mapping = {\"\", \"\", \"abc\", \"def\", \"ghi\", \"jkl\", \"mno\", \"pqrs\", \"tuv\", \"wxyz\"};\n        vector<string> result;\n        string current;\n        backtrack(digits, 0, current, result, mapping);\n        return result;\n    }\nprivate:\n    void backtrack(const string& digits, int index, string& current,\n                   vector<string>& result, const vector<string>& mapping) {\n        if (index == (int)digits.size()) {\n            result.push_back(current);\n            return;\n        }\n        const string& letters = mapping[digits[index] - '0'];\n        for (char c : letters) {\n            current.push_back(c);\n            backtrack(digits, index + 1, current, result, mapping);\n            current.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

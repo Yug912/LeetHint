@@ -1,0 +1,40 @@
+{
+  "slug": "roman-to-integer",
+  "title": "Roman to Integer",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Right-to-Left Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int result, prev, cur, i: scalar variables → O(1)\n- val() helper: uses only a switch, no allocation → O(1)\n- no containers, no recursion\n- not counted: input string s",
+  "approach": "Scan the string from right to left, tracking the previous symbol's value. If the current symbol's value is smaller than the previous one, it means a subtraction pair (like IV or IX) was encountered, so subtract the current value; otherwise add it. This works because in a valid Roman numeral, a smaller value before a larger one always indicates subtraction, and scanning backwards lets us detect this with a single comparison against the last-seen value. A simple switch maps each character to its integer value in O(1).",
+  "hints": [
+    "Look at IV (4) versus VI (6): both contain the same two symbols, yet the results differ. What property of the symbol ordering determines whether the smaller value contributes positively or negatively?\nThe string length is at most 15, so a single pass over the characters is trivially fast.",
+    "Scan right to left, tracking the previous value seen. If the current value is smaller than the previous, subtract it; otherwise add it. For MCMXCIV: V=5 (add, total=5), I=1 < 5 (subtract, total=4), C=100 > 1 (add, total=104), X=10 < 100 (subtract, total=94)...",
+    "```\nresult = 0\nprev = 0\nfor i from last index down to 0:\n    cur = value(s[i])\n    if cur < prev:\n        result = result - cur\n    else:\n        result = result + cur\n    prev = cur\nreturn result\n```",
+    "**Single character** - Only one symbol, no subtraction possible.\n`Input: s = \"M\"` → `Expected: 1000`\n⚠️ Bug: forward scan comparing s[i] with s[i+1] without bounds check on last index → reads past end of string, returns 0 or garbage\n\n**Subtraction pair** - A smaller symbol precedes a larger one.\n`Input: s = \"IV\"` → `Expected: 4`\n⚠️ Bug: always adding each symbol's value without checking relative order → returns 6\n\n**All same characters** - No subtraction, all additions.\n`Input: s = \"III\"` → `Expected: 3`\n⚠️ Bug: using `cur <= prev` instead of `cur < prev` for the subtraction test → returns -1\n\n**Multiple subtraction pairs** - Several subtractive combinations in one string.\n`Input: s = \"MCMXCIV\"` → `Expected: 1994`\n⚠️ Bug: summing all symbol values without any subtraction logic → returns 2216"
+  ],
+  "followUps": [
+    {
+      "q": "Convert an integer (1-3999) back to a Roman numeral.",
+      "a": "Use the same value-symbol pairs sorted descending. Greedily subtract the largest fitting value and append its symbol until the number reaches zero. TC: O(1) since at most 15 symbols are produced. SC: O(1)."
+    },
+    {
+      "q": "Validate whether a string is a well-formed Roman numeral.",
+      "a": "Check repetition limits (I, X, C, M at most 3 consecutive; V, L, D at most 1) and that subtraction only occurs in the six allowed pairs (IV, IX, XL, XC, CD, CM). TC: O(n). SC: O(1)."
+    },
+    {
+      "q": "Characters arrive one at a time in a stream; output the running total after each character.",
+      "a": "Keep the previous value. When a new character has a larger value than the previous, subtract twice the previous (undo the prior add and apply the subtraction) then add the new value. TC: O(1) per character. SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int val(char c) {\n        switch (c) {\n            case 'I': return 1;\n            case 'V': return 5;\n            case 'X': return 10;\n            case 'L': return 50;\n            case 'C': return 100;\n            case 'D': return 500;\n            case 'M': return 1000;\n            default: return 0;\n        }\n    }\npublic:\n    int romanToInt(string s) {\n        int result = 0;\n        int prev = 0;\n        for (int i = (int)s.size() - 1; i >= 0; --i) {\n            int cur = val(s[i]);\n            if (cur < prev) {\n                result -= cur;\n            } else {\n                result += cur;\n            }\n            prev = cur;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

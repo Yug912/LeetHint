@@ -1,0 +1,40 @@
+{
+  "slug": "string-to-integer-atoi",
+  "title": "String to Integer (atoi)",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Single-Pass Parsing",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int i, n, sign: scalar variables → O(1)\n- long long result: scalar variable → O(1)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "The input string follows a fixed structure: optional leading whitespace, an optional sign character, then a sequence of digits. We parse this in a single left-to-right pass using a `long long` accumulator to avoid overflow during digit accumulation. An early-break check stops accumulation once the value exceeds `INT_MAX + 1` (the absolute value of `INT_MIN`), preventing `long long` overflow on very long digit strings (up to 200 digits). After accumulation, we apply the sign and clamp to the 32-bit signed integer range.",
+  "hints": [
+    "In every example, what types of characters can appear before the first digit, and does their relative order ever change?",
+    "Use a single-pass linear scan with a `long long` accumulator. For `\" -042\"`: skip the space, read `'-'` to set sign = -1, then accumulate digits 0 → 4 → 42.",
+    "```\nskip leading spaces\nif next char is '-' or '+', set sign and advance\nresult = 0\nwhile next char is a digit:\n    result = result * 10 + digit\n    if result > INT_MAX + 1: break\nresult = result * sign\nclamp result to [INT_MIN, INT_MAX]\nreturn result\n```",
+    "**Whitespace before sign** - A space appears before the '-' character.\n`Input: \" -042\"` → `Expected: -42`\n⚠️ Bug: checking for sign before skipping whitespace → returns 0\n\n**Overflow past INT_MAX** - The digit string equals 2^31, one past the 32-bit maximum.\n`Input: \"2147483648\"` → `Expected: 2147483647`\n⚠️ Bug: accumulating in `int` instead of `long long` → signed overflow, wraps to -2147483648\n\n**Multiple sign characters** - A '+' immediately followed by '-'.\n`Input: \"+-12\"` → `Expected: 0`\n⚠️ Bug: reading signs in a loop (sign *= -1 for each '-') → returns -12\n\n**Long digit string** - 200 nines, exceeding 64-bit range (10^200 ≫ 9.2×10^18).\n`Input: \"999...999\" (200 nines)` → `Expected: 2147483647`\n⚠️ Bug: no early break when result exceeds 32-bit range → long long overflow, returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input is a stream (e.g., from a network socket) and you can only read one character at a time with no lookahead?",
+      "a": "The same single-pass approach works. Read characters one at a time, maintaining state (whitespace-skipping, sign-reading, digit-accumulating). The early-break check prevents overflow. TC remains O(n), SC remains O(1)."
+    },
+    {
+      "q": "What if the string can contain hexadecimal numbers (e.g., \"0x1A\")?",
+      "a": "After reading an optional sign and a leading '0', check for 'x' or 'X'. If present, switch to hex parsing: multiply by 16 and add the hex digit value (0-9, a-f, A-F). The same clamping logic applies. TC remains O(n), SC remains O(1)."
+    },
+    {
+      "q": "What if you need to parse multiple integers separated by non-digit characters in a single pass (e.g., \"12,34,56\")?",
+      "a": "After parsing one integer, continue scanning from where you stopped. Skip non-digit characters until you find the next digit or optional sign, then parse the next integer. Return a vector of all parsed integers. TC is O(n), SC is O(k) where k is the number of integers found."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int myAtoi(string s) {\n        int i = 0;\n        int n = s.size();\n        while (i < n && s[i] == ' ') i++;\n        int sign = 1;\n        if (i < n && (s[i] == '-' || s[i] == '+')) {\n            if (s[i] == '-') sign = -1;\n            i++;\n        }\n        long long result = 0;\n        while (i < n && s[i] >= '0' && s[i] <= '9') {\n            result = result * 10 + (s[i] - '0');\n            if (result > (long long)INT_MAX + 1) break;\n            i++;\n        }\n        result *= sign;\n        if (result < INT_MIN) return INT_MIN;\n        if (result > INT_MAX) return INT_MAX;\n        return (int)result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "5/5",
+    "reviewed": 2
+  }
+}

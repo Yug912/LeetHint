@@ -1,0 +1,40 @@
+{
+  "slug": "find-all-anagrams-in-a-string",
+  "title": "Find All Anagrams in a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> pCount(26): 26 ints → O(1)\n- vector<int> wCount(26): 26 ints → O(1)\n- int matches, loop variables: O(1)\n- not counted: input strings, returned vector",
+  "approach": "An anagram of p has identical character frequencies to p. Since only 26 lowercase letters exist, maintain a fixed-size window of length |p| over s, with two frequency arrays of size 26 and a \"matches\" counter tracking how many letters currently have equal counts in the window and in p. Slide the window one step at a time, updating only the two affected letters and the matches counter in O(1) per step. When matches == 26, the window is an anagram, so record its start index.",
+  "hints": [
+    "An anagram of p shares the exact same per-letter counts as p. With only 26 lowercase letters, what single integer could summarize whether a substring of s matches p's letter profile?",
+    "Use a fixed-size sliding window of length |p| over s with two size-26 frequency arrays and a \"matches\" counter (how many letters have equal counts). For s=\"cbaebabacd\", p=\"abc\": window \"cba\" gives a=b=c=1, matching p, so index 0 is recorded.",
+    "```\nbuild pCount[26] from p\nfill wCount[26] for first |p| chars of s\nmatches = number of i in 0..25 with pCount[i] == wCount[i]\nif matches == 26: record 0\nfor i from |p| to |s|-1:\n    remove s[i-|p|] from wCount, update matches\n    add s[i] to wCount, update matches\n    if matches == 26: record i-|p|+1\n```",
+    "**p longer than s** - window never fits.\n`Input: s = \"ab\", p = \"abc\"` → `Expected: []`\n⚠️ Bug: skipping the `m > n` guard → reads s out of bounds / returns garbage.\n\n**Single character match** - window is one char.\n`Input: s = \"a\", p = \"a\"` → `Expected: [0]`\n⚠️ Bug: forgetting to check the initial window before the loop → returns `[]`.\n\n**All identical characters** - frequency of one letter dominates.\n`Input: s = \"aaaa\", p = \"aa\"` → `Expected: [0,1,2]`\n⚠️ Bug: using a set of characters instead of frequency counts → returns `[]` because set size is 1 for both but counts differ.\n\n**No anagram exists** - matches never reaches 26.\n`Input: s = \"abcdef\", p = \"xyz\"` → `Expected: []`\n⚠️ Bug: recording index when `matches > 0` instead of `== 26` → returns `[0,1,2,3,4]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if p and s can contain any Unicode characters, not just lowercase English letters?",
+      "a": "Replace the size-26 arrays with hash maps keyed by character, and compare the number of keys whose counts match. The matches counter still works; only the alphabet size grows. TC stays O(n), SC becomes O(k) where k is the number of distinct characters in p."
+    },
+    {
+      "q": "What if s arrives as an unbounded stream and cannot be stored in memory?",
+      "a": "Keep a circular buffer of the last |p| characters and the running frequency map plus matches counter. Emit each matching start index as it is detected. TC remains O(n) amortized, SC is O(|p|) for the buffer and frequency map."
+    },
+    {
+      "q": "What if you must report substrings that are anagrams of p allowing up to k character substitutions?",
+      "a": "Track a \"distance\" value (e.g., count of letters whose window frequency differs from p, or sum of absolute differences) instead of an exact matches counter. Record a start index whenever the distance is within the allowed budget. TC stays O(n), SC stays O(1) for the fixed alphabet."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findAnagrams(string s, string p) {\n        vector<int> result;\n        int n = s.size(), m = p.size();\n        if (m > n) return result;\n\n        vector<int> pCount(26, 0), wCount(26, 0);\n        for (char c : p) pCount[c - 'a']++;\n\n        for (int i = 0; i < m; i++) wCount[s[i] - 'a']++;\n\n        int matches = 0;\n        for (int i = 0; i < 26; i++) {\n            if (pCount[i] == wCount[i]) matches++;\n        }\n\n        if (matches == 26) result.push_back(0);\n\n        for (int i = m; i < n; i++) {\n            int add = s[i] - 'a';\n            int rem = s[i - m] - 'a';\n\n            wCount[rem]--;\n            if (wCount[rem] == pCount[rem]) matches++;\n            else if (wCount[rem] + 1 == pCount[rem]) matches--;\n\n            wCount[add]++;\n            if (wCount[add] == pCount[add]) matches++;\n            else if (wCount[add] - 1 == pCount[add]) matches--;\n\n            if (matches == 26) result.push_back(i - m + 1);\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

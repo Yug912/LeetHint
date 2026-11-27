@@ -1,0 +1,40 @@
+{
+  "slug": "palindrome-partitioning",
+  "title": "Palindrome Partitioning",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Backtracking",
+  "tc": "O(n · 2^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<string> current: up to n substrings totaling n characters → O(n)\n- recursion call stack: up to n frames deep (each character its own piece) → O(n)\n- isPalindrome local variables (left, right): O(1)\n- not counted: input string s, returned vector<vector<string>> result",
+  "approach": "Use backtracking to explore all possible ways to partition the string. At each position, try every substring starting there; if it's a palindrome (checked with two pointers comparing from both ends), add it to the current partition and recurse from the next position. When we reach the end of the string, the current partition is complete and valid. This explores every valid partition because any valid partition must have a palindromic first piece, and after choosing it, the problem reduces to partitioning the remaining suffix.",
+  "hints": [
+    "If you've fixed the first palindromic piece of a partition, what does that tell you about where the next piece must begin? The constraint n ≤ 16 means an approach that considers every possible cut point is feasible.",
+    "Backtracking with two-pointer palindrome checks. At each position, try every substring starting there; if it's a palindrome (verified by comparing characters from both ends moving inward), recurse from the character after it. For s = \"aab\" at position 0, \"a\" is a palindrome so recurse from position 1, and \"aa\" is also a palindrome so recurse from position 2.",
+    "```\nfunction backtrack(s, start, current, result):\n    if start == length(s):\n        add copy of current to result\n        return\n    for end from start to length(s) - 1:\n        if s[start..end] is a palindrome:\n            add s[start..end] to current\n            backtrack(s, end + 1, current, result)\n            remove last element from current\n```",
+    "**Smallest input** - single character string\n`Input: s = \"a\"` → `Expected: [[\"a\"]]`\n⚠️ Bug: base case `if (start > n)` instead of `if (start == n)` → at start=1 the for loop doesn't execute and the function returns without recording, output is `[]`\n\n**All characters equal** - every substring is a palindrome, maximum partition count\n`Input: s = \"aaa\"` → `Expected: [[\"a\",\"a\",\"a\"],[\"a\",\"aa\"],[\"aa\",\"a\"],[\"aaa\"]]`\n⚠️ Bug: only trying `end = start` (single characters) instead of all end values → returns `[[\"a\",\"a\",\"a\"]]`\n\n**No multi-character palindrome** - adjacent characters differ\n`Input: s = \"ab\"` → `Expected: [[\"a\",\"b\"]]`\n⚠️ Bug: `s.substr(start, end)` instead of `s.substr(start, end - start + 1)` → at start=0, end=0, substr(0,0) returns \"\" → output is `[[\"\", \"b\"]]`\n\n**Full string is a palindrome** - entire string as one piece is valid\n`Input: s = \"aba\"` → `Expected: [[\"a\",\"b\",\"a\"],[\"aba\"]]`\n⚠️ Bug: loop condition `end < n - 1` instead of `end < n` → never checks the full string as a single piece, returns `[[\"a\",\"b\",\"a\"]]`"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of returning all partitions, return only the minimum number of cuts needed.",
+      "a": "This is Palindrome Partitioning II. Use DP where dp[i] = minimum cuts for s[0..i-1]; for each i, check all j < i where s[j..i-1] is a palindrome and set dp[i] = min(dp[j] + 1). Precompute palindromes with a 2D boolean table. O(n²) time, O(n²) space."
+    },
+    {
+      "q": "If s.length ≤ 1000, enumerate all partitions is infeasible. Count the number of valid partitions modulo 10^9+7.",
+      "a": "Use DP where dp[i] = number of ways to partition s[0..i-1], with dp[0] = 1. For each i, for each j < i where s[j..i-1] is a palindrome, dp[i] += dp[j]. Check palindromes with expand-around-center or a precomputed table. O(n²) time, O(n) space."
+    },
+    {
+      "q": "Partition s into exactly k palindromic substrings. Return whether it is possible.",
+      "a": "Use DP where dp[i][j] = true if s[0..i-1] can be partitioned into exactly j palindromes, with dp[0][0] = true. For each i and j, check all m < i where s[m..i-1] is a palindrome: dp[i][j] |= dp[m][j-1]. O(n² · k) time, O(n · k) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<string>> partition(string s) {\n        vector<vector<string>> result;\n        vector<string> current;\n        int n = s.size();\n        backtrack(s, 0, n, current, result);\n        return result;\n    }\n\nprivate:\n    void backtrack(const string& s, int start, int n,\n                   vector<string>& current,\n                   vector<vector<string>>& result) {\n        if (start == n) {\n            result.push_back(current);\n            return;\n        }\n        for (int end = start; end < n; end++) {\n            if (isPalindrome(s, start, end)) {\n                current.push_back(s.substr(start, end - start + 1));\n                backtrack(s, end + 1, n, current, result);\n                current.pop_back();\n            }\n        }\n    }\n\n    bool isPalindrome(const string& s, int left, int right) {\n        while (left < right) {\n            if (s[left] != s[right]) return false;\n            left++;\n            right--;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

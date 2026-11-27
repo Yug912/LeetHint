@@ -1,0 +1,40 @@
+{
+  "slug": "range-sum-of-bst",
+  "title": "Range Sum of BST",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS with BST Pruning",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- No containers/arrays allocated\n- Recursion call-stack depth: O(h) where h = tree height (worst case O(n) for skewed tree, O(log n) for balanced)\n- Not counted: input tree, returned int",
+  "approach": "Since the input is a binary search tree, we can prune subtrees that cannot contain values in [low, high]. If a node's value is below `low`, its entire left subtree is also below `low` (BST property), so we skip it and only recurse right. If a node's value is above `high`, we skip the right subtree and only recurse left. If the node's value is within range, we add it and explore both children. This visits only the nodes that could possibly contribute, giving O(n) worst case but typically far fewer.",
+  "hints": [
+    "At a node whose value is below `low`, which of its two subtrees could still contain values inside the range [low, high]? The input is a binary search tree, so every value in a node's left subtree is smaller than the node's value.",
+    "Use BST traversal with branch pruning: skip the left subtree when the node's value is below `low`, skip the right when above `high`. At root = 10 with low = 7, high = 15: 10 is in range (add it), 10 > 7 so explore left, 10 < 15 so explore right.",
+    "```\nfunction rangeSum(node, low, high):\n    if node is null: return 0\n    sum = 0\n    if low <= node.val <= high:\n        sum += node.val\n    if node.val > low:\n        sum += rangeSum(node.left, low, high)\n    if node.val < high:\n        sum += rangeSum(node.right, low, high)\n    return sum\n```",
+    "**Boundary at low** - node value equals low exactly\n`Input: root = [7], low = 7, high = 15` → `Expected: 7`\n⚠️ Bug: using strict `node.val > low` for the inclusion check → returns 0\n\n**Boundary at high** - node value equals high exactly\n`Input: root = [15], low = 7, high = 15` → `Expected: 15`\n⚠️ Bug: using strict `node.val < high` for the inclusion check → returns 0\n\n**Wrong prune direction** - root below range, right subtree has valid nodes\n`Input: root = [10,5,15], low = 12, high = 20` → `Expected: 15`\n⚠️ Bug: recursing into left child when `node.val < low` instead of recursing right → returns 0\n\n**All nodes in range** - entire tree within bounds\n`Input: root = [10,5,15,3,7,null,18], low = 1, high = 100` → `Expected: 58`\n⚠️ Bug: pruning right subtree when `node.val >= low` (using >= instead of >) → returns 18"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to support node insertions/deletions and answer range sum queries interleaved?",
+      "a": "Augment each node with a subtree-sum field. On insert or delete, update the subtree-sum of O(h) ancestors along the path. Range-sum queries still prune using BST ordering. TC: O(h) per operation, SC: O(n) for the augmented fields."
+    },
+    {
+      "q": "What if node values can be negative?",
+      "a": "The pruning logic is unchanged - the BST property holds regardless of sign, so if a node's value is below low, its left subtree is still smaller and can be skipped. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if the tree has 10^9 nodes arriving as a stream with no random access?",
+      "a": "Replace recursion with an explicit stack (iterative DFS) to avoid stack overflow, or use Morris traversal for O(1) auxiliary space. Pruning still applies at each visited node. TC: O(n), SC: O(1) with Morris, O(h) with explicit stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int rangeSumBST(TreeNode* root, int low, int high) {\n        if (!root) return 0;\n        int sum = 0;\n        if (root->val >= low && root->val <= high) {\n            sum += root->val;\n        }\n        if (root->val > low) {\n            sum += rangeSumBST(root->left, low, high);\n        }\n        if (root->val < high) {\n            sum += rangeSumBST(root->right, low, high);\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

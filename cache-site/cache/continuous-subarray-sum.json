@@ -1,0 +1,40 @@
+{
+  "slug": "continuous-subarray-sum",
+  "title": "Continuous Subarray Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum + Hash Map",
+  "tc": "O(n)",
+  "sc": "O(min(n, k))",
+  "spaceBreakdown": "- unordered_map<int,int> seen: up to min(n+1, k) entries → O(min(n, k))\n- recursion depth: none\n- not counted: input vector, returned bool",
+  "approach": "Use running prefix sums reduced modulo k. A subarray nums[i..j] has sum divisible by k iff the prefix-sum remainders at positions i and j+1 are equal. Store the first index where each remainder was seen in a hash map (seeded with remainder 0 at index -1). When a remainder repeats, check if the index gap is at least 2; if so, return true. Keeping only the first occurrence maximizes the gap and guarantees we never miss a valid pair.",
+  "hints": [
+    "If you compute running totals from the start of the array, what must be true about the running totals at the two endpoints of a good subarray when you divide them by k? The array can have up to 10^5 elements.",
+    "Use a hash map storing the first index where each running-sum remainder (mod k) appears, seeded with remainder 0 at index -1. For nums = [23,2,4,6,7], k=6: remainders are 0(-1), 5(0), 1(1), 5(2) - the 5 at index 2 matches index 0, distance 2.",
+    "```\nseen = {0: -1}\nsum = 0\nfor i = 0 to n-1:\n    sum = (sum + nums[i]) mod k\n    if sum in seen:\n        if i - seen[sum] >= 2: return true\n    else:\n        seen[sum] = i\nreturn false\n```",
+    "**Single element** - n=1, no subarray of length 2 can exist.\n`Input: nums = [5], k = 5` → `Expected: false`\n⚠️ Bug: omitting the `i - seen[sum] >= 2` check → returns true (5%5=0 matches the seeded 0 at index -1)\n\n**Two zeros** - a subarray summing to 0 is a multiple of every k.\n`Input: nums = [0,0], k = 7` → `Expected: true`\n⚠️ Bug: not seeding the map with `{0: -1}` → returns false (no remainder 0 to match the running sum 0)\n\n**Same remainder at distance 1** - the gap is only one element, so the subarray has length 1.\n`Input: nums = [1,0], k = 2` → `Expected: false`\n⚠️ Bug: checking `>= 1` instead of `>= 2` in the distance test → returns true (remainder 1 at index 1 matches index 0, gap 1)\n\n**Repeated remainder with zeros between** - overwriting the stored index discards the earlier, wider match.\n`Input: nums = [1,5,5,5], k = 5` → `Expected: true` (subarray [5,5] at indices 1-2 sums to 10)\n⚠️ Bug: updating `seen[sum]` to the latest index instead of keeping the first → returns false (at index 2, finds index 1 with gap 1 instead of index 0 with gap 2)"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the count of good subarrays instead of just true/false?",
+      "a": "Store a count for each remainder instead of a single index. For each position, add the current count of that remainder to the answer, then increment the count. Delay each count increment by one position so the distance-2 requirement is respected. Time O(n), space O(min(n, k))."
+    },
+    {
+      "q": "What if k can be 0?",
+      "a": "A multiple of 0 is only 0, so we need a subarray of length ≥ 2 with sum exactly 0. Drop the modulo and store prefix sums directly in a hash map with their first index. Check if the same prefix sum appeared at least 2 positions back. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if array elements can be negative?",
+      "a": "C++ modulo on negative operands can yield negative results. Normalize each remainder to [0, k-1] with `((sum % k) + k) % k` before lookup and storage. The rest of the algorithm is unchanged. Time O(n), space O(min(n, k))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkSubarraySum(vector<int>& nums, int k) {\n        unordered_map<int, int> seen;\n        seen[0] = -1;\n        long long sum = 0;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            sum = (sum + nums[i]) % k;\n            if (seen.count(sum)) {\n                if (i - seen[sum] >= 2) return true;\n            } else {\n                seen[sum] = i;\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

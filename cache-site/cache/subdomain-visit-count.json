@@ -1,0 +1,40 @@
+{
+  "slug": "subdomain-visit-count",
+  "title": "Subdomain Visit Count",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Counting",
+  "tc": "O(N × L)",
+  "sc": "O(N × L)",
+  "spaceBreakdown": "- unordered_map<string,int> counts: up to ~3N entries, each key up to L chars → O(N × L)\n- temporary string `domain`: O(L) per iteration, reused\n- result vector: not counted (returned output)\n- recursion depth: none",
+  "approach": "Each count-paired domain contributes its visit count to every subdomain - the full domain and every suffix that starts after a dot. We use a hash map to accumulate counts per subdomain string, iterating over each character of the domain to find dots and extract suffixes via `substr`. Finally, we format each map entry as `\"count domain\"` and return. This is correct because every subdomain of a domain is exactly the full string or a suffix beginning right after some dot.",
+  "hints": [
+    "Looking at \"discuss.leetcode.com\" and its implicit visits to \"leetcode.com\" and \"com\", what relationship does each visited domain have to the original full domain string?",
+    "Use an `unordered_map<string,int>` to accumulate visit counts per subdomain. For \"9001 discuss.leetcode.com\", add 9001 to \"discuss.leetcode.com\", then to \"leetcode.com\" (suffix after the first dot), then to \"com\" (suffix after the second dot).",
+    "```\ncounts = empty map\nfor each \"rep domain\" in cpdomains:\n    counts[domain] += rep\n    for each index i where domain[i] == '.':\n        counts[domain[i+1 :]] += rep\nreturn [\"{count} {domain}\" for each (domain, count) in counts]\n```",
+    "**Two-level domain (minimum)** - only one dot, so just two subdomains\n`Input: [\"1 a.com\"]` → `Expected: [\"1 a.com\",\"1 com\"]`\n⚠️ Bug: adding only suffixes after dots but skipping the full domain itself → returns `[\"1 com\"]`\n\n**Three-level domain** - two dots, three subdomains to extract\n`Input: [\"100 a.b.c\"]` → `Expected: [\"100 a.b.c\",\"100 b.c\",\"100 c\"]`\n⚠️ Bug: calling `find('.')` once instead of scanning every character → returns `[\"100 a.b.c\",\"100 b.c\"]`\n\n**Duplicate domains** - same domain string appears in multiple entries\n`Input: [\"5 leet.com\",\"5 leet.com\"]` → `Expected: [\"10 leet.com\",\"10 com\"]`\n⚠️ Bug: using `map[domain] = rep` instead of `map[domain] += rep` → returns `[\"5 leet.com\",\"5 com\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "If the output must be sorted by visit count descending (ties broken alphabetically), how does the complexity change?",
+      "a": "After building the hash map, extract all entries into a vector and sort with a custom comparator. This adds O(K log K) time where K is the number of unique subdomains (at most 3N), so total TC becomes O(N×L + K log K). Space stays O(N×L)."
+    },
+    {
+      "q": "If cpdomains arrives as an unbounded stream and memory is limited, how would you adapt?",
+      "a": "Process entries in fixed-size batches, each time building a local hash map and flushing accumulated counts to disk keyed by subdomain. After the stream ends, merge the disk-based partial counts. TC per batch is O(batch × L); total disk I/O is O(N × L)."
+    },
+    {
+      "q": "If you must also answer queries like \"total visits to all subdomains of com\", how would you extend the structure?",
+      "a": "Insert each domain into a trie keyed by the reversed label sequence (com → leetcode → discuss). Store the accumulated count at each node. A query for \"com\" traverses to the com node and returns the count stored there, which already includes all descendants. Query TC is O(L); build TC stays O(N × L)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> subdomainVisits(vector<string>& cpdomains) {\n        unordered_map<string, int> counts;\n        for (const string& cp : cpdomains) {\n            int space = cp.find(' ');\n            int rep = stoi(cp.substr(0, space));\n            string domain = cp.substr(space + 1);\n            counts[domain] += rep;\n            for (int i = 0; i < (int)domain.size(); i++) {\n                if (domain[i] == '.') {\n                    counts[domain.substr(i + 1)] += rep;\n                }\n            }\n        }\n        vector<string> result;\n        for (const auto& p : counts) {\n            result.push_back(to_string(p.second) + \" \" + p.first);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

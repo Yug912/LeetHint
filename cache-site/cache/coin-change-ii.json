@@ -1,0 +1,40 @@
+{
+  "slug": "coin-change-ii",
+  "title": "Coin Change II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Complete Knapsack DP",
+  "tc": "O(n × amount)",
+  "sc": "O(amount)",
+  "spaceBreakdown": "- vector<int> dp(amount + 1, 0): up to 5001 ints → O(amount)\n- recursion depth: none (iterative)\n- not counted: input coins vector, returned int",
+  "approach": "This is the unbounded knapsack counting problem. We use a 1D DP array where `dp[j]` = number of combinations to form amount `j`. The key insight is loop order: coins in the outer loop and amounts in the inner loop (forward iteration) ensures each combination is counted exactly once - not as multiple permutations. For each coin, we add `dp[j - coin]` to `dp[j]`, meaning \"all ways to reach `j - coin`, plus this coin.\" The base case `dp[0] = 1` represents the single way to make amount 0 (use no coins).",
+  "hints": [
+    "If you fix which coin you use last in any combination, what does the remaining part of that combination look like?",
+    "1D DP array where `dp[j]` counts ways to form amount `j`. Process each coin in the outer loop so 1+2 and 2+1 aren't double-counted. After processing coin 1 in `[1,2,5]` with amount 5: `dp = [1,1,1,1,1,1]`.",
+    "```\ndp[0..amount] = 0\ndp[0] = 1\nfor each coin in coins:\n    for j from coin to amount:\n        dp[j] += dp[j - coin]\nreturn dp[amount]\n```",
+    "**Zero amount** - amount is 0, the minimum allowed value\n`Input: amount = 0, coins = [1]` → `Expected: 1`\n⚠️ Bug: initializing dp[0] = 0 instead of 1 → returns 0\n\n**Combinations vs permutations** - same coins in different orders must not be double-counted\n`Input: amount = 4, coins = [1,2]` → `Expected: 3`\n⚠️ Bug: iterating amount in outer loop, coins in inner loop → returns 5\n\n**Complete vs 0/1 knapsack** - coins have unlimited supply, not single use\n`Input: amount = 3, coins = [1,2]` → `Expected: 2`\n⚠️ Bug: iterating j from amount down to coin (0/1 knapsack order) → returns 1\n\n**Coin equals amount** - single coin exactly matches the target\n`Input: amount = 10, coins = [10]` → `Expected: 1`\n⚠️ Bug: inner loop starting at j = coin + 1 instead of j = coin → skips dp[10], returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Return one actual combination of coins that sums to amount, not just the count.",
+      "a": "Store a parent pointer for each (coin_index, j) state recording which coin was last added to reach dp[j]. Backtrack from dp[amount] to reconstruct one valid combination. TC stays O(n × amount), SC becomes O(n × amount) for the parent table."
+    },
+    {
+      "q": "Each coin can be used at most once instead of unlimited times.",
+      "a": "Iterate j from amount down to coin in the inner loop so each coin contributes at most once to the DP. TC stays O(n × amount), SC stays O(amount)."
+    },
+    {
+      "q": "Amount can be up to 10^9 - the O(amount) array no longer fits in memory.",
+      "a": "If coins.length is small (say ≤ 5), use matrix exponentiation on the linear recurrence defined by the coin set, computing the answer in O(k^3 × log(amount)) where k = coins.length. SC becomes O(k^2) for the transition matrix."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int change(int amount, vector<int>& coins) {\n        vector<int> dp(amount + 1, 0);\n        dp[0] = 1;\n        for (int coin : coins) {\n            for (int j = coin; j <= amount; j++) {\n                dp[j] += dp[j - coin];\n            }\n        }\n        return dp[amount];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
