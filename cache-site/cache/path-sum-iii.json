@@ -1,0 +1,40 @@
+{
+  "slug": "path-sum-iii",
+  "title": "Path Sum III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum with Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long,int> seen: up to n entries (one per node on the current root-to-leaf path, plus the seed) → O(n)\n- recursion call-stack depth: worst case O(n) for a skewed tree, O(log n) for balanced\n- not counted: input tree, returned int",
+  "approach": "Use a prefix-sum hash map during a single DFS. Maintain the running sum from the root to the current node; for each node, the number of valid paths ending there equals how many ancestor prefix sums equal `runningSum - targetSum`. Store prefix-sum frequencies in a hash map, increment on entry, and decrement on exit (backtrack) so that sibling subtrees don't contaminate each other. Running sums can reach 1000 × 10^9 = 10^12, so use `long long`.",
+  "hints": [
+    "If you knew the sum from the root down to every node, what arithmetic relationship between two of those sums would identify a downward path whose sum equals targetSum? A path must travel from an ancestor to a descendant.",
+    "Use a prefix-sum frequency map during DFS. At the node with value 5 under root 10 (running sum 15) with targetSum 8, look up 15 − 8 = 7 in the map; each prior prefix sum of 7 marks one valid path ending here.",
+    "```\ndfs(node, runningSum):\n    if node is null: return\n    runningSum += node.val\n    count += map[runningSum - targetSum]\n    map[runningSum] += 1\n    dfs(node.left, runningSum)\n    dfs(node.right, runningSum)\n    map[runningSum] -= 1\n```",
+    "**Empty tree** - root is null\n`Input: root = [], targetSum = 0` → `Expected: 0`\n⚠️ Bug: accessing node->val before the null check → undefined behavior / crash\n\n**Single-node hit** - the only node equals targetSum\n`Input: root = [8], targetSum = 8` → `Expected: 1`\n⚠️ Bug: not seeding the map with {0:1} → returns 0 (no prefix sum 0 to match the root-to-itself path)\n\n**All zeros** - every downward subpath sums to 0\n`Input: root = [0,0,0], targetSum = 0` → `Expected: 5`\n⚠️ Bug: skipping the `map[runningSum] -= 1` backtrack step → returns 6 (left-child prefix sums leak into the right-child subtree)\n\n**Negatives with duplicate prefix sums** - the same prefix sum recurs at different depths\n`Input: root = [1,-1,1,-1], targetSum = 0` → `Expected: 4`\n⚠️ Bug: using a set instead of a map (counting each prefix sum once) → returns 3 (misses the second occurrence of prefix sum 0)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree has up to 10^5 nodes instead of 1000?",
+      "a": "The same prefix-sum hash map DFS runs in O(n) time and O(n) space, so it scales directly. No algorithmic change is needed; just ensure `long long` for running sums since 10^5 × 10^9 = 10^14."
+    },
+    {
+      "q": "What if you must return every valid path (the node lists), not just the count?",
+      "a": "Same DFS, but when `map[runningSum - targetSum] > 0`, record the path segment from each matching ancestor to the current node. In the worst case (all zeros, targetSum 0) there are O(n^2) paths, so time and output space become O(n^2)."
+    },
+    {
+      "q": "What if the path can travel in any direction (up or down) as long as it is simple?",
+      "a": "Downward-only prefix sums no longer suffice. Use centroid decomposition: for each centroid, count paths passing through it using a prefix-sum map, then recurse into subtrees. This gives O(n log n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int pathSum(TreeNode* root, int targetSum) {\n        unordered_map<long long, int> seen;\n        seen[0] = 1;\n        int count = 0;\n        dfs(root, 0LL, targetSum, seen, count);\n        return count;\n    }\nprivate:\n    void dfs(TreeNode* node, long long sum, int targetSum,\n             unordered_map<long long, int>& seen, int& count) {\n        if (!node) return;\n        sum += node->val;\n        count += seen[sum - targetSum];\n        seen[sum]++;\n        dfs(node->left, sum, targetSum, seen, count);\n        dfs(node->right, sum, targetSum, seen, count);\n        seen[sum]--;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

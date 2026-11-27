@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-difference-between-node-and-ancestor",
+  "title": "Maximum Difference Between Node and Ancestor",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS Path Tracking",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- int ans (single scalar): O(1)\n- recursion call-stack: up to h frames (h = tree height; O(n) worst case skewed, O(log n) balanced)\n- parameters mn, mx passed by value per frame: O(1) each, included in stack\n- not counted: input tree, returned int",
+  "approach": "For any descendant node, the ancestor that maximizes the absolute difference must be either the minimum-valued or maximum-valued ancestor on the path from root to that node. During a DFS, we carry the running minimum and maximum seen along the current path. At each node, we compute |node.val − minSoFar| and |node.val − maxSoFar| and update the global answer. This visits every node once, giving O(n) time.",
+  "hints": [
+    "For a fixed descendant node, what information about the path from the root to it would let you find the best ancestor without comparing against each one individually?",
+    "Track the running minimum and maximum values along the path during a depth-first traversal. At node 1 in Example 1, the path 8→3→1 has min=1 and max=8, giving |1−8|=7.",
+    "```\nfunction dfs(node, minSoFar, maxSoFar):\n    if node is null: return\n    answer = max(answer, |node.val - minSoFar|, |node.val - maxSoFar|)\n    newMin = min(minSoFar, node.val)\n    newMax = max(maxSoFar, node.val)\n    dfs(node.left, newMin, newMax)\n    dfs(node.right, newMin, newMax)\n```",
+    "**All equal values** - every node has the same value so no difference exists\n`Input: [7,7,7]` → `Expected: 0`\n⚠️ Bug: initialising ans to INT_MIN instead of 0 → returns INT_MIN\n\n**Only tracking min** - a descendant smaller than all ancestors needs the running maximum\n`Input: [5,10,null,1]` → `Expected: 9`\n⚠️ Bug: tracking only the running minimum, not the maximum → returns 5\n\n**Parent-only comparison** - the best ancestor may be several levels up\n`Input: [1,null,2,null,3]` → `Expected: 2`\n⚠️ Bug: comparing each node only with its direct parent → returns 1\n\n**Max value range** - values at the constraint boundary 0 and 10^5\n`Input: [100000,0]` → `Expected: 100000`\n⚠️ Bug: computing node->val - mn without abs() → returns -100000"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is extremely deep (n = 10^6) and recursion may overflow the stack?",
+      "a": "Convert the DFS to an iterative version using an explicit stack of (node, minSoFar, maxSoFar) tuples. The logic is identical; only the mechanism changes. TC: O(n), SC: O(n) worst case for the explicit stack."
+    },
+    {
+      "q": "What if you must also return the actual ancestor-descendant pair achieving the maximum?",
+      "a": "Alongside minSoFar and maxSoFar, carry pointers to the nodes where those extremes occurred. When the answer updates, record the current descendant and the corresponding extreme ancestor. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if node values can be negative?",
+      "a": "The approach is unchanged. abs(node.val − minSoFar) and abs(node.val − maxSoFar) still capture the maximum difference regardless of sign, and initialising min and max to root->val works for any value. TC: O(n), SC: O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxAncestorDiff(TreeNode* root) {\n        int ans = 0;\n        dfs(root, root->val, root->val, ans);\n        return ans;\n    }\nprivate:\n    void dfs(TreeNode* node, int mn, int mx, int& ans) {\n        if (!node) return;\n        int d1 = node->val - mn;\n        if (d1 < 0) d1 = -d1;\n        int d2 = node->val - mx;\n        if (d2 < 0) d2 = -d2;\n        if (d1 > ans) ans = d1;\n        if (d2 > ans) ans = d2;\n        if (node->val < mn) mn = node->val;\n        if (node->val > mx) mx = node->val;\n        dfs(node->left, mn, mx, ans);\n        dfs(node->right, mn, mx, ans);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

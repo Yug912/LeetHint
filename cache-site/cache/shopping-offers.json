@@ -1,0 +1,40 @@
+{
+  "slug": "shopping-offers",
+  "title": "Shopping Offers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Memoized DFS / Complete Knapsack DP",
+  "tc": "O(11^n * n * S)",
+  "sc": "O(11^n)",
+  "spaceBreakdown": "- vector<int> memo: size 11^n ≤ 1771561 ints → O(11^n)\n- vector<vector<int>> filtered: up to 100 offers each of size n+1 ≤ 7 → O(1)\n- int pw[7], int need[6]: constant size → O(1)\n- recursion depth: at most sum(needs) ≤ 60 → O(1)\n- not counted: input price/special/needs, returned int",
+  "approach": "Use memoized DFS over the needs state. Encode the needs vector as a single integer in base 11 (since each need ≤ 10). For each state, compute the baseline cost of buying all remaining items at regular price, then try applying each \"useful\" special offer (one whose price is strictly less than buying its items individually) if it doesn't exceed any need, and recurse. Memoization ensures each of the at most 11^n states is computed once.",
+  "hints": [
+    "The needs vector has at most 6 elements, each between 0 and 10. How many distinct \"remaining needs\" configurations could you encounter while deciding which offers to apply?",
+    "Use memoized recursion keyed by the needs vector (encoded as a base-11 integer). For needs=[3,2] with offer [1,2,10], subtract to get needs=[2,0], recurse, then compare 10 + result against the baseline 3×2 + 2×5 = 16.",
+    "```\nfunction solve(needs):\n    if needs in memo: return memo[needs]\n    res = sum(needs[i] * price[i])\n    for each offer:\n        if offer fits in needs:\n            subtract offer from needs\n            res = min(res, offer_price + solve(needs))\n            restore needs\n    memo[needs] = res\n    return res\n```",
+    "**Offer exceeds needs** - The offer provides more of an item than needed.\n`Input: price = [2,5], special = [[4,0,7]], needs = [3,0]` → `Expected: 6`\n⚠️ Bug: not checking if offer items exceed needs before subtracting → needs go negative, returns 5\n\n**Offer exactly matches needs** - The offer provides exactly what is needed.\n`Input: price = [2,5], special = [[3,2,10]], needs = [3,2]` → `Expected: 10`\n⚠️ Bug: using >= instead of > in the feasibility check → skips the offer, returns 16\n\n**Single item, offer reused** - Only one item type; the offer must be applied multiple times.\n`Input: price = [5], special = [[1,3]], needs = [2]` → `Expected: 6`\n⚠️ Bug: trying each offer at most once instead of recursing → returns 8\n\n**Free offer** - An offer with price 0 that is cheaper than individual prices.\n`Input: price = [2,5], special = [[1,0,0]], needs = [3,0]` → `Expected: 0`\n⚠️ Bug: filtering out offers with price 0 → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if each special offer can be used at most once instead of unlimited times?",
+      "a": "The state must also track which offers are used, adding a bitmask of up to 100 bits. Since 2^100 is infeasible, meet-in-the-middle is needed: split offers into two halves, enumerate all subsets of each half, and combine matching pairs. TC becomes O(2^50) which is still too large, so integer linear programming or branch-and-bound would be required."
+    },
+    {
+      "q": "What if n can be up to 20 instead of 6?",
+      "a": "The state space 11^20 is astronomically large, making direct memoization infeasible. If offers only involve a few items each, decompose by connected components of items that co-occur in offers, then solve each component independently. TC becomes O(11^c · m · c) where c is the largest component size."
+    },
+    {
+      "q": "What if we also want to minimize the number of transactions as a secondary objective?",
+      "a": "Store a pair (cost, transaction_count) in the memo instead of just cost. Compare lexicographically: prefer lower cost, then fewer transactions. The baseline uses count(needs[i] > 0) transactions; each offer adds one. TC and SC remain the same asymptotically."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int shoppingOffers(vector<int>& price, vector<vector<int>>& special, vector<int>& needs) {\n        int n = price.size();\n        // Keep only offers that are strictly cheaper than buying items individually\n        vector<vector<int>> filtered;\n        for (auto& s : special) {\n            int sum = 0;\n            for (int i = 0; i < n; i++) sum += s[i] * price[i];\n            if (s[n] < sum) filtered.push_back(s);\n        }\n        \n        int sz = 1;\n        for (int i = 0; i < n; i++) sz *= 11;\n        vector<int> memo(sz, -1);\n        \n        int pw[7];\n        pw[0] = 1;\n        for (int i = 1; i <= n; i++) pw[i] = pw[i - 1] * 11;\n        \n        function<int(int)> dp = [&](int state) -> int {\n            if (memo[state] != -1) return memo[state];\n            \n            int need[6];\n            int tmp = state;\n            int total = 0;\n            for (int i = 0; i < n; i++) {\n                need[i] = tmp % 11;\n                tmp /= 11;\n                total += need[i] * price[i];\n            }\n            \n            int best = total;\n            for (auto& s : filtered) {\n                int newState = 0;\n                bool ok = true;\n                for (int i = 0; i < n; i++) {\n                    int r = need[i] - s[i];\n                    if (r < 0) { ok = false; break; }\n                    newState += r * pw[i];\n                }\n                if (!ok) continue;\n                int sub = dp(newState);\n                best = min(best, s[n] + sub);\n            }\n            \n            memo[state] = best;\n            return best;\n        };\n        \n        int init = 0;\n        for (int i = 0; i < n; i++) init += needs[i] * pw[i];\n        return dp(init);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "trim-a-binary-search-tree",
+  "title": "Trim a Binary Search Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Recursive BST Pruning",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call-stack depth: up to h (O(n) for a skewed tree, O(log n) for balanced) → O(h)\n- no containers/arrays allocated → O(1) extra besides the stack\n- not counted: input tree, returned tree (modified in place)",
+  "approach": "Use the BST property: for any node, all values in its left subtree are smaller and all in its right subtree are larger. So if a node's value is below `low`, the node and its entire left subtree are out of range - only the right subtree can still hold valid values, so recurse there. Symmetrically, if a node's value is above `high`, recurse only on its left subtree. When the node is in range, recursively trim both children in place and keep the node. Each node is visited once.",
+  "hints": [
+    "When a node's value is below `low`, which of its two subtrees could still contain values inside `[low, high]`? The BST ordering property is what lets you decide.",
+    "Use recursive depth-first traversal. At node `0` in Example 2 (`val=0 < low=1`), discard it and its left subtree, recurse only on its right child (node `2`).",
+    "```\nfunction trim(node, low, high):\n    if node is null: return null\n    if node.val < low: return trim(node.right, low, high)\n    if node.val > high: return trim(node.left, low, high)\n    node.left  = trim(node.left,  low, high)\n    node.right = trim(node.right, low, high)\n    return node\n```",
+    "**Single node out of range** - root value outside `[low, high]` with no children.\n`Input: root = [5], low = 1, high = 3` → `Expected: []`\n⚠️ Bug: returning `root` whenever it is non-null instead of recursing → returns `[5]`\n\n**Root below low, right subtree in range** - root must be replaced by its trimmed right subtree.\n`Input: root = [1,null,2], low = 2, high = 3` → `Expected: [2]`\n⚠️ Bug: assigning `root->left = trim(...)` and `root->right = trim(...)` then returning `root` even when `val < low` → returns `[1,null,2]`\n\n**Root above high, left subtree contains out-of-range nodes** - returning the raw left child leaves invalid values in the result.\n`Input: root = [3,0,null,null,2,null,1], low = 1, high = 2` → `Expected: [2,1]`\n⚠️ Bug: returning `root->left` without recursively trimming it when `val > high` → returns `[0,null,2,null,1]`\n\n**Skewed right chain all above high** - entire tree must collapse to null.\n`Input: root = [1,null,2,null,3], low = 5, high = 6` → `Expected: []`\n⚠️ Bug: only checking the root once and not recursing on the appropriate child → returns `[1,null,2,null,3]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is extremely skewed (height ≈ n) and you must avoid recursion-stack overflow?",
+      "a": "Convert the recursion to an explicit stack-based DFS, or first rotate the tree to balance it before trimming. Time stays O(n); auxiliary stack space is still O(h) but you control it explicitly and can switch to an iterative Morris-style traversal for O(1) extra space."
+    },
+    {
+      "q": "What if values are not unique (the BST may contain duplicates)?",
+      "a": "The same pruning logic still works because the BST property still orders subtrees; you only need to decide consistently which side equal values live on. Complexity remains O(n) time and O(h) space."
+    },
+    {
+      "q": "What if the tree is provided as a read-only structure and you must return a brand-new trimmed tree?",
+      "a": "Allocate new `TreeNode` objects for every kept node instead of relinking in place; discard out-of-range subtrees without copying them. Time stays O(n); space becomes O(n) for the new tree plus O(h) recursion stack."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    TreeNode* trimBST(TreeNode* root, int low, int high) {\n        if (root == nullptr) return nullptr;\n        if (root->val < low) return trimBST(root->right, low, high);\n        if (root->val > high) return trimBST(root->left, low, high);\n        root->left  = trimBST(root->left,  low, high);\n        root->right = trimBST(root->right, low, high);\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

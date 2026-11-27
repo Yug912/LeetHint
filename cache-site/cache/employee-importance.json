@@ -1,0 +1,39 @@
+{
+  "slug": "employee-importance",
+  "title": "Employee Importance",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS with Hash Map Lookup",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, Employee*> mp: up to n entries → O(n)\n- recursion call-stack depth: worst case O(n) for skewed hierarchy, O(log n) for balanced\n- not counted: input vector, returned int",
+  "approach": "Build a hash map from employee ID to Employee pointer so any subordinate can be looked up in O(1). Then recursively (or iteratively) traverse the hierarchy starting from the given ID: add the current employee's importance, then recurse into each subordinate. Since the reporting structure is a tree (each employee has at most one leader), every node is visited exactly once, guaranteeing correctness.",
+  "hints": [
+    "The subordinates list contains IDs, not pointers to employee records. To follow the chain of command from any employee down to their indirect reports, what capability do you need?",
+    "Build an unordered_map<int, Employee*> to look up any employee by ID in O(1), then recursively sum the starting employee's importance plus all subordinates' totals. For Example 1: look up ID 1 (importance 5), recurse on [2, 3] → each returns 3, total = 5 + 3 + 3 = 11.",
+    "```\nbuild map: id -> employee\nfunction total(id):\n    emp = map[id]\n    sum = emp.importance\n    for sub in emp.subordinates:\n        sum += total(sub)\n    return sum\nreturn total(given_id)\n```",
+    "**Single employee, no subordinates** - Smallest valid input; the root has an empty subordinates list.\n`Input: employees = [[1,5,[]]], id = 1` → `Expected: 5`\n⚠️ Bug: Only summing subordinate importances, never adding the root's own importance → returns 0\n\n**Negative importance** - Importance values range from -100 to 100 per the constraints.\n`Input: employees = [[1,2,[5]],[5,-3,[]]], id = 5` → `Expected: -3`\n⚠️ Bug: Clamping each importance with max(0, importance) → returns 0\n\n**Starting ID not at index 0** - The target employee appears later in the array.\n`Input: employees = [[1,2,[5]],[5,-3,[]]], id = 5` → `Expected: -3`\n⚠️ Bug: Using employees[id - 1] to find the target instead of building an ID-to-employee map → returns 2\n\n**Multi-level subordinates** - An employee has a subordinate who itself has subordinates.\n`Input: employees = [[1,5,[2,3]],[2,3,[4]],[3,3,[]],[4,3,[]]], id = 1` → `Expected: 14`\n⚠️ Bug: Only visiting direct subordinates (one level deep) without recursing → returns 11"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to answer Q queries (different starting IDs) on the same employee list efficiently?",
+      "a": "Precompute the total importance for every employee using a single post-order traversal, storing each result in a map. Each query then becomes an O(1) lookup. Preprocessing is O(n) time and O(n) space; total for Q queries is O(n + Q)."
+    },
+    {
+      "q": "What if employee IDs can be up to 10^9 instead of 2000?",
+      "a": "The unordered_map approach already handles sparse IDs since it uses hashing, not direct array indexing. A solution using a direct-index array (id as index) would waste memory or fail. TC and SC remain O(n)."
+    },
+    {
+      "q": "What if the employee list is streamed and too large to store all at once?",
+      "a": "Use a two-pass approach: first pass writes ID-to-importance and ID-to-subordinates mappings to a disk-backed store; second pass loads only the reachable subtree for a given query ID on demand. TC remains O(n) per query but with disk I/O overhead; in-memory SC is O(subtree depth) for the recursion stack."
+    }
+  ],
+  "code": {
+    "cpp": "/*\n// Definition for Employee.\nclass Employee {\npublic:\n    int id;\n    int importance;\n    vector<int> subordinates;\n};\n*/\n\nclass Employee {\npublic:\n    int id;\n    int importance;\n    vector<int> subordinates;\n};\n\nclass Solution {\npublic:\n    int getImportance(vector<Employee*> employees, int id) {\n        unordered_map<int, Employee*> mp;\n        for (Employee* e : employees) {\n            mp[e->id] = e;\n        }\n        return dfs(mp, id);\n    }\nprivate:\n    int dfs(unordered_map<int, Employee*>& mp, int id) {\n        Employee* e = mp[id];\n        int total = e->importance;\n        for (int sub : e->subordinates) {\n            total += dfs(mp, sub);\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

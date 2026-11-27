@@ -1,0 +1,40 @@
+{
+  "slug": "rotate-string",
+  "title": "Rotate String",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "KMP String Matching",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> lps: n entries → O(n)\n- string text (s + s): 2n characters → O(n)\n- recursion depth: none\n- not counted: input strings s and goal",
+  "approach": "A string `goal` is a rotation of `s` if and only if `goal` is a substring of `s + s` and the two strings have equal length. To achieve O(n) time, we build the KMP failure function (lps array) for `goal` and then run a single KMP scan over `s + s`. The lps array lets us skip re-comparing characters we already know match, avoiding the O(n²) worst case of naive substring search.",
+  "hints": [
+    "If you write `s` twice in a row to form a doubled string, where do all possible rotations of `s` appear inside it?",
+    "Use KMP string matching to search for `goal` inside `s + s` in O(n) time. For `s = \"abcde\"`, the doubled string is `\"abcdeabcde\"`; searching for `goal = \"cdeab\"` finds a match starting at index 2.",
+    "```\nif length(goal) != length(s): return false\nbuild lps (failure function) for goal\nj = 0\nfor i in 0 .. 2*n:\n    while j > 0 and text[i] != goal[j]:\n        j = lps[j-1]\n    if text[i] == goal[j]:\n        j = j + 1\n    if j == n:\n        return true\nreturn false\n```",
+    "**Length mismatch** - goal is shorter than s\n`Input: s = \"abcde\", goal = \"abc\"` → `Expected: false`\n⚠️ Bug: skipping the length-equality check and only doing substring search → returns true (finds \"abc\" at index 0 of \"abcdeabcde\")\n\n**Same multiset, not a rotation** - goal has the same characters as s but in an order no rotation produces\n`Input: s = \"abcde\", goal = \"abced\"` → `Expected: false`\n⚠️ Bug: checking only that sorted(s) == sorted(goal) → returns true\n\n**All elements equal** - every character is identical\n`Input: s = \"aaa\", goal = \"aaa\"` → `Expected: true`\n⚠️ Bug: writing `len = lps[len]` instead of `len = lps[len-1]` in the lps fallback → infinite loop, never returns\n\n**Smallest input** - both strings have length 1\n`Input: s = \"a\", goal = \"b\"` → `Expected: false`\n⚠️ Bug: on mismatch with j = 0, accessing `lps[j-1]` = `lps[-1]` without guarding j > 0 → undefined behavior / crash"
+  ],
+  "followUps": [
+    {
+      "q": "What if s and goal can be up to 10^6 characters?",
+      "a": "The KMP approach already runs in O(n) time and O(n) space, so it scales directly with no algorithmic change. The lps vector and the doubled text string are both O(n), which is acceptable at 10^6. Time remains O(n), space remains O(n)."
+    },
+    {
+      "q": "What if you cannot afford to materialize s + s (streaming or tight memory)?",
+      "a": "Index into a virtual doubled string using `s[i % n]` instead of building `s + s`. KMP proceeds identically, reading each character on demand via the modulo index. Auxiliary space drops to just the lps array, O(n), while time stays O(n)."
+    },
+    {
+      "q": "How would you count the number of distinct rotations of s?",
+      "a": "Build the lps array for s itself and look at `lps[n-1]`. If `n % (n - lps[n-1]) == 0`, the string has a smallest repeating unit of length `n - lps[n-1]`, and the number of distinct rotations equals that unit length; otherwise all n rotations are distinct. This runs in O(n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool rotateString(string s, string goal) {\n        int n = (int)s.size();\n        if ((int)goal.size() != n) return false;\n\n        // Build KMP failure function (lps) for pattern = goal\n        vector<int> lps(n, 0);\n        int len = 0;\n        for (int i = 1; i < n; ) {\n            if (goal[i] == goal[len]) {\n                lps[i] = len + 1;\n                ++len;\n                ++i;\n            } else if (len > 0) {\n                len = lps[len - 1];\n            } else {\n                lps[i] = 0;\n                ++i;\n            }\n        }\n\n        // KMP search for goal inside s + s\n        string text = s + s;\n        int j = 0;\n        for (int i = 0; i < 2 * n; ) {\n            if (text[i] == goal[j]) {\n                ++i;\n                ++j;\n                if (j == n) return true;\n            } else if (j > 0) {\n                j = lps[j - 1];\n            } else {\n                ++i;\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

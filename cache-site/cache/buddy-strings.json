@@ -1,0 +1,40 @@
+{
+  "slug": "buddy-strings",
+  "title": "Buddy Strings",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[26]: 26 integers, constant size → O(1)\n- int first, second, n: 3 scalar variables → O(1)\n- recursion depth: none\n- not counted: input strings s and goal",
+  "approach": "A single swap can make s equal goal in exactly two cases: (1) s already equals goal and has a duplicate character (swap two identical characters), or (2) s differs from goal at exactly two positions i, j where s[i] == goal[j] and s[j] == goal[i]. The algorithm checks length equality first, then handles both cases with a linear scan and a small frequency array.",
+  "hints": [
+    "If you list every index where s[i] differs from goal[i], what does the count of such indices tell you about whether one swap can fix the mismatch? What if that count is zero?",
+    "Linear scan comparing s and goal, with a character frequency array for the identical-strings case. For s = \"ab\", goal = \"ba\": indices 0 and 1 differ, and s[0]='a' matches goal[1] while s[1]='b' matches goal[0], so the swap works.",
+    "```\nif lengths differ: return false\nif s == goal:\n    return true if any character appears at least twice\n    return false\nfind all indices where s[i] != goal[i]\nif exactly 2 such indices i, j:\n    return s[i] == goal[j] and s[j] == goal[i]\nreturn false\n```",
+    "**Single character** - length 1 means no two distinct indices exist.\n`Input: s = \"a\", goal = \"a\"` → `Expected: false`\n⚠️ Bug: returning true whenever s == goal without checking for a duplicate character → returns true\n\n**Identical strings, with duplicate** - s equals goal and has a repeated character.\n`Input: s = \"aa\", goal = \"aa\"` → `Expected: true`\n⚠️ Bug: only checking differing positions, ignoring the s == goal case entirely → returns false\n\n**Two diffs but swap doesn't fix** - exactly 2 positions differ but the characters don't cross-match.\n`Input: s = \"ab\", goal = \"ca\"` → `Expected: false`\n⚠️ Bug: checking only that exactly 2 positions differ, without verifying s[i] == goal[j] and s[j] == goal[i] → returns true\n\n**Three diffs, first two cross-match** - more than 2 positions differ, but the first two happen to be swappable.\n`Input: s = \"bac\", goal = \"abd\"` → `Expected: false`\n⚠️ Bug: not early-exiting when a third difference is found, only checking the first two → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if the strings could contain any Unicode character instead of just lowercase letters?",
+      "a": "Replace the size-26 frequency array with a hash set to detect duplicate characters when s equals goal. The rest of the logic - tracking differing positions and checking cross-compatibility - stays identical. Time complexity remains O(n), space becomes O(min(n, |Σ|)) where |Σ| is the alphabet size."
+    },
+    {
+      "q": "What if you needed to find the minimum number of swaps to transform s into goal?",
+      "a": "First verify that s and goal have the same character multiset using a frequency count. Then build a permutation mapping from s-positions to goal-positions for each character, and count cycles. The minimum swaps equals n minus the number of cycles. Time O(n), space O(n) for the permutation and visited array."
+    },
+    {
+      "q": "What if the strings arrive as a stream, readable only once with O(1) memory?",
+      "a": "Use a 26-bit integer as a bitmask to track which characters have been seen in s, detecting duplicates on the fly. Simultaneously track the first two differing positions. After the stream ends, apply the same logic: if zero diffs, check the duplicate flag; if two diffs, check cross-compatibility. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool buddyStrings(string s, string goal) {\n        if (s.length() != goal.length()) return false;\n        int n = s.length();\n        if (s == goal) {\n            int freq[26] = {0};\n            for (char c : s) {\n                if (++freq[c - 'a'] >= 2) return true;\n            }\n            return false;\n        }\n        int first = -1, second = -1;\n        for (int i = 0; i < n; i++) {\n            if (s[i] != goal[i]) {\n                if (first == -1) first = i;\n                else if (second == -1) second = i;\n                else return false;\n            }\n        }\n        if (second == -1) return false;\n        return s[first] == goal[second] && s[second] == goal[first];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

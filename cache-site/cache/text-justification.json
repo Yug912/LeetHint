@@ -1,0 +1,40 @@
+{
+  "slug": "text-justification",
+  "title": "Text Justification",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Simulation",
+  "tc": "O(n * maxWidth)",
+  "sc": "O(maxWidth)",
+  "spaceBreakdown": "- string line: rebuilt each iteration, at most maxWidth characters → O(maxWidth)\n- recursion depth: none\n- not counted: input vector<string>& words, returned vector<string> result",
+  "approach": "Greedily pack as many words as possible onto each line: starting from the current word, keep adding words while the total (word lengths + single spaces between them) stays within maxWidth. For non-last lines with multiple words, distribute the remaining spaces evenly across gaps, giving any remainder to the leftmost gaps. For the last line or any line with a single word, left-justify (single spaces between words, all remaining padding on the right). This directly follows the problem's mandated greedy strategy and space-distribution rules.",
+  "hints": [
+    "Given maxWidth, how do you decide where one line ends and the next begins - what quantity tells you the next word won't fit?\nEach word's length is at most maxWidth, and words are separated by at least one space.",
+    "Greedy line packing with even space distribution. In Example 1, \"This\"(4)+\"is\"(2)+\"an\"(2) plus 2 spaces = 10 ≤ 16, but adding \"example\"(7) needs 10+1+7=18 > 16, so the first line contains exactly [\"This\",\"is\",\"an\"].",
+    "```\ni = 0\nwhile i < n:\n    start = i\n    pack words greedily: while next word fits (len + 1 + word_len <= maxWidth): add it\n    if last line:\n        join words with single spaces, pad right to maxWidth\n    else if only one word:\n        word + pad right to maxWidth\n    else:\n        total_spaces = maxWidth - sum(word lengths)\n        gaps = word_count - 1\n        base = total_spaces / gaps, extra = total_spaces % gaps\n        first 'extra' gaps get base+1 spaces, rest get base\n```\n```",
+    "**Single word on non-last line** - a line with one word that is not the last line must still be left-justified.\n`Input: words = [\"hello\",\"world\"], maxWidth = 10` → `Expected: [\"hello     \",\"world     \"]`\n⚠️ Bug: not handling single-word lines separately, entering the fully-justify branch with gaps=0 → division by zero, runtime error\n\n**Last line not fully justified** - the last line uses single spaces between words and pads only the right side.\n`Input: words = [\"a\",\"b\",\"c\"], maxWidth = 7` → `Expected: [\"a b c  \"]`\n⚠️ Bug: fully justifying the last line → returns [\"a  b  c\"] (spaces distributed between words instead of right-padded)\n\n**Uneven space distribution** - when spaces don't divide evenly, leftmost gaps get the extra space.\n`Input: words = [\"a\",\"b\",\"c\",\"d\"], maxWidth = 6` → `Expected: [\"a  b c\",\"d     \"]`\n⚠️ Bug: assigning remainder spaces to rightmost gaps → returns [\"a b  c\",\"d     \"]\n\n**Single word input** - the only word forms the last line and must be padded to maxWidth.\n`Input: words = [\"hello\"], maxWidth = 10` → `Expected: [\"hello     \"]`\n⚠️ Bug: not right-padding the last line to maxWidth → returns [\"hello\"] (5 characters instead of 10)"
+  ],
+  "followUps": [
+    {
+      "q": "What if words can be split across lines with a hyphen when they don't fit?",
+      "a": "When the next word doesn't fit, split it at the character that fills the current line, append a hyphen, and continue the remainder on the next line. The greedy structure stays the same but each character is now processed individually. TC becomes O(total characters), SC stays O(maxWidth)."
+    },
+    {
+      "q": "What if lines should be center-justified instead of left-justified?",
+      "a": "Distribute extra spaces equally on both sides of the text block. For odd remainders, put the extra space on the left. The greedy packing and line-grouping logic is unchanged; only the space-distribution step changes. TC and SC remain O(n * maxWidth) and O(maxWidth)."
+    },
+    {
+      "q": "What if words arrive in a stream and you must emit each line as soon as it is complete?",
+      "a": "Buffer words until the current line is full, then output it immediately. The last line can only be emitted when the stream ends or a flush signal arrives. The algorithm is identical with streaming I/O. TC and SC are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> fullJustify(vector<string>& words, int maxWidth) {\n        vector<string> result;\n        int n = (int)words.size();\n        int i = 0;\n        while (i < n) {\n            int lineStart = i;\n            int lineLen = (int)words[i].length();\n            i++;\n            while (i < n && lineLen + 1 + (int)words[i].length() <= maxWidth) {\n                lineLen += 1 + (int)words[i].length();\n                i++;\n            }\n\n            int wordCount = i - lineStart;\n            string line;\n\n            if (i == n) {\n                // Last line: left-justified, single spaces, pad right\n                for (int j = lineStart; j < i; j++) {\n                    if (j > lineStart) line += ' ';\n                    line += words[j];\n                }\n                line += string(maxWidth - (int)line.length(), ' ');\n            } else if (wordCount == 1) {\n                // Single word on a non-last line: left-justified\n                line = words[lineStart] + string(maxWidth - (int)words[lineStart].length(), ' ');\n            } else {\n                // Fully justified: distribute spaces evenly, left gaps get more\n                int totalChars = 0;\n                for (int j = lineStart; j < i; j++) totalChars += (int)words[j].length();\n                int totalSpaces = maxWidth - totalChars;\n                int gaps = wordCount - 1;\n                int spacePerGap = totalSpaces / gaps;\n                int extra = totalSpaces % gaps;\n\n                for (int j = lineStart; j < i; j++) {\n                    line += words[j];\n                    if (j < i - 1) {\n                        int spaces = spacePerGap + ((j - lineStart) < extra ? 1 : 0);\n                        line += string(spaces, ' ');\n                    }\n                }\n            }\n            result.push_back(line);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

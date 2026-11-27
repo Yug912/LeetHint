@@ -1,0 +1,40 @@
+{
+  "slug": "furthest-building-you-can-reach",
+  "title": "Furthest Building You Can Reach",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Min-Heap",
+  "tc": "O(n log l)",
+  "sc": "O(l)",
+  "spaceBreakdown": "- priority_queue pq: up to ladders+1 entries → O(l)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Use ladders for the largest jumps and bricks for the rest. Maintain a min-heap of size at most `ladders` holding the largest gaps seen so far. For each positive height gap, push it into the heap; if the heap exceeds `ladders` entries, pop the smallest gap and charge it to bricks. Stop when the accumulated brick cost exceeds the available bricks. This is correct because at any point, the heap contains the `ladders` largest gaps encountered, and all other gaps are paid with bricks - the optimal assignment.",
+  "hints": [
+    "In Example 1, you have 5 bricks and 1 ladder for gaps of 5, 3, and 5. Which gap should the ladder cover so that the remaining brick cost stays within 5?",
+    "Use a min-heap of size at most `ladders` to track the largest gaps seen so far. When the heap exceeds `ladders` entries, pop the smallest and charge it to bricks. In Example 1: push 5 (heap=[5]), push 3 (heap=[3,5], pop 3, bricks=3≤5), push 5 (heap=[5,5], pop 5, bricks=8>5), stop at building 4.",
+    "```\nfor i from 0 to n-2:\n    gap = heights[i+1] - heights[i]\n    if gap <= 0: continue\n    push gap into min-heap\n    if heap size > ladders:\n        pop smallest, add to brick_cost\n    if brick_cost > bricks:\n        return i\nreturn n - 1\n```",
+    "**Exact brick budget** - brick_cost equals bricks exactly, should still proceed.\n`Input: heights = [1,3,5], bricks = 4, ladders = 0` → `Expected: 2`\n⚠️ Bug: using `brickCost >= bricks` instead of `brickCost > bricks` → returns 1\n\n**Ladders cover all gaps** - no bricks needed, reach the end.\n`Input: heights = [1,5,10], bricks = 0, ladders = 2` → `Expected: 2`\n⚠️ Bug: using `pq.size() >= ladders` instead of `pq.size() > ladders` → pops a gap, brick_cost=4>0, returns 1\n\n**Single building** - no transitions at all.\n`Input: heights = [42], bricks = 0, ladders = 0` → `Expected: 0`\n⚠️ Bug: initializing answer to -1 and only updating inside the loop → returns -1\n\n**Bricks run out mid-journey** - must stop at the right building.\n`Input: heights = [1,4,8], bricks = 6, ladders = 0` → `Expected: 1`\n⚠️ Bug: returning i+1 instead of i when brick_cost exceeds bricks → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if each ladder can only cover a gap of at most L units?",
+      "a": "Only push gaps ≤ L into the heap; gaps exceeding L must use bricks unconditionally. The heap still maintains the largest `ladders` eligible gaps, and the rest of the algorithm is unchanged. TC: O(n log l), SC: O(l)."
+    },
+    {
+      "q": "What if you want to minimize the number of ladders used while still reaching the last building?",
+      "a": "Binary search on the number of ladders k. For each candidate k, run the heap check to see if bricks suffice to reach the end. The smallest k that works is the answer. TC: O(n log n log l), SC: O(l)."
+    },
+    {
+      "q": "What if heights arrive as a stream and you must commit to bricks or ladder immediately for each gap?",
+      "a": "Use a max-heap of gaps already paid with bricks. For each new gap, pay with bricks and push to the max-heap. If bricks run out, swap the largest brick gap for a ladder (pop from max-heap, refund bricks). TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int furthestBuilding(vector<int>& heights, int bricks, int ladders) {\n        int n = heights.size();\n        priority_queue<int, vector<int>, greater<int>> pq;\n        long long brickCost = 0;\n        \n        for (int i = 0; i < n - 1; i++) {\n            int diff = heights[i + 1] - heights[i];\n            if (diff <= 0) continue;\n            \n            pq.push(diff);\n            if ((int)pq.size() > ladders) {\n                brickCost += pq.top();\n                pq.pop();\n            }\n            if (brickCost > bricks) {\n                return i;\n            }\n        }\n        \n        return n - 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

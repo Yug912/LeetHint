@@ -1,0 +1,40 @@
+{
+  "slug": "house-robber-iii",
+  "title": "House Robber III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Trees (post-order DFS returning a pair)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- struct R return values: O(1) per call, not accumulated → O(1)\n- recursion call-stack depth: up to h (O(n) skewed, O(log n) balanced) → O(h)\n- no containers/arrays allocated\n- not counted: input tree",
+  "approach": "For each node, compute two values via post-order DFS: the best total for its subtree when this node is robbed (so both children must be skipped) and when it is skipped (so each child is free to be robbed or skipped, take the better of its two values). The answer is the max of the two values returned at the root. This is correct because the \"no two directly-linked houses\" rule only couples a node to its parent and children, so each subtree's effect on its parent is fully captured by these two numbers.",
+  "hints": [
+    "For any house, only its parent and its direct children restrict the choice. What is the smallest set of facts about a subtree that its parent needs to make its own decision?",
+    "Post-order DFS where each call returns a pair (best if robbing this node, best if skipping this node). For the root 3 in Example 1, its left child 2 returns (2, 3) and right child 3 returns (3, 1), so root's rob = 3+3+1 = 7 and skip = max(2,3)+max(3,1) = 6.",
+    "function dfs(node):\n    if node is null: return (0, 0)\n    (lRob, lSkip) = dfs(node.left)\n    (rRob, rSkip) = dfs(node.right)\n    rob   = node.val + lSkip + rSkip\n    skip  = max(lRob, lSkip) + max(rRob, rSkip)\n    return (rob, skip)\nreturn max(dfs(root))",
+    "**Single node** - only one house exists\n`Input: [5]` → `Expected: 5`\n⚠️ Bug: returning 0 when both children are null without adding node.val → returns 0\n\n**Skewed tree** - chain shaped like a linked list, recursion goes n deep\n`Input: [2,1,null,null,3,null,4]` → `Expected: 6`\n⚠️ Bug: greedy \"rob alternating levels\" without comparing both options at each node → returns 5\n\n**Buggy skip formula** - one child has skip > rob, the other has rob > skip\n`Input: [1,1,100,null,100]` → `Expected: 200`\n⚠️ Bug: `skip = l.rob + r.rob` (forcing both children to be robbed) → returns 101"
+  ],
+  "followUps": [
+    {
+      "q": "What if recursion depth is limited and you cannot use the call stack?",
+      "a": "Use an explicit stack for iterative post-order traversal, pushing each node twice (or a state flag) so children are processed before the node is combined. Time stays O(n), space is O(h) for the explicit stack instead of the call stack."
+    },
+    {
+      "q": "What if the houses form a general tree (each node has up to k children) instead of a binary tree?",
+      "a": "The same pair-returning DFS generalizes: rob = node.val + sum of children's skip, skip = sum of max(child.rob, child.skip) over all children. Time is O(n), space O(h)."
+    },
+    {
+      "q": "What if you may rob at most k houses total?",
+      "a": "Each DFS call returns an array of size k+1 where entry i is the best total using exactly i robberies in that subtree; combine children by convolving their arrays. Time becomes O(n·k²), space O(h·k) on the stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct R { int rob, skip; };\n    R dfs(TreeNode* node) {\n        if (!node) return {0, 0};\n        R l = dfs(node->left);\n        R r = dfs(node->right);\n        return { node->val + l.skip + r.skip,\n                 max(l.rob, l.skip) + max(r.rob, r.skip) };\n    }\npublic:\n    int rob(TreeNode* root) {\n        R p = dfs(root);\n        return max(p.rob, p.skip);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

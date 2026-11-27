@@ -1,0 +1,40 @@
+{
+  "slug": "finding-the-users-active-minutes",
+  "title": "Finding the Users Active Minutes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Table Counting",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, unordered_set<int>> userMinutes: up to n total entries across all users and minutes → O(n)\n- recursion depth: none\n- not counted: input logs, returned answer vector",
+  "approach": "Group each user's action times into a set of unique minutes using a hash map from user ID to a hash set of times. The size of each user's set is their UAM. Then iterate over all users and increment `answer[uam - 1]` (1-indexed). This correctly handles duplicate (user, minute) pairs and large user IDs up to 10^9.",
+  "hints": [
+    "The logs array can contain the same user-minute pair more than once. What must you determine about each user's logged times before computing their UAM?",
+    "Use an `unordered_map<int, unordered_set<int>>` to map each user ID to their set of unique minutes. Processing `[0,5]`, `[0,2]`, `[0,5]` for user 0 yields the set `{5, 2}`, giving UAM = 2.",
+    "```\nmap = empty map from user ID to set of minutes\nfor each [id, time] in logs:\n    add time to map[id]\nanswer = array of k zeros\nfor each (id, minutes) in map:\n    uam = size of minutes\n    answer[uam - 1] += 1\nreturn answer\n```",
+    "**Single entry** - only one log entry exists\n`Input: logs = [[0,1]], k = 1` → `Expected: [1]`\n⚠️ Bug: indexing answer with `uam` instead of `uam - 1` → returns `[0]`\n\n**Duplicate minutes** - same user logs the same minute multiple times\n`Input: logs = [[0,5],[0,5],[0,5]], k = 1` → `Expected: [1]`\n⚠️ Bug: counting total log entries per user instead of unique minutes → returns `[3]`\n\n**Large user IDs** - IDs up to 10^9\n`Input: logs = [[1000000000,1],[999999999,2]], k = 2` → `Expected: [2,0]`\n⚠️ Bug: using a vector indexed by user ID → allocation of 10^9+1 ints, memory limit exceeded\n\n**Shared minute across users** - different users acting at the same minute\n`Input: logs = [[0,1],[1,1],[2,1]], k = 1` → `Expected: [3]`\n⚠️ Bug: using a single global set of minutes instead of per-user sets → counts 1 unique minute → returns `[1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also return the user IDs that have the maximum UAM?",
+      "a": "Track the maximum UAM while iterating over the map. Collect all user IDs whose set size equals that maximum into a separate vector. Time stays O(n), space stays O(n)."
+    },
+    {
+      "q": "What if logs arrive as an unbounded stream and you must answer \"how many users have UAM = j\" queries in real-time?",
+      "a": "Maintain the same per-user set map plus a frequency map from UAM value to user count. On each new log, if the user's set size changes, decrement the old UAM count and increment the new one. Each query is O(1), amortized O(1) per log, space O(n)."
+    },
+    {
+      "q": "What if you must compute UAM over a sliding time window of w minutes?",
+      "a": "Replace each user's unordered_set with an ordered structure (e.g., a sorted container) of timestamps. When the window slides past a minute, remove it from every affected user's set and update their UAM count. Time O(n log n) overall, space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findingUsersActiveMinutes(vector<vector<int>>& logs, int k) {\n        unordered_map<int, unordered_set<int>> userMinutes;\n        for (auto& log : logs) {\n            userMinutes[log[0]].insert(log[1]);\n        }\n        vector<int> answer(k, 0);\n        for (auto& [id, minutes] : userMinutes) {\n            int uam = (int)minutes.size();\n            if (uam <= k) {\n                answer[uam - 1]++;\n            }\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "word-pattern",
+  "title": "Word Pattern",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Table Bijection",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<string> words: up to n words totaling O(m) characters → O(n + m)\n- unordered_map<char,string> p2w: up to 26 entries, O(m) total string data → O(n + m)\n- unordered_map<string,char> w2p: up to n entries, O(m) total string data → O(n + m)\n- stringstream ss: O(m) internal buffer → O(m)\n- recursion depth: none\n- not counted: input strings pattern and s",
+  "approach": "Split `s` into words and verify the word count equals the pattern length. Then iterate position-by-position, maintaining two hash maps: one from pattern characters to words (`char→word`) and one from words to pattern characters (`word→char`). At each position, if either mapping already exists but conflicts with the current pair, return false; otherwise insert both mappings. This enforces a bijection: no character maps to two different words, and no word maps to two different characters.",
+  "hints": [
+    "If the same letter appears twice in the pattern, what constraint does that place on the words at those positions in s-and does the same constraint hold in the reverse direction?",
+    "Use two hash maps: one mapping pattern characters to words (`char→word`) and one mapping words to characters (`word→char`). For pattern `\"abba\"` and s `\"dog cat cat dog\"`: at i=0 set `'a'→\"dog\"` and `\"dog\"→'a'`; at i=3, `'a'→\"dog\"` already exists and matches, so continue.",
+    "```\nsplit s into words\nif word count != pattern length: return false\nfor i from 0 to pattern length - 1:\n    c = pattern[i], w = words[i]\n    if c already mapped and mapped word != w: return false\n    if w already mapped and mapped char != c: return false\n    set c → w and w → c\nreturn true\n```",
+    "**Count mismatch** - more words than pattern letters\n`pattern = \"ab\", s = \"dog cat dog\"` → `Expected: false`\n⚠️ Bug: iterating only over `pattern.size()` without checking `words.size()` first → ignores the third word, returns true\n\n**Missing reverse map** - same word mapped to two different letters\n`pattern = \"ab\", s = \"dog dog\"` → `Expected: false`\n⚠️ Bug: maintaining only a `char→word` map → both `'a'` and `'b'` map to `\"dog\"` with no conflict detected, returns true\n\n**Missing forward map** - same letter mapped to two different words\n`pattern = \"aa\", s = \"dog cat\"` → `Expected: false`\n⚠️ Bug: maintaining only a `word→char` map → `\"dog\"→'a'` and `\"cat\"→'a'` with no conflict detected, returns true\n\n**Operator[] insertion** - all identical pattern and words\n`pattern = \"aaaa\", s = \"dog dog dog dog\"` → `Expected: true`\n⚠️ Bug: using `p2w[c] != w` with `operator[]` before checking `.count(c)` → inserts `\"\"` for new key at i=0, `\"\" != \"dog\"` is true → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if pattern tokens are also space-separated words instead of single characters?",
+      "a": "Split both inputs into token lists by their respective delimiters, then apply the same bijection check between the two token sequences. The algorithm is identical-only the pattern splitting step changes. TC O(n + m), SC O(n + m)."
+    },
+    {
+      "q": "What if s arrives as a character stream too large to store entirely in memory?",
+      "a": "Tokenize words on the fly from the stream, maintaining the two maps incrementally. You never store the full word list-only the maps, which are bounded by the number of unique pattern letters (≤ 26) and unique words seen so far. TC O(n + m), SC O(min(n, unique words))."
+    },
+    {
+      "q": "What if you need to find the longest contiguous substring of s (in word units) that matches the pattern?",
+      "a": "For each starting word position in s, attempt to match the pattern against consecutive words using the same bijection check, tracking the longest match. This becomes O(m × n) in the worst case since each starting position may scan up to n words. TC O(m × n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool wordPattern(string pattern, string s) {\n        vector<string> words;\n        stringstream ss(s);\n        string word;\n        while (ss >> word) {\n            words.push_back(word);\n        }\n        if (words.size() != pattern.size()) return false;\n        unordered_map<char, string> p2w;\n        unordered_map<string, char> w2p;\n        for (int i = 0; i < (int)pattern.size(); i++) {\n            char c = pattern[i];\n            const string& w = words[i];\n            if (p2w.count(c) && p2w[c] != w) return false;\n            if (w2p.count(w) && w2p[w] != c) return false;\n            p2w[c] = w;\n            w2p[w] = c;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

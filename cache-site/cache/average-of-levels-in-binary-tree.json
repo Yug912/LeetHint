@@ -1,0 +1,40 @@
+{
+  "slug": "average-of-levels-in-binary-tree",
+  "title": "Average of Levels in Binary Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- vector<long long> sums: up to h entries → O(h)\n- vector<int> counts: up to h entries → O(h)\n- recursion depth: up to h → O(h)\n- not counted: input, returned vector",
+  "approach": "We use a Depth-First Search (DFS) to traverse the tree while tracking the current depth. We maintain two arrays: one for the sum of values at each depth, and another for the count of nodes at each depth. By updating these arrays during the traversal, we can compute the average for each level by dividing the sum by the count. This approach is correct because it partitions the nodes by their depth and aggregates the necessary statistics to compute the exact average.",
+  "hints": [
+    "If you explore the tree by going as deep as possible before backtracking, how does the sequence of depths you visit relate to the levels of the tree? The number of nodes in the tree is in the range [1, 10^4].",
+    "Use Depth-First Search (DFS) with two arrays tracking the sum and count of nodes at each depth. Visiting node 9 at depth 1 in Example 1 adds 9 to `sums[1]` and 1 to `counts[1]`.",
+    "```\nfunction dfs(node, depth):\n    if node is null: return\n    if depth == size of sums:\n        append node.val to sums, 1 to counts\n    else:\n        sums[depth] += node.val\n        counts[depth] += 1\n    dfs(node.left, depth + 1)\n    dfs(node.right, depth + 1)\n```",
+    "**Single node** - The tree has only the root.\n`Input: [5]` → `Expected: [5.00000]`\n⚠️ Bug: Only updating `sums[depth]` if `depth < sums.size()` without pushing back for new depths → returns `[]`.\n\n**Large sum overflow** - A level contains many nodes with large values.\n`Input: [2147483647, 2147483647, 2147483647]` → `Expected: [2147483647.00000, 2147483647.00000]`\n⚠️ Bug: Using `int` for the `sums` array → returns `[2147483647.00000, -1.00000]` because the sum of two `2147483647` overflows a 32-bit signed integer.\n\n**Integer division** - Dividing two integers without casting to double.\n`Input: [3, 9, 20]` → `Expected: [3.00000, 14.50000]`\n⚠️ Bug: Calculating `sums[i] / counts[i]` with both as integers → returns `[3.00000, 14.00000]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is extremely large and doesn't fit in memory, represented as a stream of nodes with parent pointers?",
+      "a": "Process the stream sequentially, maintaining a hash map of depth to sum and count. Since nodes might not arrive in depth order, the hash map handles arbitrary arrival order. Time complexity remains O(n), but space becomes O(n) in the worst case if the tree is skewed."
+    },
+    {
+      "q": "What if you need to return the median of each level instead of the average?",
+      "a": "Store all node values at each depth rather than just the sum and count. During DFS, append each node's value to a list corresponding to its depth. After traversal, sort each list and find the median, making time complexity O(n log n) and space O(n)."
+    },
+    {
+      "q": "What if the tree is a perfect binary tree and you want to optimize space further?",
+      "a": "For a perfect binary tree, the number of nodes at depth d is exactly 2^d. Pre-allocate the sums and counts arrays to the tree's height to avoid dynamic resizing. The space complexity remains O(h), but with fewer reallocations during the traversal."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<double> averageOfLevels(TreeNode* root) {\n        vector<long long> sums;\n        vector<int> counts;\n        dfs(root, 0, sums, counts);\n        vector<double> ans;\n        for (int i = 0; i < sums.size(); ++i) {\n            ans.push_back(static_cast<double>(sums[i]) / counts[i]);\n        }\n        return ans;\n    }\n    \n    void dfs(TreeNode* node, int depth, vector<long long>& sums, vector<int>& counts) {\n        if (!node) return;\n        if (depth == sums.size()) {\n            sums.push_back(node->val);\n            counts.push_back(1);\n        } else {\n            sums[depth] += node->val;\n            counts[depth] += 1;\n        }\n        dfs(node->left, depth + 1, sums, counts);\n        dfs(node->right, depth + 1, sums, counts);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

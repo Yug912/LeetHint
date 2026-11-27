@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-town-judge",
+  "title": "Find the Town Judge",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-Degree/Out-Degree Counting",
+  "tc": "O(n + m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> trustCount: n+1 entries → O(n)\n- vector<int> trustedByCount: n+1 entries → O(n)\n- recursion depth: none\n- not counted: input trust vector, returned int",
+  "approach": "The town judge is the unique person who trusts nobody (out-degree 0) and is trusted by everyone else (in-degree n−1). We maintain two arrays of size n+1: one for out-degree (how many people each person trusts) and one for in-degree (how many people trust each person). After processing all trust pairs, we scan for the person with out-degree 0 and in-degree n−1. If exactly one such person exists, return them; otherwise return −1. The problem guarantees at most one such person by construction, so the first match is the answer.",
+  "hints": [
+    "For each person in the town, what two numbers about their trust relationships would set the judge apart from everyone else?",
+    "Use two integer arrays of size n+1: one for out-degree (people this person trusts) and one for in-degree (people who trust this person). In Example 2 (n=3, trust=[[1,3],[2,3]]), person 3 has out-degree 0 and in-degree 2 = n−1, so 3 is the judge.",
+    "```\ninitialize outDeg[1..n] = 0, inDeg[1..n] = 0\nfor each pair (a, b) in trust:\n    outDeg[a] += 1\n    inDeg[b] += 1\nfor i from 1 to n:\n    if outDeg[i] == 0 and inDeg[i] == n - 1:\n        return i\nreturn -1\n```",
+    "**Single person** - n=1 with no trust relationships; the judge vacuously satisfies both conditions.\n`Input: n = 1, trust = []` → `Expected: 1`\n⚠️ Bug: requiring `inDeg[i] > 0` in addition to `== n - 1` → returns -1\n\n**Judge trusts someone** - the would-be judge also appears as a truster.\n`Input: n = 3, trust = [[1,3],[2,3],[3,1]]` → `Expected: -1`\n⚠️ Bug: checking only `inDeg[i] == n - 1`, ignoring out-degree → returns 3\n\n**No one trusted by all** - no person reaches in-degree n−1.\n`Input: n = 3, trust = [[1,2],[2,3]]` → `Expected: -1`\n⚠️ Bug: returning the person with maximum in-degree → returns 3\n\n**High in-degree but non-zero out-degree** - person trusted by all but also trusts someone.\n`Input: n = 4, trust = [[1,3],[2,3],[3,2],[4,3]]` → `Expected: -1`\n⚠️ Bug: checking only `inDeg[i] == n - 1` → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^9 but trust.length stays ≤ 10^4, how would you adapt?",
+      "a": "Replace the two size-n arrays with hash maps that only store people appearing in trust. A person never mentioned has out-degree 0 and in-degree 0, so they qualify only when n = 1. TC: O(m), SC: O(m)."
+    },
+    {
+      "q": "What if the judge is allowed to trust at most k people instead of 0?",
+      "a": "Change the condition to `outDeg[i] <= k && inDeg[i] >= n - 1 - k`. The rest of the algorithm stays identical. TC: O(n + m), SC: O(n)."
+    },
+    {
+      "q": "What if trust pairs arrive as a stream and you must answer after each pair whether a judge currently exists?",
+      "a": "Maintain the two degree arrays and a running count of how many people currently satisfy the judge condition. After each pair update, increment or decrement the count for the two affected people. Answer \"yes\" when the count is exactly 1. TC: O(m) total, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findJudge(int n, vector<vector<int>>& trust) {\n        vector<int> trustCount(n + 1, 0);\n        vector<int> trustedByCount(n + 1, 0);\n        \n        for (const auto& t : trust) {\n            trustCount[t[0]]++;\n            trustedByCount[t[1]]++;\n        }\n        \n        for (int i = 1; i <= n; i++) {\n            if (trustCount[i] == 0 && trustedByCount[i] == n - 1) {\n                return i;\n            }\n        }\n        \n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

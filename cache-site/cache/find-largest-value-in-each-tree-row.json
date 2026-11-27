@@ -1,0 +1,40 @@
+{
+  "slug": "find-largest-value-in-each-tree-row",
+  "title": "Find Largest Value in Each Tree Row",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Level-Order Traversal",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: up to ~n/2 nodes at the widest level (complete tree's last level) → O(n)\n- recursion depth: none (iterative BFS)\n- not counted: input tree, returned vector<int> result",
+  "approach": "Perform a level-order traversal (BFS) using a queue. For each level, process all nodes currently in the queue, track the maximum value seen, push children for the next level, and append the level max to the result. This visits each node exactly once and naturally groups nodes by depth.",
+  "hints": [
+    "What do all nodes at the same distance from the root have in common, and how could you visit them as a group before moving deeper? The tree has up to 10^4 nodes.",
+    "Use a queue for level-order traversal. In Example 1, start with queue = [1]; pop 1, record max = 1, push children 3 and 2 - that is one full level processed.",
+    "```\nq.push(root)\nwhile q not empty:\n    size = q.size()\n    levelMax = -infinity\n    repeat size times:\n        node = q.pop()\n        levelMax = max(levelMax, node.val)\n        if node.left:  q.push(node.left)\n        if node.right: q.push(node.right)\n    result.push(levelMax)\n```",
+    "**Empty tree** - root is null, no rows exist.\n`Input: []` → `Expected: []`\n⚠️ Bug: skipping the null check and calling q.push(root) → dereferences null, runtime crash.\n\n**All negative values** - every node value is below zero.\n`Input: [-1,-2,-3]` → `Expected: [-1,-3]`\n⚠️ Bug: initialising levelMax to 0 instead of INT_MIN → returns [0,0].\n\n**Single node** - tree has exactly one node.\n`Input: [5]` → `Expected: [5]`\n⚠️ Bug: only pushing to result when queue size > 1 → returns [].\n\n**Skewed tree** - every node has only a right child, depth = n.\n`Input: [1,null,2,null,3]` → `Expected: [1,2,3]`\n⚠️ Bug: only checking node->left and ignoring node->right → returns [1].\n\n**INT_MIN as a node value** - a node value equals the smallest int.\n`Input: [-2147483648]` → `Expected: [-2147483648]`\n⚠️ Bug: initialising levelMax to INT_MIN + 1 \"to be safe\" → returns [-2147483647]."
+  ],
+  "followUps": [
+    {
+      "q": "What if you must use O(1) extra space (no queue)?",
+      "a": "Use Morris-like level traversal or, if modifying the tree is allowed, repeatedly walk to each depth with a DFS that tracks current depth and writes the max into a pre-sized array indexed by depth. Time becomes O(n·h) in the worst case; space is O(h) for recursion or O(1) iteratively if you avoid the call stack."
+    },
+    {
+      "q": "What if the tree is so large it does not fit in memory and nodes arrive as a stream grouped by level?",
+      "a": "Process each level's stream independently: maintain a running max and emit it when the level ends. Time stays O(n); space drops to O(1) since you never hold more than one node's worth of data plus the current max."
+    },
+    {
+      "q": "What if you also need the smallest value in each row alongside the largest?",
+      "a": "Track both a running min and max per level inside the same BFS loop - one extra comparison per node. Time stays O(n); space is unchanged at O(n) for the queue, with the result vectors not counted."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x, left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    vector<int> largestValues(TreeNode* root) {\n        vector<int> result;\n        if (!root) return result;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int size = q.size();\n            int maxVal = INT_MIN;\n            for (int i = 0; i < size; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                if (node->val > maxVal) maxVal = node->val;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            result.push_back(maxVal);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

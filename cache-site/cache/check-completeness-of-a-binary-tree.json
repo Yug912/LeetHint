@@ -1,0 +1,40 @@
+{
+  "slug": "check-completeness-of-a-binary-tree",
+  "title": "Check Completeness of a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS with Heap Indexing",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- countNodes recursion stack: depth up to h → O(h)\n- check recursion stack: depth up to h → O(h)\n- no containers allocated\n- not counted: input tree",
+  "approach": "Number the root as index 1, and for any node at index i assign its left child 2i and its right child 2i+1. In a complete binary tree with n nodes, the set of indices is exactly {1, 2, …, n}, so the tree is complete iff no node receives an index greater than n. First count the nodes with one DFS, then run a second DFS that returns false the moment any index exceeds n (this early prune also prevents overflow on skewed trees). Both passes are O(n) time and O(h) stack space.",
+  "hints": [
+    "If you number the root 1 and every left child 2·(parent) and right child 2·(parent)+1, what is the relationship between the largest number assigned and the total node count in a tree that is complete?",
+    "Use DFS with heap-style indexing: root = 1, left = 2·i, right = 2·i+1. In Example 1 the six nodes get indices 1,2,3,4,5,6 - the maximum equals the count. In Example 2 the node 7 gets index 7 while there are only 6 nodes.",
+    "```\nfunction count(node):\n    if node is null: return 0\n    return 1 + count(node.left) + count(node.right)\n\nfunction check(node, idx, n):\n    if node is null: return true\n    if idx > n: return false\n    return check(node.left, 2*idx, n)\n       and check(node.right, 2*idx+1, n)\n\nn = count(root)\nreturn check(root, 1, n)\n```",
+    "**Single node** - smallest valid input, root has no children\n`Input: [1]` → `Expected: true`\n⚠️ Bug: starting the root at index 0 and testing `maxIndex == n` → 0 ≠ 1, returns false\n\n**Left-packing violation** - last level has a gap before a later node\n`Input: [1,2,3,4,null,null,7]` → `Expected: false`\n⚠️ Bug: checking only that every level except the last is completely full → returns true\n\n**Right-skewed tree** - every node has only a right child, indices grow 1, 3, 7, 15…\n`Input: [1,null,2,null,3]` → `Expected: false`\n⚠️ Bug: using `int` for the index with no early prune on a 100-node right-skewed tree → 2^99 overflows and wraps, may equal the count → returns true\n\n**Full perfect tree** - all levels filled\n`Input: [1,2,3,4,5,6,7]` → `Expected: true`\n⚠️ Bug: returning false the moment a null child is seen during traversal → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "Solve this with O(1) extra space (no recursion stack, no explicit stack).",
+      "a": "Use Morris traversal to walk the tree in-order while maintaining a running index, counting nodes in one pass and verifying indices in a second Morris pass. Time stays O(n); space drops to O(1), at the cost of temporarily modifying tree pointers."
+    },
+    {
+      "q": "The node count can be up to 10^7; recursion may overflow the call stack. How do you adapt?",
+      "a": "Convert both the counting pass and the index-checking pass to iterative DFS using an explicit stack of (node, index) pairs. Time remains O(n); space is O(h) on the explicit stack, which you control and which avoids the fixed OS call-stack limit."
+    },
+    {
+      "q": "Nodes arrive as a level-order stream and you cannot revisit them. Can you decide completeness online?",
+      "a": "Track an expected-index counter starting at 1; for each non-null node received, compare its heap index to the expected value and increment expected. If any node's index exceeds the running count or a null appears before all nodes are placed, emit false. This is O(n) time and O(1) space but requires the stream to include null sentinels."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int countNodes(TreeNode* node) {\n        if (!node) return 0;\n        return 1 + countNodes(node->left) + countNodes(node->right);\n    }\n    bool check(TreeNode* node, long long idx, int n) {\n        if (!node) return true;\n        if (idx > n) return false;\n        return check(node->left, 2 * idx, n) && check(node->right, 2 * idx + 1, n);\n    }\npublic:\n    bool isCompleteTree(TreeNode* root) {\n        int n = countNodes(root);\n        return check(root, 1LL, n);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "combinations",
+  "title": "Combinations",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking",
+  "tc": "O(C(n, k) * k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> current: at most k elements → O(k)\n- recursion call-stack depth: at most k → O(k)\n- not counted: input, returned vector<vector<int>> result",
+  "approach": "Use backtracking: build each combination by always picking numbers in strictly increasing order, which guarantees each unordered combination appears exactly once. Maintain a `current` vector; at each call, try appending every number from `start` to `n`, recurse with `start = i+1`, then pop. Prune branches where the remaining candidates are too few to reach size `k`. When `current.size() == k`, push a copy into the result.",
+  "hints": [
+    "Look at the six outputs for n = 4, k = 2: what do you notice about the relative order of the two numbers inside each pair?",
+    "Backtracking with a growing partial combination. For n = 4, k = 2: start with [1], extend to [1,2] (complete, save), backtrack, try [1,3], [1,4], then move to [2], etc.",
+    "```\nfunction backtrack(start):\n    if current.size() == k:\n        save copy of current\n        return\n    if current.size() + (n - start + 1) < k:\n        return\n    for i from start to n:\n        add i to current\n        backtrack(i + 1)\n        remove last from current\n```",
+    "**Smallest input** - n = 1, k = 1, the only valid combination\n`Input: n = 1, k = 1` → `Expected: [[1]]`\n⚠️ Bug: loop `for (int i = start; i < n; i++)` uses `<` instead of `<=` → never enters loop, returns `[]`\n\n**k equals n** - every number must be picked, exactly one combination\n`Input: n = 3, k = 3` → `Expected: [[1,2,3]]`\n⚠️ Bug: prune condition `current.size() + (n - start + 1) <= k` uses `<=` → prunes at start = 1 since 0 + 3 ≤ 3, returns `[]`\n\n**Missing cleanup** - forgetting to remove the last element after recursion\n`Input: n = 3, k = 2` → `Expected: [[1,2],[1,3],[2,3]]`\n⚠️ Bug: omitting `current.pop_back()` after the recursive call → current never shrinks, returns `[[1,2]]`\n\n**Loop from 1 instead of start** - generates duplicates and self-pairs\n`Input: n = 3, k = 2` → `Expected: [[1,2],[1,3],[2,3]]`\n⚠️ Bug: `for (int i = 1; i <= n; i++)` instead of `from start` → produces `[[1,1],[1,2],[1,3],[2,1],[2,2],[2,3],[3,1],[3,2],[3,3]]`"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 1000 and you only need the count of combinations, not the list, how would you change the approach?",
+      "a": "Stop generating and compute C(n, k) directly via the multiplicative formula: product of (n - i + 1) / i for i = 1..k, using modular or big-integer arithmetic as needed. TC: O(k), SC: O(1)."
+    },
+    {
+      "q": "What if the output must be in lexicographic (dictionary) order?",
+      "a": "No change needed - the backtracking already visits smaller numbers first at every level, so combinations are produced in lexicographic order naturally. TC and SC unchanged."
+    },
+    {
+      "q": "If k is close to n (e.g., k = 18, n = 20), how can you reduce the work?",
+      "a": "Use the complement identity C(n, k) = C(n, n - k): generate combinations of size n - k instead, then output the complement of each (the numbers not chosen). TC: O(C(n, min(k, n-k)) * k), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> combine(int n, int k) {\n        vector<vector<int>> result;\n        vector<int> current;\n        backtrack(1, n, k, current, result);\n        return result;\n    }\nprivate:\n    void backtrack(int start, int n, int k, vector<int>& current, vector<vector<int>>& result) {\n        if ((int)current.size() == k) {\n            result.push_back(current);\n            return;\n        }\n        if ((int)current.size() + (n - start + 1) < k) return;\n        for (int i = start; i <= n; i++) {\n            current.push_back(i);\n            backtrack(i + 1, n, k, current, result);\n            current.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "sliding-window-median",
+  "title": "Sliding Window Median",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Heaps / Ordered Multiset Sliding Window",
+  "tc": "O(n log k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- multiset<int> left: up to k/2 + 1 elements → O(k)\n- multiset<int> right: up to k/2 elements → O(k)\n- recursion depth: none\n- not counted: input vector, returned vector",
+  "approach": "Use two multisets: `left` (smaller half, max at `rbegin()`) and `right` (larger half, min at `begin()`). Maintain the invariant `left.size() == right.size()` or `left.size() == right.size() + 1`. Insert each incoming element into the appropriate multiset, lazily remove the outgoing element, then rebalance. The median is `*left.rbegin()` for odd `k`, or the average of `*left.rbegin()` and `*right.begin()` for even `k`. Each insert/erase/rebalance step is O(log k), giving O(n log k) total.",
+  "hints": [
+    "As the window slides right by one position, how many of the k values in the window are actually different from the previous step? The constraints allow up to 10^5 elements.",
+    "Use two multisets: one for the smaller half (max-extractable) and one for the larger half (min-extractable). In Example 1 with window [1, 3, -1], the smaller half is {1, -1} and the larger half is {3}, so the median is max of the smaller half = 1.",
+    "```\nleft = empty multiset  # smaller half, max at end\nright = empty multiset # larger half, min at begin\n\nfor i from 0 to n-1:\n    insert nums[i] into left if <= max(left), else into right\n    if i >= k:\n        remove nums[i-k] from left if <= max(left), else from right\n    rebalance until |left| == |right| or |left| == |right| + 1\n    if i >= k-1:\n        median = max(left) if k odd else (max(left) + min(right)) / 2\n```",
+    "**Smallest window** - k=1 means each element is its own median; left can become empty after removal\n`Input: nums = [42], k = 1` → `Expected: [42.00000]`\n⚠️ Bug: accessing `*right.begin()` for even k without checking right is empty → undefined behavior on k=1\n\n**Overflow** - two values near INT_MAX summed for even k exceed 2^31 - 1\n`Input: nums = [2147483647, 2147483647], k = 2` → `Expected: [2147483647.00000]`\n⚠️ Bug: `(double)(*left.rbegin() + *right.begin()) / 2.0` → int addition wraps to -2 → returns `-1.00000`\n\n**Duplicates** - multiple equal values require erasing only one copy\n`Input: nums = [1,1,1,1,2], k = 3` → `Expected: [1.00000, 1.00000, 1.00000]`\n⚠️ Bug: `left.erase(out)` instead of `left.erase(left.find(out))` → erases all copies → returns `[1.00000, 1.00000, 2.00000]`\n\n**Single full-array window** - k equals n, only one output\n`Input: nums = [1,2,3,4,5], k = 5` → `Expected: [3.00000]`\n⚠️ Bug: output condition `i > k-1` instead of `i >= k-1` → returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the data arrives as an infinite stream and memory is limited to O(k)?",
+      "a": "The two-multiset approach already uses only O(k) space since it stores exactly the window elements. For a stream, process each new element the same way: insert, remove the oldest if the window is full, rebalance, and output. Time per element remains O(log k)."
+    },
+    {
+      "q": "What if k can change between queries on the same array?",
+      "a": "Two multisets become inefficient because changing k requires rebuilding. Instead, use a Fenwick tree (Binary Indexed Tree) over coordinate-compressed values: insert and delete are O(log n), and the median is found by binary searching the prefix sum for the k/2-th element in O(log^2 n) or O(log n) with binary lifting."
+    },
+    {
+      "q": "What if you need the median of any arbitrary subarray [l, r], not just a fixed-size sliding window?",
+      "a": "Use a persistent segment tree or merge-sort tree. Build it in O(n log n) preprocessing, then for each query [l, r] binary search the median value by counting elements <= mid in the range in O(log^2 n) per query. Total: O(n log n + q log^2 n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<double> medianSlidingWindow(vector<int>& nums, int k) {\n        vector<double> result;\n        int n = nums.size();\n        multiset<int> left, right;\n        \n        for (int i = 0; i < n; i++) {\n            if (left.empty() || nums[i] <= *left.rbegin()) {\n                left.insert(nums[i]);\n            } else {\n                right.insert(nums[i]);\n            }\n            \n            if (i >= k) {\n                int out = nums[i - k];\n                if (out <= *left.rbegin()) {\n                    left.erase(left.find(out));\n                } else {\n                    right.erase(right.find(out));\n                }\n            }\n            \n            while (left.size() > right.size() + 1) {\n                right.insert(*left.rbegin());\n                left.erase(prev(left.end()));\n            }\n            while (right.size() > left.size()) {\n                left.insert(*right.begin());\n                right.erase(right.begin());\n            }\n            \n            if (i >= k - 1) {\n                if (k % 2 == 1) {\n                    result.push_back((double)*left.rbegin());\n                } else {\n                    result.push_back(((double)*left.rbegin() + (double)*right.begin()) / 2.0);\n                }\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

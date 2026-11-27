@@ -1,0 +1,40 @@
+{
+  "slug": "second-minimum-node-in-a-binary-tree",
+  "title": "Second Minimum Node In a Binary Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS with Pruning",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- int minVal, int secondMin, bool found: O(1) each\n- recursion call-stack depth: up to h (tree height), worst case O(n) for a skewed full binary tree\n- not counted: input tree, returned int",
+  "approach": "The root's value is the global minimum because the min property propagates upward from leaves. The second minimum is the smallest value strictly greater than root.val. We DFS the tree: when a node's value exceeds root.val, it's a candidate and we prune its subtree (children are ≥ node.val by the min property). When a node's value equals root.val, we must explore both children. We track the minimum candidate found; if none exists, return -1.",
+  "hints": [
+    "If a node's value is strictly greater than the root's value, what must be true about every value in that node's subtree? The constraint states root.val = min(root.left.val, root.right.val) for each internal node.",
+    "Use a DFS that prunes subtrees. The root's value is the global minimum, so track the smallest value strictly greater than it. In Example 1, the right child 5 > 2 is immediately a candidate - its children (5, 7) are all ≥ 5, so we skip them.",
+    "```\nminVal = root.val\nsecondMin = none\nfunction dfs(node):\n    if node is null: return\n    if node.val > minVal:\n        if secondMin is none or node.val < secondMin:\n            secondMin = node.val\n        return\n    dfs(node.left)\n    dfs(node.right)\ndfs(root)\nreturn secondMin if secondMin is not none else -1\n```",
+    "**Single node** - tree has only the root with no children\n`Input: [1]` → `Expected: -1`\n⚠️ Bug: returning `secondMin` (initialized to 0) without a found flag → returns 0\n\n**All equal values** - every node has the same value as the root\n`Input: [2,2,2]` → `Expected: -1`\n⚠️ Bug: using `node->val >= minVal` as the candidate check → 2 qualifies as a candidate, returns 2\n\n**Second min deep in tree** - the only value greater than root.val is at a leaf\n`Input: [2,2,2,null,null,2,3]` → `Expected: 3`\n⚠️ Bug: only checking root's immediate children, not recursing when child.val == root.val → misses 3, returns -1\n\n**Duplicates in sorted list** - multiple nodes share the minimum value\n`Input: [2,2,5,null,null,5,7]` → `Expected: 5`\n⚠️ Bug: collecting all values, sorting, and returning index 1 → returns 2 (duplicate min), not 5"
+  ],
+  "followUps": [
+    {
+      "q": "Find the k-th smallest value in the tree (k ≥ 2).",
+      "a": "The root still holds the minimum. During DFS, maintain a max-heap of size k for values strictly greater than root.val. Prune a subtree when the node's value is already ≥ the heap's maximum, since all descendants are ≥ it. TC: O(n log k), SC: O(k + h)."
+    },
+    {
+      "q": "What if the min property is removed - the tree is an arbitrary binary tree?",
+      "a": "The root no longer holds the global minimum, so pruning is invalid. You must visit every node and track the two smallest distinct values seen so far. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if the tree has 10^9 nodes and must be traversed as a stream with O(1) memory?",
+      "a": "Use an iterative DFS with an explicit stack limited to the current path. Keep only minVal, secondMin, and a found flag - the algorithm is already single-pass. The pruning still applies: skip subtrees where node.val > minVal. TC: O(n), SC: O(h) for the stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int minVal;\n    int secondMin;\n    bool found;\n\n    void dfs(TreeNode* node) {\n        if (!node) return;\n        if (node->val > minVal) {\n            if (!found || node->val < secondMin) {\n                secondMin = node->val;\n                found = true;\n            }\n            return;\n        }\n        dfs(node->left);\n        dfs(node->right);\n    }\n\npublic:\n    int findSecondMinimumValue(TreeNode* root) {\n        minVal = root->val;\n        found = false;\n        secondMin = 0;\n        dfs(root);\n        return found ? secondMin : -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

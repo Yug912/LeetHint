@@ -1,0 +1,40 @@
+{
+  "slug": "contiguous-array",
+  "title": "Contiguous Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum + Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> seen: up to n+1 distinct prefix sums → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Relabel 0 as -1 and 1 as +1, so a subarray has equal 0s and 1s exactly when its sum is 0. Track a running prefix sum; if the same sum appears at indices i and j (with i < j), the subarray (i, j] has sum 0. Store the first occurrence of each prefix sum in a hash map (seeded with sum 0 at index -1 to capture subarrays starting at index 0), and for each new position compute the candidate length j - firstSeen[sum]. The maximum candidate is the answer.",
+  "hints": [
+    "If you relabelled every 0 as -1, how would the totals at the two ends of any valid subarray compare? With n ≤ 10^5, checking every pair of endpoints is too slow.",
+    "Use a hash map from prefix sum to its first occurrence index, seeded with {0: -1}. For [0,1,1,1,1,1,0,0,0], prefix sums (0→-1) are -1,0,1,2,3,4,3,2,1; sum 1 first seen at index 2 reappears at index 8, giving length 6.",
+    "```\nseen = {0: -1}\nsum = 0, best = 0\nfor i in 0..n-1:\n    sum += 1 if nums[i] else -1\n    if sum in seen:\n        best = max(best, i - seen[sum])\n    else:\n        seen[sum] = i\nreturn best\n```",
+    "**Single element** - n = 1, no balanced subarray exists.\n`Input: [0]` → `Expected: 0`\n⚠️ Bug: initialising best to 1 instead of 0 → returns 1\n\n**All same value** - no subarray can balance 0s and 1s.\n`Input: [1,1,1,1]` → `Expected: 0`\n⚠️ Bug: initialising best to 1 instead of 0 → returns 1\n\n**Full array is valid** - sum returns to 0 at the last index.\n`Input: [0,0,1,1]` → `Expected: 4`\n⚠️ Bug: not seeding seen[0] = -1 → misses the full-array match, returns 2\n\n**Sum reappears far from its first occurrence** - must keep the first index, not overwrite.\n`Input: [1,1,0,0,1,1,0]` → `Expected: 6`\n⚠️ Bug: overwriting seen[sum] on every visit instead of only the first → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual subarray (start and end indices) of maximum length, not just the length.",
+      "a": "While scanning, track the current best length and store the corresponding (start, end) pair; whenever a candidate equals the best, keep the first one, and whenever it exceeds the best, replace both. TC stays O(n), SC stays O(n) for the map plus O(1) for the stored indices."
+    },
+    {
+      "q": "Generalise to an array of k distinct values where you want the longest subarray with equal counts of all k values.",
+      "a": "Track a (k-1)-tuple of prefix-sum differences (e.g. count[0]-count[1], count[0]-count[2], …) and hash that tuple to its first occurrence; same logic applies. TC O(n) with O(n·k) tuple hashing, SC O(n)."
+    },
+    {
+      "q": "The array arrives as an unbounded stream and you must report the current max length after each element.",
+      "a": "Run the same algorithm online: maintain the running sum, the hash map of first occurrences, and the running best, updating all three per incoming element. TC O(n) total, SC O(n) for the map (which grows with the number of distinct prefix sums seen so far)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMaxLength(vector<int>& nums) {\n        unordered_map<int,int> seen;\n        seen[0] = -1;\n        int sum = 0, best = 0;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            sum += nums[i] ? 1 : -1;\n            auto it = seen.find(sum);\n            if (it != seen.end()) {\n                int len = i - it->second;\n                if (len > best) best = len;\n            } else {\n                seen[sum] = i;\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

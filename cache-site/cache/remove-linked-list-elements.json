@@ -1,0 +1,40 @@
+{
+  "slug": "remove-linked-list-elements",
+  "title": "Remove Linked List Elements",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sentinel/Dummy Head",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode dummy: one stack node → O(1)\n- ListNode* cur: one pointer → O(1)\n- no recursion, no containers\n- not counted: input list, returned head",
+  "approach": "Use a dummy (sentinel) node whose `next` points to the real head, so removing the head is no longer a special case. Walk a single pointer `cur` through the list; whenever `cur->next->val == val`, relink `cur->next` past it (and do NOT advance, since the new `cur->next` may also match), otherwise advance `cur`. Return `dummy.next`. This is correct because every node is examined exactly once via the `cur->next` check, and consecutive matches are all skipped before advancing.",
+  "hints": [
+    "In Example 3 with head = [7,7,7,7] and val = 7, the head changes after each removal - what makes removing the first node different from removing a middle node?",
+    "Use a dummy (sentinel) node whose `next` points to head, then walk a pointer checking only `cur->next`. For [1,2,6,3,4,5,6] val=6: when `cur` is at node 2 and `cur->next->val == 6`, set `cur->next = cur->next->next` to skip it.",
+    "```\ndummy.next = head\ncur = dummy\nwhile cur.next != null:\n    if cur.next.val == val:\n        cur.next = cur.next.next\n    else:\n        cur = cur.next\nreturn dummy.next\n```",
+    "**Empty list** - head is null, so there is nothing to traverse.\n`Input: head = [], val = 1` → `Expected: []`\n⚠️ Bug: dereferencing `head->val` without a null check → segfault\n\n**Head matches val** - the very first node must be removed, so the returned head differs from the input head.\n`Input: head = [6,1,2], val = 6` → `Expected: [1,2]`\n⚠️ Bug: starting `cur = head` and only relinking `cur->next` → returns [6,1,2]\n\n**All nodes equal val** - every node is removed, leaving an empty list.\n`Input: head = [7,7,7,7], val = 7` → `Expected: []`\n⚠️ Bug: advancing `cur` unconditionally after relinking `cur->next` → returns [7,7]\n\n**Tail matches val** - the last node must be removed, so `cur->next` becomes null.\n`Input: head = [1,2,6], val = 6` → `Expected: [1,2]`\n⚠️ Bug: deleting by copying `cur->next->val` into `cur` (null at tail) → segfault"
+  ],
+  "followUps": [
+    {
+      "q": "Solve it recursively without a dummy node. What changes about the space complexity?",
+      "a": "Recurse as `removeElements(head->next, val)`; if `head->val == val` return that result, else set `head->next = result` and return `head`, with base case `head == nullptr`. TC O(n), SC O(n) for the recursion stack on a skewed list."
+    },
+    {
+      "q": "What if the list is doubly linked - does the approach simplify?",
+      "a": "A dummy node is still useful for head removal. When skipping node `x`, also set `x->next->prev = x->prev` (guarding `x->next != null`). TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if the list arrives as a streaming input too large to hold in memory?",
+      "a": "You cannot finalize a run of consecutive matching nodes until you see the next non-matching node, so buffer only the current run of matches. Output is delayed by the length of the longest matching run. TC O(n), SC O(k) where k is the longest run of matching values."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* removeElements(ListNode* head, int val) {\n        ListNode dummy(0, head);\n        ListNode* cur = &dummy;\n        while (cur->next) {\n            if (cur->next->val == val) {\n                cur->next = cur->next->next;\n            } else {\n                cur = cur->next;\n            }\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

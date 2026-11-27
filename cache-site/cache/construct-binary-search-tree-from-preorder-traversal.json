@@ -1,0 +1,40 @@
+{
+  "slug": "construct-binary-search-tree-from-preorder-traversal",
+  "title": "Construct Binary Search Tree from Preorder Traversal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Recursive Construction with Bounds",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- int idx: single integer → O(1)\n- recursion call stack: depth equals tree height h; worst case (skewed tree) O(n), balanced O(log n)\n- not counted: input vector, returned tree nodes",
+  "approach": "The first element of a preorder traversal is always the root. In a BST, all left-subtree values are strictly less than the root and all right-subtree values are strictly greater. We use a single global index and a recursive helper `build(bound)`: if the next value exceeds `bound`, it belongs to an ancestor's right subtree, so return null; otherwise consume it as a new node, recursively build its left subtree with bound = node's value, then build its right subtree with the inherited bound. Each element is consumed exactly once, giving O(n) time.",
+  "hints": [
+    "In a preorder traversal the first value is the root. After it, which consecutive range of values must all belong to the left subtree, and what single property separates that range from the right-subtree values?",
+    "Use a recursive helper with an upper bound and a shared index. For [8,5,1,7,10,12]: root = 8, then call build(8) which consumes 5,1,7 (all < 8), then call build(∞) which consumes 10,12.",
+    "```\nfunction build(bound):\n    if index >= n or preorder[index] > bound:\n        return null\n    node = new TreeNode(preorder[index])\n    index += 1\n    node.left  = build(node.val)\n    node.right = build(bound)\n    return node\n\nroot = build(+infinity)\n```",
+    "**Right-skewed tree** - every node has only a right child.\n`Input: [1,3]` → `Expected: [1,null,3]`\n⚠️ Bug: passing `node->val` as the bound for the right subtree instead of the inherited bound → build(1) sees 3 > 1, returns null → output [1].\n\n**Left-skewed tree** - every node has only a left child.\n`Input: [3,2,1]` → `Expected: [3,2,null,1]`\n⚠️ Bug: building the right subtree before the left subtree → consumes 2 as right child of 3, 1 as right child of 2 → output [3,null,2,null,1].\n\n**Single element** - minimum input size, n = 1.\n`Input: [1]` → `Expected: [1]`\n⚠️ Bug: using a class-member index that is not reset in the public method → on a second test case idx starts stale, build returns null immediately → output [].\n\n**Already sorted ascending** - produces a fully right-skewed tree.\n`Input: [1,2,3]` → `Expected: [1,null,2,null,3]`\n⚠️ Bug: swapping the bounds (left gets inherited bound, right gets node->val) → produces [1,2,3] (fully left-skewed) instead."
+  ],
+  "followUps": [
+    {
+      "q": "What if the preorder array could contain duplicate values?",
+      "a": "The BST must adopt a consistent convention such as \"left ≤ node < right.\" Adjust the bound check to use `>=` for the left-subtree bound so duplicates go left (or right, consistently). TC stays O(n), SC stays O(h)."
+    },
+    {
+      "q": "What if you are given the inorder traversal instead of preorder?",
+      "a": "Inorder of a BST is just the sorted sequence, so it does not uniquely determine the tree shape. You would need a second traversal (e.g., preorder) and a hash map from value to inorder index to partition ranges, giving TC O(n) and SC O(n)."
+    },
+    {
+      "q": "What if the input arrives as a stream of one element at a time and you must build the tree online?",
+      "a": "Replace recursion with an explicit stack of nodes. For each new value, if it is smaller than the stack top, attach it as the left child; otherwise pop until the stack top exceeds it and attach as the right child of the last popped node. TC O(n) amortized, SC O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int idx;\n    TreeNode* helper(vector<int>& pre, int bound) {\n        if (idx >= (int)pre.size() || pre[idx] > bound) return nullptr;\n        TreeNode* node = new TreeNode(pre[idx++]);\n        node->left = helper(pre, node->val);\n        node->right = helper(pre, bound);\n        return node;\n    }\npublic:\n    TreeNode* bstFromPreorder(vector<int>& preorder) {\n        idx = 0;\n        return helper(preorder, INT_MAX);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

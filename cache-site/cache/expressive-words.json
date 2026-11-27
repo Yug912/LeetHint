@@ -1,0 +1,40 @@
+{
+  "slug": "expressive-words",
+  "title": "Expressive Words",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Run-Length Encoding",
+  "tc": "O(|s| + Σ|words[i]|)",
+  "sc": "O(|s|)",
+  "spaceBreakdown": "- vector<pair<char,int>> sRLE: at most |s| entries (bounded by 26 distinct lowercase letters) → O(|s|)\n- recursion depth: none\n- not counted: input string s, input vector words, returned int",
+  "approach": "The key insight is to run-length encode both `s` and each query word into sequences of (character, count) pairs. A word is stretchy if and only if: (1) it has the same sequence of distinct characters as `s`, and (2) for each group, if `s`'s count is less than 3 the counts must be exactly equal (no extension possible since the result would be < 3), but if `s`'s count is 3 or more the word's count just needs to be ≤ `s`'s count (extension to a size ≥ 3 is valid). We precompute `s`'s encoding once, then check each word in a single pass.",
+  "hints": [
+    "If you wrote each string as a sequence of (character, run-length) pairs, what relationship between `s`'s pairs and a word's pairs would make the word stretchy?",
+    "Run-length encoding. For `s = \"heeellooo\"`, the encoding is [(h,1),(e,3),(l,2),(o,3)]. A word is stretchy if its encoding has the same characters in order, and for each group: counts match exactly when `s`'s count is below 3, or the word's count is at most `s`'s count when `s`'s count is 3 or more.",
+    "```\nencode s into list of (char, count) pairs\nfor each word:\n    encode word into (char, count) pairs\n    if number of groups differs → skip\n    for each group i:\n        if chars differ → not stretchy\n        if s_count[i] < 3 and word_count[i] != s_count[i] → not stretchy\n        if s_count[i] >= 3 and word_count[i] > s_count[i] → not stretchy\n    if all groups pass → count++\nreturn count\n```",
+    "**Small group in s** - s has a group of size 2, word has size 1 for that group.\n`s = \"aa\", words = [\"a\"]` → `Expected: 0`\n⚠️ Bug: checking only `word_count <= s_count` without testing `s_count < 3` → returns 1\n\n**Word group larger than s** - word's group exceeds s's group even when s's group is ≥ 3.\n`s = \"aaa\", words = [\"aaaa\"]` → `Expected: 0`\n⚠️ Bug: only checking character equality, skipping count comparison → returns 1\n\n**Fewer groups in word** - word has fewer groups than s.\n`s = \"heeellooo\", words = [\"he\"]` → `Expected: 0`\n⚠️ Bug: not checking `idx == sRLE.size()` at the end → returns 1\n\n**Word group of size 1 when s group ≥ 3** - extension from 1 to ≥ 3 is valid.\n`s = \"aaaa\", words = [\"a\"]` → `Expected: 1`\n⚠️ Bug: requiring `word_count >= 3` when `s_count >= 3` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if s can be up to 10^5 characters and there are 10^5 query words?",
+      "a": "The run-length encoding approach still works unchanged. Precompute s's encoding once in O(|s|), then check each word in O(|word|). Total time O(|s| + Σ|words[i]|), space O(|s|) for the encoding."
+    },
+    {
+      "q": "What if the extension operation could also shrink groups (remove characters) as long as the resulting size is ≥ 3?",
+      "a": "For groups where s's count ≥ 3, the word's count just needs to be ≥ 1 (any positive count works since we can both add and remove). For groups where s's count < 3, counts must still match exactly. The check becomes: same characters, and for each group either counts are equal or both are ≥ 3."
+    },
+    {
+      "q": "What if words can contain uppercase letters and matching should be case-insensitive?",
+      "a": "Convert both s and each word to lowercase before run-length encoding. This adds O(|s| + |word|) preprocessing per string but doesn't change the overall approach. Time complexity remains O(|s| + Σ|words[i]|)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int expressiveWords(string s, vector<string>& words) {\n        vector<pair<char, int>> sRLE;\n        int i = 0;\n        int n = s.size();\n        while (i < n) {\n            int j = i;\n            while (j < n && s[j] == s[i]) j++;\n            sRLE.push_back({s[i], j - i});\n            i = j;\n        }\n        \n        int count = 0;\n        for (const string& word : words) {\n            if (isStretchy(word, sRLE)) count++;\n        }\n        return count;\n    }\n    \nprivate:\n    bool isStretchy(const string& word, const vector<pair<char, int>>& sRLE) {\n        int i = 0;\n        int n = word.size();\n        int idx = 0;\n        while (i < n) {\n            if (idx >= (int)sRLE.size()) return false;\n            int j = i;\n            while (j < n && word[j] == word[i]) j++;\n            int wCount = j - i;\n            char c = word[i];\n            if (c != sRLE[idx].first) return false;\n            int sCount = sRLE[idx].second;\n            if (sCount < 3) {\n                if (wCount != sCount) return false;\n            } else {\n                if (wCount > sCount) return false;\n            }\n            i = j;\n            idx++;\n        }\n        return idx == (int)sRLE.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

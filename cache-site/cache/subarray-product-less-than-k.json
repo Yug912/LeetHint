@@ -1,0 +1,40 @@
+{
+  "slug": "subarray-product-less-than-k",
+  "title": "Subarray Product Less Than K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long product: single variable → O(1)\n- int left, count, right: single variables → O(1)\n- recursion depth: none\n- not counted: input vector nums",
+  "approach": "Since all elements are at least 1, the product of a subarray is monotonically non-decreasing as we extend it to the right. Use a sliding window with two pointers: for each right endpoint, shrink from the left until the product is below k, then all subarrays ending at right with start in [left, right] are valid - that's (right - left + 1) new subarrays. Handle k ≤ 1 separately since no product can be strictly less than 1.",
+  "hints": [
+    "Since every nums[i] is at least 1, how does the product of a subarray change when you extend it by one element to the right?",
+    "Use a sliding window (two pointers, left and right). For nums = [10,5,2,6], k = 100: when the window [10,5,2] reaches product 100 ≥ k, shrink from the left (remove 10 → product 10 < k), then count all subarrays ending at index 2 within the valid window.",
+    "```\nif k <= 1: return 0\nleft = 0, product = 1, count = 0\nfor right in 0..n-1:\n    product *= nums[right]\n    while product >= k:\n        product /= nums[left]\n        left += 1\n    count += right - left + 1\nreturn count\n```",
+    "**k ≤ 1** - every element is at least 1, so no product can be strictly less than k.\n`Input: nums = [1,2,3], k = 1` → `Expected: 0`\n⚠️ Bug: omitting the `if (k <= 1) return 0` guard → the while loop never terminates because product stays ≥ 1 = k, causing out-of-bounds access on nums[left].\n\n**Single element equal to k** - the product equals k, which is not strictly less.\n`Input: nums = [5], k = 5` → `Expected: 0`\n⚠️ Bug: using `product > k` instead of `product >= k` in the while condition → returns 1.\n\n**Product hits k mid-window** - the window must shrink even when product equals k exactly.\n`Input: nums = [10,5,2,6], k = 100` → `Expected: 8`\n⚠️ Bug: using `product > k` instead of `product >= k` → at index 2, product 100 is not shrunk, count becomes 9 instead of 8.\n\n**All ones** - product stays 1 regardless of window size, so every subarray qualifies when k > 1.\n`Input: nums = [1,1,1], k = 2` → `Expected: 6`\n⚠️ Bug: adding `right - left` instead of `right - left + 1` to count → returns 3 instead of 6."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be 0?",
+      "a": "A 0 makes the product 0, which is < k for any k > 0. When you encounter a 0, reset product to 1 and move left to right + 1. All subarrays ending at the 0 (starting from the old left) are valid. TC stays O(n), SC O(1)."
+    },
+    {
+      "q": "What if nums[i] can be negative?",
+      "a": "The product is no longer monotonic as the window grows, so the two-pointer approach breaks. Track the min and max product ending at each position (as in the maximum product subarray problem) and count valid subarrays from there. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if the array arrives as a streaming input too large to store?",
+      "a": "Maintain a deque of the current window elements so you can divide them out when shrinking from the left. The window can grow up to n elements (all 1s with k > 1), so SC becomes O(n). TC stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSubarrayProductLessThanK(vector<int>& nums, int k) {\n        if (k <= 1) return 0;\n        int n = nums.size();\n        long long product = 1;\n        int left = 0;\n        int count = 0;\n        for (int right = 0; right < n; right++) {\n            product *= nums[right];\n            while (product >= k) {\n                product /= nums[left];\n                left++;\n            }\n            count += right - left + 1;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

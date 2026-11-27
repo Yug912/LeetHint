@@ -1,0 +1,40 @@
+{
+  "slug": "equal-sum-arrays-with-minimum-number-of-operations",
+  "title": "Equal Sum Arrays With Minimum Number of Operations",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Counting Sort",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[6]: fixed size 6 → O(1)\n- recursion depth: none\n- not counted: input vectors, returned int",
+  "approach": "Compute both sums. If the possible sum ranges [n1, 6·n1] and [n2, 6·n2] don't overlap, return -1. Otherwise, ensure sum1 ≤ sum2 (swap if needed) and compute diff = sum2 − sum1. Each element in the smaller-sum array can contribute gain 6−v (increase to 6); each element in the larger-sum array can contribute gain v−1 (decrease to 1). Since values are 1-6, gains are 0-5 - a fixed alphabet of 6 buckets. Count gains by bucket, then greedily consume from the largest gain downward until diff ≤ 0.",
+  "hints": [
+    "With values restricted to 1-6, each element can shift the total by at most 5 in one operation. What property of an element determines exactly how much it can contribute toward closing the gap?",
+    "Use a fixed-size frequency array of size 6, indexed by gain (0-5). In Example 1, after swapping so nums1 has the smaller sum, nums1's value 1 gives gain 5 (1→6) and nums2's value 6 gives gain 5 (6→1); both land in bucket 5.",
+    "```\nif 6 * min(len1, len2) < max(len1, len2): return -1\nif sum1 == sum2: return 0\nensure sum1 < sum2; diff = sum2 - sum1\nfor v in nums1: freq[6 - v]++\nfor v in nums2: freq[v - 1]++\nfor g from 5 down to 1 while diff > 0:\n    take = min(freq[g], ceil(diff / g))\n    ops += take; diff -= take * g\nreturn ops\n```",
+    "**Impossible range** - shorter array can never reach the longer array's minimum sum.\n`Input: nums1 = [1,1,1,1,1,1,1], nums2 = [6]` → `Expected: -1`\n⚠️ Bug: skipping the range-overlap check → returns 1 (greedily takes one gain-5 operation but sums can never match)\n\n**Non-divisible difference** - gap isn't a multiple of the largest available gain.\n`Input: nums1 = [6,6], nums2 = [1]` → `Expected: 3`\n⚠️ Bug: using `diff / g` (floor division) instead of `(diff + g - 1) / g` → takes 2 gain-5 ops (diff 11→1), no gain-1 left, returns 2\n\n**Larger sum in first array** - requires swapping before computing gains.\n`Input: nums1 = [6], nums2 = [1]` → `Expected: 1`\n⚠️ Bug: not swapping when sum1 > sum2 → diff becomes negative, loop condition `diff > 0` is false, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if values could range from 1 to k where k is up to 10^9?",
+      "a": "The fixed-size frequency array no longer works. Collect all gains into a vector, sort descending, and greedily pick the largest until diff ≤ 0. Time O((n+m) log(n+m)), space O(n+m)."
+    },
+    {
+      "q": "What if you must also return the specific operations (array index and new value)?",
+      "a": "Store alongside each gain its source array and original index. When consuming a gain from a bucket, emit the index and target value (6 for the smaller-sum array, 1 for the larger-sum array). Time and space unchanged."
+    },
+    {
+      "q": "What if elements arrive in a stream and you must answer after each insertion?",
+      "a": "Maintain the frequency array incrementally - each new element updates one bucket in O(1). To answer a query, recompute the greedy pass over the 6 buckets in O(1). Total O(n+m) time, O(1) space per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums1, vector<int>& nums2) {\n        int n1 = nums1.size(), n2 = nums2.size();\n        if (6 * min(n1, n2) < max(n1, n2)) return -1;\n\n        int sum1 = 0, sum2 = 0;\n        for (int v : nums1) sum1 += v;\n        for (int v : nums2) sum2 += v;\n\n        if (sum1 == sum2) return 0;\n        if (sum1 > sum2) {\n            swap(nums1, nums2);\n            swap(sum1, sum2);\n        }\n\n        int diff = sum2 - sum1;\n        int freq[6] = {0};\n        for (int v : nums1) freq[6 - v]++;\n        for (int v : nums2) freq[v - 1]++;\n\n        int ops = 0;\n        for (int g = 5; g >= 1 && diff > 0; g--) {\n            int take = min(freq[g], (diff + g - 1) / g);\n            ops += take;\n            diff -= take * g;\n        }\n        return ops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

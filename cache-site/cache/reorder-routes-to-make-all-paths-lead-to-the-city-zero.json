@@ -1,0 +1,27 @@
+{
+  "slug": "reorder-routes-to-make-all-paths-lead-to-the-city-zero",
+  "title": "Reorder Routes to Make All Paths Lead to the City Zero",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS / Undirected Reorientation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<pair<int,int>>> adj: 2(n-1) directed entries → O(n)\n- vector<bool> seen: n entries → O(n)\n- stack<pair<int,int>> st: up to n entries → O(n)\n- not counted: input connections, returned int",
+  "approach": "Treat the tree as undirected by adding each edge in both directions, tagging the original direction with weight 1 and the reverse with weight 0. Starting a DFS from city 0, every time we traverse an edge in its original (forward) direction to reach a new node, that edge must be reversed so traffic can flow toward 0. Summing these weights gives the minimum number of reversals, since the tree has a unique path from every node to 0.",
+  "hints": [
+    "The network is a tree with n-1 edges. If you traverse from city 0 ignoring directions, what tells you whether an edge's current direction helps or hinders travel toward the capital?",
+    "Build an undirected adjacency list where each edge stores a tag: 1 if it points away from the node you arrived from (needs reversal), 0 if it points toward you (already correct). BFS from 0, summing tags. In Example 1, edge 0→1 gets tag 1 from node 0's perspective, so it counts; edge 4→0 gets tag 0, so it doesn't.",
+    "```\nfor each connection [a, b]:\n    adj[a].add((b, 1))  # forward, needs flip\n    adj[b].add((a, 0))  # reverse, already correct\nqueue = [0], visited[0] = true, count = 0\nwhile queue not empty:\n    node = dequeue\n    for each (neighbor, tag) in adj[node]:\n        if not visited[neighbor]:\n            visited[neighbor] = true\n            count += tag\n            enqueue neighbor\nreturn count\n```",
+    "**Smallest input** - n=2, single edge pointing away from capital\n`Input: n = 2, connections = [[0,1]]` → `Expected: 1`\n⚠️ Bug: returning (n - 1 - count) instead of count → returns 0\n\n**Skewed tree** - chain of 5 cities, all edges pointing away from 0\n`Input: n = 5, connections = [[0,1],[1,2],[2,3],[3,4]]` → `Expected: 4`\n⚠️ Bug: recursive DFS on a chain of 5×10^4 nodes → stack overflow, runtime error\n\n**All edges toward 0** - every edge already points toward city 0\n`Input: n = 3, connections = [[1,0],[2,0]]` → `Expected: 0`\n⚠️ Bug: incrementing count when direction tag is 0 instead of 1 → returns 2"
+  ],
+  "followUps": [],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minReorder(int n, vector<vector<int>>& connections) {\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& c : connections) {\n            int a = c[0], b = c[1];\n            adj[a].push_back({b, 1}); // original direction a -> b\n            adj[b].push_back({a, 0}); // reverse direction b -> a\n        }\n        int ans = 0;\n        vector<bool> seen(n, false);\n        seen[0] = true;\n        vector<pair<int,int>> st;\n        st.push_back({0, -1});\n        while (!st.empty()) {\n            pair<int,int> top = st.back();\n            st.pop_back();\n            int u = top.first;\n            for (int i = 0; i < (int)adj[u].size(); ++i) {\n                int v = adj[u][i].first;\n                int d = adj[u][i].second;\n                if (!seen[v]) {\n                    seen[v] = true;\n                    ans += d;\n                    st.push_back({v, u});\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

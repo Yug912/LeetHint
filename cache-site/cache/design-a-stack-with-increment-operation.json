@@ -1,0 +1,39 @@
+{
+  "slug": "design-a-stack-with-increment-operation",
+  "title": "Design a Stack With Increment Operation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Lazy Propagation",
+  "tc": "O(1)",
+  "sc": "O(maxSize)",
+  "spaceBreakdown": "- vector<int> st: up to maxSize entries → O(maxSize)\n- vector<int> inc: up to maxSize entries → O(maxSize)\n- int sz, cap: O(1)\n- recursion depth: none\n- not counted: input, returned output",
+  "approach": "Use a lazy increment array alongside the stack. When `increment(k, val)` is called, add `val` to `inc[min(k, size) - 1]`, deferring the actual increment. When `pop()` is called, the result is `st[top] + inc[top]`; before returning, propagate `inc[top]` down to `inc[top-1]` so elements below inherit the deferred increment, then reset `inc[top]` to 0. This makes all three operations O(1) time with O(maxSize) auxiliary space.",
+  "hints": [
+    "Each increment operation covers a prefix of the stack starting from the bottom. When you pop the top element, what must happen to the increments that also covered elements still in the stack?",
+    "Use an auxiliary array `inc[]` where `inc[i]` stores deferred increments applying to all elements from index 0 to i. For `increment(5, 100)` on stack [1,2,3], add 100 to `inc[2]` - the last index of the affected prefix.",
+    "```\npush(x):\n  if size < maxSize: st[size]=x; inc[size]=0; size++\n\npop():\n  if size==0: return -1\n  i=size-1; res=st[i]+inc[i]\n  if i>0: inc[i-1]+=inc[i]; inc[i]=0; size--; return res\n\nincrement(k,val):\n  if size>0: inc[min(k,size)-1] += val\n```",
+    "**Empty stack pop** - no elements exist when pop is called.\n`Input: pop()` on empty stack → `Expected: -1`\n⚠️ Bug: accessing st[sz-1] without checking sz==0 → reads st[-1], undefined behavior\n\n**Increment on empty stack** - increment called before any push.\n`Input: increment(5, 100)` on empty stack → `Expected: no effect`\n⚠️ Bug: computing min(k,sz)-1 without checking sz>0 → idx=-1, writes to inc[-1], out of bounds\n\n**Push when full** - push called when stack is at maxSize.\n`Input: push(4)` on stack [1,2,3] with maxSize=3 → `Expected: stack stays [1,2,3]`\n⚠️ Bug: using `sz <= cap` instead of `sz < cap` → writes st[3], out of bounds on array of size 3\n\n**Increment propagation through multiple pops** - increments must cascade down during successive pops.\n`Input: increment(5,100), increment(2,100) on [1,2,3], then pop×3` → `Expected: 103, 202, 201`\n⚠️ Bug: not propagating inc[i] to inc[i-1] during pop → returns 103, 102, 1\n\n**k exceeds stack size** - increment with k larger than current stack size.\n`Input: increment(5, 100)` on stack [1,2,3] → `Expected: all 3 elements incremented by 100`\n⚠️ Bug: using k-1 as index without capping to size → writes to inc[4], increment lost when popping indices 0-2"
+  ],
+  "followUps": [
+    {
+      "q": "What if we need to support `incrementRange(l, r, val)` that increments elements at indices l to r (0-indexed from bottom), not just from the bottom?",
+      "a": "Use a difference array: add `val` to `diff[l]` and subtract `val` from `diff[r+1]`. During pop, maintain a running prefix sum of `diff[0..i]` to compute the total increment for the popped element. This generalizes the current approach (which handles l=0). All operations remain O(1), space stays O(maxSize)."
+    },
+    {
+      "q": "What if auxiliary space must be O(1) - no extra array allowed?",
+      "a": "Apply increments directly to the stack array during the increment call, iterating over the bottom min(k, sz) elements. This makes increment O(k) time but uses O(1) auxiliary space. The trade-off favors this when increment calls are rare relative to push/pop."
+    },
+    {
+      "q": "What if maxSize can be up to 10^9 and we cannot preallocate arrays of that size?",
+      "a": "Use a hash map instead of a fixed-size array for `inc[]`, keyed by stack index. Only indices that receive an increment are stored. Push and pop remain O(1) average, increment is O(1) average. Space becomes O(n) where n is the number of distinct indices that received increments, not O(maxSize)."
+    }
+  ],
+  "code": {
+    "cpp": "class CustomStack {\n    vector<int> st;\n    vector<int> inc;\n    int sz;\n    int cap;\npublic:\n    CustomStack(int maxSize) {\n        cap = maxSize;\n        sz = 0;\n        st.resize(maxSize);\n        inc.resize(maxSize, 0);\n    }\n    \n    void push(int x) {\n        if (sz < cap) {\n            st[sz] = x;\n            inc[sz] = 0;\n            sz++;\n        }\n    }\n    \n    int pop() {\n        if (sz == 0) return -1;\n        int i = sz - 1;\n        int res = st[i] + inc[i];\n        if (i > 0) inc[i - 1] += inc[i];\n        inc[i] = 0;\n        sz--;\n        return res;\n    }\n    \n    void increment(int k, int val) {\n        if (sz == 0) return;\n        int idx = (k < sz ? k : sz) - 1;\n        if (idx >= 0) inc[idx] += val;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

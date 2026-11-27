@@ -1,0 +1,40 @@
+{
+  "slug": "russian-doll-envelopes",
+  "title": "Russian Doll Envelopes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "LIS via Patience Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> tails: up to n entries → O(n)\n- sort(): C++ introsort uses O(log n) stack\n- not counted: input (modified in place), returned int",
+  "approach": "Sort envelopes by width ascending; for equal widths, sort by height descending. This ensures same-width envelopes can never appear in an increasing height subsequence. Then the problem reduces to finding the Longest Increasing Subsequence (LIS) on the heights, solved in O(n log n) via patience sorting with binary search. The descending-height tie-break is critical: it prevents two envelopes of the same width from being counted as nestable.",
+  "hints": [
+    "If you arrange envelopes in order of increasing width, what property must the heights satisfy for a subset to form a valid nesting chain? n can reach 10^5, so checking every pair is too slow.",
+    "Sort by width ascending; for equal widths, sort by height descending. Then find the Longest Increasing Subsequence on heights using binary search. For [[5,4],[6,4],[6,7],[2,3]], sorted heights are [3,4,7,4] and the LIS length is 3.",
+    "```\nsort envelopes by width asc, height desc\ntails = empty list\nfor each envelope:\n    h = envelope height\n    pos = binary search for first element >= h in tails\n    if pos is past end: append h to tails\n    else: tails[pos] = h\nreturn length of tails\n```",
+    "**All same width** - same-width envelopes can never nest, so the answer is 1 regardless of heights\n`Input: [[5,1],[5,2],[5,3],[5,4],[5,5]]` → `Expected: 1`\n⚠️ Bug: sorting equal widths by ascending height → heights [1,2,3,4,5], LIS returns 5\n\n**All identical** - no envelope fits inside another\n`Input: [[1,1],[1,1],[1,1]]` → `Expected: 1`\n⚠️ Bug: using upper_bound instead of lower_bound in LIS → returns 3\n\n**Ties with valid chain** - same-width pair plus one wider envelope\n`Input: [[2,3],[2,5],[3,6]]` → `Expected: 2`\n⚠️ Bug: sorting equal widths by ascending height → heights [3,5,6], LIS returns 3\n\n**Width increasing, height decreasing** - no valid chain exists\n`Input: [[1,3],[2,2],[3,1]]` → `Expected: 1`\n⚠️ Bug: checking only width ordering without height comparison → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual sequence of envelopes in the longest chain, not just the count.",
+      "a": "During LIS, maintain a parent array: when placing an element at position i in tails, record which element was at position i-1. Reconstruct by following parent pointers from the last element at the maximum position backward. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if envelopes can be rotated 90 degrees (swap width and height)?",
+      "a": "For each envelope, generate both orientations as candidates. Sort all 2n candidates by width ascending, height descending. Run LIS on heights while tracking source envelope indices to ensure each original envelope is used at most once. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if memory is limited to O(1) auxiliary space beyond the input?",
+      "a": "Use an in-place sort (heapsort, O(1) auxiliary). For LIS, the tails array requires O(n) space which violates the constraint, so fall back to the O(n²) DP approach storing lengths in a reused portion of the input array. TC: O(n²), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxEnvelopes(vector<vector<int>>& envelopes) {\n        sort(envelopes.begin(), envelopes.end(), [](const vector<int>& a, const vector<int>& b) {\n            if (a[0] != b[0]) return a[0] < b[0];\n            return a[1] > b[1];\n        });\n        \n        vector<int> tails;\n        for (auto& e : envelopes) {\n            int h = e[1];\n            auto it = lower_bound(tails.begin(), tails.end(), h);\n            if (it == tails.end()) tails.push_back(h);\n            else *it = h;\n        }\n        return (int)tails.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

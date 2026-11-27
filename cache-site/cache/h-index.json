@@ -1,0 +1,40 @@
+{
+  "slug": "h-index",
+  "title": "H-Index",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Sort",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> count: n+1 entries → O(n)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Since the h-index can never exceed n (the number of papers), we only need a count array of size n+1. For each citation c, if c ≥ n we increment count[n] (because any citation ≥ n is \"at least n\" and thus at least any h ≤ n); otherwise we increment count[c]. We then scan h from n downward, accumulating the running total of papers with at least h citations. The first h where total ≥ h is the answer.",
+  "hints": [
+    "The h-index can never exceed the number of papers. Given that, which citation values actually need to be distinguished when counting how many papers have at least h citations?",
+    "Use a counting array of size n+1. For each citation c, if c ≥ n increment count[n], else increment count[c]. Example: for [3,0,6,1,5] with n=5, citation 6 ≥ 5 so count[5]++, citation 3 < 5 so count[3]++.",
+    "```\ncount = array of size n+1, all zeros\nfor each c in citations:\n    if c >= n: count[n] += 1\n    else: count[c] += 1\ntotal = 0\nfor h from n down to 0:\n    total += count[h]\n    if total >= h: return h\nreturn 0\n```",
+    "**Single paper, zero citations** - smallest valid input, answer is 0.\n`Input: citations = [0]` → `Expected: 0`\n⚠️ Bug: returning n as the default when the loop exits → returns 1.\n\n**Citation exceeds n** - a citation value larger than the paper count.\n`Input: citations = [3,0,6,1,5]` → `Expected: 3`\n⚠️ Bug: `count[c]++` without capping c at n → count[6] is out of bounds (array size 6), undefined behavior.\n\n**All papers cited exactly n times** - every citation equals the number of papers.\n`Input: citations = [5,5,5,5,5]` → `Expected: 5`\n⚠️ Bug: using `>` instead of `>=` in `total >= h` → at h=5, total=5, 5 > 5 is false, returns 4.\n\n**All papers uncited** - every citation is 0.\n`Input: citations = [0,0,0]` → `Expected: 0`\n⚠️ Bug: scanning only from h=n down to h=1 (excluding 0) and returning n as default → returns 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if citations[i] can be up to 10^9 and n up to 10^5?",
+      "a": "The counting array approach still works unchanged because we cap every citation at n - any value ≥ n goes into count[n]. The array size remains n+1, so TC stays O(n) and SC stays O(n)."
+    },
+    {
+      "q": "What if citations arrive as a stream and you can only store O(1) extra memory beyond the input?",
+      "a": "Sort the array in descending order in place using introsort (O(n log n) time, O(log n) stack), then scan for the largest h where citations[h-1] ≥ h. No extra array is needed."
+    },
+    {
+      "q": "What if you need to support dynamic insertions/deletions of papers and query the h-index after each update?",
+      "a": "Maintain a Fenwick tree (BIT) over a count array of size n+1. Each update is a point update in O(log n); each query binary-searches the BIT for the largest h with prefix-sum ≥ h, giving O(log² n) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int hIndex(vector<int>& citations) {\n        int n = citations.size();\n        vector<int> count(n + 1, 0);\n        for (int c : citations) {\n            if (c >= n) count[n]++;\n            else count[c]++;\n        }\n        int total = 0;\n        for (int h = n; h >= 0; h--) {\n            total += count[h];\n            if (total >= h) return h;\n        }\n        return 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

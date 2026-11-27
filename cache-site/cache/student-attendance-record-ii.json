@@ -1,0 +1,40 @@
+{
+  "slug": "student-attendance-record-ii",
+  "title": "Student Attendance Record II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Matrix Exponentiation",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- T[6][6] (transition matrix): 36 longs → O(1)\n- R[6][6] (result matrix): 36 longs → O(1)\n- tmp[6][6] (inside mul): 36 longs → O(1)\n- recursion depth: none\n- not counted: input n, returned int",
+  "approach": "A prefix's eligibility for extension depends only on two fixed-size quantities: how many absences so far (0 or 1) and how many trailing lates (0, 1, or 2). This yields 6 states with position-independent transition rules, so the count vector after n steps equals Tⁿ applied to the initial vector [1,0,0,0,0,0] (the empty record). We compute Tⁿ via binary matrix exponentiation in O(log n) time, then sum the first column of the result (which is Tⁿ × initial vector).",
+  "hints": [
+    "What two facts about a partially-built attendance record fully determine which characters can legally extend it? The same extension rule applies at every position regardless of how long the prefix is.",
+    "Matrix exponentiation on a 6×6 transition matrix. The 6 states are (absence count ∈ {0,1}) × (trailing-late count ∈ {0,1,2}). For n=2, squaring T and reading column 0 gives [2,1,1,3,1,0], which sums to 8.",
+    "```\nBuild 6×6 transition matrix T from the 6 states\nInitialize result R = identity matrix\nWhile n > 0:\n    If n is odd: R = R × T  (mod 10^9+7)\n    T = T × T              (mod 10^9+7)\n    n = n / 2\nAnswer = sum of column 0 of R  (mod 10^9+7)\n```",
+    "**Smallest input** - n=1, every single character is valid.\n`Input: 1` → `Expected: 3`\n⚠️ Bug: initializing the result matrix R to all zeros instead of the identity matrix → returns 0.\n\n**Two-absence boundary** - n=2, \"AA\" is the only invalid string.\n`Input: 2` → `Expected: 8`\n⚠️ Bug: transition allowing 'A' from a state that already has 1 absence (e.g., setting T[3][3]=1) → returns 9 (adds \"AA\").\n\n**Three-late boundary** - n=3, \"LLL\" must be excluded along with all AA-containing strings.\n`Input: 3` → `Expected: 19`\n⚠️ Bug: transition allowing a third consecutive 'L' from state (0 absences, 2 trailing lates) (e.g., setting T[2][2]=1) → returns 20 (adds the invalid \"LLL\" path).\n\n**Large n overflow** - at n=10⁵, matrix entries approach 10⁹+7; a single product A[i][k]·B[k][j] reaches ~10¹⁸, exceeding 2³¹−1.\n`Input: 100000` → `Expected: 76584302`\n⚠️ Bug: using `int` instead of `long long` for the product accumulation in matrix multiply → overflow corrupts the modular result."
+  ],
+  "followUps": [
+    {
+      "q": "What if the award allows fewer than k absences and forbids m consecutive lates?",
+      "a": "Generalize the state space to k absence levels × (m−1) trailing-late levels, giving a k·(m−1) square matrix. Matrix exponentiation still applies with O((k·(m−1))³ log n) time and O((k·(m−1))²) space."
+    },
+    {
+      "q": "What if n can be as large as 10¹⁸?",
+      "a": "Matrix exponentiation already handles this directly - log₂(10¹⁸) ≈ 60 iterations, each doing a constant-size 6×6 multiply. The O(n) DP would TLE, but this approach runs in microseconds."
+    },
+    {
+      "q": "What if we must answer many queries for different n values up to 10¹⁸?",
+      "a": "Precompute T^(2ⁱ) for i = 0…60 once (61 matrices). Each query then selects and multiplies the relevant precomputed matrices in O(6³ · 60) time per query, sharing the precomputation cost across all queries."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    void mul(long long A[6][6], long long B[6][6], long long C[6][6], long long MOD) {\n        long long tmp[6][6];\n        for (int i = 0; i < 6; i++)\n            for (int j = 0; j < 6; j++) tmp[i][j] = 0;\n        for (int i = 0; i < 6; i++) {\n            for (int k = 0; k < 6; k++) {\n                if (A[i][k] == 0) continue;\n                for (int j = 0; j < 6; j++) {\n                    tmp[i][j] = (tmp[i][j] + A[i][k] * B[k][j]) % MOD;\n                }\n            }\n        }\n        for (int i = 0; i < 6; i++)\n            for (int j = 0; j < 6; j++) C[i][j] = tmp[i][j];\n    }\npublic:\n    int checkRecord(int n) {\n        const long long MOD = 1000000007LL;\n        long long T[6][6] = {\n            {1,1,1,0,0,0},\n            {1,0,0,0,0,0},\n            {0,1,0,0,0,0},\n            {1,1,1,1,1,1},\n            {0,0,0,1,0,0},\n            {0,0,0,0,1,0}\n        };\n        long long R[6][6];\n        for (int i = 0; i < 6; i++)\n            for (int j = 0; j < 6; j++)\n                R[i][j] = (i == j) ? 1 : 0;\n\n        while (n > 0) {\n            if (n & 1) mul(R, T, R, MOD);\n            mul(T, T, T, MOD);\n            n >>= 1;\n        }\n\n        long long ans = 0;\n        for (int i = 0; i < 6; i++) ans = (ans + R[i][0]) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "validate-ip-address",
+  "title": "Validate IP Address",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, dotCount, colonCount, i, j, segCount, len, val, k, c): constant count → O(1)\n- no containers, arrays, or extra strings allocated\n- no recursion\n- not counted: input string, returned string",
+  "approach": "Count the separators ('.' and ':') in one pass - exactly 3 dots means try IPv4, exactly 7 colons means try IPv6. Then validate each segment in place using two pointers (start index `i`, end index `j`) that delimit the segment without copying. For IPv4: each segment is 1-3 digits, no leading zeros, value 0-255. For IPv6: each segment is 1-4 hex digits. This avoids allocating any substring vector, using O(1) extra space.",
+  "hints": [
+    "What can you count in a single pass through the string that immediately narrows down which IP format to even attempt?",
+    "Two-pointer in-place scan. For \"172.16.254.1\", set start=0, advance end until '.' at index 3, then validate segment \"172\" directly without copying.",
+    "```\ncount dots and colons in one pass\nif dots == 3:\n    for each segment between dots (start/end pointers):\n        reject if empty, > 3 chars, leading zero, or non-digit\n        reject if value > 255\n    return \"IPv4\" if 4 valid segments else \"Neither\"\nif colons == 7:\n    for each segment between colons (start/end pointers):\n        reject if empty or > 4 chars\n        reject if any char not hex digit\n    return \"IPv6\" if 8 valid segments else \"Neither\"\nreturn \"Neither\"\n```",
+    "**Leading zeros** - \"01\" is numeric but has a leading zero.\n`Input: \"192.168.01.1\"` → `Expected: \"Neither\"`\n⚠️ Bug: checking only `val <= 255` without testing `len > 1 && first char == '0'` → returns \"IPv4\"\n\n**Empty segment** - Consecutive separators produce a zero-length segment.\n`Input: \"192.168..1\"` → `Expected: \"Neither\"`\n⚠️ Bug: skipping the `len == 0` check → treats empty as value 0, returns \"IPv4\"\n\n**IPv6 segment too long** - A hex group with more than 4 characters.\n`Input: \"02001:0db8:85a3:0000:0000:8a2e:0370:7334\"` → `Expected: \"Neither\"`\n⚠️ Bug: not checking `len > 4` → accepts \"02001\", returns \"IPv6\"\n\n**Single zero** - \"0\" is valid but \"00\" is not.\n`Input: \"0.0.0.0\"` → `Expected: \"IPv4\"`\n⚠️ Bug: rejecting any segment starting with '0' including single \"0\" → returns \"Neither\""
+  ],
+  "followUps": [
+    {
+      "q": "How would you validate IPv6 addresses that allow \"::\" zero-compression per RFC 5952?",
+      "a": "The two-pointer scan stays the same, but you must detect exactly one occurrence of \"::\" (two consecutive colons yielding an empty segment). Count actual non-empty groups present; if \"::\" exists, the total groups must be ≤ 8 since the omitted groups are all-zero. Still O(n) time and O(1) space, but the segment-counting logic branches on whether compression was already seen."
+    },
+    {
+      "q": "What if the input contains multiple candidate IPs separated by newlines and you return the type of the first valid one?",
+      "a": "Scan for newline characters to find each candidate's boundaries, then apply the same two-pointer validation using indices into the original string. Stop at the first valid result. O(n) time and O(1) space where n is total input length."
+    },
+    {
+      "q": "What if characters arrive one at a time in a stream with no buffering?",
+      "a": "Maintain a state machine tracking separator count, current segment length, current numeric value (for IPv4), and a validity flag for the current segment. On each character update state; on separator or end-of-stream finalize the segment. O(1) space and O(n) time, but the logic is more complex due to explicit state transitions."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string validIPAddress(string queryIP) {\n        int n = queryIP.size();\n        \n        int dotCount = 0, colonCount = 0;\n        for (char c : queryIP) {\n            if (c == '.') dotCount++;\n            else if (c == ':') colonCount++;\n        }\n        \n        if (dotCount == 3) {\n            int i = 0, segCount = 0;\n            while (i <= n) {\n                int j = i;\n                while (j < n && queryIP[j] != '.') j++;\n                int len = j - i;\n                if (len == 0 || len > 3) return \"Neither\";\n                if (len > 1 && queryIP[i] == '0') return \"Neither\";\n                int val = 0;\n                for (int k = i; k < j; k++) {\n                    if (queryIP[k] < '0' || queryIP[k] > '9') return \"Neither\";\n                    val = val * 10 + (queryIP[k] - '0');\n                }\n                if (val > 255) return \"Neither\";\n                segCount++;\n                if (j == n) break;\n                i = j + 1;\n            }\n            return segCount == 4 ? \"IPv4\" : \"Neither\";\n        }\n        \n        if (colonCount == 7) {\n            int i = 0, segCount = 0;\n            while (i <= n) {\n                int j = i;\n                while (j < n && queryIP[j] != ':') j++;\n                int len = j - i;\n                if (len == 0 || len > 4) return \"Neither\";\n                for (int k = i; k < j; k++) {\n                    char c = queryIP[k];\n                    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))\n                        return \"Neither\";\n                }\n                segCount++;\n                if (j == n) break;\n                i = j + 1;\n            }\n            return segCount == 8 ? \"IPv6\" : \"Neither\";\n        }\n        \n        return \"Neither\";\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

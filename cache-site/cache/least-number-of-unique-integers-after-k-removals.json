@@ -1,0 +1,40 @@
+{
+  "slug": "least-number-of-unique-integers-after-k-removals",
+  "title": "Least Number of Unique Integers after K Removals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Sort / Frequency Bucketing",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n entries → O(n)\n- vector<int> bucket of size n+1 → O(n)\n- recursion depth: none\n- not counted: input arr, returned int",
+  "approach": "Count each value's frequency, then eliminate whole groups of values starting from the smallest frequency, since removing a value with frequency f costs exactly f removals and reduces the unique count by 1. Because frequencies are bounded by n, use bucket sort: bucket[f] = how many distinct values occur exactly f times. Walk f from 1 upward, spending k to delete entire buckets; once a bucket's total cost (f × bucket[f]) exceeds the remaining k, stop, since partial removals never reduce the unique count.",
+  "hints": [
+    "Each distinct value has a \"cost\" to erase completely from the array. With a fixed removal budget k, which values should you erase first to drop the unique count as fast as possible?",
+    "Use a frequency map, then bucket-sort the frequencies (bucket[f] = count of values appearing exactly f times). For arr = [4,3,1,1,3,3,2], frequencies are {4:1, 2:1, 1:2, 3:3}, so bucket[1]=2, bucket[2]=1, bucket[3]=1.",
+    "```\nfreq = count of each value\nbucket[f] = number of values with frequency f\nunique = number of distinct values\nfor f = 1 to n:\n    cost = f * bucket[f]\n    if cost <= k:\n        k -= cost\n        unique -= bucket[f]\n    else:\n        break\nreturn unique\n```",
+    "**Smallest input** - single element, k must be 0 or 1.\n`Input: arr = [7], k = 0` → `Expected: 1`\n⚠️ Bug: returning `freq.size() - k` without the bucket loop → returns 1 (correct here) but fails when k spans multiple frequency groups.\n\n**k removes everything** - k equals array length, all elements deleted.\n`Input: arr = [1,2,3], k = 3` → `Expected: 0`\n⚠️ Bug: stopping the loop at `f < n` instead of `f <= n` → skips bucket[n] when one value fills the array, returns 1.\n\n**All equal values** - one distinct value with frequency n.\n`Input: arr = [5,5,5,5], k = 2` → `Expected: 1`\n⚠️ Bug: decrementing `unique` by 1 per removed element instead of per removed group → returns -1.\n\n**Partial bucket left over** - remaining k too small to clear the next frequency group.\n`Input: arr = [4,3,1,1,3,3,2], k = 3` → `Expected: 2`\n⚠️ Bug: using `bucket[f] <= k` instead of `f * bucket[f] <= k` → removes the f=2 group with k=1 left, returns 1.\n\n**Large values, no overflow** - arr[i] up to 10^9, but only stored as map keys and compared; sums of frequencies ≤ n ≤ 10^5, so no overflow."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be larger than arr.length and you must report -1 when invalid?",
+      "a": "Validate k ≤ n up front and return -1 otherwise; the bucket loop is unchanged. Time stays O(n), space O(n)."
+    },
+    {
+      "q": "What if elements arrive in a stream and you must answer after each insertion with the current k?",
+      "a": "Maintain the frequency map and a bucket array incrementally: when a value's frequency rises from f to f+1, decrement bucket[f], increment bucket[f+1], and re-run the sweep from the current f. Each query is O(n) worst case but O(1) amortized when k is stable; space remains O(n)."
+    },
+    {
+      "q": "What if you must minimize unique integers after removing exactly k elements but each removal also has a per-element cost, with a total cost budget B?",
+      "a": "This becomes a knapsack-style selection over frequency groups: each group of size f costs f·(unit cost) and yields 1 unique saved. Sort groups by cost-per-unique and greedily take cheapest within budget B; time O(n log n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findLeastNumOfUniqueInts(vector<int>& arr, int k) {\n        int n = (int)arr.size();\n        unordered_map<int,int> freq;\n        freq.reserve(n * 2);\n        for (int x : arr) freq[x]++;\n        vector<int> bucket(n + 1, 0);\n        for (auto& p : freq) bucket[p.second]++;\n        int unique = (int)freq.size();\n        for (int f = 1; f <= n; f++) {\n            if (bucket[f] == 0) continue;\n            long long cost = (long long)f * (long long)bucket[f];\n            if (cost <= (long long)k) {\n                k -= (int)cost;\n                unique -= bucket[f];\n            } else {\n                break;\n            }\n        }\n        return unique;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

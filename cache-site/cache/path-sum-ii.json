@@ -1,0 +1,40 @@
+{
+  "slug": "path-sum-ii",
+  "title": "Path Sum II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS with Backtracking",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> current: up to h entries → O(h)\n- recursion call stack: up to h frames → O(h)\n- not counted: input tree, returned result vector",
+  "approach": "Use DFS with backtracking to explore all root-to-leaf paths. Maintain a single path vector that we push to on entry and pop from on exit, avoiding the cost of copying paths at every node. Track the remaining sum (targetSum minus the sum of values in the current path). When we reach a leaf and the remaining sum is 0, copy the current path into the result. This visits every root-to-leaf path exactly once.",
+  "hints": [
+    "When you move from exploring one root-to-leaf path to the next, how much of the path do they share? The tree has up to 5000 nodes.",
+    "Depth-first search with backtracking: maintain one path vector, push on entry, pop on exit. At node 5→4→11→2, the path [5,4,11,2] sums to 22, so copy it into the result.",
+    "```\ndfs(node, remaining, path, result):\n    if node is null: return\n    append node.val to path\n    remaining = remaining - node.val\n    if node is leaf and remaining == 0:\n        append copy of path to result\n    dfs(node.left, remaining, path, result)\n    dfs(node.right, remaining, path, result)\n    remove last from path\n```",
+    "**Empty tree** - root is null, no paths exist\n`Input: root = [], targetSum = 0` → `Expected: []`\n⚠️ Bug: checking `remaining == 0` in the null base case before returning → returns `[[]]`\n\n**Non-leaf matching sum** - sum equals target at a non-leaf node\n`Input: root = [1,2], targetSum = 1` → `Expected: []`\n⚠️ Bug: checking `remaining == 0` at every node instead of only at leaves → returns `[[1]]`\n\n**Negative values** - path sum involves negative numbers\n`Input: root = [-2,null,-3], targetSum = -5` → `Expected: [[-2,-3]]`\n⚠️ Bug: pruning when `remaining < 0` (assuming all values are positive) → returns `[]`\n\n**All zeros** - every node value is 0, targetSum is 0\n`Input: root = [0,0,0], targetSum = 0` → `Expected: [[0,0],[0,0]]`\n⚠️ Bug: checking `remaining == 0` at every node, not just leaves → returns `[[0],[0,0],[0,0]]`"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of root-to-leaf paths, find all downward paths (any node to any descendant) that sum to targetSum.",
+      "a": "Use prefix sums during the same DFS. Track a hash map of prefix sum frequencies from root to current node. At each node, check how many previous prefix sums equal (currentSum - targetSum). O(n) time, O(n) space."
+    },
+    {
+      "q": "The tree could have up to 10^6 nodes. How would you avoid stack overflow?",
+      "a": "Replace the recursive DFS with an iterative version using an explicit stack. Store (node, remaining, path_length) tuples on the stack. The path vector is shared and truncated to path_length on backtrack. O(n) time, O(h) space - same as recursive, but no call stack limit."
+    },
+    {
+      "q": "Find the root-to-leaf path whose sum is closest to targetSum (not necessarily equal).",
+      "a": "Same DFS, but track the minimum absolute difference between remaining and 0 at each leaf. Store the path with the closest sum. O(n) time, O(h) space. No need to collect all valid paths."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> pathSum(TreeNode* root, int targetSum) {\n        vector<vector<int>> result;\n        vector<int> current;\n        dfs(root, (long long)targetSum, current, result);\n        return result;\n    }\nprivate:\n    void dfs(TreeNode* node, long long remaining, vector<int>& current, vector<vector<int>>& result) {\n        if (!node) return;\n        current.push_back(node->val);\n        remaining -= node->val;\n        if (!node->left && !node->right && remaining == 0) {\n            result.push_back(current);\n        }\n        dfs(node->left, remaining, current, result);\n        dfs(node->right, remaining, current, result);\n        current.pop_back();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

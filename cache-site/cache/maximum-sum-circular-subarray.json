@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-sum-circular-subarray",
+  "title": "Maximum Sum Circular Subarray",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Kadane's Algorithm (max + min variants)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar variables (total, maxSum, curMax, minSum, curMin, x): O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "The maximum circular subarray is either a normal (non-wrapping) subarray or a wrapping one (prefix + suffix). The non-wrapping case is solved by Kadane's algorithm. The wrapping case equals total sum minus the minimum subarray sum (the \"hole\" in the middle we skip). Take the max of both, with a guard: if all elements are negative, the wrapping formula yields 0 (empty subarray), so return the Kadane max directly.",
+  "hints": [
+    "A wrapping subarray takes a prefix and a suffix of the array. What does the contiguous block of elements you leave out look like, and how does its sum relate to the total?",
+    "Use Kadane's algorithm twice: once for the maximum subarray sum and once for the minimum subarray sum. For [5,-3,5], total=7, min subarray=-3, so the wrapping answer is 7−(−3)=10.",
+    "```\ntotal = sum(nums)\nmaxSum = kadane_max(nums)\nminSum = kadane_min(nums)\nif maxSum < 0:\n    return maxSum\nreturn max(maxSum, total - minSum)\n```",
+    "**All negatives** - every element is negative, so the best subarray is a single element.\n`Input: [-3,-2,-3]` → `Expected: -2`\n⚠️ Bug: returning `max(maxSum, total - minSum)` without the all-negative guard → returns `0` (empty subarray).\n\n**Single negative element** - n=1 with a negative value.\n`Input: [-5]` → `Expected: -5`\n⚠️ Bug: computing `total - minSum = -5 - (-5) = 0` and returning `max(-5, 0)` → returns `0`.\n\n**Single positive element** - n=1, no wrapping possible.\n`Input: [7]` → `Expected: 7`\n⚠️ Bug: initializing `maxSum` to `0` instead of `nums[0]` → returns `7` only by luck; on `[-7]` returns `0`.\n\n**Wrapping equals whole array** - the min subarray is a single interior negative.\n`Input: [5,-3,5]` → `Expected: 10`\n⚠️ Bug: using `max(maxSum, total - minSum)` but initializing `minSum` to `0` instead of `nums[0]` → `minSum` stays `0`, returns `max(7, 7-0)=7`."
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual start and end indices of the maximum circular subarray.",
+      "a": "Track indices during both Kadane passes by resetting the running start when the current sum restarts. For the wrapping case, the chosen indices are the complement of the min subarray's range. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if elements arrive in a stream and you must answer the max circular sum after each insertion?",
+      "a": "Maintain a running total and a data structure supporting prefix-sum min/max queries (e.g., a balanced BST or monotonic deque over prefix sums). Each insertion updates total and queries the best window in O(log n) or O(1) amortized, giving O(n log n) total."
+    },
+    {
+      "q": "What if you must pick a subarray of length at most k (k < n) in the circular array?",
+      "a": "Use a monotonic deque over prefix sums of the doubled array to find the max sum window of length ≤ k in O(n). The min-subarray trick no longer applies directly because the \"hole\" length is unconstrained."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSubarraySumCircular(vector<int>& nums) {\n        int total = 0;\n        int maxSum = nums[0], curMax = 0;\n        int minSum = nums[0], curMin = 0;\n        for (int x : nums) {\n            curMax = max(curMax + x, x);\n            maxSum = max(maxSum, curMax);\n            curMin = min(curMin + x, x);\n            minSum = min(minSum, curMin);\n            total += x;\n        }\n        if (maxSum < 0) return maxSum;\n        return max(maxSum, total - minSum);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

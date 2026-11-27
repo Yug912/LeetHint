@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-matching-subsequences",
+  "title": "Number of Matching Subsequences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bucket / Next-Letter Pointer",
+  "tc": "O(|s| + Σ|word|)",
+  "sc": "O(|words|)",
+  "spaceBreakdown": "- `vector<vector<pair<int,int>>> buckets`: 26 vectors; at any moment each word lives in exactly one bucket → O(|words|) total entries\n- `vector<pair<int,int>> current`: temporarily holds one bucket's contents before redistribution → O(|words|) worst case\n- not counted: input `s`, input `words`, returned `int`",
+  "approach": "Group words by the next character each one needs. Maintain 26 buckets (one per lowercase letter), each holding `(word index, current position)` pairs. Scan `s` once: when reading character `c`, swap out all entries from bucket `c`, advance each word's position by one, and either count it as matching (if the word is fully consumed) or push it into the bucket for its next needed character. Swapping the bucket out before iterating avoids re-processing entries whose next character is also `c`. Every character of `s` and every character of every word is touched exactly once.",
+  "hints": [
+    "If you scan `s` once from left to right and try to advance all words in parallel, what single piece of per-word state determines which words can move forward at each character?",
+    "Use 26 buckets indexed by the next character each word needs. For `s = \"abcde\"`, the words `\"a\"`, `\"acd\"`, `\"ace\"` all sit in bucket `'a'` and advance together when `s[0] = 'a'` is read.",
+    "```\nfor each word i: bucket[word[i][0]].add(i, 0)\ncount = 0\nfor c in s:\n    current = swap-out bucket[c]        # empties bucket[c]\n    for (wi, ci) in current:\n        ci += 1\n        if ci == len(word[wi]): count += 1\n        else: bucket[word[wi][ci]].add(wi, ci)\nreturn count\n```",
+    "**Single-character word** - word length 1, matched by one char of `s`.\n`Input: s = \"a\", words = [\"a\"]` → `Expected: 1`\n⚠️ Bug: checking `ci < len-1` instead of `ci == len` after increment → returns 0\n\n**Repeated same character** - word needs the same char twice but `s` has it once.\n`Input: s = \"a\", words = [\"aa\"]` → `Expected: 0`\n⚠️ Bug: iterating `bucket[c]` in-place without swapping it out first → the word advances twice on one char of `s`, returns 1\n\n**Duplicate words** - the same word appears multiple times.\n`Input: s = \"abc\", words = [\"a\",\"a\",\"a\"]` → `Expected: 3`\n⚠️ Bug: deduplicating `words` with a set before processing → returns 1\n\n**Last character only** - word matches only the final char of `s`.\n`Input: s = \"abcde\", words = [\"e\"]` → `Expected: 1`\n⚠️ Bug: looping `for i in 0..len(s)-1` with `< len-1` instead of `< len` → never processes `s[4]`, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must answer for many different `s` strings with the same `words` array?",
+      "a": "Pre-build the 26-bucket structure from `words` once. For each query string, clone the buckets and run the single-pass scan. Time per query: O(|s| + Σ|word|); space: O(|words|) for the bucket copy."
+    },
+    {
+      "q": "What if `words[i]` can contain uppercase letters and digits in addition to lowercase?",
+      "a": "Replace the 26-element array with a 62-element array (or a hash map from `char` to bucket). The algorithm is otherwise unchanged; time and space stay the same."
+    },
+    {
+      "q": "What if `s` is a streaming input of unknown length and you need real-time answers as each character arrives?",
+      "a": "Keep the 26 buckets resident in memory. On each incoming character `c`, process bucket `c` exactly as in the batch version and report any word whose pointer reaches its end immediately. Time: O(1) amortized per character of `s`; space: O(|words|)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numMatchingSubseq(string s, vector<string>& words) {\n        vector<vector<pair<int,int>>> buckets(26);\n        for (int i = 0; i < (int)words.size(); i++) {\n            buckets[words[i][0] - 'a'].push_back({i, 0});\n        }\n        int count = 0;\n        for (char c : s) {\n            int idx = c - 'a';\n            vector<pair<int,int>> current;\n            current.swap(buckets[idx]);\n            for (auto& [wi, ci] : current) {\n                ci++;\n                if (ci == (int)words[wi].size()) {\n                    count++;\n                } else {\n                    buckets[words[wi][ci] - 'a'].push_back({wi, ci});\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "the-number-of-weak-characters-in-the-game",
+  "title": "The Number of Weak Characters in the Game",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sorting + Running Maximum",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): C++ introsort uses O(log n) stack → O(log n)\n- maxDef, weak: two ints → O(1)\n- not counted: input vector (modified in place), returned int",
+  "approach": "Sort characters by attack descending; for equal attack, sort by defense ascending. Then scan left to right tracking the maximum defense seen so far. Because same-attack characters are ordered by ascending defense, any character whose defense is below the running max must have been beaten by a character with strictly greater attack (not just equal attack). Each such character is weak.",
+  "hints": [
+    "With n up to 10^5, comparing every pair is infeasible. If characters were arranged so that each one's attack is no greater than all characters before it, what single value would you need to know to decide if the current character is weak?",
+    "Sort by attack descending; for equal attack, sort by defense ascending. Scan left to right tracking the maximum defense seen - if the current defense is below it, the character is weak. In Example 3, sorted as [[10,4],[4,3],[1,5]]: at [4,3], max defense so far is 4, so 3 < 4 → weak.",
+    "```\nsort by attack descending, defense ascending\nmaxDef = 0\nweak = 0\nfor each character c:\n    if c.defense < maxDef:\n        weak = weak + 1\n    maxDef = max(maxDef, c.defense)\nreturn weak\n```",
+    "**Same attack, different defense** - characters sharing an attack value must not dominate each other.\n`Input: [[5,5],[5,3]]` → `Expected: 0`\n⚠️ Bug: sorting by attack descending with defense descending tie-break → returns 1\n\n**All identical** - no character strictly exceeds another on either property.\n`Input: [[3,3],[3,3]]` → `Expected: 0`\n⚠️ Bug: using `<=` instead of `<` in the defense comparison → returns 1\n\n**Minimum input** - exactly two characters, one strictly dominates.\n`Input: [[2,2],[3,3]]` → `Expected: 1`\n⚠️ Bug: initializing maxDef to INT_MAX → returns 2\n\n**Reverse sorted input** - input sorted ascending by attack.\n`Input: [[1,5],[4,3],[10,4]]` → `Expected: 1`\n⚠️ Bug: sorting by attack ascending instead of descending → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed to count the number of dominating pairs (i, j) where j strictly dominates i, instead of just counting weak characters?",
+      "a": "Use the same sort, but replace the running maximum with a Fenwick tree indexed by defense values. For each character, query the count of already-processed characters with defense greater than the current one. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if attack and defense values could be up to 10^9?",
+      "a": "The solution is unchanged - we only compare values, never use them as array indices. TC: O(n log n), SC: O(log n)."
+    },
+    {
+      "q": "What if the input is a stream too large to store entirely, with a memory budget of O(k)?",
+      "a": "Exact counting is impossible since any early character could be dominated by a later one. Maintain only the k characters with the highest defense among those with the highest attack seen so far; this gives an approximate lower bound on the count. TC: O(n log k), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfWeakCharacters(vector<vector<int>>& properties) {\n        sort(properties.begin(), properties.end(), [](const vector<int>& a, const vector<int>& b) {\n            if (a[0] != b[0]) return a[0] > b[0];\n            return a[1] < b[1];\n        });\n        int maxDef = 0;\n        int weak = 0;\n        for (const auto& p : properties) {\n            if (p[1] < maxDef) weak++;\n            maxDef = max(maxDef, p[1]);\n        }\n        return weak;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

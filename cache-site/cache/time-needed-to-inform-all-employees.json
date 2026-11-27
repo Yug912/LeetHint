@@ -1,0 +1,40 @@
+{
+  "slug": "time-needed-to-inform-all-employees",
+  "title": "Time Needed to Inform All Employees",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree BFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> children: n vectors, n-1 total entries → O(n)\n- queue<pair<int,int>> q: up to n entries (star graph) → O(n)\n- not counted: input manager, informTime",
+  "approach": "Build an adjacency list mapping each manager to their direct subordinates. Then BFS from `headID`, tracking the cumulative inform time for each node (parent's cumulative + parent's `informTime`). Since all managers inform in parallel, the total time equals the maximum cumulative time across all root-to-leaf paths - the last leaf informed determines the answer.",
+  "hints": [
+    "Since each manager informs their direct subordinates in parallel, which single path through the tree determines when the last employee hears the news?",
+    "Build an adjacency list of each manager's subordinates, then traverse from `headID` tracking cumulative inform time. In Example 2, `headID=2` has `informTime[2]=1`, so each of its five children accumulates `0+1=1` minute.",
+    "```\nbuild children list from manager array\nqueue ← (headID, 0)\nanswer ← 0\nwhile queue not empty:\n    (node, time) ← queue.pop()\n    answer ← max(answer, time)\n    for each child of node:\n        queue.push((child, time + informTime[node]))\nreturn answer\n```",
+    "**Two employees** - Head with one direct subordinate.\n`Input: n=2, headID=0, manager=[-1,0], informTime=[5,0]` → `Expected: 5`\n⚠️ Bug: pushing children with parent's cumulative time instead of `time + informTime[node]` → returns 0\n\n**Deep chain** - Each manager has exactly one subordinate, creating maximum depth.\n`Input: n=3, headID=0, manager=[-1,0,1], informTime=[2,3,0]` → `Expected: 5`\n⚠️ Bug: returning the maximum single `informTime` value instead of the maximum path sum → returns 3\n\n**All zeros** - Every `informTime` is 0 regardless of tree shape.\n`Input: n=4, headID=0, manager=[-1,0,0,2], informTime=[0,0,0,0]` → `Expected: 0`\n⚠️ Bug: initializing `answer` to 1 instead of 0 → returns 1\n\n**Branching tree** - Two branches with different total path sums.\n`Input: n=5, headID=0, manager=[-1,0,0,1,2], informTime=[2,3,1,0,0]` → `Expected: 5`\n⚠️ Bug: returning the last processed node's cumulative time instead of the running maximum → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you also need to return the ID of the last employee informed (not just the time)?",
+      "a": "Track the node ID alongside the cumulative time during BFS. When updating the maximum, also store the corresponding node ID. Same O(n) time and O(n) space."
+    },
+    {
+      "q": "What if the manager array represents a forest (multiple roots) instead of a single tree?",
+      "a": "Identify all roots (nodes whose manager is -1) and run BFS from each, sharing a single visited set and global maximum. Each node is still visited once, so time remains O(n) and space O(n)."
+    },
+    {
+      "q": "What if the tree can be dynamically restructured (an employee reassigned to a new manager) and you must answer \"time to inform all\" after each update?",
+      "a": "A single recompute is O(n). For frequent updates, use Heavy-Light Decomposition or a Link-Cut Tree to support path-sum queries and edge updates in O(log² n) or O(log n) per operation, with O(n) preprocessing."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numOfMinutes(int n, int headID, vector<int>& manager, vector<int>& informTime) {\n        vector<vector<int>> children(n);\n        for (int i = 0; i < n; i++) {\n            if (manager[i] != -1) {\n                children[manager[i]].push_back(i);\n            }\n        }\n        \n        queue<pair<int,int>> q;\n        q.push({headID, 0});\n        int ans = 0;\n        while (!q.empty()) {\n            auto [node, time] = q.front();\n            q.pop();\n            ans = max(ans, time);\n            for (int child : children[node]) {\n                q.push({child, time + informTime[node]});\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

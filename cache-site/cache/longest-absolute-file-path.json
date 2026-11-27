@@ -1,0 +1,40 @@
+{
+  "slug": "longest-absolute-file-path",
+  "title": "Longest Absolute File Path",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack-based DFS / Depth-indexed DP",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> lengths: up to n entries (skewed tree) → O(n)\n- recursion depth: none\n- not counted: input string",
+  "approach": "Parse the input line by line (splitting on '\\n'). For each line, count leading '\\t' characters to determine its depth in the directory tree. Maintain an array `lengths` where `lengths[d]` stores the cumulative absolute path length of the most recent entry at depth `d`. For a new entry at depth `d` with name length `L`, its path length is `lengths[d-1] + 1 + L` (the `+1` for the '/' separator), or just `L` if `d == 0`. If the name contains a '.', it's a file, so update the answer. Overwriting `lengths[d]` when revisiting a depth correctly invalidates stale deeper entries since the traversal is DFS-ordered.",
+  "hints": [
+    "Each line's leading tabs reveal its depth in the directory tree. What does the absolute path length to an entry at depth d depend on, given the entries processed so far?",
+    "Use an array indexed by depth storing the cumulative path length ending at that depth. For \"\\t\\tfile2.ext\" (depth 2, name length 8), lengths[2] = lengths[1] + 1 + 8.",
+    "```\nlengths = []\nans = 0\nfor each line:\n    depth = count of leading tabs\n    name = line without tabs\n    curLen = name.length\n    if depth > 0: curLen += lengths[depth-1] + 1\n    lengths[depth] = curLen\n    if name contains '.': ans = max(ans, curLen)\nreturn ans\n```",
+    "**Root file** - file at depth 0, no parent\n`Input: \"file.txt\"` → `Expected: 8`\n⚠️ Bug: accessing lengths[depth-1] without checking depth > 0 → undefined behavior / crash\n\n**No file at all** - only directories exist\n`Input: \"a\"` → `Expected: 0`\n⚠️ Bug: not checking for '.' in the name, returning max path length → returns 1\n\n**Sibling overwrites stale deeper entry** - two files at same depth under different parents\n`Input: \"dir\\n\\ta\\n\\t\\tf.ext\\n\\tb\\n\\t\\tggg.ext\"` → `Expected: 13`\n⚠️ Bug: not overwriting lengths[depth] when re-entering a depth, reusing stale lengths[2]=11 → returns 11\n\n**Skewed chain** - single deep path, depth grows to n\n`Input: \"a\\n\\tb\\n\\t\\tc\\n\\t\\t\\td.txt\"` → `Expected: 11`\n⚠️ Bug: using a fixed-size array instead of a resizable container → out-of-bounds access"
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve this if the input arrives as a stream (one line at a time) with unknown total length?",
+      "a": "The algorithm already processes line by line, so it adapts directly. Read each line, count tabs, update the depth-indexed array, and track the max file path. Time stays O(n), space O(max depth)."
+    },
+    {
+      "q": "What if we wanted the longest path to any node (file or directory), not just files?",
+      "a": "Remove the '.' check and update the answer for every entry. The rest of the logic is unchanged. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if directory/file names could contain literal '/' characters escaped as \"\\/\"?",
+      "a": "When computing name length, count escaped '/' as one character and skip the next char. The depth and path-separator logic stays the same. Time O(n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int lengthLongestPath(string input) {\n        vector<int> lengths;\n        int ans = 0;\n        int i = 0;\n        int n = (int)input.size();\n        while (i < n) {\n            int depth = 0;\n            while (i < n && input[i] == '\\t') {\n                depth++;\n                i++;\n            }\n            int start = i;\n            bool isFile = false;\n            while (i < n && input[i] != '\\n') {\n                if (input[i] == '.') isFile = true;\n                i++;\n            }\n            int nameLen = i - start;\n            if (i < n) i++; // skip '\\n'\n            \n            if (depth >= (int)lengths.size()) lengths.resize(depth + 1);\n            int curLen = nameLen + (depth > 0 ? lengths[depth - 1] + 1 : 0);\n            lengths[depth] = curLen;\n            \n            if (isFile) ans = max(ans, curLen);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

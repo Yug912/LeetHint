@@ -1,0 +1,40 @@
+{
+  "slug": "majority-element-ii",
+  "title": "Majority Element II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Boyer-Moore Majority Vote",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- cand1, cand2, cnt1, cnt2, v1, v2, n: scalars → O(1)\n- res: returned output (not counted)\n- no recursion, no containers",
+  "approach": "At most two elements can appear more than ⌊n/3⌋ times, so we track two candidate/count pairs. In one pass, each element either boosts a matching candidate, claims an empty slot, or decrements both counts (pairing it against two \"enemies\"). Any true majority survives because it has too many copies to be fully cancelled. A second pass verifies actual frequencies, since candidates may be stale.",
+  "hints": [
+    "At most how many distinct values can each occupy more than ⌊n/3⌋ of the n positions? The array can be up to 5·10⁴ long.",
+    "Boyer-Moore Majority Vote with two candidate slots. On [3,2,3]: 3 fills slot1 (count 1), 2 fills slot2 (count 1), final 3 bumps slot1 to count 2; then verify each candidate's real frequency.",
+    "```\ncand1 = None, cand2 = None, cnt1 = 0, cnt2 = 0\nfor x in nums:\n    if x == cand1:  cnt1 += 1\n    elif x == cand2: cnt2 += 1\n    elif cnt1 == 0: cand1, cnt1 = x, 1\n    elif cnt2 == 0: cand2, cnt2 = x, 1\n    else: cnt1 -= 1; cnt2 -= 1\ncount actual occurrences of cand1, cand2\nreturn those with count > n/3\n```",
+    "**No majority** - three distinct values each appear once.\n`Input: nums = [1,2,3]` → `Expected: []`\n⚠️ Bug: returning candidates without a verification pass → returns [1,2]\n\n**Threshold boundary** - one value appears exactly twice in four elements.\n`Input: nums = [1,2,3,3]` → `Expected: [3]`\n⚠️ Bug: using `count >= n/3` instead of `count > n/3` → returns [3,2]\n\n**Two qualifying elements** - both values appear once in a length-2 array.\n`Input: nums = [1,2]` → `Expected: [1,2]`\n⚠️ Bug: using single-candidate majority vote (the n/2 version) → returns [1]\n\n**Value equals initial candidate** - the sole element is 0, same as the default candidate.\n`Input: nums = [0]` → `Expected: [0]`\n⚠️ Bug: using two separate `if` statements (not `else if`) in verification when both candidates start at 0 → returns [0,0]"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to finding all elements appearing more than ⌊n/k⌋ times.",
+      "a": "Maintain k−1 candidate/count pairs with the same pairing-down logic: match, claim empty slot, or decrement all. Verify in a second pass. TC: O(n·k), SC: O(k)."
+    },
+    {
+      "q": "The input is a stream you can read only once - no second pass for verification.",
+      "a": "Keep a hash map of counts capped at k−1 entries: increment on match, add on new key, and when size exceeds k−1 decrement all and drop zeros. TC: O(n), SC: O(k)."
+    },
+    {
+      "q": "Find elements appearing more than (n/3 ± ε) times in a stream too large to store.",
+      "a": "Replace exact counts with a Count-Min Sketch; query each candidate's estimated frequency and compare to the relaxed threshold. TC: O(n), SC: O(1/ε · log(1/δ))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> majorityElement(vector<int>& nums) {\n        int cand1 = 0, cand2 = 0, cnt1 = 0, cnt2 = 0;\n        for (int x : nums) {\n            if (x == cand1) {\n                cnt1++;\n            } else if (x == cand2) {\n                cnt2++;\n            } else if (cnt1 == 0) {\n                cand1 = x;\n                cnt1 = 1;\n            } else if (cnt2 == 0) {\n                cand2 = x;\n                cnt2 = 1;\n            } else {\n                cnt1--;\n                cnt2--;\n            }\n        }\n        int v1 = 0, v2 = 0;\n        for (int x : nums) {\n            if (x == cand1) v1++;\n            else if (x == cand2) v2++;\n        }\n        vector<int> res;\n        int n = nums.size();\n        if (v1 > n / 3) res.push_back(cand1);\n        if (v2 > n / 3) res.push_back(cand2);\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

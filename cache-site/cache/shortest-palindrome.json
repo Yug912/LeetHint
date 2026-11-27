@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-palindrome",
+  "title": "Shortest Palindrome",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Rolling Hash",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long variables for hashes, powers, and moduli: constant size → O(1)\n- string res: returned output, not counted as auxiliary space → O(1)\n- not counted: input string s, returned string res",
+  "approach": "To find the shortest palindrome, we must identify the longest prefix of `s` that is already a palindrome. We can do this efficiently by computing a forward rolling hash and a backward rolling hash simultaneously as we iterate through the string. If the forward and backward hashes match at index `i`, the prefix `s[0...i]` is a palindrome. To prevent collisions, we use two large prime moduli. Once the longest palindromic prefix is found, we reverse the remaining suffix and prepend it to the original string.",
+  "hints": [
+    "What part of the original string is already a palindrome and can be kept in place to minimize the number of characters added? The string length can be up to 5 * 10^4.",
+    "Use a rolling hash to compare the forward and reversed prefixes of the string in O(1) time per character. For \"aacecaaa\", the prefix \"aacecaa\" has the same hash forwards and backwards, so it is the longest palindromic prefix.",
+    "```\nbest = 0\nfor i from 0 to n-1:\n    forward_hash = update with s[i]\n    backward_hash = update with s[i] and current power of base\n    if forward_hash == backward_hash:\n        best = i + 1\nreverse s[best...n-1] and prepend to s\n```",
+    "**Smallest input** - The string is empty.\n`Input: s = \"\"` → `Expected: \"\"`\n⚠️ Bug: Not returning early for `n == 0` and accessing `s[0]` → crashes on empty string.\n\n**All elements equal** - The entire string is a palindrome.\n`Input: s = \"aaaa\"` → `Expected: \"aaaa\"`\n⚠️ Bug: Updating the base power before using it in the backward hash → returns `\"aaaaaaa\"`.\n\n**No palindromic prefix** - Only the first character is a palindrome.\n`Input: s = \"abcd\"` → `Expected: \"dcbabcd\"`\n⚠️ Bug: Initialising `best` to `1` instead of `0` → returns `\"abcd\"`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the string contains uppercase letters and digits?",
+      "a": "The rolling hash base and character-to-integer mapping must accommodate a larger alphabet. Map characters to 1-62 instead of 1-26, and the base should be at least 63. Time and space complexity remain O(n) and O(1)."
+    },
+    {
+      "q": "What if we need to guarantee absolutely no hash collisions?",
+      "a": "Use a deterministic string matching algorithm like KMP. We would compute the LPS array of the string `s + \"#\" + reverse(s)`. The last value of the LPS array gives the longest palindromic prefix. This takes O(n) time and O(n) space."
+    },
+    {
+      "q": "What if the string is too large to fit in memory and arrives as a stream?",
+      "a": "We can maintain the forward and backward rolling hashes as we process the stream, keeping track of the longest match. However, we must store the string (or at least the non-palindromic suffix) to construct the final result, requiring O(n) space in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string shortestPalindrome(string s) {\n        int n = s.length();\n        if (n <= 1) return s;\n        \n        long long base = 131;\n        long long mod1 = 1000000007;\n        long long mod2 = 1000000009;\n        \n        long long hash1 = 0, rhash1 = 0;\n        long long hash2 = 0, rhash2 = 0;\n        long long power1 = 1, power2 = 1;\n        \n        int best = 0;\n        for (int i = 0; i < n; ++i) {\n            int c = s[i] - 'a' + 1;\n            hash1 = (hash1 * base + c) % mod1;\n            rhash1 = (rhash1 + c * power1) % mod1;\n            power1 = (power1 * base) % mod1;\n            \n            hash2 = (hash2 * base + c) % mod2;\n            rhash2 = (rhash2 + c * power2) % mod2;\n            power2 = (power2 * base) % mod2;\n            \n            if (hash1 == rhash1 && hash2 == rhash2) {\n                best = i + 1;\n            }\n        }\n        \n        string res;\n        res.reserve(2 * n - best);\n        for (int i = n - 1; i >= best; --i) {\n            res += s[i];\n        }\n        res += s;\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

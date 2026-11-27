@@ -1,0 +1,40 @@
+{
+  "slug": "rotating-the-box",
+  "title": "Rotating the Box",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers (settle pointer + scan pointer)",
+  "tc": "O(m·n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<vector<char>> rotated (n×m): this is the returned output, not counted as auxiliary\n- int m, n, bottom, row, col, i, j: scalars → O(1)\n- no recursion, no other containers",
+  "approach": "First build the 90°-clockwise-rotated grid using `rotated[i][j] = box[m-1-j][i]` (result is n×m). Then settle gravity independently in each column with a single bottom-to-top scan: keep a `bottom` pointer = lowest empty cell not blocked by an obstacle. On `'*'`, reset `bottom = row-1` (obstacle blocks everything below). On `'#'`, clear the source cell, write the stone at `bottom`, decrement `bottom`. On `'.'`, do nothing. Each cell is touched O(1) times, so the whole thing is linear.",
+  "hints": [
+    "After the 90° rotation, stones fall within individual columns. If you scan one column from bottom to top, what single position would you need to remember to place each stone correctly in one pass? Constraints: m, n ≤ 500.",
+    "Use two pointers per column: a scan pointer moving upward and a \"settle\" pointer marking the lowest empty cell not blocked by an obstacle. In Example 1's rotated column `['#','.','#']`: row 2 `'#'` stays (settle→1), row 1 `'.'` skip, row 0 `'#'` falls to row 1 → `['.','#','#']`.",
+    "```\nrotated[i][j] = box[m-1-j][i]            # 90° CW rotation, result is n×m\nfor each column c:\n    settle = n - 1\n    for row from n-1 down to 0:\n        if rotated[row][c] == '*':\n            settle = row - 1\n        else if rotated[row][c] == '#':\n            rotated[row][c] = '.'\n            rotated[settle][c] = '#'\n            settle = settle - 1\nreturn rotated\n```",
+    "**Single stone** - one cell, the stone is already at the bottom.\n`Input: [[\"#\"]]` → `Expected: [[\"#\"]]`\n⚠️ Bug: writing `'#'` to `bottom` then clearing `row` (instead of clearing `row` first) when `row==bottom` → returns `[[\".\"]]` (erases the stone).\n\n**All stones stack** - column full of stones, none can fall.\n`Input: [[\"#\",\"#\"]]` → `Expected: [[\"#\"],[\"#\"]]`\n⚠️ Bug: forgetting to decrement `settle` after placing a stone → returns `[[\".\"],[\"#\"]]` (both stones collapse onto one cell).\n\n**Obstacle blocks fall** - obstacle sits below a stone in the rotated column.\n`Input: [[\"*\",\"#\"]]` → `Expected: [[\"#\"],[\"*\"]]`\n⚠️ Bug: setting `settle = row` on `'*'` instead of `row-1` → returns `[[\".\"],[\"#\"]]` (overwrites the obstacle cell).\n\n**Multiple columns** - `settle` must reset per column.\n`Input: [[\"#\",\".\"],[\".\",\"#\"]]` → `Expected: [[\".\",\".\"],[\"#\",\"#\"]]`\n⚠️ Bug: declaring `settle` outside the column loop (carrying its value across columns) → returns `[[\".\"],[\"#\"],[\"#\"],[\".\"]]`-shaped corruption; specifically column 1 keeps `settle=0` from column 0 and leaves the top stone in place, yielding `[[\".\",\"#\"],[\"#\",\".\"]]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the box is rotated k×90° (k arbitrary) instead of exactly 90° clockwise?",
+      "a": "Reduce k mod 4. For 0°/180° gravity acts along original rows; for 90°/270° along original columns. Apply the same settle-pointer scan in the post-rotation \"down\" direction, then rotate. TC O(m·n), SC O(1) auxiliary."
+    },
+    {
+      "q": "What if stones have weights and heavier stones fall first (or push lighter ones aside)?",
+      "a": "Within each column segment between obstacles, collect stones, sort descending by weight, then stack from the bottom. Per segment of length L this is O(L log L), total O(m·n log max(m,n)). SC O(max(m,n)) for the per-segment buffer."
+    },
+    {
+      "q": "What if the box is tumbled - rotated 90° repeatedly with gravity after each turn until it stabilises?",
+      "a": "Each rotation flips the gravity direction; run the settle scan after every rotation. The configuration reaches a fixed point within O(min(m,n)) rotations, so cap iterations there. TC O(min(m,n)·m·n), SC O(1) auxiliary."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<char>> rotateTheBox(vector<vector<char>>& boxGrid) {\n        int m = boxGrid.size();\n        int n = boxGrid[0].size();\n        vector<vector<char>> rotated(n, vector<char>(m));\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < m; j++) {\n                rotated[i][j] = boxGrid[m - 1 - j][i];\n            }\n        }\n        for (int col = 0; col < m; col++) {\n            int bottom = n - 1;\n            for (int row = n - 1; row >= 0; row--) {\n                if (rotated[row][col] == '*') {\n                    bottom = row - 1;\n                } else if (rotated[row][col] == '#') {\n                    rotated[row][col] = '.';\n                    rotated[bottom][col] = '#';\n                    bottom--;\n                }\n            }\n        }\n        return rotated;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

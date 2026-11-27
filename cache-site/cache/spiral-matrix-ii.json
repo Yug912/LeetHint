@@ -1,0 +1,40 @@
+{
+  "slug": "spiral-matrix-ii",
+  "title": "Spiral Matrix II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Layer-by-Layer Simulation",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<vector<int>> res: n×n - returned output, not counted\n- int val, top, bottom, left, right: 5 scalars → O(1)\n- recursion depth: none\n- not counted: returned matrix",
+  "approach": "Fill the n×n matrix layer by layer, starting from the outermost ring and moving inward. Maintain four boundary pointers (top, bottom, left, right) that shrink after each lap. For each layer, fill the top row left-to-right, the right column top-to-bottom, the bottom row right-to-left, and the left column bottom-to-top, incrementing a counter at each cell. The guards `if (top <= bottom)` and `if (left <= right)` prevent double-writing on the innermost row/column. Every cell is visited exactly once, guaranteeing values 1 through n² are placed in spiral order.",
+  "hints": [
+    "In the n=3 answer, trace where 1 through 9 sit - what path do they follow, and what region is left to fill once the outermost numbers are placed?\nn ≤ 20, so even an O(n²) simulation is trivially fast.",
+    "Use a 2D matrix with four boundary pointers (top, bottom, left, right) that shrink inward after each lap. For n=3: fill top row [1,2,3], then right column down [4,5], then bottom row left [6,7], then left column up [8], then repeat for the inner layer.",
+    "```\nmatrix = n×n zeros; top=0, bottom=n-1, left=0, right=n-1, val=1\nwhile top ≤ bottom and left ≤ right:\n    fill top row left→right, then top++\n    fill right column top→bottom, then right--\n    if top ≤ bottom: fill bottom row right→left, then bottom--\n    if left ≤ right: fill left column bottom→top, then left++\nreturn matrix\n```",
+    "**Smallest input** - n=1, only one cell to fill.\n`Input: n = 1` → `Expected: [[1]]`\n⚠️ Bug: using `top < bottom and left < right` (strict) in the while condition → loop body never executes → returns `[[0]]`\n\n**Even dimension** - n=2, no single center cell; the spiral has two partial rings.\n`Input: n = 2` → `Expected: [[1,2],[4,3]]`\n⚠️ Bug: using `i < bottom` instead of `i <= bottom` in the right-column fill → res[1][1] is never written → returns `[[1,2],[3,0]]`\n\n**Value initialization** - the counter must start at 1, not 0.\n`Input: n = 3` → `Expected: [[1,2,3],[8,9,4],[7,6,5]]`\n⚠️ Bug: initializing `val = 0` instead of `val = 1` → returns `[[0,1,2],[7,8,3],[6,5,4]]`\n\n**Direction reversal** - the bottom row must be filled right-to-left.\n`Input: n = 3` → `Expected: [[1,2,3],[8,9,4],[7,6,5]]`\n⚠️ Bug: filling the bottom row left-to-right (`j = left` to `right`) → res[2][0]=6, res[2][1]=7 → returns `[[1,2,3],[8,9,4],[6,7,5]]`"
+  ],
+  "followUps": [
+    {
+      "q": "Given an m×n matrix, return all its elements in spiral order.",
+      "a": "Use the same four-boundary layer approach but read instead of write. The guards `if (top <= bottom)` and `if (left <= right)` are now essential because m ≠ n can leave a single row or column that would otherwise be read twice. TC O(m×n), SC O(1) auxiliary."
+    },
+    {
+      "q": "Fill the spiral matrix with the first n² prime numbers instead of 1 through n².",
+      "a": "Precompute the first n² primes with a sieve up to roughly n²·ln(n²), then walk the same spiral path placing primes in order. TC O(n² log n) dominated by the sieve, SC O(n²) for the prime list (or O(1) extra if generated on the fly)."
+    },
+    {
+      "q": "If n can be up to 10^5 and you only need the value at position (r, c), how do you avoid building the full matrix?",
+      "a": "Compute the cell's layer k = min(r, c, n-1-r, n-1-c), then derive its value from the layer's starting value 4k(n-k)+1 and its offset along that layer's perimeter. TC O(1), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> generateMatrix(int n) {\n        vector<vector<int>> res(n, vector<int>(n));\n        int val = 1;\n        int top = 0, bottom = n - 1, left = 0, right = n - 1;\n        while (top <= bottom && left <= right) {\n            for (int j = left; j <= right; j++)\n                res[top][j] = val++;\n            top++;\n            for (int i = top; i <= bottom; i++)\n                res[i][right] = val++;\n            right--;\n            if (top <= bottom) {\n                for (int j = right; j >= left; j--)\n                    res[bottom][j] = val++;\n                bottom--;\n            }\n            if (left <= right) {\n                for (int i = bottom; i >= top; i--)\n                    res[i][left] = val++;\n                left++;\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

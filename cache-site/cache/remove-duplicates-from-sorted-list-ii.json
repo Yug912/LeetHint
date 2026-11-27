@@ -1,0 +1,40 @@
+{
+  "slug": "remove-duplicates-from-sorted-list-ii",
+  "title": "Remove Duplicates from Sorted List II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dummy Head + Single Pass",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode dummy (stack-allocated): 1 node → O(1)\n- prev pointer: 1 pointer → O(1)\n- int dup: 1 int → O(1)\n- not counted: input list, returned list",
+  "approach": "Since the list is sorted, all duplicate values appear consecutively. We use a dummy head node (to handle the case where the first node is a duplicate) and a `prev` pointer. At each step, if `prev->next` and `prev->next->next` share the same value, we record that value and skip every node with it by relinking `prev->next` forward. If they differ, we advance `prev`. This single pass correctly removes all duplicate groups while preserving distinct nodes.",
+  "hints": [
+    "In a sorted list, where must equal values appear relative to each other? The list has at most 300 nodes.",
+    "Use a dummy node before the real head and a `prev` pointer. For `[1,1,1,2,3]`, `prev` starts at dummy; since `prev->next` (1) equals `prev->next->next` (1), skip all 1s, linking dummy directly to 2.",
+    "```\ndummy -> head\nprev = dummy\nwhile prev->next and prev->next->next:\n    if prev->next->val == prev->next->next->val:\n        dup = prev->next->val\n        while prev->next and prev->next->val == dup:\n            prev->next = prev->next->next\n    else:\n        prev = prev->next\nreturn dummy->next\n```",
+    "**Empty input** - no nodes at all\n`Input: []` → `Expected: []`\n⚠️ Bug: accessing `head->next` without a null check → crash\n\n**Single node** - only one element, nothing to compare\n`Input: [1]` → `Expected: [1]`\n⚠️ Bug: loop condition `while (prev->next->next)` without first checking `prev->next` → null dereference crash\n\n**Head is duplicate** - the first value repeats\n`Input: [1,1,2,3]` → `Expected: [2,3]`\n⚠️ Bug: operating directly on `head` with no dummy node → cannot unlink the first node, returns `[1,2,3]`\n\n**Consecutive duplicate groups** - multiple duplicate groups back-to-back\n`Input: [1,1,2,2,3]` → `Expected: [3]`\n⚠️ Bug: advancing `prev = prev->next` after the skip loop instead of re-checking from the same position → returns `[2,3]`\n\n**No duplicates** - all values are distinct\n`Input: [1,2,3]` → `Expected: [1,2,3]`\n⚠️ Bug: using `prev = prev->next->next` in the else branch → skips node 2, returns `[1,3]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the list is not sorted - how would you remove all values that appear more than once?",
+      "a": "First pass: count frequencies in a hash map. Second pass: rebuild the list keeping only nodes whose count is 1. Time O(n), space O(n) for the map."
+    },
+    {
+      "q": "Instead of removing all duplicates, keep at most k copies of each value.",
+      "a": "In the inner loop, count consecutive equal nodes; if the count exceeds k, relink past the extras. The outer structure stays the same. Time O(n), space O(1)."
+    },
+    {
+      "q": "The list is sorted but streamed from disk in chunks too large to hold entirely in memory.",
+      "a": "The algorithm only needs the current node and its successor, so it processes the stream sequentially with O(1) working memory. Buffer two nodes at a time and relink as you go; no change to time complexity."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* deleteDuplicates(ListNode* head) {\n        ListNode dummy(0, head);\n        ListNode* prev = &dummy;\n        while (prev->next && prev->next->next) {\n            if (prev->next->val == prev->next->next->val) {\n                int dup = prev->next->val;\n                while (prev->next && prev->next->val == dup) {\n                    prev->next = prev->next->next;\n                }\n            } else {\n                prev = prev->next;\n            }\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

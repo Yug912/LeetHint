@@ -1,0 +1,40 @@
+{
+  "slug": "sum-root-to-leaf-numbers",
+  "title": "Sum Root to Leaf Numbers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- int sum: single variable → O(1)\n- int current (passed by value per call): O(1) per frame\n- recursion call-stack depth: worst case O(h) for a skewed tree (constraint: h ≤ 10)\n- not counted: input tree, returned int",
+  "approach": "Traverse the tree with DFS, maintaining a running number formed by the path from root to the current node. At each node, update the running number as `current * 10 + node->val`. When a leaf is reached (both children null), add the running number to the total sum. Because `current` is passed by value, each branch gets its own independent copy, so sibling paths don't interfere. The problem guarantees the total fits in a 32-bit integer, so `int` suffices.",
+  "hints": [
+    "When you extend a root-to-leaf path by one node, what happens to the number that path represents? Each node holds a single digit (0-9), and the tree depth is at most 10.",
+    "Depth-first search with a running number. Walking 4→9 in Example 2, the running number becomes 4×10+9 = 49; reaching leaf 5 gives 49×10+5 = 495, added to the total.",
+    "```\nfunction dfs(node, current, total):\n    if node is null: return\n    current = current * 10 + node.val\n    if node is leaf:\n        total += current\n        return\n    dfs(node.left, current, total)\n    dfs(node.right, current, total)\n```",
+    "**Single node** - root is also a leaf\n`Input: root = [5]` → `Expected: 5`\n⚠️ Bug: returning 0 when root has no children before accumulating → returns 0\n\n**One child** - a node with one child is not a leaf\n`Input: root = [1,2]` → `Expected: 12`\n⚠️ Bug: using `!node->left || !node->right` instead of `!node->left && !node->right` to detect leaf → treats root as leaf, returns 1\n\n**Adding at every node** - only complete root-to-leaf numbers contribute\n`Input: root = [1,2,3]` → `Expected: 25`\n⚠️ Bug: adding `current` to sum at every node, not just leaves → returns 26\n\n**Shared running number in BFS** - each path needs its own accumulated value\n`Input: root = [4,9,0,5,1]` → `Expected: 1026`\n⚠️ Bug: using a single shared `current` variable in level-order traversal → returns 54446"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree depth could be up to 10^5 - how do you avoid stack overflow?",
+      "a": "Replace recursion with an iterative DFS using an explicit stack of (node, current) pairs. The logic is identical: pop a pair, compute the new running number, and push children. TC remains O(n); SC is O(n) worst case for the explicit stack on a skewed tree."
+    },
+    {
+      "q": "What if each node value could be 0-99 (two digits) instead of 0-9?",
+      "a": "Change the accumulation to `current * 100 + node->val` and use `long long` for `current` and `sum`, since a single path could now reach 100^10 ≈ 10^20. TC stays O(n); SC stays O(h)."
+    },
+    {
+      "q": "What if you must return the sum modulo 10^9 + 7?",
+      "a": "Apply the modulo at every step: `current = (current * 10 + node->val) % MOD` and `sum = (sum + current) % MOD`. This keeps all intermediates bounded. TC O(n); SC O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int sumNumbers(TreeNode* root) {\n        int sum = 0;\n        dfs(root, 0, sum);\n        return sum;\n    }\nprivate:\n    void dfs(TreeNode* node, int current, int& sum) {\n        if (!node) return;\n        current = current * 10 + node->val;\n        if (!node->left && !node->right) {\n            sum += current;\n            return;\n        }\n        dfs(node->left, current, sum);\n        dfs(node->right, current, sum);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

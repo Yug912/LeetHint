@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-paths",
+  "title": "Binary Tree Paths",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS Backtracking",
+  "tc": "O(n * h)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- string path: up to O(h) characters at any time → O(h)\n- recursion call stack: up to O(h) frames → O(h)\n- not counted: input tree, returned vector<string> result",
+  "approach": "Use DFS from the root, maintaining a single mutable string that accumulates the current path in \"val->val->...\" format. When reaching a leaf (no left or right child), push a copy of the current path into the result. After exploring both children, truncate the string back to its length at entry (backtracking), so sibling subtrees start from the same prefix. This visits each node once and builds each path exactly once.",
+  "hints": [
+    "Every answer string ends at a node with no children. As you walk from the root downward, at what point does a partial path become a complete answer worth saving?",
+    "Use DFS with a mutable string that accumulates \"val->val->…\" and backtracks on return. In Example 1, reaching leaf 5 with path \"1->2\" appends \"->5\" and saves \"1->2->5\".",
+    "```\ndfs(node, path, result):\n    save current length of path\n    if path not empty: append \"->\"\n    append node's value to path\n    if node is leaf:\n        add copy of path to result\n    recurse on left child if exists\n    recurse on right child if exists\n    restore path to saved length\n```",
+    "**Single node** - tree with only the root, which is also a leaf\n`Input: [1]` → `Expected: [\"1\"]`\n⚠️ Bug: always prepending \"->\" before every node including root → returns `[\"->1\"]`\n\n**Negative values** - node values can be as low as -100\n`Input: [-1,2,null]` → `Expected: [\"-1->2\"]`\n⚠️ Bug: building the string with `(char)(node->val + '0')` instead of to_string → returns garbled output for negative numbers\n\n**Branching tree** - multiple leaves require clean path restoration between siblings\n`Input: [1,2,3]` → `Expected: [\"1->2\",\"1->3\"]`\n⚠️ Bug: not truncating path after returning from left subtree → returns `[\"1->2\",\"1->2->3\"]`\n\n**Non-leaf with one child** - a node with only a left child is not a leaf\n`Input: [1,2]` → `Expected: [\"1->2\"]`\n⚠️ Bug: recording path at every node instead of only at leaves → returns `[\"1\",\"1->2\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to return paths sorted lexicographically?",
+      "a": "Collect all paths via the same DFS, then sort the result vector before returning. String comparisons during sort add O(k·log k·h) where k is the leaf count, so total TC becomes O(n·h + k·log k·h)."
+    },
+    {
+      "q": "What if the tree could have up to 10^5 nodes?",
+      "a": "The same DFS-with-backtracking approach works unchanged. Passing the path string by reference avoids O(h) copies per call, keeping TC at O(n·h) and SC at O(h). A skewed tree of 10^5 nodes is fine for the call stack in practice."
+    },
+    {
+      "q": "What if you only need the path with the maximum sum instead of all paths?",
+      "a": "Track a running sum alongside the path during DFS. At each leaf, compare the sum against a global maximum and store the corresponding path. TC drops to O(n) and SC stays O(h), since you never store all paths simultaneously."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> binaryTreePaths(TreeNode* root) {\n        vector<string> result;\n        if (!root) return result;\n        string path;\n        dfs(root, path, result);\n        return result;\n    }\nprivate:\n    void dfs(TreeNode* node, string& path, vector<string>& result) {\n        int len = path.size();\n        if (!path.empty()) path += \"->\";\n        path += to_string(node->val);\n        if (!node->left && !node->right) {\n            result.push_back(path);\n        }\n        if (node->left) dfs(node->left, path, result);\n        if (node->right) dfs(node->right, path, result);\n        path.resize(len);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

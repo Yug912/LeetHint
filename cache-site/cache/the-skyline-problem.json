@@ -1,0 +1,40 @@
+{
+  "slug": "the-skyline-problem",
+  "title": "The Skyline Problem",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sweep Line with Ordered Multiset",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> events: 2n entries → O(n)\n- multiset<int> heights: up to n entries → O(n)\n- sort(): O(log n) stack (introsort)\n- not counted: input buildings, returned result vector",
+  "approach": "The skyline height at any x-coordinate equals the maximum height among all buildings active (spanning) that x. We use a sweep line: create two events per building - (left, −height) for starts and (right, +height) for ends - then sort all events by x, breaking ties so that at the same x, taller starts come before shorter starts, and shorter ends come before taller ends (the sign trick on height achieves this). We maintain a multiset of active heights (seeded with 0 as ground). At each event we insert or remove one height, then check if the multiset's maximum changed; if it did, we emit a key point (x, newMax). This is correct because the skyline only changes when the tallest active building changes.",
+  "hints": [
+    "At any x-coordinate, what single property of the buildings covering that x determines the skyline's height there? Buildings are perfect rectangles grounded at height 0.",
+    "Sweep line with a multiset of active heights. Encode each building as two events: (left, −height) for start and (right, +height) for end, then sort by (x, height). At x = 3 in Example 1, height 15 is inserted, the max changes 10 → 15, so (3, 15) is emitted.",
+    "```\nevents = [(b.left, -b.height), (b.right, b.height) for each building]\nsort events by (x, height)\nactive = multiset containing 0\nprevMax = 0\nfor (x, h) in events:\n    if h < 0: active.insert(-h)\n    else: active.erase_one(h)\n    currMax = max(active)\n    if currMax != prevMax:\n        emit (x, currMax)\n        prevMax = currMax\n```",
+    "**Single building** - Minimum valid input.\n`Input: [[0,1,1]]` → `Expected: [[0,1],[1,0]]`\n⚠️ Bug: not inserting 0 as a sentinel in the multiset → `*rbegin()` on an empty set is undefined behavior after the last building is removed\n\n**Adjacent same-height buildings** - One building ends where another of equal height begins.\n`Input: [[0,2,3],[2,5,3]]` → `Expected: [[0,3],[5,0]]`\n⚠️ Bug: sorting events by x only without the height tiebreaker → returns [[0,3],[2,0],[2,3],[5,0]]\n\n**Overlapping same-height buildings** - Three buildings of height 5 overlap.\n`Input: [[0,5,5],[1,4,5],[2,3,5]]` → `Expected: [[0,5],[5,0]]`\n⚠️ Bug: calling `multiset.erase(h)` instead of `erase(find(h))` removes all copies → returns [[0,5],[3,0]]\n\n**Same left edge, different heights** - Two buildings start at the same x.\n`Input: [[0,3,5],[0,2,10]]` → `Expected: [[0,10],[2,5],[3,0]]`\n⚠️ Bug: processing the shorter building's start before the taller one at the same x → returns [[0,5],[0,10],[2,5],[3,0]]"
+  ],
+  "followUps": [
+    {
+      "q": "How would you compute the total area under the skyline?",
+      "a": "After computing the key points, iterate through consecutive pairs and sum (x_{i+1} − x_i) × y_i. This adds O(n) time on top of the O(n log n) skyline computation. Space remains O(n)."
+    },
+    {
+      "q": "What if buildings arrive in an online stream and you must report the skyline after each insertion?",
+      "a": "Maintain the key points in a balanced BST ordered by x. Each new building may split existing segments and update heights. In the worst case each insertion affects O(k) key points, giving O(k log n) per insertion where k is the number of changed points."
+    },
+    {
+      "q": "What if coordinates are real numbers instead of integers?",
+      "a": "The sweep line approach works identically - events are sorted by real-valued x-coordinates and the multiset tracks active heights. No integer-specific assumptions are used. Time and space complexity remain O(n log n) and O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> getSkyline(vector<vector<int>>& buildings) {\n        vector<pair<int, int>> events;\n        events.reserve(buildings.size() * 2);\n        for (auto& b : buildings) {\n            events.push_back({b[0], -b[2]});  // start: negative height\n            events.push_back({b[1],  b[2]});  // end:   positive height\n        }\n        sort(events.begin(), events.end());\n\n        multiset<int> heights;\n        heights.insert(0);  // ground sentinel\n        int prevMax = 0;\n        vector<vector<int>> result;\n\n        for (auto& e : events) {\n            int x = e.first;\n            int h = e.second;\n            if (h < 0) {\n                heights.insert(-h);\n            } else {\n                heights.erase(heights.find(h));\n            }\n            int currMax = *heights.rbegin();\n            if (currMax != prevMax) {\n                result.push_back({x, currMax});\n                prevMax = currMax;\n            }\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

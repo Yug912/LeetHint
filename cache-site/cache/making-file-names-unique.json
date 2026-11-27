@@ -1,0 +1,40 @@
+{
+  "slug": "making-file-names-unique",
+  "title": "Making File Names Unique",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Table Simulation",
+  "tc": "O(n·L)",
+  "sc": "O(n·L)",
+  "spaceBreakdown": "- unordered_map<string,int> cnt: up to n entries → O(n)\n- vector<string> ans: up to n entries → O(n) (returned output, not counted by convention)\n- not counted: input vector",
+  "approach": "Use a hash map storing, for each base name, the next suffix integer `k` to try. When a name `s` is new, use it directly and record `cnt[s] = 1`. When `s` already exists, start from `k = cnt[s]` and increment until `s + \"(\" + k + \")\"` is not in the map - this loop is amortized O(n) total because each generated candidate is skipped at most once. Insert the chosen name into the map so future collisions with it are detected, and update `cnt[s]` to `k + 1`.",
+  "hints": [
+    "When a name like \"gta\" is already taken and \"gta(1)\" is also taken, what information would let you jump straight to the next candidate instead of re-checking from 1 every time?",
+    "Use a hash map from each base name to the next integer `k` to try. For input \"gta\" when \"gta\" and \"gta(1)\" are both in the map, the map says `cnt[\"gta\"] = 2`, so you jump directly to \"gta(2)\".",
+    "```\nfor each name s:\n    if s not in map:\n        output s\n        map[s] = 1\n    else:\n        k = map[s]\n        while s+\"(\"+k+\")\" in map:\n            k++\n        output s+\"(\"+k+\")\"\n        map[s+\"(\"+k+\")\"] = 1\n        map[s] = k + 1\n```",
+    "**Single element** - only one folder, no collisions possible.\n`[\"a\"]` → `[\"a\"]`\n⚠️ Bug: starting k from 0 instead of 1 → for `[\"a\",\"a\"]` returns `[\"a\",\"a(0)\"]` instead of `[\"a\",\"a(1)\"]`\n\n**All duplicates** - every name is the same base, forcing sequential suffixes.\n`[\"a\",\"a\",\"a\"]` → `[\"a\",\"a(1)\",\"a(2)\"]`\n⚠️ Bug: not updating `cnt[s]` after finding a valid name → for `[\"a\",\"a\",\"a\",\"a\"]` with 50000 entries, TLE because each name re-scans from k=1\n\n**Name already containing a suffix** - the input itself looks like a suffixed name but is treated as a whole string.\n`[\"a(1)\",\"a(1)\"]` → `[\"a(1)\",\"a(1)(1)\"]`\n⚠️ Bug: stripping the trailing `(k)` before lookup → treats second \"a(1)\" as base \"a\" with k=1, returns `[\"a(1)\",\"a(2)\"]` instead of `[\"a(1)\",\"a(1)(1)\"]`\n\n**Collision between base and suffixed name** - an earlier input reserves a name that a later suffix would generate.\n`[\"gta\",\"gta(1)\",\"gta\"]` → `[\"gta\",\"gta(1)\",\"gta(2)\"]`\n⚠️ Bug: not inserting the chosen suffixed name into the map → third \"gta\" tries k=1, \"gta(1)\" appears free, returns `[\"gta\",\"gta(1)\",\"gta(1)\"]` with a duplicate"
+  ],
+  "followUps": [
+    {
+      "q": "What if names.length can be up to 10^6 and each name up to 10^5 characters?",
+      "a": "The hash map still works, but string concatenation and hashing become O(L) per operation. Use a rolling hash of each name as the map key to get O(1) average lookups. TC becomes O(n·L) for hashing all names, SC stays O(n)."
+    },
+    {
+      "q": "What if you also need to support deleting a folder name, freeing it for reuse?",
+      "a": "Maintain a min-heap (or sorted set) of available k values per base name. On deletion, push the freed k back. When assigning, pop the smallest available k. TC: O(log n) per create/delete, SC: O(n)."
+    },
+    {
+      "q": "What if names arrive in a stream and you cannot store all of them in memory?",
+      "a": "Use a Bloom filter for fast rejection of likely-new names, backed by disk for confirmed entries. False positives trigger a disk lookup. TC: O(1) expected per name with O(n) disk space, SC: O(n/bytes_per_entry) in RAM."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> getFolderNames(vector<string>& names) {\n        unordered_map<string, int> cnt;\n        vector<string> ans;\n        ans.reserve(names.size());\n        for (const string& s : names) {\n            auto it = cnt.find(s);\n            if (it == cnt.end()) {\n                ans.push_back(s);\n                cnt[s] = 1;\n            } else {\n                int k = it->second;\n                string candidate = s + \"(\" + to_string(k) + \")\";\n                while (cnt.find(candidate) != cnt.end()) {\n                    k++;\n                    candidate = s + \"(\" + to_string(k) + \")\";\n                }\n                ans.push_back(candidate);\n                cnt[candidate] = 1;\n                cnt[s] = k + 1;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

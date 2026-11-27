@@ -1,0 +1,40 @@
+{
+  "slug": "score-of-parentheses",
+  "title": "Score of Parentheses",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Depth Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int depth, ans: two scalars → O(1)\n- no containers, no recursion, no stack\n- not counted: input string s",
+  "approach": "The key insight is that every `()` pair contributes 2^d to the total score, where d is its nesting depth (the number of unmatched `(` surrounding it). We track depth with a single counter-incrementing on `(` and decrementing on `)`-and whenever we detect a `()` pair (a `)` immediately following `(`), we add 2^depth to the answer. This works because the recursive rules (AB = A+B and (A) = 2A) decompose exactly into summing 2^depth over all innermost pairs.",
+  "hints": [
+    "In `(())` the score is 2 while in `()` it is 1-what single property of the innermost `()` pair differs between these two strings?",
+    "Use a single integer depth counter. In `(())`, the inner `()` is detected when `)` follows `(` at depth 1 (after decrement), contributing 2^1 = 2.",
+    "```\ndepth = 0, ans = 0\nfor i in 0..n-1:\n    if s[i] == '(':\n        depth = depth + 1\n    else:\n        depth = depth - 1\n        if s[i-1] == '(':\n            ans = ans + 2^depth\nreturn ans\n```",
+    "**Smallest input** - Only one pair at depth 0.\n`Input: \"()\"` → `Expected: 1`\n⚠️ Bug: initializing ans to 1 instead of 0 → returns 2\n\n**Max nesting** - 25 nested pairs, the deepest allowed by n ≤ 50.\n`Input: \"(((((((((((((((((((((((())))))))))))))))))))))))))\"` → `Expected: 16777216`\n⚠️ Bug: using `1 << (depth + 1)` instead of `1 << depth` → returns 33554432\n\n**All flat pairs** - 25 consecutive pairs, each at depth 0.\n`Input: \"()()()()()()()()()()()()()()()()()()()()()()()()()\"` → `Expected: 25`\n⚠️ Bug: using `ans += depth` instead of `ans += (1 << depth)` → returns 0\n\n**Mixed nesting** - Nested and adjacent pairs combined.\n`Input: \"(()(()))\"` → `Expected: 6`\n⚠️ Bug: adding 2^depth on every `)` instead of only when s[i-1]=='(' → returns 9"
+  ],
+  "followUps": [
+    {
+      "q": "What if s can be up to 10^6 characters long?",
+      "a": "The algorithm is already O(n) time and O(1) space, so it scales directly. However, the maximum nesting depth could be ~5×10^5, making 2^depth astronomically large-use modular arithmetic (e.g., mod 10^9+7) or big integers. TC stays O(n), SC stays O(1)."
+    },
+    {
+      "q": "What if there are k types of brackets, each contributing a different base value?",
+      "a": "Replace the single depth counter with a depth counter plus a stack of bracket types. When a matching pair closes, add base[type] × 2^depth. Still O(n) time, but O(n) space for the type stack in the worst case."
+    },
+    {
+      "q": "What if you need to answer the score for every prefix of s?",
+      "a": "Run the same depth-counting pass once, recording the running answer after each character. Each prefix score is just the accumulated sum up to that point. O(n) time, O(n) space for the output array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int scoreOfParentheses(string s) {\n        int depth = 0, ans = 0;\n        for (int i = 0; i < (int)s.size(); i++) {\n            if (s[i] == '(') {\n                depth++;\n            } else {\n                depth--;\n                if (s[i - 1] == '(') {\n                    ans += 1 << depth;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

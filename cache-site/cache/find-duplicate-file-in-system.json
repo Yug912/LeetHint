@@ -1,0 +1,32 @@
+{
+  "slug": "find-duplicate-file-in-system",
+  "title": "Find Duplicate File in System",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Grouping",
+  "tc": "O(S)",
+  "sc": "O(S)",
+  "spaceBreakdown": "- unordered_map<string, vector<string>> mp: stores every content key and every full file path → O(S)\n- temporary strings dir, token, filename, content: O(max single path length) = O(3000)\n- not counted: input vector, returned result",
+  "approach": "Parse each directory-info string by splitting on spaces: the first token is the directory path, and each remaining token has the form \"filename(content)\". For each file, build the full path \"directory/filename\" and group paths by their content string using a hash map. Finally, emit every group containing at least two paths. This is correct because duplicate files are exactly those sharing identical content, and grouping by content collects each duplicate set in one pass.",
+  "hints": [
+    "The total input is at most 5×10^5 characters, so comparing every pair of files is too slow. What must you extract from each \"name(content)\" token so that all duplicates of a file can be located without pairwise comparison?",
+    "Use a hash map keyed by file content, mapping to a list of full file paths. For the token \"1.txt(abcd)\" in directory \"root/a\", insert key \"abcd\" → [\"root/a/1.txt\"].",
+    "for each path string:\n    split into directory (first token) and file tokens (rest)\n    for each file token \"name(content)\":\n        full_path = directory + \"/\" + name\n        map[content].append(full_path)\nreturn every map group whose size >= 2",
+    "**No duplicates** - every content appears exactly once.\n`Input: [\"root/a 1.txt(abcd)\"]` → `Expected: []`\n⚠️ Bug: returning all map entries instead of filtering size ≥ 2 → returns [[\"root/a/1.txt\"]]\n\n**Root directory only** - m = 0, the directory token is just \"root\".\n`Input: [\"root 1.txt(abcd) 2.txt(abcd)\"]` → `Expected: [[\"root/1.txt\",\"root/2.txt\"]]`\n⚠️ Bug: skipping the directory prefix when it has no '/' → returns [[\"1.txt\",\"2.txt\"]]\n\n**Multiple duplicates in one directory** - two files with identical content in the same directory.\n`Input: [\"root/a 1.txt(abcd) 2.txt(abcd)\"]` → `Expected: [[\"root/a/1.txt\",\"root/a/2.txt\"]]`\n⚠️ Bug: storing paths in a set to deduplicate → returns [[\"root/a/1.txt\"]]\n\n**Content with dots and digits** - content is not restricted to letters.\n`Input: [\"root/a 1.txt(a1.b2) 2.txt(a1.b2)\"]` → `Expected: [[\"root/a/1.txt\",\"root/a/2.txt\"]]`\n⚠️ Bug: splitting the token on '.' to separate name and content → misparses, returns []"
+  ],
+  "followUps": [
+    {
+      "q": "If file content is very large (GB level), how would you modify your solution?",
+      "a": "Compute a cryptographic hash (e.g., SHA-256) of each file's content and use that hash as the map key instead of the raw content. Read each file in chunks to compute the hash without loading the whole file into memory. After grouping by hash, byte-compare files within each candidate group to eliminate collision-based false positives. TC: O(S) where S is total file size; SC: O(F) for F file hashes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<string>> findDuplicate(vector<string>& paths) {\n        unordered_map<string, vector<string>> mp;\n        for (const string& p : paths) {\n            int n = p.size();\n            int i = 0;\n            while (i < n && p[i] != ' ') i++;\n            string dir = p.substr(0, i);\n            i++; // skip the space\n            while (i < n) {\n                int start = i;\n                while (i < n && p[i] != ' ') i++;\n                string token = p.substr(start, i - start);\n                size_t lp = token.find('(');\n                size_t rp = token.rfind(')');\n                string filename = token.substr(0, lp);\n                string content = token.substr(lp + 1, rp - lp - 1);\n                mp[content].push_back(dir + \"/\" + filename);\n                i++; // skip the space (or go past end)\n            }\n        }\n        vector<vector<string>> res;\n        for (auto& kv : mp) {\n            if (kv.second.size() >= 2) {\n                res.push_back(move(kv.second));\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

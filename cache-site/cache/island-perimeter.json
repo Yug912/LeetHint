@@ -1,0 +1,40 @@
+{
+  "slug": "island-perimeter",
+  "title": "Island Perimeter",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Grid Cell Neighbor Counting",
+  "tc": "O(m × n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int dr[4], dc[4]: fixed 4 entries → O(1)\n- int perimeter, rows, cols, r, c, k, nr, nc: scalars → O(1)\n- recursion depth: none\n- not counted: input grid, returned int",
+  "approach": "For each land cell, a side contributes to the perimeter exactly when the adjacent cell in that direction is water or lies outside the grid. So iterate over every cell; for each land cell, examine its four orthogonal neighbors and add 1 for each neighbor that is water or out of bounds. This is correct because every perimeter edge is precisely a land/water (or land/boundary) interface, and each such interface is touched by exactly one land cell, so it is counted exactly once.",
+  "hints": [
+    "For a single land cell, which of its four sides should count toward the perimeter, and which should not? The grid is at most 100×100.",
+    "Iterate over every cell; for each land cell, check its four orthogonal neighbors and add 1 for each neighbor that is water or outside the grid. Example: cell (0,1) in Example 1 has neighbors up(out), down(land), left(water), right(water), contributing 3.",
+    "```\nperimeter = 0\nfor r in 0..rows-1:\n    for c in 0..cols-1:\n        if grid[r][c] == land:\n            for each of 4 neighbors (nr, nc):\n                if (nr,nc) out of bounds or grid[nr][nc] == water:\n                    perimeter += 1\nreturn perimeter\n```",
+    "**Single cell** - the entire grid is one land cell with no neighbors.\n`Input: [[1]]` → `Expected: 4`\n⚠️ Bug: only counting in-bounds water neighbors (ignoring out-of-bounds sides) → returns 0\n\n**Single row** - land cell next to water in a 1×2 grid.\n`Input: [[1,0]]` → `Expected: 4`\n⚠️ Bug: checking only right and down neighbors and multiplying by 2 → returns 2\n\n**Full land block** - every cell is land, so only the outer boundary counts.\n`Input: [[1,1],[1,1]]` → `Expected: 8`\n⚠️ Bug: counting every side of every land cell without subtracting land-land adjacencies → returns 16\n\n**Boundary column** - land cells in the first column have an out-of-bounds left side.\n`Input: [[1,1],[0,0]]` → `Expected: 6`\n⚠️ Bug: looping neighbor columns from c instead of c-1 → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if there could be multiple islands in the grid?",
+      "a": "The same per-cell neighbor check still works, since each land cell's contribution depends only on its local neighbors. Summing over all land cells gives the total perimeter of all islands combined. TC O(m×n), SC O(1)."
+    },
+    {
+      "q": "What if the island may contain lakes (water cells fully enclosed by land)?",
+      "a": "The local rule would wrongly count lake shorelines as island perimeter. First mark water cells reachable from the grid border via BFS/DFS; then only count edges between land and that \"outside\" water. TC O(m×n), SC O(m×n) for the visited marker."
+    },
+    {
+      "q": "What if the grid is too large to fit in memory and arrives row by row as a stream?",
+      "a": "Keep only the current and previous row. For each land cell you can check left, right, and up (previous row) immediately; the down neighbor is resolved when the next row arrives. TC O(m×n), SC O(n) for two rows."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int islandPerimeter(vector<vector<int>>& grid) {\n        int rows = grid.size();\n        int cols = grid[0].size();\n        int perimeter = 0;\n        int dr[4] = {-1, 1, 0, 0};\n        int dc[4] = {0, 0, -1, 1};\n        for (int r = 0; r < rows; r++) {\n            for (int c = 0; c < cols; c++) {\n                if (grid[r][c] == 1) {\n                    for (int k = 0; k < 4; k++) {\n                        int nr = r + dr[k];\n                        int nc = c + dc[k];\n                        if (nr < 0 || nr >= rows || nc < 0 || nc >= cols || grid[nr][nc] == 0) {\n                            perimeter++;\n                        }\n                    }\n                }\n            }\n        }\n        return perimeter;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

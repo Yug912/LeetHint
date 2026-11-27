@@ -1,0 +1,40 @@
+{
+  "slug": "expression-add-operators",
+  "title": "Expression Add Operators",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking",
+  "tc": "O(n · 4^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- `string expr` (mutable builder): max 2n−1 chars → O(n)\n- recursion call stack: max depth n → O(n)\n- `string num` (copy of input): n chars → O(n), mirrors input\n- `vector<string> res`: not counted (returned output)",
+  "approach": "Use backtracking to explore every way to split the digit string into multi-digit operands and interleave +, −, *. Build the expression left-to-right in a mutable `string` passed by reference (append/resize), tracking the running value and the last operand's signed contribution. For + and −, update value directly; for ×, undo the last operand's effect and replace it with `last × curr` to respect precedence. Leading-zero operands are pruned by checking if the first digit of a multi-digit operand is '0'. All arithmetic uses `long long` to avoid overflow.",
+  "hints": [
+    "Each gap between adjacent digits offers four choices: +, −, ×, or concatenate into a longer operand. With n ≤ 10, how would you enumerate all combinations, and what value must you carry forward so that × is evaluated with correct precedence while building left to right?",
+    "Backtracking with a mutable string passed by reference. For \"123\" targeting 6: place nothing before \"1\" (first operand), then try \"+2\" giving val=3, then \"+3\" giving val=6 → record \"1+2+3\"; backtrack and try \"*2\" then \"*3\" → val = 2−2+2×3 = 6 → record \"1*2*3\".",
+    "```\nbacktrack(pos, val, last, expr):\n  if pos == n:\n    if val == target: record expr\n    return\n  curr = 0\n  for i from pos to n-1:\n    if i > pos and digit[pos] == '0': break   # leading zero\n    curr = curr*10 + digit[i]\n    if pos == 0:\n      append digit[i]; backtrack(i+1, curr, curr, expr); pop\n    else:\n      for op in [+, -, *]:\n        append op, digit[i]\n        if op == '+': backtrack(i+1, val+curr, curr, expr)\n        if op == '-': backtrack(i+1, val-curr, -curr, expr)\n        if op == '*': backtrack(i+1, val-last+last*curr, last*curr, expr)\n        pop op and digit[i]\n```",
+    "**Single digit** - only one operand, no operators to insert.\n`Input: num = \"5\", target = 5` → `Expected: [\"5\"]`\n⚠️ Bug: always requiring an operator before the first operand (no pos==0 special case) → returns `[]`\n\n**Leading zeros** - a multi-digit operand starting with '0' is illegal.\n`Input: num = \"105\", target = 5` → `Expected: [\"1*0+5\",\"10-5\"]`\n⚠️ Bug: omitting the `i > pos && num[pos] == '0'` break check → returns `[\"1*0+5\",\"1*05\",\"10-5\"]` (includes invalid \"1*05\")\n\n**Overflow** - a 10-digit operand exceeds 2³¹−1; 9999999999 mod 2³² = 1410065407.\n`Input: num = \"9999999999\", target = 1410065407` → `Expected: []`\n⚠️ Bug: using `int` instead of `long long` for `curr` → curr wraps to 1410065407, returns `[\"9999999999\"]`\n\n**Multiplication precedence** - × binds tighter than +/−, so the last operand must be undone.\n`Input: num = \"232\", target = 8` → `Expected: [\"2*3+2\",\"2+3*2\"]`\n⚠️ Bug: computing × as `val * curr` instead of `val - last + last * curr` → \"2+3*2\" evaluates to 10 instead of 8, returns `[\"2*3+2\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if num.length could be up to 20?",
+      "a": "4^19 ≈ 2.7×10^11 expressions is far too many. A meet-in-the-middle approach would split the string at its midpoint, enumerate all reachable (value, last_operand) states for each half, then combine matching halves - reducing time to roughly O(4^(n/2)) at the cost of O(4^(n/2)) space to store half-results."
+    },
+    {
+      "q": "What if integer division (truncating toward zero) were also allowed?",
+      "a": "Add a '/' case alongside +, −, *. Division shares ×'s precedence, so use the same undo trick: new_val = val − last + last / curr, new_prev = last / curr. Skip the branch when curr == 0 to avoid division by zero. Time and space remain O(n · 4^n) and O(n)."
+    },
+    {
+      "q": "If you only need the count of valid expressions, not the strings themselves?",
+      "a": "Drop the mutable string entirely - recurse on (pos, val, last) and increment a counter when pos == n and val == target. Time stays O(4^n) with a smaller constant; space drops to O(n) for the call stack only. For n up to ~15, memoization on (pos, val, last) could prune repeated subproblems, though val's wide range limits cache hit rates."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<string> res;\n    string num;\n    long long target;\n    int n;\n\n    void backtrack(int pos, long long val, long long prev, string& expr) {\n        if (pos == n) {\n            if (val == target) res.push_back(expr);\n            return;\n        }\n        long long curr = 0;\n        for (int i = pos; i < n; i++) {\n            if (i > pos && num[pos] == '0') break;\n            curr = curr * 10 + (num[i] - '0');\n            if (pos == 0) {\n                int saved = expr.size();\n                expr.push_back(num[i]);\n                backtrack(i + 1, curr, curr, expr);\n                expr.resize(saved);\n            } else {\n                int saved = expr.size();\n                expr.push_back('*');\n                expr.push_back(num[i]);\n                backtrack(i + 1, val - prev + prev * curr, prev * curr, expr);\n                expr.resize(saved);\n                expr.push_back('+');\n                expr.push_back(num[i]);\n                backtrack(i + 1, val + curr, curr, expr);\n                expr.resize(saved);\n                expr.push_back('-');\n                expr.push_back(num[i]);\n                backtrack(i + 1, val - curr, -curr, expr);\n                expr.resize(saved);\n            }\n        }\n    }\n\npublic:\n    vector<string> addOperators(string num, int target) {\n        res.clear();\n        this->num = num;\n        this->target = target;\n        n = (int)num.size();\n        string expr;\n        backtrack(0, 0, 0, expr);\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

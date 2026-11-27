@@ -1,0 +1,40 @@
+{
+  "slug": "excel-sheet-column-number",
+  "title": "Excel Sheet Column Number",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Positional Numeral System (Base Conversion)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long result: single scalar → O(1)\n- loop variable c: single scalar → O(1)\n- not counted: input string columnTitle",
+  "approach": "Treat the column title as a base-26 positional numeral where A=1, B=2, …, Z=26 (no zero digit). Scan left to right, and for each character fold it into a running accumulator: `result = result * 26 + (c - 'A' + 1)`. This mirrors how decimal digits combine (`d = d*10 + digit`), except the digit range is 1-26. Correctness follows by induction: after processing the first k letters, `result` holds the column number of that prefix, and appending one more letter shifts the prefix one place left (×26) and adds the new digit.",
+  "hints": [
+    "When you append one letter to a column title, how does the value of the original (shorter) title contribute to the value of the new title? The constraint says titles range up to \"FXSHRXW\" (length 7).",
+    "Iterative base-26 positional accumulation. For \"AB\": start at 0, after 'A' → 0×26+1 = 1, after 'B' → 1×26+2 = 28.",
+    "```\nresult = 0\nfor each char c in columnTitle:\n    result = result * 26 + (c - 'A' + 1)\nreturn result\n```",
+    "**Single letter** - smallest input, length 1\n`Input: \"A\"` → `Expected: 1`\n⚠️ Bug: using `c - 'A'` without `+ 1` → returns 0\n\n**Letter Z** - digit value is 26, the maximum single-letter value\n`Input: \"Z\"` → `Expected: 26`\n⚠️ Bug: using `c - 'A'` instead of `c - 'A' + 1` → returns 25\n\n**Two-letter minimum** - first multi-letter title\n`Input: \"AA\"` → `Expected: 27`\n⚠️ Bug: summing digit values without positional weighting (`result += c - 'A' + 1`) → returns 2\n\n**Reverse-sorted letters** - descending order, stresses the ×26 shift\n`Input: \"ZY\"` → `Expected: 701`\n⚠️ Bug: 0-indexed digits with `c - 'A'` → returns 674\n\n**Largest input** - value equals INT_MAX exactly\n`Input: \"FXSHRXW\"` → `Expected: 2147483647`\n⚠️ Bug: accumulating in `int` with a right-to-left `pow(26, i)` formula where intermediate `6 * 26^6 = 1853494656` then summed can wrap if a signed overflow occurs in a different formulation → returns negative"
+  ],
+  "followUps": [
+    {
+      "q": "Given a positive integer, return its Excel column title (the inverse problem).",
+      "a": "Repeatedly compute `n % 26`; if the remainder is 0 the digit is 'Z' and you must subtract 26 (not 0) before dividing by 26, otherwise map 1-25 to 'A'-'Y' and subtract the remainder. Prepend each character. TC O(log₂₆ n), SC O(log₂₆ n) for the output string."
+    },
+    {
+      "q": "Titles may now contain lowercase letters too, treated case-insensitively; return the column number.",
+      "a": "Normalize each character to uppercase (or compute `toupper(c) - 'A' + 1`) before folding into the accumulator. TC O(n), SC O(1)."
+    },
+    {
+      "q": "A stream of titles arrives one at a time; answer each query online with strict O(1) extra memory.",
+      "a": "The same left-to-right fold already uses O(1) memory and no preprocessing, so process each title independently as it arrives. TC O(n) per query, SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int titleToNumber(string columnTitle) {\n        long long result = 0;\n        for (char c : columnTitle) {\n            result = result * 26 + (c - 'A' + 1);\n        }\n        return (int)result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

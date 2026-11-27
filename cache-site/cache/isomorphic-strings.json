@@ -1,0 +1,40 @@
+{
+  "slug": "isomorphic-strings",
+  "title": "Isomorphic Strings",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bidirectional Mapping",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int mapST[256]: fixed 256 entries → O(1)\n- int mapTS[256]: fixed 256 entries → O(1)\n- recursion depth: none\n- not counted: input strings s and t",
+  "approach": "Two strings are isomorphic iff there is a bijection between their characters: each character in s maps to exactly one character in t, and no two characters in s map to the same character in t. We scan both strings left to right, maintaining two arrays (s→t and t→s). At each position, if a mapping already exists it must match the current pair; otherwise we record it. A mismatch in either direction means the strings are not isomorphic.",
+  "hints": [
+    "When the same character appears at two different positions in s, what must be true about the characters at those same positions in t? The strings can be up to 5 × 10^4 characters long.",
+    "Use two fixed-size arrays to track the forward map (s→t) and the reverse map (t→s). For s = \"egg\", t = \"add\": at i = 0 store 'e'→'a' and 'a'→'e'; at i = 2 the existing 'g'→'d' matches, so continue.",
+    "```\nfor each index i from 0 to n-1:\n    if s[i] already mapped and map[s[i]] != t[i]: return false\n    if t[i] already mapped and reverseMap[t[i]] != s[i]: return false\n    map[s[i]] = t[i]\n    reverseMap[t[i]] = s[i]\nreturn true\n```",
+    "**Single character** - The minimum input size of n = 1.\n`Input: s = \"a\", t = \"b\"` → `Expected: true`\n⚠️ Bug: checking `mapST[sc] != tc` without first testing for the unmapped sentinel -1 → returns false\n\n**Two-to-one collision** - Two different characters in s would need to map to the same character in t.\n`Input: s = \"ab\", t = \"aa\"` → `Expected: false`\n⚠️ Bug: maintaining only a forward map (s→t) without a reverse map (t→s) → returns true\n\n**Self-mapping** - Every character maps to itself.\n`Input: s = \"abc\", t = \"abc\"` → `Expected: true`\n⚠️ Bug: rejecting any position where s[i] == t[i] with `if (sc == tc) return false` → returns false\n\n**One-to-two collision** - The same character in s would need to map to two different characters in t.\n`Input: s = \"aa\", t = \"ab\"` → `Expected: false`\n⚠️ Bug: maintaining only a reverse map (t→s) without a forward map (s→t) → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "Given a list of k strings, determine if they are all pairwise isomorphic to each other.",
+      "a": "Isomorphism is transitive because the composition of two bijections is a bijection. Check that every string is isomorphic to the first one using the same two-map approach. TC O(k·n), SC O(1) with fixed arrays."
+    },
+    {
+      "q": "What if the strings can contain any Unicode character instead of just ASCII?",
+      "a": "Replace the fixed-size arrays with hash maps (unordered_map<int,int>). The algorithm is identical; only the container changes. TC remains O(n) average, SC becomes O(d) where d is the number of distinct characters (at most n)."
+    },
+    {
+      "q": "What if the strings arrive as a stream of character pairs and you must answer after each pair whether the prefix is isomorphic?",
+      "a": "Maintain the two maps incrementally. After each new pair, run the same consistency check. Once a violation occurs the answer is permanently false, since the conflicting mapping can never be undone. TC O(1) per query, SC O(d)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isIsomorphic(string s, string t) {\n        int mapST[256], mapTS[256];\n        for (int i = 0; i < 256; i++) {\n            mapST[i] = -1;\n            mapTS[i] = -1;\n        }\n        for (int i = 0; i < (int)s.size(); i++) {\n            int sc = (unsigned char)s[i];\n            int tc = (unsigned char)t[i];\n            if (mapST[sc] != -1 && mapST[sc] != tc) return false;\n            if (mapTS[tc] != -1 && mapTS[tc] != sc) return false;\n            mapST[sc] = tc;\n            mapTS[tc] = sc;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "add-two-numbers-ii",
+  "title": "Add Two Numbers II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-Place Reversal",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode* dummy: 1 node → O(1)\n- ListNode* curr, prev, nextTemp: a few pointers → O(1)\n- not counted: input lists l1, l2, returned result list",
+  "approach": "The key insight is that addition naturally proceeds from the least significant digit to the most significant, but the input lists are ordered the opposite way. By reversing both input lists in-place, we align their traversal order with the direction of addition. We then add the numbers digit by digit while tracking the carry, build the result list, and reverse it at the end to restore the most-significant-first order. This yields O(n + m) time and O(1) auxiliary space.",
+  "hints": [
+    "The input lists present digits from most to least significant, but addition naturally flows from least to most significant. What structural change to the lists would align their order with the direction of addition?",
+    "Reverse both input lists in-place so the least significant digits are at the head, then add them digit by digit with a carry.\nFor l1 = [7,2,4,3] and l2 = [5,6,4], reversing them gives [3,4,2,7] and [4,6,5], allowing you to add 3+4 first.",
+    "reverse l1\nreverse l2\nwhile l1 or l2 or carry:\n    sum = carry + l1.val (if l1) + l2.val (if l2)\n    carry = sum / 10\n    append (sum % 10) to result list\nreverse result list\nreturn result",
+    "**Final carry** - The sum of the most significant digits produces a carry that extends the result length.\n`Input: l1 = [9,9,9], l2 = [1]` → `Expected: [1,0,0,0]`\n⚠️ Bug: Using `while (l1 || l2)` instead of `while (l1 || l2 || carry)` drops the final carry and returns `[0,0,0]`.\n\n**Unequal lengths** - One list is much longer than the other.\n`Input: l1 = [7,2,4,3], l2 = [5]` → `Expected: [7,2,4,8]`\n⚠️ Bug: Assuming both lists have the same length and stopping early when the shorter one ends returns `[8]` instead of `[7,2,4,8]`.\n\n**Exact sum of 10** - Two digits add up to exactly 10, requiring a carry of 1.\n`Input: l1 = [5], l2 = [5]` → `Expected: [1,0]`\n⚠️ Bug: Using `carry = sum > 10 ? 1 : 0` instead of `sum / 10` fails to propagate the carry when the sum is exactly 10, returning `[0]` instead of `[1,0]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if you cannot modify the input lists?",
+      "a": "You would need to find the lengths of both lists, align them by padding the shorter one with leading zeros conceptually, and use recursion or an explicit stack to add from the least significant digit to the most. This takes O(n + m) time and O(n + m) space for the recursion stack."
+    },
+    {
+      "q": "What if the numbers are extremely large and stored across multiple distributed nodes?",
+      "a": "You would reverse the lists locally on each node or process them in chunks, handling carries that propagate across chunk boundaries. The time complexity remains O(n + m), but distributed communication adds overhead."
+    },
+    {
+      "q": "What if the linked list is doubly linked instead of singly linked?",
+      "a": "You would not need to reverse the lists at all. You could traverse to the tails of both lists and walk backwards simultaneously, adding digits and carrying overflows. This takes O(n + m) time and O(1) space without modifying the input."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\n    ListNode* reverseList(ListNode* head) {\n        ListNode* prev = nullptr;\n        ListNode* curr = head;\n        while (curr) {\n            ListNode* nextTemp = curr->next;\n            curr->next = prev;\n            prev = curr;\n            curr = nextTemp;\n        }\n        return prev;\n    }\npublic:\n    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {\n        l1 = reverseList(l1);\n        l2 = reverseList(l2);\n        \n        ListNode* dummy = new ListNode(0);\n        ListNode* curr = dummy;\n        int carry = 0;\n        \n        while (l1 || l2 || carry) {\n            int sum = carry;\n            if (l1) {\n                sum += l1->val;\n                l1 = l1->next;\n            }\n            if (l2) {\n                sum += l2->val;\n                l2 = l2->next;\n            }\n            carry = sum / 10;\n            curr->next = new ListNode(sum % 10);\n            curr = curr->next;\n        }\n        \n        ListNode* res = reverseList(dummy->next);\n        delete dummy;\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

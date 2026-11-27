@@ -1,0 +1,40 @@
+{
+  "slug": "frog-jump",
+  "title": "Frog Jump",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP with Hash Map",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- unordered_map<long long, unordered_set<int>> dp: n entries, each set up to O(n) elements → O(n²) total\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Track, for each stone, the set of jump sizes *k* that can land on it. Start at stone 0 with *k* = 0 (so the only valid first jump is *k*+1 = 1). Process stones in increasing position order; for each stone and each *k* in its set, try jumps of *k*−1, *k*, and *k*+1 (if positive). If the target position has a stone, insert the jump size into that stone's set. The frog succeeds iff the last stone's set is non-empty. The total number of (stone, *k*) pairs is O(*n*²) because *k* at stone *i* is bounded by *i*.",
+  "hints": [
+    "What property of arriving at a stone - beyond just its position - determines which stones the frog can reach next?",
+    "Use a hash map from each stone's position to the set of jump sizes that can land there. From stone 0 with jump size 0, only a jump of 1 reaches stone 1, so dp[1] = {1}.",
+    "```\ndp[0] = {0}\nfor each stone position pos in sorted order:\n    for each k in dp[pos]:\n        for step in {k-1, k, k+1}:\n            if step > 0 and pos+step is a stone:\n                add step to dp[pos+step]\nreturn dp[last stone] is non-empty\n```",
+    "**First jump must be 1** - frog starts with k=0, so only k+1=1 is valid.\n`Input: stones = [0,2]` → `Expected: false`\n⚠️ Bug: initializing dp[0] = {1} instead of {0} → returns true (from k=1, step=2 reaches stone 2)\n\n**Need to repeat a jump size** - frog must use k (not k+1) at some point.\n`Input: stones = [0,1,3,5]` → `Expected: true` (jumps: 1, 2, 2)\n⚠️ Bug: only trying step=k+1 → returns false (after k=2 reaches stone 3, only tries k=3 for stone 6; misses k=2 reaching stone 5)\n\n**Multiple paths to same stone** - a stone reachable with different k values, only some lead forward.\n`Input: stones = [0,1,2,3,5,8]` → `Expected: true` (0→1→2→3→5→8, jumps 1,1,1,2,3)\n⚠️ Bug: storing only one k per stone (overwriting) → returns false (at stone 3, k=2 from stone 1 is overwritten by k=1 from stone 2; then from stone 3 with k=1, step=2 reaches stone 5 with k=1, but step=2 from stone 5 looks for stone 7 which doesn't exist, missing the k=2 path that would reach stone 8)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the frog can also jump backward (k-1, k, or k+1 in either direction)?",
+      "a": "The state space becomes (stone, k) pairs on a graph with bidirectional edges. Use BFS with a visited set of (position, k) pairs to handle cycles. Time complexity stays O(n²) but you must track visited states to avoid infinite loops."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The O(n²) worst case is too slow. However, k at stone i is bounded by O(√(stones[i])) since 1+2+…+k ≤ stones[i]. If positions grow faster than linearly, the total number of reachable (stone, k) pairs shrinks and the same approach may still pass; otherwise a different strategy is needed."
+    },
+    {
+      "q": "What if the first jump can be any value from 1 to m?",
+      "a": "Initialize dp[0] with all values from 1 to m instead of just {0}. The rest of the algorithm is identical. Time complexity becomes O(n²·m) in the worst case if m is large, but O(n²) when m is small."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canCross(vector<int>& stones) {\n        int n = stones.size();\n        unordered_map<long long, unordered_set<int>> dp;\n        for (int s : stones) dp[s] = {};\n        dp[0].insert(0);\n        for (int i = 0; i < n; i++) {\n            long long pos = stones[i];\n            for (int k : dp[pos]) {\n                for (int step = k - 1; step <= k + 1; step++) {\n                    if (step > 0 && dp.count(pos + step)) {\n                        dp[pos + step].insert(step);\n                    }\n                }\n            }\n        }\n        return !dp[stones[n - 1]].empty();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

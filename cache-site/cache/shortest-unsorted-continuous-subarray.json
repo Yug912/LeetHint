@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-unsorted-continuous-subarray",
+  "title": "Shortest Unsorted Continuous Subarray",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Running Max/Min Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, maxSeen, right, minSeen, left, i): O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input vector",
+  "approach": "An element is already in its correct sorted position if it is ≥ every element to its left and ≤ every element to its right. Scan left-to-right tracking the running maximum: the rightmost index where the current element falls below the running max is the right boundary of the unsorted subarray. Symmetrically, scan right-to-left tracking the running minimum: the leftmost index where the current element exceeds the running min is the left boundary. The answer is `right - left + 1`, or 0 if no element was out of place.",
+  "hints": [
+    "If an element is already in its correct sorted position, what must be true about it relative to every element to its left and every element to its right?",
+    "Track the running maximum while scanning left-to-right; the rightmost index where `nums[i]` falls below the running max is the right end. Symmetrically, track the running minimum right-to-left for the left end. In `[2,6,4,8,10,9,15]`, at index 5 the value 9 is below running max 10, so right = 5; at index 1 the value 6 exceeds running min 4, so left = 1.",
+    "```\nmaxSeen = nums[0], right = -1\nfor i from 1 to n-1:\n    if nums[i] < maxSeen: right = i\n    else: maxSeen = nums[i]\n\nminSeen = nums[n-1], left = -1\nfor i from n-2 down to 0:\n    if nums[i] > minSeen: left = i\n    else: minSeen = nums[i]\n\nif right == -1: return 0\nreturn right - left + 1\n```",
+    "**Already sorted** - no element is out of place\n`Input: [1,2,3,4]` → `Expected: 0`\n⚠️ Bug: omitting the `if (right == -1) return 0;` guard → returns 1\n\n**All equal** - every element equals every other\n`Input: [5,5,5,5]` → `Expected: 0`\n⚠️ Bug: using `<=` instead of `<` in the right-boundary check → returns 4\n\n**All negative, already sorted** - values are negative and ascending\n`Input: [-5,-4,-3,-2,-1]` → `Expected: 0`\n⚠️ Bug: initializing `maxSeen` to 0 instead of `nums[0]` → every element is below 0, right = 4, left = -1, returns 6\n\n**Reverse sorted** - entire array needs sorting\n`Input: [5,4,3,2,1]` → `Expected: 5`\n⚠️ Bug: checking `nums[i] > maxSeen` instead of `nums[i] < maxSeen` → right stays -1, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual subarray indices [left, right] instead of its length.",
+      "a": "Run the same algorithm unchanged. When `right != -1`, return `{left, right}`; otherwise return `{-1, -1}` to signal the array is already sorted. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if the array arrives as a single-pass data stream with no random access?",
+      "a": "You must buffer the entire stream in memory first, because the right-to-left scan requires knowing suffix minimums that are not yet available during a forward-only pass. O(n) time, O(n) space to buffer."
+    },
+    {
+      "q": "Find the shortest subarray to sort in descending order so the whole array becomes non-increasing.",
+      "a": "Invert every comparison: track the running minimum left-to-right for the right boundary (rightmost index where `nums[i] > running min`) and the running maximum right-to-left for the left boundary (leftmost index where `nums[i] < running max`). Same O(n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findUnsortedSubarray(vector<int>& nums) {\n        int n = nums.size();\n        if (n <= 1) return 0;\n\n        int maxSeen = nums[0];\n        int right = -1;\n        for (int i = 1; i < n; i++) {\n            if (nums[i] < maxSeen) {\n                right = i;\n            } else {\n                maxSeen = nums[i];\n            }\n        }\n\n        int minSeen = nums[n - 1];\n        int left = -1;\n        for (int i = n - 2; i >= 0; i--) {\n            if (nums[i] > minSeen) {\n                left = i;\n            } else {\n                minSeen = nums[i];\n            }\n        }\n\n        if (right == -1) return 0;\n        return right - left + 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

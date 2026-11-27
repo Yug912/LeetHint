@@ -1,0 +1,40 @@
+{
+  "slug": "remove-colored-pieces-if-both-neighbors-are-the-same-color",
+  "title": "Remove Colored Pieces if Both Neighbors are the Same Color",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Run-Length Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int counters (a, b, i, j, len, n): constant → O(1)\n- recursion depth: none\n- not counted: input string (modified only by reading)",
+  "approach": "The moves available to each player are independent: removing an 'A' from the middle of an A-run only shortens that run, and never creates or destroys B-runs. For any maximal run of identical color of length L, the owning player can remove L−2 pieces (the interior ones). Sum Alice's removable A's and Bob's removable B's across all runs; Alice wins iff her total strictly exceeds Bob's.",
+  "hints": [
+    "When Alice removes an interior 'A' from a block of A's, does that ever change how many B's Bob can later remove? The string length can reach 10^5, so simulating every move is too slow.",
+    "Count maximal consecutive runs. For \"AAABABB\", the run \"AAA\" gives Alice 3−2=1 move; the B-runs \"B\", \"BB\" give Bob 0.",
+    "a = 0, b = 0\ni = 0\nwhile i < n:\n    j = i\n    while j < n and colors[j] == colors[i]: j++\n    len = j - i\n    if colors[i] == 'A': a += max(0, len - 2)\n    else: b += max(0, len - 2)\n    i = j\nreturn a > b",
+    "**Single character** - no run has length ≥ 3, so nobody can move.\n`Input: \"A\"` → `Expected: false`\n⚠️ Bug: using `len - 2` without clamping to 0 → returns true (−1 > 0).\n\n**Two characters** - both pieces are edges, no interior piece exists.\n`Input: \"AA\"` → `Expected: false`\n⚠️ Bug: treating `len == 2` as 1 move → returns true.\n\n**All same color, long run** - only one player can ever move.\n`Input: \"AAAAA\"` → `Expected: true`\n⚠️ Bug: comparing `a >= b` instead of `a > b` → still true here, but on `\"AA\"` returns true instead of false.\n\n**Mixed runs, Bob dominates** - Alice's single A-run is outweighed by Bob's long B-run.\n`Input: \"ABBBBBBBAAA\"` → `Expected: false`\n⚠️ Bug: only counting the longest run per player → Alice 1, Bob 5, but a buggy version counting only \"AAA\" vs \"BBBBBBB\" might still get this; the real bug is ignoring multiple runs of the same color.\n\n**Tie** - equal move counts mean Alice, moving first, runs out and loses.\n`Input: \"AAABBB\"` → `Expected: false`\n⚠️ Bug: returning `a >= b` → returns true."
+  ],
+  "followUps": [
+    {
+      "q": "What if three colors were allowed (A, B, C) with a third player Carol taking turns after Bob?",
+      "a": "Extend the run-length counting to track C-runs the same way; Carol's moves are max(0, len−2) summed over C-runs. Alice wins iff her total strictly exceeds both Bob's and Carol's, else compare Bob vs Carol when Alice is eliminated. Still O(n) time, O(1) space."
+    },
+    {
+      "q": "What if a removed piece's neighbors merge and can form a new removable piece of the other color?",
+      "a": "The independence argument breaks, so run-counting no longer works; you'd need to simulate with a structure tracking adjacent runs and re-checking merges after each removal. Worst case O(n) removals each touching O(1) neighbors with a linked-list representation, so O(n) time, O(n) space."
+    },
+    {
+      "q": "What if the input arrives as a stream of unknown length and you must answer after each character whether Alice would win on the prefix so far?",
+      "a": "Maintain the current run's color and length plus running totals a and b; on each new character either extend the current run or close it (adding max(0, len−2) to the right total) and start a new one, then compare a > b. O(1) time per character, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool winnerOfGame(string colors) {\n        int a = 0, b = 0;\n        int n = (int)colors.size();\n        int i = 0;\n        while (i < n) {\n            int j = i;\n            while (j < n && colors[j] == colors[i]) j++;\n            int len = j - i;\n            if (colors[i] == 'A') a += (len > 2 ? len - 2 : 0);\n            else b += (len > 2 ? len - 2 : 0);\n            i = j;\n        }\n        return a > b;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

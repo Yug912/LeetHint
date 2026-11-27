@@ -1,0 +1,40 @@
+{
+  "slug": "find-k-pairs-with-smallest-sums",
+  "title": "Find K Pairs with Smallest Sums",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "k-Way Merge with Min-Heap",
+  "tc": "O(k log min(k, n1))",
+  "sc": "O(min(k, n1))",
+  "spaceBreakdown": "- priority_queue pq: up to min(k, n1) entries → O(min(k, n1))\n- result vector: k pairs (returned output, not counted)\n- not counted: input arrays, returned vector",
+  "approach": "Treat each index `i` of `nums1` as the head of a sorted \"list\" - the list of pairs `(nums1[i], nums2[0]), (nums1[i], nums2[1]), …` - because `nums2` is sorted, these pairs are in non-decreasing sum order. Seed a min-heap with the first pair of the first `min(k, n1)` lists, then repeatedly pop the smallest pair, output it, and push the next pair from the same `nums1` index. This is a k-way merge of sorted lists, guaranteeing the k smallest sums in order.",
+  "hints": [
+    "Both arrays are sorted. For a fixed element `u` from `nums1`, in what order do the pairs `(u, nums2[0]), (u, nums2[1]), …` appear when sorted by their sum? Given `k ≤ 10^4`, how many distinct `u` values could ever contribute to the answer?",
+    "Use a min-heap (priority queue) keyed by pair sum. Seed it with `(nums1[i]+nums2[0], i, 0)` for `i` in `0..min(k,n1)-1`; e.g. for `nums1=[1,7,11], nums2=[2,4,6]` the heap starts with sums `3, 9, 13`, pop `3` → output `[1,2]`, then push `(1+4, 0, 1)`.",
+    "```\nseed heap with (nums1[i]+nums2[0], i, 0) for i in 0..min(k,n1)-1\nwhile heap not empty and output size < k:\n    (sum, i, j) = pop min from heap\n    append (nums1[i], nums2[j]) to output\n    if j+1 < len(nums2):\n        push (nums1[i]+nums2[j+1], i, j+1) onto heap\nreturn output\n```",
+    "**Negatives** - both arrays contain negative values, so the smallest sums are negative\n`Input: nums1 = [-10,-5,0], nums2 = [-3,1,4], k = 3` → `Expected: [[-10,-3],[-10,1],[-5,-3]]`\n⚠️ Bug: seeding the heap with only `(nums1[0], nums2[0])` instead of one entry per `nums1` index → returns `[[-10,-3],[-10,1],[-10,4]]`\n\n**Duplicates** - all elements equal, every pair has the same sum\n`Input: nums1 = [1,1], nums2 = [1,1], k = 3` → `Expected: [[1,1],[1,1],[1,1]]`\n⚠️ Bug: deduplicating pairs with a set before output → returns `[[1,1]]`\n\n**Full drain** - k equals the total number of pairs\n`Input: nums1 = [1,2], nums2 = [3,4], k = 4` → `Expected: [[1,3],[1,4],[2,3],[2,4]]`\n⚠️ Bug: seeding heap with `min(k, n1) - 1` entries → returns `[[1,3],[1,4]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as nums1.length × nums2.length (up to 10^10)?",
+      "a": "The heap approach is O(10^10 log 10^5), too slow. Binary search on a target sum S: count pairs with sum ≤ S using two pointers in O(n1 + n2) per check, find the smallest S with ≥ k pairs, then emit all pairs with sum < S and enough sum = S pairs to reach k. TC: O((n1 + n2) log(range)), SC: O(1) auxiliary."
+    },
+    {
+      "q": "What if nums2 arrives as a stream where you can only call next() to reveal its next element?",
+      "a": "Keep the same heap but lazily advance j: only push `(nums1[i], nums2[j+1])` once that stream element has been revealed. Seed after the first next() call, and each pop may trigger one next() call. TC unchanged, SC unchanged."
+    },
+    {
+      "q": "What if ties in sum must be broken by smaller nums1 index, then smaller nums2 index?",
+      "a": "Store `(sum, i, j)` in the heap and make the comparator compare sum first, then i, then j. The algorithm structure is identical; only the comparator gains two extra comparisons. No complexity change."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> kSmallestPairs(vector<int>& nums1, vector<int>& nums2, int k) {\n        int n1 = nums1.size(), n2 = nums2.size();\n        vector<vector<int>> result;\n        if (n1 == 0 || n2 == 0 || k == 0) return result;\n        \n        auto cmp = [](const tuple<long long,int,int>& a, const tuple<long long,int,int>& b) {\n            return get<0>(a) > get<0>(b);\n        };\n        priority_queue<tuple<long long,int,int>,\n                       vector<tuple<long long,int,int>>,\n                       decltype(cmp)> pq(cmp);\n        \n        int initCount = min(k, n1);\n        for (int i = 0; i < initCount; i++) {\n            pq.push(make_tuple((long long)nums1[i] + nums2[0], i, 0));\n        }\n        \n        while (!pq.empty() && (int)result.size() < k) {\n            auto top = pq.top();\n            pq.pop();\n            int i = get<1>(top);\n            int j = get<2>(top);\n            result.push_back({nums1[i], nums2[j]});\n            if (j + 1 < n2) {\n                pq.push(make_tuple((long long)nums1[i] + nums2[j + 1], i, j + 1));\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

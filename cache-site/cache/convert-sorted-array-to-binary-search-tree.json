@@ -1,0 +1,40 @@
+{
+  "slug": "convert-sorted-array-to-binary-search-tree",
+  "title": "Convert Sorted Array to Binary Search Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Divide and Conquer",
+  "tc": "O(n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- recursion call-stack depth: balanced tree → O(log n)\n- no containers/arrays allocated\n- not counted: input vector, returned tree nodes",
+  "approach": "Pick the middle element of the sorted array as the root of the BST, then recursively build the left subtree from the left half and the right subtree from the right half. Because the array is sorted, the left half contains exactly the elements smaller than the root and the right half contains those larger, satisfying the BST property. Splitting at the midpoint every time guarantees the two subtrees differ in size by at most one, producing a height-balanced tree.",
+  "hints": [
+    "Given that the array is sorted, if you pick any element as the root of a BST, which contiguous range of the array forms its left subtree and which range forms its right? The array is sorted in strictly increasing order and the output must be height-balanced.",
+    "Use divide and conquer: choose the middle element as the root, then recursively build the left subtree from the left half and the right subtree from the right half. For nums = [-10,-3,0,5,9], the middle index is 2, so 0 becomes the root; [-10,-3] feeds the left subtree and [5,9] the right.",
+    "```\nfunction build(lo, hi):\n    if lo > hi: return null\n    mid = lo + (hi - lo) / 2\n    node = new TreeNode(nums[mid])\n    node.left  = build(lo, mid - 1)\n    node.right = build(mid + 1, hi)\n    return node\n```",
+    "**Single element** - n = 1, the smallest valid input.\n`Input: nums = [5]` → `Expected: [5]`\n⚠️ Bug: omitting the base case `if (lo > hi) return nullptr` → calls build(0, -1), accesses nums[-1] → undefined behavior / crash.\n\n**Two elements** - even length, off-by-one in recursion bounds is fatal.\n`Input: nums = [1,3]` → `Expected: [1,null,3]`\n⚠️ Bug: writing `node->left = build(lo, mid)` instead of `build(lo, mid - 1)` → mid = 0, left = build(0, 0) calls itself forever → stack overflow.\n\n**Even length, four elements** - wrong middle selection creates a skewed, unbalanced tree.\n`Input: nums = [1,2,3,4]` → `Expected: [2,1,3,null,null,null,4]`\n⚠️ Bug: always picking `mid = lo` (first element as root) → returns [1,null,2,null,3,null,4], height 4, not height-balanced.\n\n**Boundary: last element** - picking the end instead of the middle skews the tree.\n`Input: nums = [1,2,3,4,5]` → `Expected: [3,1,4,null,2,null,5]`\n⚠️ Bug: always picking `mid = hi` → returns [5,4,null,3,null,2,null,1], height 5, not height-balanced."
+  ],
+  "followUps": [
+    {
+      "q": "Convert a sorted singly linked list to a height-balanced BST instead of an array.",
+      "a": "Use the same recursive split, but find the middle of each sublist with a slow/fast pointer traversal (O(n) per level). Total TC becomes O(n log n), SC O(log n). Alternatively, copy the list into an array first for O(n) TC at the cost of O(n) extra space."
+    },
+    {
+      "q": "Build a complete binary search tree (every level full except possibly the last, filled left to right) from the sorted array.",
+      "a": "Compute the exact left-subtree node count from the total n using complete-tree height formulas, then partition at that index instead of the midpoint. TC remains O(n), SC O(log n), but the size calculation is more involved than a simple midpoint split."
+    },
+    {
+      "q": "The sorted array arrives as a stream too large to store in memory, but n is known in advance.",
+      "a": "Simulate the recursion structure knowing n: process elements in the exact order the balanced BST would consume them (left-root-right at each level), building nodes on the fly. TC O(n), SC O(log n) for the recursion stack with O(1) buffering. Without knowing n, use a self-balancing tree (AVL or red-black) for O(log n) per insertion."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    TreeNode* sortedArrayToBST(vector<int>& nums) {\n        return build(nums, 0, (int)nums.size() - 1);\n    }\nprivate:\n    TreeNode* build(vector<int>& nums, int lo, int hi) {\n        if (lo > hi) return nullptr;\n        int mid = lo + (hi - lo + 1) / 2;\n        TreeNode* node = new TreeNode(nums[mid]);\n        node->left = build(nums, lo, mid - 1);\n        node->right = build(nums, mid + 1, hi);\n        return node;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

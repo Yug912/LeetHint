@@ -1,0 +1,40 @@
+{
+  "slug": "sort-list",
+  "title": "Sort List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Merge Sort",
+  "tc": "O(n log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode dummy in sortList: 1 stack node → O(1)\n- ListNode dummy in merge: 1 stack node per call, only one alive at a time → O(1)\n- Pointers (len, cur, tail, left, right, merged, size): constant count → O(1)\n- Recursion depth: none (iterative) → O(1)\n- No containers or arrays allocated",
+  "approach": "Use bottom-up merge sort on the linked list to achieve O(n log n) time with O(1) auxiliary space. First count the list length, then iteratively merge pairs of sorted sublists with sizes 1, 2, 4, … until the size covers the entire list. Each pass splits the list into runs of the current size, merges adjacent pairs, and reconnects them via a dummy head - no recursion is used, so the call stack is O(1).",
+  "hints": [
+    "A list of n nodes already contains n sorted runs of length 1. How could you exploit that to reach a single sorted run?",
+    "Bottom-up merge sort: iteratively merge pairs of sorted sublists, doubling the sublist size each pass (1, 2, 4, …). For [4,2,1,3], first merge pairs [4]&[2]→[2,4] and [1]&[3]→[1,3], then merge [2,4]&[1,3]→[1,2,3,4].",
+    "```\ncount length n\ndummy.next = head\nfor size = 1, 2, 4, ... while size < n:\n    tail = dummy, cur = dummy.next\n    while cur is not null:\n        left = cur\n        right = split(left, size)   // cut after size nodes\n        cur = split(right, size)    // cut after size more nodes\n        merged = merge(left, right)\n        tail.next = merged\n        advance tail to end of merged\nreturn dummy.next\n```",
+    "**Empty list** - head is null, zero nodes to sort.\n`Input: []` → `Expected: []`\n⚠️ Bug: counting length with `while (cur->next)` instead of `while (cur)` → dereferences nullptr, runtime error\n\n**Already sorted** - list is in ascending order, no reordering needed.\n`Input: [1,2,3,4]` → `Expected: [1,2,3,4]`\n⚠️ Bug: not advancing tail to end of merged list after `tail->next = merged` → next merge overwrites dummy.next, returns [3,4]\n\n**Two nodes reverse** - smallest non-trivial input, two elements out of order.\n`Input: [2,1]` → `Expected: [1,2]`\n⚠️ Bug: split loop condition `size > 0` instead of `size > 1` → advances one step too many, left=[2,1] right=nullptr, returns [2,1]\n\n**Merge drops remaining** - merge loop exits when one sublist is exhausted.\n`Input: [4,2,1,3]` → `Expected: [1,2,3,4]`\n⚠️ Bug: merge does not append leftover nodes after the while loop (`tail->next = l1 ? l1 : l2` missing) → merge([4],[2]) returns [2], final result is []"
+  ],
+  "followUps": [
+    {
+      "q": "What if the list is too large to fit in memory and must be sorted from disk?",
+      "a": "Use external merge sort: write sorted runs of size k to disk, then merge pairs of runs using a min-heap of size 2. Each pass reads and writes all n elements with O(log(n/k)) passes. Time: O(n log(n/k)), Space: O(k) for the in-memory heap and buffers."
+    },
+    {
+      "q": "What if you need a stable sort (equal-valued nodes keep their original relative order)?",
+      "a": "In the merge step, when l1->val == l2->val, always take from l1 (the left sublist) first. This preserves original order with no change to time or space complexity: O(n log n) time, O(1) space."
+    },
+    {
+      "q": "What if the list is doubly linked (each node also has a prev pointer)?",
+      "a": "The same bottom-up merge sort applies. The merge step is identical; you only need to update both next and prev pointers when reconnecting nodes, and split must null out the prev of the returned head. Time: O(n log n), Space: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* sortList(ListNode* head) {\n        if (!head || !head->next) return head;\n\n        int len = 0;\n        ListNode* cur = head;\n        while (cur) { len++; cur = cur->next; }\n\n        ListNode dummy(0);\n        dummy.next = head;\n\n        for (int size = 1; size < len; size *= 2) {\n            ListNode* tail = &dummy;\n            cur = dummy.next;\n            while (cur) {\n                ListNode* left = cur;\n                ListNode* right = split(left, size);\n                cur = split(right, size);\n                ListNode* merged = merge(left, right);\n                tail->next = merged;\n                while (tail->next) tail = tail->next;\n            }\n        }\n        return dummy.next;\n    }\n\nprivate:\n    ListNode* split(ListNode* head, int size) {\n        if (!head) return nullptr;\n        while (size > 1 && head->next) {\n            head = head->next;\n            size--;\n        }\n        ListNode* rest = head->next;\n        head->next = nullptr;\n        return rest;\n    }\n\n    ListNode* merge(ListNode* l1, ListNode* l2) {\n        ListNode dummy(0);\n        ListNode* tail = &dummy;\n        while (l1 && l2) {\n            if (l1->val <= l2->val) {\n                tail->next = l1;\n                l1 = l1->next;\n            } else {\n                tail->next = l2;\n                l2 = l2->next;\n            }\n            tail = tail->next;\n        }\n        tail->next = l1 ? l1 : l2;\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "subarray-sums-divisible-by-k",
+  "title": "Subarray Sums Divisible by K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum with Modulo Counting",
+  "tc": "O(n)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> count(k, 0): exactly k entries → O(k)\n- sum, ans, rem, loop variable x: O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Use prefix sums: a subarray sum from index i+1 to j equals prefix[j] − prefix[i], which is divisible by k exactly when prefix[j] ≡ prefix[i] (mod k). Maintain a count array of size k tracking how many prior prefix sums have each remainder. For each new prefix sum, add count[rem] to the answer (each prior prefix with the same remainder forms one valid subarray), then increment count[rem]. Initialize count[0] = 1 for the empty prefix, and normalize remainders with ((sum % k) + k) % k to handle negative running sums.",
+  "hints": [
+    "If you knew the cumulative sum from the start up to index i and up to index j (j > i), what must be true of those two sums for the elements between i+1 and j to add up to a multiple of k? The constraint n ≤ 3·10^4 rules out checking every subarray directly.",
+    "Prefix sums with a remainder-count array of size k. For nums = [4,5,0,-2,-3,1], k = 5: after sum=4 (rem 4) then sum=9 (rem 4), the matching remainder contributes 1 new divisible subarray [5].",
+    "```\ncount[0] = 1\nsum = 0, ans = 0\nfor each x in nums:\n    sum += x\n    rem = ((sum % k) + k) % k\n    ans += count[rem]\n    count[rem] += 1\nreturn ans\n```",
+    "**Single divisible element** - n = 1, the element itself is a multiple of k.\n`Input: nums = [5], k = 5` → `Expected: 1`\n⚠️ Bug: not initializing count[0] = 1 → returns 0\n\n**All zeros** - every subarray sums to 0, all divisible by k.\n`Input: nums = [0,0], k = 5` → `Expected: 3`\n⚠️ Bug: initializing all remainder counts to 0 (no count[0] = 1) → returns 1\n\n**Negative then positive prefix** - prefix sums −3 and 2 are congruent mod 5 but differ under raw C++ modulo.\n`Input: nums = [-3,5], k = 5` → `Expected: 1`\n⚠️ Bug: using raw sum % k (negative in C++) as the lookup key → returns 0\n\n**Single non-divisible element** - n = 1, element is not a multiple of k.\n`Input: nums = [5], k = 9` → `Expected: 0`\n⚠️ Bug: incrementing count[rem] before adding it to ans → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "Replace the fixed-size array with an unordered_map<int,int> for remainder counts. Time stays O(n); space becomes O(min(n, k)) since at most n+1 distinct remainders can appear."
+    },
+    {
+      "q": "What if you must return all the subarray index ranges, not just the count?",
+      "a": "Store a list of prefix indices for each remainder in the map. When a new prefix with remainder r arrives, enumerate all stored indices for r as subarray starts. Time is O(n + total output size); space is O(n) for the index lists."
+    },
+    {
+      "q": "What if the array arrives as an unbounded stream you cannot store?",
+      "a": "Keep only the running sum and the remainder-count map, processing one element at a time. This is a single-pass online algorithm with O(min(n, k)) space and O(n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int subarraysDivByK(vector<int>& nums, int k) {\n        vector<int> count(k, 0);\n        count[0] = 1;\n        int sum = 0, ans = 0;\n        for (int x : nums) {\n            sum += x;\n            int rem = ((sum % k) + k) % k;\n            ans += count[rem];\n            count[rem]++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

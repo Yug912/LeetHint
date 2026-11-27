@@ -1,0 +1,40 @@
+{
+  "slug": "dungeon-game",
+  "title": "Dungeon Game",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming (reverse fill, rolling array)",
+  "tc": "O(m·n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp of size n+1 → O(n)\n- recursion depth: none\n- not counted: input grid dungeon",
+  "approach": "Work backwards from the princess. Define dp[i][j] = minimum health the knight must have *when entering* cell (i,j) to reach the princess alive. From (i,j) he goes to either (i+1,j) or (i,j+1), so he needs at least min(dp[i+1][j], dp[i][j+1]) health *after* absorbing dungeon[i][j]; combined with the \"stay above 0\" rule this gives dp[i][j] = max(1, min(dp[i+1][j], dp[i][j+1]) - dungeon[i][j]). The princess cell uses \"1\" as the post-cell requirement (he must end with ≥1 health). I roll the table into a single row of size n+1, using a large sentinel for out-of-bounds \"no path\" neighbors.",
+  "hints": [
+    "The knight must stay strictly above zero at every step. For any single room, what is the smallest health he could have *upon entering it* and still be guaranteed to reach the princess from there?",
+    "Dynamic programming: let dp[i][j] be that smallest entry-health for cell (i,j), filled from bottom-right to top-left. For the princess cell in Example 1 (value −5): dp = max(1, 1 − (−5)) = 6.",
+    "for i from m-1 down to 0:\n  for j from n-1 down to 0:\n    next = min(dp_below, dp_right)   # ∞ if out of bounds; 1 for the princess cell\n    dp[i][j] = max(1, next - dungeon[i][j])\nreturn dp[0][0]",
+    "**Single negative cell** - the whole dungeon is one damaging room.\n`Input: [[-100]]` → `Expected: 101`\n⚠️ Bug: omitting the `max(1, …)` clamp → returns `1 - (-100) = 101` here but fails positive cells.\n\n**Single positive cell** - an orb in the only room.\n`Input: [[100]]` → `Expected: 1`\n⚠️ Bug: writing `dp = next - dungeon[i][j]` without clamping → returns `1 - 100 = -99`.\n\n**All-positive grid** - no threats anywhere.\n`Input: [[5,5],[5,5]]` → `Expected: 1`\n⚠️ Bug: initializing the \"no-path\" sentinel to 0 instead of a large value → returns `1` by luck here, but on mixed grids lets the knight pick a nonexistent neighbor.\n\n**Overflow with INT_MAX sentinel** - a damaging room next to an out-of-bounds neighbor.\n`Input: [[-1000,-1000]]` → `Expected: 1001`\n⚠️ Bug: using `INT_MAX` as sentinel and computing `min(INT_MAX, x) - dungeon[i][j]` with negative dungeon → `INT_MAX + 1000` overflows int → returns a garbage negative value."
+  ],
+  "followUps": [
+    {
+      "q": "What if the knight may move up, down, left, or right (4-directional) instead of only right/down?",
+      "a": "The acyclic right/down order is gone, so a single reverse pass no longer works; model it as a shortest-path problem where each cell's required entry health is relaxed against its four neighbors until fixed point, akin to Bellman-Ford / Dijkstra with the max(1, ·) clamp. Time becomes O(m·n·log(m·n)) with a priority queue, space O(m·n)."
+    },
+    {
+      "q": "What if the knight must visit k specified rooms (not just the princess) before exiting?",
+      "a": "This becomes a Steiner/TSP-style state: dp over (cell, visited-mask), transitioning to neighbors and updating the mask. Time O(m·n·2^k), space O(m·n·2^k) - feasible only for small k."
+    },
+    {
+      "q": "What if rows of the dungeon arrive one at a time in a stream and you cannot store the whole grid?",
+      "a": "Keep only the previous row's dp values (size n+1), exactly as the rolling array already does; each new row is processed right-to-left against the kept row. Time stays O(m·n), space O(n), with no need to retain past rows."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int calculateMinimumHP(vector<vector<int>>& dungeon) {\n        int m = (int)dungeon.size();\n        int n = (int)dungeon[0].size();\n        const int INF = 1'000'000'000;\n        vector<int> dp(n + 1, INF);\n        dp[n - 1] = 1; // post-princess requirement: end with >= 1 health\n        for (int i = m - 1; i >= 0; --i) {\n            for (int j = n - 1; j >= 0; --j) {\n                int below = dp[j];      // dp[i+1][j] (still from previous row)\n                int right = dp[j + 1];  // dp[i][j+1] (already updated this row)\n                int need = min(below, right) - dungeon[i][j];\n                dp[j] = max(1, need);\n            }\n        }\n        return dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

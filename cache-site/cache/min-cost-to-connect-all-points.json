@@ -1,0 +1,40 @@
+{
+  "slug": "min-cost-to-connect-all-points",
+  "title": "Min Cost to Connect All Points",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Minimum Spanning Tree (Prim's Algorithm, Dense Graph)",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> minDist: n entries → O(n)\n- vector<bool> inMST: n entries → O(n)\n- recursion depth: none\n- not counted: input points, returned int",
+  "approach": "This is a Minimum Spanning Tree problem on a complete graph where vertices are points and edge weights are Manhattan distances. Since the graph is dense (n ≤ 1000, so up to ~10^6 edges), Prim's algorithm with an O(n²) dense-graph implementation is optimal - it avoids the O(E log V) overhead of a heap-based approach. We maintain a `minDist` array tracking the cheapest edge from each non-tree vertex to the current tree, repeatedly pick the minimum, add it to the MST, and relax all remaining vertices.",
+  "hints": [
+    "What does the requirement \"exactly one simple path between any two points\" tell you about the shape of the chosen connections? n ≤ 1000.",
+    "Use Prim's algorithm for minimum spanning tree. In Example 1, starting from [0,0], the nearest unconnected point is [2,2] at Manhattan distance 4, so add that edge first.",
+    "```\nmark point 0 as visited, set its cost to 0\nrepeat n-1 times:\n    pick unvisited point with smallest cost to visited set\n    add its cost to total, mark visited\n    for each unvisited point:\n        update cost if edge to new point is cheaper\nreturn total\n```",
+    "**Single point** - only one point exists, so no connections are needed\n`Input: [[0,0]]` → `Expected: 0`\n⚠️ Bug: initializing minDist[0] to INT_MAX instead of 0 → returns 2147483647\n\n**Negative coordinates** - coordinates can be as low as -10^6\n`Input: [[-4,1],[-2,5]]` → `Expected: 6`\n⚠️ Bug: computing distance as (x_i - x_j) + (y_i - y_j) without abs → returns -6\n\n**Collinear points** - all points on a horizontal line\n`Input: [[0,0],[1,0],[2,0],[3,0]]` → `Expected: 3`\n⚠️ Bug: skipping the minDist update step after adding a node → returns 6\n\n**Vertical line** - all points share the same x-coordinate\n`Input: [[0,0],[0,3],[0,6]]` → `Expected: 6`\n⚠️ Bug: computing distance as |x_i - x_j| only, ignoring the y-component → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "O(n²) Prim's becomes infeasible. For Manhattan MST, reduce edges to O(n) by keeping only the nearest neighbor in each of 8 directional octants per point, then run Kruskal's on the reduced edge set. New complexity: O(n log n) time, O(n) space."
+    },
+    {
+      "q": "What if you must also return the list of edges in the MST?",
+      "a": "Track the parent node whenever minDist is updated. When a node joins the tree, output the (parent, node) pair. Same Prim's structure, O(n²) time, O(n) extra space for the edge list."
+    },
+    {
+      "q": "What if the cost is Euclidean distance instead of Manhattan?",
+      "a": "Same Prim's structure, but replace the distance formula with sqrt((x_i-x_j)² + (y_i-y_j)²) and use double for comparisons. Time complexity stays O(n²), space stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCostConnectPoints(vector<vector<int>>& points) {\n        int n = points.size();\n        vector<int> minDist(n, INT_MAX);\n        vector<bool> inMST(n, false);\n        minDist[0] = 0;\n        long long totalCost = 0;\n        \n        for (int i = 0; i < n; i++) {\n            int u = -1;\n            for (int j = 0; j < n; j++) {\n                if (!inMST[j] && (u == -1 || minDist[j] < minDist[u])) {\n                    u = j;\n                }\n            }\n            totalCost += minDist[u];\n            inMST[u] = true;\n            \n            for (int v = 0; v < n; v++) {\n                if (!inMST[v]) {\n                    int dist = abs(points[u][0] - points[v][0]) +\n                               abs(points[u][1] - points[v][1]);\n                    if (dist < minDist[v]) {\n                        minDist[v] = dist;\n                    }\n                }\n            }\n        }\n        return (int)totalCost;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

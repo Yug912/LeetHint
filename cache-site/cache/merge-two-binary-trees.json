@@ -1,0 +1,40 @@
+{
+  "slug": "merge-two-binary-trees",
+  "title": "Merge Two Binary Trees",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS",
+  "tc": "O(min(n, m))",
+  "sc": "O(h)",
+  "spaceBreakdown": "- No containers/arrays allocated\n- Recursion call stack: depth up to min(h1, h2) where h1, h2 are tree heights → O(h)\n- Input modified in place (root1 reused): O(1) auxiliary\n- Not counted: input trees, returned tree (shares nodes with root1)",
+  "approach": "The key insight is that merging is position-by-position: at each corresponding location in both trees, either both nodes exist (sum their values), only one exists (use it directly), or neither exists (null). A recursive depth-first traversal processes both trees in lockstep - if one node is null, return the other; otherwise sum the values and recursively merge both left and right children. This is correct because the tree structure is itself recursive, so merging at each position naturally produces the correct merged tree.",
+  "hints": [
+    "If you walk both trees from their roots at the same time, what are the possible situations you encounter at each corresponding position? Each tree can have between 0 and 2000 nodes.",
+    "Use recursive depth-first traversal. At the root of Example 1, both roots exist (values 1 and 2), so set the value to 3 and recursively merge both left children and both right children.",
+    "```\nfunction merge(t1, t2):\n    if t1 is null: return t2\n    if t2 is null: return t1\n    t1.val = t1.val + t2.val\n    t1.left = merge(t1.left, t2.left)\n    t1.right = merge(t1.right, t2.right)\n    return t1\n```",
+    "**Both empty** - Neither tree has any nodes.\n`Input: root1 = [], root2 = []` → `Expected: []`\n⚠️ Bug: returning `new TreeNode(0)` when both roots are null → returns `[0]`\n\n**One empty tree** - Only one tree has nodes; the other is null.\n`Input: root1 = [], root2 = [1,2,3]` → `Expected: [1,2,3]`\n⚠️ Bug: `if (!root1) return new TreeNode(root2->val);` (creating a new node instead of returning the existing subtree) → returns `[1]` (children 2 and 3 lost)\n\n**Negative values** - Both nodes hold -10000, the minimum allowed value.\n`Input: root1 = [-10000], root2 = [-10000]` → `Expected: [-20000]`\n⚠️ Bug: `root1->val = max(root1->val, root2->val);` (taking max instead of summing) → returns `[-10000]`\n\n**Skewed tree** - Both trees are right-chains; the right children must be merged too.\n`Input: root1 = [1,null,2], root2 = [3,null,4]` → `Expected: [4,null,6]`\n⚠️ Bug: only recursing on the left child and forgetting `root1->right = merge(...)` → returns `[4,null,2]` (right child 2 from root1 never merged with 4)"
+  ],
+  "followUps": [
+    {
+      "q": "Can you solve this iteratively without recursion?",
+      "a": "Use a stack of node pairs. Push (root1, root2), then pop and sum values, push both left-child pairs and both right-child pairs. When one node is null, skip pushing that pair. TC stays O(min(n, m)), SC is O(h) for the stack instead of the call stack."
+    },
+    {
+      "q": "What if you must not modify either input tree - return a completely new tree?",
+      "a": "Allocate a new TreeNode for every overlapping position, copying the value sum. When one side is null, you must deep-copy the other subtree instead of returning its pointer. TC stays O(min(n, m)), but auxiliary SC becomes O(min(n, m)) for the new nodes (though LeetCode does not count output space)."
+    },
+    {
+      "q": "Given k binary trees, merge them all into one.",
+      "a": "Merge pairwise: fold the list by merging the accumulator with each next tree. Each merge is O(min(acc, next)), so total TC is O(k × N) where N is the max tree size. Alternatively, traverse all k trees simultaneously at each position, summing all non-null values - same asymptotic TC but avoids repeated traversal of shared structure."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* mergeTrees(TreeNode* root1, TreeNode* root2) {\n        if (!root1) return root2;\n        if (!root2) return root1;\n        root1->val += root2->val;\n        root1->left = mergeTrees(root1->left, root2->left);\n        root1->right = mergeTrees(root1->right, root2->right);\n        return root1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

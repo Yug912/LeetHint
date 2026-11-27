@@ -1,0 +1,39 @@
+{
+  "slug": "delete-nodes-and-return-forest",
+  "title": "Delete Nodes And Return Forest",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order DFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> toDel: up to k entries (k = to_delete.size()) → O(k)\n- recursion call stack: worst case skewed tree depth n → O(n)\n- not counted: input tree (modified in place), returned vector",
+  "approach": "Use post-order DFS carrying a boolean indicating whether the parent was deleted. A hash set provides O(1) deletion checks. When a node is deleted, return nullptr so the parent nulls its child pointer; the deleted node's children are recursed first with parentDeleted=true, so any surviving child is added to the result. The initial call uses parentDeleted=true so the root becomes a forest root if it survives.",
+  "hints": [
+    "When a node is removed, its children lose their connection to everything above them - what does each surviving child become, and what must you know about a node's parent to decide whether to collect it as a new root?",
+    "Post-order DFS carrying a boolean \"parent was deleted\"; use a hash set for O(1) deletion checks. In Example 1, deleting node 3 makes children 6 and 7 new roots, so dfs adds them when it visits them with parentDeleted = true.",
+    "```\ndfs(node, parentDeleted):\n    if node is null: return null\n    deleted = node.val in deleteSet\n    node.left  = dfs(node.left,  deleted)\n    node.right = dfs(node.right, deleted)\n    if deleted: return null\n    if parentDeleted: append node to result\n    return node\n```",
+    "**Single node deleted** - root is the only node and is in to_delete\n`Input: root = [1], to_delete = [1]` → `Expected: []`\n⚠️ Bug: unconditionally adding root to result before calling dfs → returns `[[1]]`\n\n**No deletions** - to_delete is empty, entire tree survives\n`Input: root = [1,2,3], to_delete = []` → `Expected: [[1,2,3]]`\n⚠️ Bug: calling dfs(root, false) instead of dfs(root, true) → root never added, returns `[]`\n\n**Skewed tree, middle deleted** - right-skewed list, middle node deleted\n`Input: root = [1,null,2,null,3], to_delete = [2]` → `Expected: [[1],[3]]`\n⚠️ Bug: not assigning dfs return value to node->right → deleted node 2 stays attached, returns `[[1,null,2,null,3]]`\n\n**All nodes deleted** - every node in to_delete\n`Input: root = [1,2,3], to_delete = [1,2,3]` → `Expected: []`\n⚠️ Bug: checking parentDeleted before deleted (wrong order) → adds all three nodes, returns `[[1],[2],[3]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if deletion values arrive one at a time online, and you must report the forest after each deletion?",
+      "a": "Store parent pointers for every node and maintain a set of current roots. On each deletion, detach the node from its parent, add its non-deleted children to the root set, and remove the node from the root set if present. Each deletion is O(1) amortized; total O(n + q) time and O(n) space, where q is the number of queries."
+    },
+    {
+      "q": "What if node values are not distinct - how do you delete specific nodes?",
+      "a": "Key the deletion set on node pointers instead of values. The DFS structure stays identical; only the lookup changes from a value-based set to a pointer-based set. Time and space complexity remain O(n)."
+    },
+    {
+      "q": "What if after deletions, you must support queries asking whether two surviving nodes are in the same tree?",
+      "a": "After building the forest with the same DFS, run union-find over all surviving nodes: union each node with its surviving children. Preprocessing is O(n α(n)) time and O(n) space; each query is O(α(n)) amortized."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<TreeNode*> result;\n    unordered_set<int> toDel;\n\n    TreeNode* dfs(TreeNode* node, bool parentDeleted) {\n        if (!node) return nullptr;\n        bool deleted = toDel.count(node->val) > 0;\n        node->left = dfs(node->left, deleted);\n        node->right = dfs(node->right, deleted);\n        if (deleted) return nullptr;\n        if (parentDeleted) result.push_back(node);\n        return node;\n    }\n\n    vector<TreeNode*> delNodes(TreeNode* root, vector<int>& to_delete) {\n        result.clear();\n        toDel.clear();\n        for (int v : to_delete) toDel.insert(v);\n        dfs(root, true);\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

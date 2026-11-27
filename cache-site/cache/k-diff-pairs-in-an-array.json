@@ -1,0 +1,40 @@
+{
+  "slug": "k-diff-pairs-in-an-array",
+  "title": "K-diff Pairs in an Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Frequency Counting",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n entries → O(n)\n- recursion call-stack: none\n- not counted: input vector, returned int",
+  "approach": "Count the frequency of every value in `nums` with a hash map. For `k > 0`, each unique value `x` forms at most one unique pair with `x + k`, so we just check whether `x + k` exists in the map (checking only the `+k` direction avoids double-counting). For `k == 0`, a valid pair needs two equal elements, so we count values whose frequency is at least 2. This is correct because every unique k-diff pair is represented exactly once by its smaller element.",
+  "hints": [
+    "If you fix one number of a k-diff pair, how many distinct values can its partner take? The values span ±10^7, far too wide for a direct index array.",
+    "Use a hash map storing each number's frequency. For `nums = [3,1,4,1,5], k = 2`: after counting, `freq = {3:1, 1:2, 4:1, 5:1}`; checking `3+2=5` exists gives one pair, `1+2=3` exists gives another.",
+    "count frequencies of every number into a map\nans = 0\nfor each (x, c) in map:\n    if k == 0:\n        if c >= 2: ans += 1\n    else:\n        if (x + k) exists in map: ans += 1\nreturn ans",
+    "**k = 0 with duplicates** - k=0 needs two equal elements, not mere existence\n`Input: nums = [1,3,1,5,4], k = 0` → `Expected: 1`\n⚠️ Bug: using `freq.count(x+k)` for k=0 (always finds x itself) → returns 5\n\n**All equal, k = 0** - many equal elements still yield one unique pair\n`Input: nums = [2,2,2], k = 0` → `Expected: 1`\n⚠️ Bug: adding `freq[x]` instead of checking `freq[x] >= 2` → returns 3\n\n**Negatives** - partner lookup must use one consistent direction\n`Input: nums = [-1,-3,-1], k = 2` → `Expected: 1`\n⚠️ Bug: checking both `x+k` and `x-k` and summing both → returns 2\n\n**Single element** - no pair can be formed\n`Input: nums = [5], k = 0` → `Expected: 0`\n⚠️ Bug: checking existence of x in map instead of requiring count ≥ 2 → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if k could be negative?",
+      "a": "Since `|nums[i] - nums[j]|` is always non-negative, a negative k yields zero pairs. Add an early `return 0` at the top; the rest of the algorithm is unchanged. Time stays O(n) for valid k."
+    },
+    {
+      "q": "What if nums arrives as an unbounded stream you cannot store fully?",
+      "a": "Keep a hash set of values seen so far and a separate set of values already reported as part of a pair. For each incoming x, check x+k and x-k in the set; for k=0, emit the pair only on x's second occurrence. Time O(n) amortized, space O(n) worst case."
+    },
+    {
+      "q": "What if you must list every unique pair instead of just counting?",
+      "a": "Use the same frequency map; when x+k exists (or freq[x] >= 2 for k=0), append {x, x+k} to a result vector. Time O(n), space O(n) for the map plus O(pairs) for the output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findPairs(vector<int>& nums, int k) {\n        unordered_map<int,int> freq;\n        for (int x : nums) freq[x]++;\n        int ans = 0;\n        for (auto& [x, c] : freq) {\n            if (k == 0) {\n                if (c >= 2) ans++;\n            } else {\n                if (freq.count(x + k)) ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

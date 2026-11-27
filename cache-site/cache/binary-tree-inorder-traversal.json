@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-inorder-traversal",
+  "title": "Binary Tree Inorder Traversal",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Morris Traversal (Threaded Binary Tree)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> result: n entries - returned output, not counted\n- TreeNode* cur: single pointer → O(1)\n- TreeNode* pred: single pointer → O(1)\n- no recursion stack, no explicit stack\n- not counted: input tree, returned vector",
+  "approach": "Morris inorder traversal achieves O(n) time with O(1) extra space by temporarily threading the right pointer of each node's inorder predecessor (the rightmost node in its left subtree) back to the node itself. When we later arrive at a node via such a thread, we know its left subtree is fully processed, so we remove the thread, record the node, and move right. Nodes with no left child are recorded immediately. The tree is restored to its original shape by the end.",
+  "hints": [
+    "In an inorder traversal, after you finish visiting a node's entire left subtree, which specific node did you visit last - and what is its right pointer pointing to at that moment?",
+    "Morris traversal temporarily sets that predecessor's right pointer to the current node as a return thread. In Example 1, node 2's predecessor is node 3; set 3→right = 2, descend left to 3, visit 3, then follow the thread back to 2.",
+    "```\ncur = root\nwhile cur is not null:\n    if cur has no left child:\n        visit cur\n        cur = cur.right\n    else:\n        pred = rightmost node reachable from cur.left\n        if pred.right is null:\n            pred.right = cur        # create thread\n            cur = cur.left\n        else:\n            pred.right = null       # remove thread\n            visit cur\n            cur = cur.right\n```",
+    "**Empty tree** - root is null, zero nodes allowed by constraints\n`Input: []` → `Expected: []`\n⚠️ Bug: using a `do { … } while (cur)` loop instead of `while (cur)` → dereferences null on first iteration → runtime error\n\n**Single node** - tree with only a root, no children\n`Input: [1]` → `Expected: [1]`\n⚠️ Bug: forgetting `result.push_back(cur->val)` in the no-left-child branch, only pushing in the thread-removal branch → returns `[]`\n\n**Left-skewed tree** - every node has only a left child\n`Input: [3,2,null,1]` → `Expected: [1,2,3]`\n⚠️ Bug: pushing `cur->val` when creating the thread instead of when removing it → returns `[3,2,1]`\n\n**Right-skewed tree** - every node has only a right child\n`Input: [1,null,2,null,3]` → `Expected: [1,2,3]`\n⚠️ Bug: descending `cur = cur->left` in the no-left-child branch instead of `cur = cur->right` → returns `[1]`"
+  ],
+  "followUps": [
+    {
+      "q": "Adapt this approach to produce a preorder traversal.",
+      "a": "Keep the same threading logic, but record the node when you create the thread (descending left) rather than when you remove it. Nodes with no left child are still recorded immediately. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if tree nodes are immutable - you cannot modify any pointers?",
+      "a": "Morris requires temporary pointer writes, so fall back to an explicit stack: push every node while descending left, pop and record, then push the right subtree. O(n) time, O(h) space."
+    },
+    {
+      "q": "The tree is too large to hold in memory at once - can you yield nodes one at a time?",
+      "a": "Morris is naturally incremental: each loop iteration advances by at most one node, so wrap it in an iterator holding just the `cur` pointer. O(1) state per yield, O(n) total time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> inorderTraversal(TreeNode* root) {\n        vector<int> result;\n        TreeNode* cur = root;\n        while (cur) {\n            if (!cur->left) {\n                result.push_back(cur->val);\n                cur = cur->right;\n            } else {\n                TreeNode* pred = cur->left;\n                while (pred->right && pred->right != cur) {\n                    pred = pred->right;\n                }\n                if (!pred->right) {\n                    pred->right = cur;\n                    cur = cur->left;\n                } else {\n                    pred->right = nullptr;\n                    result.push_back(cur->val);\n                    cur = cur->right;\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

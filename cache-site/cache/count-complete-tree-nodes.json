@@ -1,0 +1,40 @@
+{
+  "slug": "count-complete-tree-nodes",
+  "title": "Count Complete Tree Nodes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Complete Tree",
+  "tc": "O(log² n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- local variables (d, lo, hi, mid, node, i, bit): constant → O(1)\n- no containers, arrays, or recursion → O(1)\n- not counted: input tree, returned int",
+  "approach": "In a complete binary tree, going left from the root always reaches the deepest level, giving height `d`. Levels 0 through d−1 are fully filled (2^d − 1 nodes). The last level is filled left-to-right with no gaps, so there is a single boundary between existing and non-existing positions. Binary search on positions 0 to 2^d − 1 of the last level, checking existence via bit-traversal (each bit of the position encodes left=0/right=1 from MSB to LSB), finds the rightmost existing node in O(log n) checks × O(log n) per check = O(log² n).",
+  "hints": [
+    "In a complete binary tree, what can you observe about the arrangement of existing nodes in the last level?\nThe problem requires an algorithm that runs in less than O(n) time.",
+    "Binary search on the last level's positions. For [1,2,3,4,5,6], going left gives height 2, so levels 0-1 have 2²−1=3 nodes; binary search on last-level positions 0-3 finds position 2 (node 6) is the rightmost existing node, giving 3+3=6.",
+    "```\nd = depth by always going left from root\nlo, hi = 0, 2^d - 1\nwhile lo <= hi:\n    mid = (lo + hi) / 2\n    if position mid at level d exists:\n        lo = mid + 1\n    else:\n        hi = mid - 1\nreturn (2^d - 1) + (hi + 1)\n```",
+    "**Empty tree** - root is null, no nodes exist\n`Input: []` → `Expected: 0`\n⚠️ Bug: not checking `if (!root) return 0` before accessing `root->left` → null pointer dereference\n\n**Single node** - depth is 0, last level has exactly one position\n`Input: [1]` → `Expected: 1`\n⚠️ Bug: returning `(1 << d) - 1 + hi` instead of `(1 << d) - 1 + (hi + 1)` → returns 0\n\n**Partially filled last level** - binary search must find the exact boundary\n`Input: [1,2,3,4,5,6]` → `Expected: 6`\n⚠️ Bug: using `lo < hi` instead of `lo <= hi` in the binary search loop → returns 7\n\n**Full tree** - last level entirely filled, all positions exist\n`Input: [1,2,3,4,5,6,7]` → `Expected: 7`\n⚠️ Bug: setting `hi = (1 << d) - 2` instead of `hi = (1 << d) - 1` → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is perfect (all levels completely filled)?",
+      "a": "No binary search needed. Compute height h by going left, then return 2^(h+1) − 1 directly. TC: O(log n), SC: O(1)."
+    },
+    {
+      "q": "What if you need to check whether a node at a specific level-order position exists?",
+      "a": "Use the same bit-traversal technique: encode the 0-indexed position in d bits, then follow bits from MSB to LSB (0 = left, 1 = right). If you never hit null, the node exists. TC: O(log n), SC: O(1)."
+    },
+    {
+      "q": "What if the tree is complete but stored as an array (heap representation)?",
+      "a": "The node count equals the array length, so return it directly. To verify completeness, ensure no null gaps appear before the last non-null element. TC: O(1) for count, O(n) for verification, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countNodes(TreeNode* root) {\n        if (!root) return 0;\n        \n        int d = 0;\n        TreeNode* node = root;\n        while (node->left) {\n            d++;\n            node = node->left;\n        }\n        \n        int lo = 0, hi = (1 << d) - 1;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (exists(root, d, mid)) {\n                lo = mid + 1;\n            } else {\n                hi = mid - 1;\n            }\n        }\n        \n        return (1 << d) - 1 + (hi + 1);\n    }\n    \nprivate:\n    bool exists(TreeNode* root, int d, int pos) {\n        TreeNode* node = root;\n        for (int i = d - 1; i >= 0; i--) {\n            int bit = (pos >> i) & 1;\n            if (bit == 0) {\n                node = node->left;\n            } else {\n                node = node->right;\n            }\n            if (!node) return false;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

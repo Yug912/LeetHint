@@ -1,0 +1,40 @@
+{
+  "slug": "summary-ranges",
+  "title": "Summary Ranges",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan",
+  "tc": "O(n log V)",
+  "sc": "O(log V)",
+  "spaceBreakdown": "- int start: single variable → O(1)\n- int i (loop counter): O(1)\n- not counted: input vector nums, returned vector<string> result",
+  "approach": "Since the array is already sorted and unique, consecutive integers form ranges. Scan left to right, tracking the start of the current range. When `nums[i]` is not exactly `nums[i-1] + 1`, the current range ends at `nums[i-1]`-emit it (as `\"a->b\"` or `\"a\"`), then begin a new range at `nums[i]`. After the loop, emit the final pending range. Using `long long` for the consecutiveness check avoids overflow when values span the full `int` range.",
+  "hints": [
+    "The array is already sorted and unique. What relationship must two adjacent elements satisfy for them to belong to the same output range?",
+    "Linear scan tracking the start of the current range. For `nums = [0,1,2,4,5,7]`, start=0; at i=3, `nums[3]=4 ≠ 2+1`, so close range `[0,2]` and restart at 4.",
+    "```\nstart = nums[0]\nfor i = 1 to n-1:\n    if nums[i] != nums[i-1] + 1:\n        emit range [start, nums[i-1]]\n        start = nums[i]\nemit range [start, nums[n-1]]\n```",
+    "**Empty input** - no elements to process\n`Input: nums = []` → `Expected: []`\n⚠️ Bug: accessing `nums[0]` without checking `n == 0` → undefined behavior / crash\n\n**Single element** - loop body never executes, range must be emitted after the loop\n`Input: nums = [7]` → `Expected: [\"7\"]`\n⚠️ Bug: only emitting ranges inside the for loop, no post-loop emission → returns `[]`\n\n**All separate** - every element is its own range, format must use `\"a\"` not `\"a->a\"`\n`Input: nums = [0, 2, 4, 6]` → `Expected: [\"0\", \"2\", \"4\", \"6\"]`\n⚠️ Bug: always using `\"a->b\"` format even when `a == b` → returns `[\"0->0\", \"2->2\", \"4->4\", \"6->6\"]`\n\n**Extreme values** - INT_MIN and INT_MAX in the same array\n`Input: nums = [-2147483648, 2147483647]` → `Expected: [\"-2147483648\", \"2147483647\"]`\n⚠️ Bug: using `nums[i] - nums[i-1] == 1` to check consecutiveness → signed integer overflow (UB) when computing `2147483647 - (-2147483648)`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input array is not guaranteed to be sorted?",
+      "a": "Sort it first, then run the same linear scan. Time complexity becomes O(n log n) due to the sort; space remains O(1) auxiliary (in-place sort)."
+    },
+    {
+      "q": "What if the array may contain duplicates?",
+      "a": "After sorting, skip duplicates by advancing `i` past consecutive equal values before checking consecutiveness. Time stays O(n log n); space stays O(1)."
+    },
+    {
+      "q": "What if nums arrives as an unbounded stream and cannot fit in memory?",
+      "a": "Keep only the previous value and the current range start in memory. On each new value, check consecutiveness against the previous; emit and reset when the streak breaks. Time is O(n) per element; space is O(1) (excluding output)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> summaryRanges(vector<int>& nums) {\n        vector<string> result;\n        int n = nums.size();\n        if (n == 0) return result;\n        int start = nums[0];\n        for (int i = 1; i < n; i++) {\n            if ((long long)nums[i] != (long long)nums[i - 1] + 1) {\n                if (start == nums[i - 1]) {\n                    result.push_back(to_string(start));\n                } else {\n                    result.push_back(to_string(start) + \"->\" + to_string(nums[i - 1]));\n                }\n                start = nums[i];\n            }\n        }\n        if (start == nums[n - 1]) {\n            result.push_back(to_string(start));\n        } else {\n            result.push_back(to_string(start) + \"->\" + to_string(nums[n - 1]));\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

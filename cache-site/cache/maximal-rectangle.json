@@ -1,0 +1,40 @@
+{
+  "slug": "maximal-rectangle",
+  "title": "Maximal Rectangle",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(rows × cols)",
+  "sc": "O(cols)",
+  "spaceBreakdown": "- vector<int> heights: cols entries → O(cols)\n- stack<int> st: up to cols entries → O(cols)\n- not counted: input matrix, returned int",
+  "approach": "The key insight is that fixing any row as the bottom of a rectangle reduces the problem to finding the largest rectangle in a histogram, where each column's bar height is the count of consecutive 1's ending at that row. For each row, we update the heights array (increment for '1', reset to 0 for '0') and compute the largest rectangle in the resulting histogram using a monotonic stack in O(cols) time. The algorithm is correct because every maximal rectangle has a unique bottom row, and for that row, the histogram captures exactly the set of valid rectangles ending there.",
+  "hints": [
+    "If you fix one row as the bottom edge of the answer, what does the problem reduce to for the columns above it?",
+    "Use a monotonic stack to find the largest rectangle in the histogram formed by each row. After processing row 2 of Example 1, the heights are [3,1,3,2,2]; popping the bar of height 2 at index 3 gives width 3 and area 6.",
+    "```\nfor each row i:\n    for each column j:\n        heights[j] = heights[j]+1 if matrix[i][j]=='1' else 0\n    run largest-rectangle-in-histogram on heights\n    update maxArea with the result\nreturn maxArea\n```",
+    "**All zeros** - every cell is '0', so no rectangle exists.\n`Input: [[\"0\",\"0\"],[\"0\",\"0\"]]` → `Expected: 0`\n⚠️ Bug: initializing maxArea = 1 instead of 0 → returns 1\n\n**Height reset** - a '0' in a later row must reset that column's accumulated height.\n`Input: [[\"1\",\"1\"],[\"0\",\"0\"],[\"1\",\"1\"]]` → `Expected: 2`\n⚠️ Bug: omitting `else heights[j] = 0` when matrix[i][j]=='0' → returns 4\n\n**Width off-by-one** - the width between two stack indices excludes both endpoints.\n`Input: [[\"1\",\"1\",\"1\"],[\"0\",\"1\",\"0\"],[\"1\",\"1\",\"1\"]]` → `Expected: 3`\n⚠️ Bug: computing width as `i - st.top()` instead of `i - st.top() - 1` → returns 6\n\n**Missing sentinel** - a sentinel height of 0 at index n forces all remaining bars to be popped.\n`Input: [[\"1\",\"1\"],[\"1\",\"1\"]]` → `Expected: 4`\n⚠️ Bug: looping `for (i < n)` instead of `for (i <= n)` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if we want the largest square (not rectangle) of 1's?",
+      "a": "Use DP where dp[i][j] = min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1 when matrix[i][j]=='1', else 0. Track the maximum side length and square it. TC: O(rows × cols), SC: O(cols) with a rolling array."
+    },
+    {
+      "q": "What if the matrix is too large to fit in memory and rows arrive one at a time?",
+      "a": "The histogram approach already processes row by row, so it naturally handles streaming. Keep only the heights array of size O(cols) and update it as each row arrives, running the monotonic stack after each row. TC: O(rows × cols), SC: O(cols)."
+    },
+    {
+      "q": "What if we want the largest rectangle of 0's instead of 1's?",
+      "a": "Flip the logic: treat '0' as contributing to the height and '1' as resetting it to 0. The same histogram and monotonic stack approach applies unchanged. TC: O(rows × cols), SC: O(cols)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximalRectangle(vector<vector<char>>& matrix) {\n        if (matrix.empty() || matrix[0].empty()) return 0;\n        int rows = matrix.size();\n        int cols = matrix[0].size();\n        vector<int> heights(cols, 0);\n        int maxArea = 0;\n        for (int i = 0; i < rows; i++) {\n            for (int j = 0; j < cols; j++) {\n                if (matrix[i][j] == '1') heights[j]++;\n                else heights[j] = 0;\n            }\n            maxArea = max(maxArea, largestRectangleArea(heights));\n        }\n        return maxArea;\n    }\nprivate:\n    int largestRectangleArea(vector<int>& heights) {\n        stack<int> st;\n        int n = heights.size();\n        int maxArea = 0;\n        for (int i = 0; i <= n; i++) {\n            int h = (i == n) ? 0 : heights[i];\n            while (!st.empty() && heights[st.top()] > h) {\n                int height = heights[st.top()];\n                st.pop();\n                int width = st.empty() ? i : i - st.top() - 1;\n                maxArea = max(maxArea, height * width);\n            }\n            st.push(i);\n        }\n        return maxArea;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

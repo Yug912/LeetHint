@@ -1,0 +1,40 @@
+{
+  "slug": "sort-array-by-increasing-frequency",
+  "title": "Sort Array by Increasing Frequency",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Sort with Fixed-Range Bucket",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[201]: fixed 201 entries → O(1)\n- vector<int> result: returned output, not counted\n- not counted: input nums",
+  "approach": "Since values are bounded to [-100, 100], use a fixed-size frequency array of 201 slots (index = value + 100). Count all frequencies in one pass over the input. Then scan frequencies from 1 to 100 (ascending frequency order) and, for each frequency, scan values from 100 down to -100 (descending value for tie-breaking), appending each matching value that many times to the result. This avoids any comparison-based sort entirely - the ordering is produced directly by the scan structure.",
+  "hints": [
+    "Given that every value falls in [-100, 100], what is the maximum number of distinct values the array can contain? The constraint -100 ≤ nums[i] ≤ 100 limits values to a range of 201 integers.",
+    "Use a fixed-size frequency array of 201 slots (index = value + 100). For nums = [1,1,2,2,2,3], this gives freq[101]=2, freq[102]=3, freq[103]=1; then scan frequencies from 1 upward and values from high to low to emit 3, then 1,1, then 2,2,2.",
+    "```\nfreq = array of 201 zeros\nfor each x in nums:\n    freq[x + 100] += 1\nresult = empty list\nfor f from 1 to 100:\n    for v from 100 down to -100:\n        if freq[v + 100] == f:\n            append v to result, f times\nreturn result\n```",
+    "**Ties in frequency** - two values share the same frequency and must be ordered decreasing\n`Input: nums = [2,3,1,3,2]` → `Expected: [1,3,3,2,2]`\n⚠️ Bug: iterating values from low to high instead of high to low → returns [1,2,2,3,3]\n\n**Negative values** - values span the full negative range\n`Input: nums = [-1,1,-6,4,5,-6,1,4,1]` → `Expected: [5,-1,4,4,-6,-6,1,1,1]`\n⚠️ Bug: indexing `freq[x]` without `+100` offset → out-of-bounds access on negative indices, crash\n\n**Boundary value** - value at the edge of the allowed range\n`Input: nums = [100,-100,100]` → `Expected: [-100,100,100]`\n⚠️ Bug: declaring `freq[200]` instead of `freq[201]` → out-of-bounds write at index 200 for value 100, crash\n\n**Maximum frequency** - all 100 elements are the same value\n`Input: nums = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]` → `Expected: [5,5,...,5]` (100 fives)\n⚠️ Bug: outer loop `for f from 1 to 99` instead of `1 to 100` → returns [] (empty)"
+  ],
+  "followUps": [
+    {
+      "q": "What if values can be any 32-bit integer, not bounded to [-100, 100]?",
+      "a": "Replace the fixed array with a hash map for frequency counting, then sort the distinct keys with a custom comparator (frequency ascending, value descending). TC becomes O(n log n) and SC becomes O(n) for the map and distinct-value list."
+    },
+    {
+      "q": "What if nums.length can be up to 10^7 but values stay in [-100, 100]?",
+      "a": "The same fixed-range approach works unchanged - one O(n) counting pass, a fixed 100×201 scan, and one O(n) output-building pass. Call result.reserve(n) to avoid reallocations. TC stays O(n), SC stays O(1)."
+    },
+    {
+      "q": "What if you receive values in a stream and must output the sorted result with only O(1) extra memory?",
+      "a": "Two passes are required: you cannot emit anything until all frequencies are known, since the lowest-frequency values come first. With the value range fixed at 201, store only the 201-slot frequency array in O(1) space, make one pass to count, then a second pass (or replay) to emit in the correct order."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> frequencySort(vector<int>& nums) {\n        int freq[201] = {0};\n        for (int x : nums) freq[x + 100]++;\n        vector<int> result;\n        result.reserve(nums.size());\n        for (int f = 1; f <= 100; f++) {\n            for (int v = 100; v >= -100; v--) {\n                if (freq[v + 100] == f) {\n                    for (int i = 0; i < f; i++) result.push_back(v);\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "range-sum-query-mutable",
+  "title": "Range Sum Query - Mutable",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Indexed Tree (Fenwick Tree)",
+  "tc": "O((n + q) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> tree: n+1 entries → O(n)\n- vector<int> arr: n entries → O(n)\n- int n: O(1)\n- recursion: none",
+  "approach": "Use a Binary Indexed Tree (Fenwick Tree) to support both point updates and range sum queries in O(log n) time. Each tree index i stores a partial sum covering a range whose length equals the lowest set bit of i. To update, propagate the delta to all covering indices; to query a prefix sum, accumulate all covering indices by stripping the lowest set bit. A range sum [left, right] is prefix(right) − prefix(left − 1).",
+  "hints": [
+    "With up to 3·10^4 calls each to update and sumRange on a 3·10^4-element array, what total cost would result if every sumRange scanned its full range?",
+    "Use a Binary Indexed Tree (Fenwick Tree). For nums = [1, 3, 5], build a tree where tree[i] covers a power-of-two range; sumRange(0, 2) reads prefix(2) = 9 in O(log n) instead of scanning all elements.",
+    "build:\n  for each i: add(i, nums[i])\nadd(i, delta):\n  i += 1\n  while i <= n: tree[i] += delta; i += i & -i\nprefix(i):\n  i += 1; s = 0\n  while i > 0: s += tree[i]; i -= i & -i\nsumRange(l, r) = prefix(r) − (l > 0 ? prefix(l−1) : 0)\nupdate(i, val) = add(i, val − arr[i]); arr[i] = val",
+    "**Single element** - n=1, only index 0 exists\n`Input: NumArray([7]), sumRange(0,0)` → `Expected: 7`\n⚠️ Bug: prefix loop uses `for (i; i > 0; ...)` without incrementing i first → prefix(0) returns 0, sumRange returns 0\n\n**Full range from 0** - left=0, right=n-1\n`Input: NumArray([1,3,5]), sumRange(0,2)` → `Expected: 9`\n⚠️ Bug: `prefix(right) - prefix(left)` instead of `prefix(right) - prefix(left-1)` → returns 8\n\n**Update to same value** - delta is zero\n`Input: NumArray([1,3,5]), update(1,3), sumRange(0,2)` → `Expected: 9`\n⚠️ Bug: `add(index, val)` instead of `add(index, val - arr[index])` → returns 12\n\n**Repeated updates** - same index updated twice\n`Input: NumArray([1,3,5]), update(1,2), update(1,4), sumRange(0,2)` → `Expected: 10`\n⚠️ Bug: not updating arr[index] after add → second update uses stale value 3, delta=1 instead of 2, returns 9"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need range updates (add v to every element in [l, r]) and point queries instead?",
+      "a": "Store a BIT over the difference array. A range update [l, r] by v becomes add(l, v) and add(r+1, -v). A point query at i is just prefix(i). Time stays O(log n) per operation, space O(n)."
+    },
+    {
+      "q": "What if the input is a 2D matrix with point updates and sub-rectangle sum queries?",
+      "a": "Use a 2D BIT where each cell (r, c) covers a 2D range. Updates and queries each touch O(log R × log C) cells. Space becomes O(R × C)."
+    },
+    {
+      "q": "What if indices arrive online with no known upper bound on n?",
+      "a": "Use coordinate compression to map seen indices into a dense [1, m] range, then build a standard BIT of size m. Each operation is O(log m) where m is the number of distinct indices seen so far, and space is O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class NumArray {\n    vector<int> tree;\n    vector<int> arr;\n    int n;\n\n    void add(int i, int delta) {\n        for (++i; i <= n; i += i & (-i))\n            tree[i] += delta;\n    }\n\n    int prefix(int i) {\n        int s = 0;\n        for (++i; i > 0; i -= i & (-i))\n            s += tree[i];\n        return s;\n    }\n\npublic:\n    NumArray(vector<int>& nums) {\n        n = nums.size();\n        arr = nums;\n        tree.assign(n + 1, 0);\n        for (int i = 0; i < n; ++i)\n            add(i, nums[i]);\n    }\n\n    void update(int index, int val) {\n        add(index, val - arr[index]);\n        arr[index] = val;\n    }\n\n    int sumRange(int left, int right) {\n        return prefix(right) - (left > 0 ? prefix(left - 1) : 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

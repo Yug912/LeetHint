@@ -1,0 +1,40 @@
+{
+  "slug": "best-time-to-buy-and-sell-stock-iii",
+  "title": "Best Time to Buy and Sell Stock III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "State Machine DP",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- buy1, sell1, buy2, sell2: 4 ints → O(1)\n- loop variable p: O(1)\n- not counted: input vector prices",
+  "approach": "Track four states as you scan prices left to right: best profit after the first buy (buy1), after the first sell (sell1), after the second buy (buy2), and after the second sell (sell2). Each state either keeps its previous value or transitions by acting at the current price. Since sell1 and sell2 start at 0 and only increase, and buy1/buy2 start at negative infinity, the final sell2 holds the maximum profit achievable with at most two transactions.",
+  "hints": [
+    "With n up to 10^5, checking every pair of buy/sell days for two transactions is far too slow. As you scan the prices left to right, what is the smallest set of situations you would need to remember to know the best profit achievable so far?",
+    "Use a state-machine DP with four states: buy1, sell1, buy2, sell2. For prices [3,3,5,0,0,3,1,4], when the price hits 0, buy1 = max(-3, -0) = 0, meaning buying at 0 beats the previous best buy at 3.",
+    "```\nbuy1 = -inf, sell1 = 0, buy2 = -inf, sell2 = 0\nfor each price p:\n    buy1  = max(buy1,  -p)\n    sell1 = max(sell1, buy1 + p)\n    buy2  = max(buy2,  sell1 - p)\n    sell2 = max(sell2, buy2 + p)\nreturn sell2\n```",
+    "**Single day** - n = 1, no transaction can be completed\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: initializing buy1 to 0 instead of -inf → returns 5\n\n**All equal prices** - buying and selling at the same price yields zero profit\n`Input: [3,3,3,3]` → `Expected: 0`\n⚠️ Bug: initializing buy1/buy2 to 0 instead of -inf → returns 3\n\n**Two separate profitable windows** - both transactions are needed for the optimum\n`Input: [1,4,2,7]` → `Expected: 8`\n⚠️ Bug: tracking only one transaction (omitting buy2/sell2 states) → returns 6\n\n**Peak then decline** - optimal sell is mid-array, not on the last day\n`Input: [1,5,4,3,2]` → `Expected: 4`\n⚠️ Bug: using assignment sell1 = buy1 + p instead of max(sell1, buy1 + p) → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you may complete at most k transactions instead of 2?",
+      "a": "Generalize to 2k states (buy[i], sell[i] for i = 1..k) with the same recurrence pattern: buy[i] = max(buy[i], sell[i-1] - p) and sell[i] = max(sell[i], buy[i] + p). TC becomes O(nk), SC O(k)."
+    },
+    {
+      "q": "What if unlimited transactions are allowed but each sell incurs a fixed fee?",
+      "a": "Collapse to two states (buy, sell) and subtract the fee at sell time: sell = max(sell, buy + p - fee). TC stays O(n), SC O(1)."
+    },
+    {
+      "q": "What if unlimited transactions are allowed but you cannot buy the day after selling (cooldown)?",
+      "a": "Use three states: hold (owning stock), sold (just sold, in cooldown), and rest (not holding, free to buy). Transitions: sold = hold + p, rest = max(rest, sold), hold = max(hold, rest - p). TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        const int NEG = -1000000000;\n        int buy1 = NEG, sell1 = 0, buy2 = NEG, sell2 = 0;\n        for (int p : prices) {\n            buy1  = max(buy1,  -p);\n            sell1 = max(sell1, buy1 + p);\n            buy2  = max(buy2,  sell1 - p);\n            sell2 = max(sell2, buy2 + p);\n        }\n        return sell2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

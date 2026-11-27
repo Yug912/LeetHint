@@ -1,0 +1,40 @@
+{
+  "slug": "count-of-smaller-numbers-after-self",
+  "title": "Count of Smaller Numbers After Self",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Indexed Tree (Fenwick Tree)",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> sorted: copy of nums, up to n entries → O(n)\n- vector<int> bit: size m+1 where m ≤ n → O(n)\n- vector<int> counts: returned output, not counted\n- no recursion, no other containers",
+  "approach": "Process the array from right to left, maintaining a Fenwick tree (BIT) over coordinate-compressed values. At each element, query the BIT for the count of values strictly smaller than the current value (prefix sum up to rank−1), then insert the current value's rank into the BIT. Coordinate compression maps the value range to ranks 1..m where m is the number of distinct values, keeping BIT size ≤ n. This yields O(n log n) time and O(n) auxiliary space.",
+  "hints": [
+    "If you scan the array from right to left, what information about the elements you've already seen would let you answer each position instantly? The constraint n ≤ 10^5 means checking every pair is too slow.",
+    "Use a Fenwick tree (Binary Indexed Tree) with coordinate compression. For nums = [5,2,6,1], compress to ranks [3,2,4,1]; scanning right to left, at 6 (rank 4) you query how many ranks < 4 have been inserted → 1.",
+    "```\ncompress values to ranks 1..m\ninitialize BIT of size m\nfor i from n-1 down to 0:\n    r = rank of nums[i]\n    counts[i] = BIT.prefix_sum(r - 1)\n    BIT.add(r, 1)\nreturn counts\n```",
+    "**Single element** - the only element has nothing to its right.\n`Input: nums = [42]` → `Expected: [0]`\n⚠️ Bug: not initializing counts to 0 → returns garbage values\n\n**All equal** - no element is strictly smaller than another equal element.\n`Input: nums = [7,7,7]` → `Expected: [0,0,0]`\n⚠️ Bug: querying `rank` instead of `rank-1` (counting equal as smaller) → returns [0,1,2]\n\n**Reverse sorted** - maximum inversions per element.\n`Input: nums = [3,2,1]` → `Expected: [2,1,0]`\n⚠️ Bug: processing left to right instead of right to left → returns [0,0,0]\n\n**Negatives with duplicates** - coordinate compression must handle negative values and duplicates.\n`Input: nums = [-1,-1,0,1]` → `Expected: [0,0,0,0]`\n⚠️ Bug: using raw values as BIT indices → negative indices cause undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "Count of LARGER numbers after self instead of smaller?",
+      "a": "Same right-to-left BIT approach, but query total inserted so far minus prefix_sum(rank) instead of prefix_sum(rank-1). This counts elements strictly greater. Time stays O(n log n), space O(n)."
+    },
+    {
+      "q": "Count of smaller numbers BEFORE self (to the left) instead of after?",
+      "a": "Process left to right instead of right to left. At each element, query the BIT for count of ranks smaller than the current rank, then insert. Same BIT structure, same O(n log n) time and O(n) space."
+    },
+    {
+      "q": "Count of numbers in a value range [lo, hi] after self?",
+      "a": "Query prefix_sum(rank(hi)) minus prefix_sum(rank(lo)-1) at each step, where rank maps lo and hi into compressed coordinates. Two prefix queries per element instead of one. Time O(n log n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> countSmaller(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> counts(n, 0);\n        \n        vector<int> sorted(nums);\n        sort(sorted.begin(), sorted.end());\n        sorted.erase(unique(sorted.begin(), sorted.end()), sorted.end());\n        int m = sorted.size();\n        \n        vector<int> bit(m + 1, 0);\n        \n        auto update = [&](int i) {\n            for (; i <= m; i += i & (-i))\n                bit[i]++;\n        };\n        \n        auto query = [&](int i) -> int {\n            int s = 0;\n            for (; i > 0; i -= i & (-i))\n                s += bit[i];\n            return s;\n        };\n        \n        for (int i = n - 1; i >= 0; i--) {\n            int rank = lower_bound(sorted.begin(), sorted.end(), nums[i]) - sorted.begin() + 1;\n            counts[i] = query(rank - 1);\n            update(rank);\n        }\n        \n        return counts;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

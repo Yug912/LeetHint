@@ -1,0 +1,40 @@
+{
+  "slug": "distribute-coins-in-binary-tree",
+  "title": "Distribute Coins in Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order DFS on Tree",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- int moves: O(1)\n- recursion call-stack depth: O(h), worst case O(n) for a skewed tree\n- not counted: input tree, return value",
+  "approach": "For each node, compute the \"excess\" = (node.val - 1) + left_excess + right_excess, which is the net number of coins that must flow through the edge to its parent (positive = upward, negative = downward). The minimum moves is the sum of |excess| over all nodes, because every coin that enters or leaves a subtree must cross that single connecting edge. A post-order DFS computes this in one pass; the root's excess is always 0 since total coins = n.",
+  "hints": [
+    "For any subtree of the binary tree, what single quantity determines how many coins must cross the edge connecting that subtree to its parent? The total number of coins equals the total number of nodes.",
+    "Post-order DFS. In Example 1, the left leaf (val=0) has excess 0−1=−1, so |−1|=1 coin crosses the edge to its parent - contributing 1 move; the right leaf contributes 1 more, totaling 2.",
+    "```\nfunction dfs(node):\n    if node is null: return 0\n    left = dfs(node.left)\n    right = dfs(node.right)\n    excess = (node.val - 1) + left + right\n    moves += |excess|\n    return excess\n```",
+    "**Single node** - the tree has exactly one node with one coin\n`Input: root = [1]` → `Expected: 0`\n⚠️ Bug: not guarding `if (!node) return 0` before accessing `node->val` → dereferences null on leaf children → crash/UB\n\n**All coins at one leaf** - one leaf holds all coins, root and sibling have zero\n`Input: root = [0,0,3]` → `Expected: 3`\n⚠️ Bug: using `moves += excess` instead of `moves += |excess|` → returns 1 (−1 + 2 + 0 = 1)\n\n**Right-skewed chain** - four nodes in a line, coins only at the deepest node\n`Input: root = [1,null,0,null,0,null,3]` → `Expected: 3`\n⚠️ Bug: computing `moves += |node.val - 1|` per node without propagating children's excess → returns 4 (0+1+1+2)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is a general (non-binary) tree with arbitrary number of children per node?",
+      "a": "The same approach works - sum the excess from all children instead of just left and right. Iterate over all children in the post-order DFS. Time complexity stays O(n), space O(h)."
+    },
+    {
+      "q": "What if you must also return the actual sequence of moves (source node, destination node, count)?",
+      "a": "During the post-order DFS, whenever |excess| > 0 for a child, record a move between child and parent with that count. The direction depends on the sign of excess. Time O(n), space O(n) for the move list."
+    },
+    {
+      "q": "What if n can be up to 10^5 - does the recursion stack become a problem?",
+      "a": "Yes, a skewed tree would recurse 10^5 deep and risk stack overflow. Convert the DFS to an iterative post-order traversal using an explicit stack. Time remains O(n), space O(n) for the explicit stack in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int distributeCoins(TreeNode* root) {\n        int moves = 0;\n        dfs(root, moves);\n        return moves;\n    }\nprivate:\n    int dfs(TreeNode* node, int& moves) {\n        if (!node) return 0;\n        int left = dfs(node->left, moves);\n        int right = dfs(node->right, moves);\n        int excess = node->val - 1 + left + right;\n        if (excess < 0) moves -= excess;\n        else moves += excess;\n        return excess;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

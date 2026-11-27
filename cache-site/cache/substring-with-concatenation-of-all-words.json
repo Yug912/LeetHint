@@ -1,0 +1,40 @@
+{
+  "slug": "substring-with-concatenation-of-all-words",
+  "title": "Substring with Concatenation of All Words",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n * wlen)",
+  "sc": "O(numWords * wlen)",
+  "spaceBreakdown": "- unordered_map<string,int> target: up to numWords distinct entries, each key length wlen → O(numWords * wlen)\n- unordered_map<string,int> cur: same bound → O(numWords * wlen)\n- temporary substr strings: length wlen each, transient → O(wlen)\n- recursion depth: none\n- not counted: input string, returned vector",
+  "approach": "All words have equal length `wlen`, so any valid concatenation occupies exactly `numWords * wlen` characters and is composed of consecutive `wlen`-sized chunks. For each of the `wlen` possible starting offsets (0..wlen-1), slide a window over `s` in `wlen`-sized steps, maintaining a frequency map of the words currently inside the window. When a word's count exceeds its target count, shrink from the left until it's valid; when the window contains exactly `numWords` matched words, record the left boundary. This is correct because every valid concatenation corresponds to a contiguous run of `numWords` chunks whose multiset equals the multiset of `words`.",
+  "hints": [
+    "Every word in `words` has the same length (constraint: 1 ≤ words[i].length ≤ 30). If you split `s` into chunks of that fixed length starting at some index, what must the multiset of those chunks look like over a window of `words.size()` consecutive chunks?",
+    "Use a sliding window with a hash map of word frequencies, stepping by the fixed word length. For `s = \"barfoothefoobarman\"`, `words = [\"foo\",\"bar\"]`: at offset 0 the chunks are `bar, foo, the, foo, bar, man`; the window `{bar, foo}` matches, so index 0 is recorded.",
+    "```\ntarget = frequency map of words\nfor offset in 0..wlen-1:\n    cur = empty map, left = offset, count = 0\n    for right from offset step wlen while right+wlen <= n:\n        word = s[right .. right+wlen)\n        if word not in target: clear cur, left = right+wlen, count = 0\n        else:\n            cur[word]++, count++\n            while cur[word] > target[word]:\n                cur[s[left..left+wlen)]--, count--, left += wlen\n            if count == numWords: record left\n```",
+    "**Total length exceeds s** - `s` shorter than `words.size() * wlen`.\n`Input: s = \"ab\", words = [\"ab\",\"cd\"]` → `Expected: []`\n⚠️ Bug: skipping the `n < totalLen` early return and letting the offset loop run → returns `[]` only by luck on some inputs, but on `s=\"abc\", words=[\"ab\",\"cd\"]` a buggy bound check `right+wlen < n` (instead of `<=`) skips the last valid chunk and can miss matches.\n\n**Duplicate words** - `words` contains repeats, so equality is multiset equality, not set equality.\n`Input: s = \"aaaa\", words = [\"aa\",\"aa\"]` → `Expected: [0]`\n⚠️ Bug: using a `set<string>` instead of a frequency map → returns `[0,1,2]` because it only checks membership, ignoring that two `aa` are required.\n\n**Word not in dictionary mid-window** - an unknown chunk must reset the whole window, not just decrement.\n`Input: s = \"barxxxfoobarman\", words = [\"foo\",\"bar\"]` → `Expected: []`\n⚠️ Bug: on seeing `xxx`, only doing `count--` and `left += wlen` instead of clearing `cur` and jumping `left` past `xxx` → leftover frequencies cause a false match reported later.\n\n**Boundary match at the very end** - valid concatenation ending exactly at `s.size()`.\n`Input: s = \"barfoo\", words = [\"foo\",\"bar\"]` → `Expected: [0]`\n⚠️ Bug: loop condition `right + wlen < n` (strict) instead of `<= n` → never examines the final chunk, returns `[]`.\n\n**All words identical** - every chunk matches; window must still respect the exact count.\n`Input: s = \"aaaaaa\", words = [\"aa\",\"aa\",\"aa\"]` → `Expected: [0]`\n⚠️ Bug: not shrinking when `cur[word] > target[word]` → returns `[0,1,2,3,4]` instead of `[0]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if words can have different lengths?",
+      "a": "The chunk-stepping trick breaks. Build an Aho-Corasick automaton over `words` to find all occurrences of every word in `s` in O(n + total word length), then run a sliding window over the sorted occurrence endpoints, matching by word-id frequency. Time becomes O(n + total_word_len + k log k) where k is the number of occurrences; space O(total_word_len + k)."
+    },
+    {
+      "q": "What if `s` is a stream and cannot fit in memory?",
+      "a": "Process `s` in blocks of size `totalLen + wlen - 1` with overlap of `totalLen - 1` between blocks, running the same sliding window per block. Each block needs O(totalLen) memory; results are emitted online. Time stays O(n * wlen), space drops to O(numWords * wlen + totalLen)."
+    },
+    {
+      "q": "What if `words` can be reused (each word usable any number of times) and you want the longest substring that is a concatenation of words from the list?",
+      "a": "Replace the exact-count check with \"every chunk must be in the dictionary\"; the window then only shrinks when an unknown chunk appears. Track the longest window seen. Time O(n * wlen), space O(numWords * wlen)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findSubstring(string s, vector<string>& words) {\n        vector<int> result;\n        if (words.empty() || s.empty()) return result;\n        int n = s.size();\n        int numWords = (int)words.size();\n        int wlen = (int)words[0].size();\n        long long totalLen = (long long)numWords * wlen;\n        if ((long long)n < totalLen) return result;\n\n        unordered_map<string, int> target;\n        for (auto& w : words) target[w]++;\n\n        for (int offset = 0; offset < wlen; offset++) {\n            unordered_map<string, int> cur;\n            int left = offset;\n            int count = 0;\n            for (int right = offset; right + wlen <= n; right += wlen) {\n                string word = s.substr(right, wlen);\n                auto it = target.find(word);\n                if (it == target.end()) {\n                    cur.clear();\n                    count = 0;\n                    left = right + wlen;\n                } else {\n                    cur[word]++;\n                    count++;\n                    while (cur[word] > it->second) {\n                        string leftWord = s.substr(left, wlen);\n                        cur[leftWord]--;\n                        count--;\n                        left += wlen;\n                    }\n                    if (count == numWords) {\n                        result.push_back(left);\n                        string leftWord = s.substr(left, wlen);\n                        cur[leftWord]--;\n                        count--;\n                        left += wlen;\n                    }\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

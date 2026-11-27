@@ -1,0 +1,40 @@
+{
+  "slug": "partition-to-k-equal-sum-subsets",
+  "title": "Partition to K Equal Sum Subsets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask DP",
+  "tc": "O(n · 2^n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<int> dp: 2^n entries → O(2^n)\n- no recursion (iterative)\n- not counted: input nums",
+  "approach": "First check if the total sum is divisible by k; if not, return false. Then use bitmask DP where `dp[mask]` stores the sum accumulated in the current open bucket (or -1 if the subset `mask` is unreachable). The key insight: for any reachable mask, the open-bucket sum is uniquely `sum(mask) % target`, so one value per mask suffices. For each reachable mask, try adding each unused element; if it fits (`dp[mask] + nums[i] ≤ target`), transition to `dp[mask | (1<<i)] = (dp[mask] + nums[i]) % target`. The answer is `dp[full] == 0`, meaning all buckets are exactly filled.",
+  "hints": [
+    "With at most 16 elements, what determines whether a particular set of already-placed elements can be extended into a valid k-way partition?",
+    "Bitmask DP: `dp[mask]` = sum in the current open bucket (or -1 if unreachable). With nums=[4,3,2,3,5,2,1], target=5: from mask=0 (dp=0), placing element 5 gives dp=0 (bucket full), placing element 4 gives dp=4 (partial).",
+    "```\ntarget = sum(nums) / k\ndp[0] = 0, rest = -1\nfor mask in 0..2^n - 1:\n    if dp[mask] == -1: skip\n    for each i not in mask:\n        if dp[mask] + nums[i] <= target:\n            dp[mask | (1<<i)] = (dp[mask] + nums[i]) % target\nreturn dp[2^n - 1] == 0\n```",
+    "**Sum not divisible by k** - total sum is not a multiple of k, so no equal partition exists.\n`Input: nums = [1,1,1], k = 2` → `Expected: false`\n⚠️ Bug: computing `target = total / k` without checking `total % k != 0` first → target=1, dp[full]=0, returns true\n\n**Bucket fills exactly** - an element completes the current bucket, sum equals target exactly.\n`Input: nums = [5,5], k = 2` → `Expected: true`\n⚠️ Bug: using `>=` instead of `>` in the overflow check → skips exact-fill placements, dp[full]=-1, returns false\n\n**Modulo on completion** - when a bucket fills, the running sum must reset to 0 via modulo.\n`Input: nums = [2,2,2,2], k = 2` → `Expected: true`\n⚠️ Bug: storing `dp[newMask] = dp[mask] + nums[i]` without `% target` → after 2+2=4, dp=4 not 0, next add 4+2>4 skipped, dp[full]=-1, returns false\n\n**Duplicate elements** - all elements are identical, must be distributed across multiple buckets.\n`Input: nums = [4,4,4,4,4,4], k = 3` → `Expected: true`\n⚠️ Bug: deduplicating nums before processing → only one 4 remains, can't form 3 subsets of 8, returns false"
+  ],
+  "followUps": [
+    {
+      "q": "If n grows to 30, how would you adapt the solution?",
+      "a": "The O(n·2^n) bitmask DP becomes infeasible at 2^30. Use meet-in-the-middle: split the array into two halves, enumerate all subset sums for each half, then search for complementary subsets that form valid bucket groupings. Time O(2^(n/2)·n), space O(2^(n/2))."
+    },
+    {
+      "q": "Instead of a fixed k, find the maximum k for which an equal-sum partition exists.",
+      "a": "Enumerate divisors d of the total sum from largest to smallest; for each, set k = d and run the same bitmask DP with target = total/d. Return the largest d that yields dp[full] == 0. Time O(d(total)·n·2^n), space O(2^n)."
+    },
+    {
+      "q": "Elements arrive one at a time in a stream and must be assigned to a bucket immediately.",
+      "a": "Exact online partitioning is impossible since future elements affect past decisions. Use a best-fit greedy: assign each element to the bucket whose current sum is closest to target without exceeding it. Time O(n·k), space O(k), but no optimality guarantee."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canPartitionKSubsets(vector<int>& nums, int k) {\n        int n = nums.size();\n        int total = 0;\n        for (int x : nums) total += x;\n        if (total % k != 0) return false;\n        int target = total / k;\n        for (int x : nums) if (x > target) return false;\n\n        int full = (1 << n) - 1;\n        vector<int> dp(1 << n, -1);\n        dp[0] = 0;\n        for (int mask = 0; mask <= full; mask++) {\n            if (dp[mask] == -1) continue;\n            for (int i = 0; i < n; i++) {\n                if (mask & (1 << i)) continue;\n                int next = dp[mask] + nums[i];\n                if (next > target) continue;\n                int newMask = mask | (1 << i);\n                dp[newMask] = next % target;\n            }\n        }\n        return dp[full] == 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

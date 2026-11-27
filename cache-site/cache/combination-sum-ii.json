@@ -1,0 +1,40 @@
+{
+  "slug": "combination-sum-ii",
+  "title": "Combination Sum II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking with Duplicate Skipping",
+  "tc": "O(2^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> current: up to min(n, target) = 30 elements → O(n)\n- recursion call stack: depth up to min(n, target) = 30 → O(n)\n- sort(): introsort uses O(log n) stack\n- not counted: input candidates (modified in place), returned result vector",
+  "approach": "Sort the candidates so duplicates become adjacent, then use backtracking to explore all subsets that sum to target. At each recursion level, skip a candidate if it has the same value as the previous candidate at the same level (i > start && candidates[i] == candidates[i-1]), ensuring each unique combination is generated exactly once. Break early when candidates[i] > target to prune branches that can't lead to a valid sum. Each candidate is used at most once by passing i+1 as the next start index.",
+  "hints": [
+    "If two candidates have the same value, what distinguishes picking one from picking the other at the same position in a combination? With up to 100 candidates and values only from 1 to 50, some values must repeat.",
+    "Backtracking with sorting and same-level duplicate skipping. Sort [10,1,2,7,6,1,5] to [1,1,2,5,6,7,10]; at the top level, after trying the first 1, skip the second 1 to avoid generating the same combinations twice.",
+    "```\nsort candidates\nfunction backtrack(start, remaining):\n    if remaining == 0:\n        save current combination\n        return\n    for i from start to end:\n        if candidates[i] > remaining: break\n        if i > start and candidates[i] == candidates[i-1]: continue\n        add candidates[i] to current\n        backtrack(i + 1, remaining - candidates[i])\n        remove last element from current\n```",
+    "**All duplicates** - every element has the same value\n`Input: candidates = [2,2,2,2], target = 4` → `Expected: [[2,2]]`\n⚠️ Bug: omitting the `i > start && candidates[i] == candidates[i-1]` skip → returns [[2,2],[2,2],[2,2],[2,2],[2,2],[2,2]]\n\n**Repeated values needed in answer** - same value must appear multiple times in a valid combination\n`Input: candidates = [1,1,6], target = 8` → `Expected: [[1,1,6]]`\n⚠️ Bug: using `i > 0` instead of `i > start` in the skip check → skips the second 1 at depth 1 → returns []\n\n**Unsorted duplicates** - equal values are not adjacent in the input\n`Input: candidates = [1,2,1,2], target = 3` → `Expected: [[1,2]]`\n⚠️ Bug: not sorting before backtracking → duplicate detection fails → returns [[1,2],[2,1],[1,2]]\n\n**Single element, reuse bug** - n = 1, target requires using the element twice\n`Input: candidates = [2], target = 4` → `Expected: []`\n⚠️ Bug: passing `i` instead of `i + 1` to the recursive call → allows reusing the same element → returns [[2,2]]"
+  ],
+  "followUps": [
+    {
+      "q": "What if candidates can contain negative numbers?",
+      "a": "The `candidates[i] > target` break must be removed because adding a negative could reduce the sum back toward target. Sorting still helps for deduplication, but pruning is weaker. Worst-case TC becomes O(2^n) with no early termination."
+    },
+    {
+      "q": "What if target can be up to 10^9 instead of 30?",
+      "a": "Backtracking still works but loses the implicit depth bound of target ≤ 30. Depth is now bounded by n (≤ 100). If the number of distinct values is small, a DP approach counting ways to reach each sum is more efficient: O(n × target) time, O(target) space."
+    },
+    {
+      "q": "What if you only need the count of valid combinations, not the combinations themselves?",
+      "a": "Use bounded knapsack DP: group candidates by value with their counts, then dp[j] = number of ways to sum to j. Process each distinct value, updating dp from high to low. TC: O(n × target), SC: O(target)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> combinationSum2(vector<int>& candidates, int target) {\n        vector<vector<int>> result;\n        vector<int> current;\n        sort(candidates.begin(), candidates.end());\n        backtrack(candidates, target, 0, current, result);\n        return result;\n    }\nprivate:\n    void backtrack(vector<int>& candidates, int target, int start, vector<int>& current, vector<vector<int>>& result) {\n        if (target == 0) {\n            result.push_back(current);\n            return;\n        }\n        for (int i = start; i < (int)candidates.size(); i++) {\n            if (candidates[i] > target) break;\n            if (i > start && candidates[i] == candidates[i - 1]) continue;\n            current.push_back(candidates[i]);\n            backtrack(candidates, target - candidates[i], i + 1, current, result);\n            current.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
