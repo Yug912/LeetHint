@@ -1,0 +1,40 @@
+{
+  "slug": "decode-ways-ii",
+  "title": "Decode Ways II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming (Rolling State)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long prev1, prev2, cur, w2: constant → O(1)\n- const long long MOD: O(1)\n- not counted: input string s",
+  "approach": "Use dynamic programming where the state at position i depends only on the previous two positions. A single character s[i] contributes ways1 (0 if '0', 9 if '*', 1 otherwise), and a pair s[i-1..i] contributes ways2 (count of valid two-digit codes 10-26, accounting for '*' wildcards). Rolling two variables gives O(n) time and O(1) space. All arithmetic uses long long with modulo 10^9+7 to prevent overflow since prev1·9 can reach ~9×10^9.",
+  "hints": [
+    "With n up to 10^5, enumerating every grouping is impossible. When you extend a prefix by one character, which suffix of the already-read prefix could start a new code group?",
+    "Dynamic programming with two rolling variables. For s = \"1*\": after \"1\" there is 1 way; reading \"*\", single-use contributes 1·9 and pair-use \"1*\" contributes 1·9, total 18.",
+    "```\ndp[0] = 1\ndp[1] = ways1(s[0])\nfor i from 2 to n:\n    dp[i] = dp[i-1] * ways1(s[i-1])\n          + dp[i-2] * ways2(s[i-2], s[i-1])\nreturn dp[n] mod 1e9+7\n```",
+    "**Leading zero** - the entire string is a single '0', which has no valid decoding.\n`Input: \"0\"` → `Expected: 0`\n⚠️ Bug: counting '0' as a valid single-character code → returns 1\n\n**Star followed by zero** - '*0' can form \"10\" or \"20\", both valid two-digit codes.\n`Input: \"*0\"` → `Expected: 2`\n⚠️ Bug: only counting \"10\" for the pair '*0', missing \"20\" → returns 1\n\n**Double star** - '**' has 9 single options and 15 valid two-digit pairs (11-19, 21-26).\n`Input: \"**\"` → `Expected: 96`\n⚠️ Bug: counting ways2('*','*') as 9 instead of 15 → returns 90\n\n**Boundary value 26** - \"26\" decodes as (2,6) and (26), both valid.\n`Input: \"26\"` → `Expected: 2`\n⚠️ Bug: using v < 26 instead of v <= 26 in the two-digit check → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if '*' could also represent '0' (i.e., any digit 0-9)?",
+      "a": "Change ways1('*') from 9 to 10, and adjust ways2: for pair ('*', '*') count all 10-26 → 17; for ('*', d) with d in 0-6 → 2, else 1; for (d, '*') with d='1' → 10 (10-19), d='2' → 7 (20-26). Time and space stay O(n) and O(1)."
+    },
+    {
+      "q": "What if the string arrives as a stream and you must report the count after each character?",
+      "a": "The rolling two-variable state is already online-friendly: process each new character, update prev2/prev1, and emit prev1 after each step. Time O(n) total, space O(1); no buffering of the string needed."
+    },
+    {
+      "q": "What if you must return one actual decoded string instead of the count?",
+      "a": "Store a parent pointer or choice array alongside the DP (single vs. pair) during the forward pass, then backtrack from the end to reconstruct one valid grouping. Time O(n), space O(n) for the choice array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numDecodings(string s) {\n        const long long MOD = 1000000007;\n        int n = (int)s.size();\n        if (n == 0) return 0;\n        long long prev2 = 1;\n        long long prev1 = (s[0] == '*') ? 9 : (s[0] == '0' ? 0 : 1);\n        for (int i = 1; i < n; i++) {\n            long long cur = 0;\n            char c = s[i];\n            char p = s[i - 1];\n            // single-character group ending at i\n            if (c == '*') {\n                cur = (cur + prev1 * 9) % MOD;\n            } else if (c != '0') {\n                cur = (cur + prev1) % MOD;\n            }\n            // two-character group ending at i\n            long long w2 = 0;\n            if (p == '*' && c == '*') {\n                w2 = 15; // 11-19 (9) + 21-26 (6)\n            } else if (p == '*') {\n                if (c >= '0' && c <= '6') w2 = 2; // 1c and 2c\n                else w2 = 1; // only 1c\n            } else if (c == '*') {\n                if (p == '1') w2 = 9; // 11-19\n                else if (p == '2') w2 = 6; // 21-26\n            } else {\n                int v = (p - '0') * 10 + (c - '0');\n                if (v >= 10 && v <= 26) w2 = 1;\n            }\n            cur = (cur + prev2 * w2) % MOD;\n            prev2 = prev1;\n            prev1 = cur;\n        }\n        return (int)prev1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-distance-value-between-two-arrays",
+  "title": "Find the Distance Value Between Two Arrays",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum over Fixed Value Range",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int present[2001]: fixed-size, 2001 ints → O(1)\n- int prefix[2002]: fixed-size, 2002 ints → O(1)\n- recursion depth: none\n- not counted: input arrays, returned int",
+  "approach": "The value range is fixed and tiny: every element of both arrays lies in [-1000, 1000] (2001 values). Build a boolean presence array over arr2 indexed by (value + 1000), then a prefix sum over it. For each arr1[i] = v, the window [v-d, v+d] maps to indices [v-d+1000, v+d+1000]; clamp them to [0, 2000] and query the count of arr2 values inside in O(1) via prefix[hi+1] - prefix[lo]. If that count is 0, arr1[i] is far. This avoids sorting/binary search entirely.",
+  "hints": [
+    "Every arr1[i] and arr2[j] is confined to [-1000, 1000]. For a given arr1[i], what single fact about arr2 would let you decide \"far or not\" without scanning all of arr2?",
+    "Use a prefix sum over a fixed-size presence array indexed by (value + 1000). For arr2 = [10,9,1,8], mark indices 1010, 1009, 1001, 1008; the prefix sum then answers \"does any marked index fall in [lo, hi]?\" in one subtraction.",
+    "```\nOFFSET = 1000, SIZE = 2001\npresent[SIZE] = 0\nfor x in arr2: present[x + OFFSET] = 1\nprefix[0] = 0\nfor i in 0..SIZE-1: prefix[i+1] = prefix[i] + present[i]\nans = 0\nfor v in arr1:\n    lo = max(0, v - d + OFFSET)\n    hi = min(SIZE-1, v + d + OFFSET)\n    if lo > hi or prefix[hi+1] - prefix[lo] == 0:\n        ans = ans + 1\nreturn ans\n```",
+    "**Distance exactly equals d** - the boundary |arr1[i] - arr2[j]| = d must count as \"not far\" (problem requires strictly greater than d).\n`Input: arr1 = [5], arr2 = [3], d = 2` → `Expected: 0`\n⚠️ Bug: making the window exclusive on the left (`lo = v - d + 1 + OFFSET`) → excludes value 3 → returns 1.\n\n**Off-by-one in prefix query** - the inclusive upper index must be included.\n`Input: arr1 = [1000], arr2 = [1000], d = 100` → `Expected: 0`\n⚠️ Bug: writing `prefix[hi] - prefix[lo]` instead of `prefix[hi+1] - prefix[lo]` → drops index 2000 → returns 1.\n\n**Negative boundary value** - values at -1000 need the +1000 offset to become a valid index.\n`Input: arr1 = [-1000], arr2 = [-1000], d = 0` → `Expected: 0`\n⚠️ Bug: indexing `present[x]` without adding OFFSET → out-of-bounds write at index -1000, query at index 0 finds 0 → returns 1.\n\n**Duplicates in arr2** - multiple copies of the same value must still register as \"present\".\n`Input: arr1 = [5], arr2 = [5,5,5], d = 0` → `Expected: 0`\n⚠️ Bug: checking `count <= d` (confusing element count with distance) → 3 <= 0 is false → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if each value range were unbounded, e.g. [-10^9, 10^9]?",
+      "a": "The fixed-range presence array becomes infeasible. Sort arr2 in place and binary-search each arr1[i]'s insertion point, checking only the two neighbors - O((n + m) log m) time, O(1) extra space."
+    },
+    {
+      "q": "What if you must also return the nearest arr2 value for each far element?",
+      "a": "Augment the scheme with two fixed-size arrays storing, for each index, the nearest marked index to the left and to the right (filled in one forward and one backward pass). Each arr1[i] then resolves in O(1). Still O(n + m) time, O(1) space."
+    },
+    {
+      "q": "What if arr2 arrives as a stream interleaved with arr1 queries?",
+      "a": "Keep present[] updated on each arr2 insertion in O(1). For each arr1 query, scan the window [v-d, v+d] directly - at most 2d+1 ≤ 201 cells - giving O(201) per query and O(1) overall space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findTheDistanceValue(vector<int>& arr1, vector<int>& arr2, int d) {\n        const int OFFSET = 1000;\n        const int SIZE = 2001;\n        int present[SIZE] = {0};\n        for (int x : arr2) present[x + OFFSET] = 1;\n        int prefix[SIZE + 1];\n        prefix[0] = 0;\n        for (int i = 0; i < SIZE; i++) prefix[i + 1] = prefix[i] + present[i];\n        int ans = 0;\n        for (int v : arr1) {\n            int lo = v - d + OFFSET;\n            int hi = v + d + OFFSET;\n            if (lo < 0) lo = 0;\n            if (hi > SIZE - 1) hi = SIZE - 1;\n            int count = (lo > hi) ? 0 : (prefix[hi + 1] - prefix[lo]);\n            if (count == 0) ans++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

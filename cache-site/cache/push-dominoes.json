@@ -1,0 +1,40 @@
+{
+  "slug": "push-dominoes",
+  "title": "Push Dominoes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- input string `dominoes`: modified in place, not counted\n- no additional containers, arrays, or recursion\n- returned string is the same object as input, not counted",
+  "approach": "Only 'L' and 'R' dominoes exert force; the '.' characters between two consecutive forces form an independent segment whose fate depends solely on those two boundary forces. Using two pointers, we scan for each pair of consecutive non-'.' characters and fill the dots between them: same force → all become that force; 'R'…'L' → fill inward from both ends (middle dot stays '.' if the count is odd); 'L'…'R' → all stay '.'. A virtual 'L' sentinel before index 0 and a virtual 'R' sentinel after the last index handle the prefix and suffix uniformly.",
+  "hints": [
+    "In the string \".L.R...LR..L..\", which characters actually determine what happens to the dots - and is the segment of dots between two such characters independent of everything outside that pair?",
+    "Use two pointers to find consecutive non-'.' characters and fill the dots between them. In \".L.R...LR..L..\", the dots between 'R' (index 8) and 'L' (index 11) become 'R' and 'L' respectively, yielding \"RRLL\".",
+    "```\ni = -1   // virtual 'L' sentinel\nfor j in 0..n-1:\n    if dominoes[j] == '.': continue\n    left = (i == -1) ? 'L' : dominoes[i]\n    right = dominoes[j]\n    if left == right:       fill (i+1 .. j-1) with left\n    elif left=='R' and right=='L':  fill inward from both ends, middle stays '.'\n    i = j\nif dominoes[i] == 'R':  fill (i+1 .. n-1) with 'R'\n```",
+    "**All dots** - no force anywhere in the string.\n`Input: \"....\"` → `Expected: \"....\"`\n⚠️ Bug: initialising `i = 0` and treating `dominoes[0]` as a force → returns \"RRRR\".\n\n**Prefix before first force** - dots precede the first 'L' or 'R'.\n`Input: \"..R\"` → `Expected: \"..R\"`\n⚠️ Bug: using a virtual 'R' sentinel at the left instead of 'L' → returns \"RRR\".\n\n**Odd gap between R and L** - a single dot sits exactly at the balance point.\n`Input: \"R...L\"` → `Expected: \"RR.LL\"`\n⚠️ Bug: using `while (lo <= hi)` instead of `while (lo < hi)` → overwrites the middle dot, returns \"RRLLL\".\n\n**Suffix after last force** - trailing dots follow the last 'R'.\n`Input: \"R...\"` → `Expected: \"RRRR\"`\n⚠️ Bug: omitting the suffix-handling block entirely → returns \"R...\"."
+  ],
+  "followUps": [
+    {
+      "q": "What if each 'L' or 'R' carries a force magnitude, and a domino falls toward the stronger net force?",
+      "a": "For each segment between two forces, compute the effective force at every position as (magnitude_left − distance_from_left) versus (magnitude_right − distance_from_right). Fill toward whichever is larger; ties stay '.'. Still O(n) with two pointers, but the fill step compares computed values instead of just splitting by distance."
+    },
+    {
+      "q": "What if the dominoes are arranged in a circle?",
+      "a": "Find the longest arc of consecutive '.' characters and cut there to linearize, then apply the same algorithm. If every domino is a force, handle the wrap-around segment between the last and first force directly. O(n) time, O(n) space for the linearized copy."
+    },
+    {
+      "q": "What if you must answer Q queries, each asking for the state of domino i at time t?",
+      "a": "Precompute for each domino the time it would fall and its direction using the nearest forces on both sides. A domino between 'R' at distance a and 'L' at distance b falls at time min(a, b) if a ≠ b, or never if a = b. Each query compares t against the precomputed fall time in O(1), after O(n) preprocessing."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string pushDominoes(string dominoes) {\n        int n = dominoes.size();\n        int i = -1; // virtual 'L' sentinel at position -1\n        for (int j = 0; j < n; ++j) {\n            if (dominoes[j] == '.') continue;\n            char left  = (i == -1) ? 'L' : dominoes[i];\n            char right = dominoes[j];\n            if (left == right) {\n                for (int k = i + 1; k < j; ++k) dominoes[k] = left;\n            } else if (left == 'R' && right == 'L') {\n                int lo = i + 1, hi = j - 1;\n                while (lo < hi) {\n                    dominoes[lo++] = 'R';\n                    dominoes[hi--] = 'L';\n                }\n            }\n            // left == 'L' && right == 'R': leave dots unchanged\n            i = j;\n        }\n        // suffix: virtual 'R' sentinel at position n\n        char left = (i == -1) ? 'L' : dominoes[i];\n        if (left == 'R') {\n            for (int k = i + 1; k < n; ++k) dominoes[k] = 'R';\n        }\n        return dominoes;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

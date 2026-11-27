@@ -1,0 +1,40 @@
+{
+  "slug": "max-number-of-k-sum-pairs",
+  "title": "Max Number of K-Sum Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Counting",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> cnt: up to n distinct entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Count the frequency of each value in nums using a hash map. For each distinct value x, its only possible partner is k−x. If x < k−x, the number of disjoint pairs is min(count(x), count(k−x)); if x == k−x (i.e., x = k/2), it is floor(count(x)/2). Processing only x ≤ k−x avoids double counting. This is correct because each complementary value pair is considered exactly once and we always extract the maximum number of disjoint pairs from it.",
+  "hints": [
+    "With n up to 10^5, checking every pair is too slow. For any given number x in the array, how many distinct values could complete it to reach the sum k?",
+    "Use an unordered_map to count frequencies. For nums = [1,2,3,4], k = 5: value 1 appears once and its complement 4 appears once, so they form min(1, 1) = 1 pair.",
+    "```\ncount frequencies of nums in a map\nans = 0\nfor each (x, cx) in map:\n    y = k - x\n    if y < x: continue\n    if y == x: ans += cx / 2\n    else: ans += min(cx, count[y])\nreturn ans\n```",
+    "**Self-complement** - x equals k/2, so each element pairs with itself\n`Input: nums = [5,5,5,5,5], k = 10` → `Expected: 2`\n⚠️ Bug: using min(count[x], count[k-x]) instead of count[x]/2 when x == k-x → returns 5\n\n**Double counting** - both x and k-x are distinct keys in the map\n`Input: nums = [1,4,2,3], k = 5` → `Expected: 2`\n⚠️ Bug: processing every key without skipping when k-x < x → returns 4\n\n**Single self-complement element** - n = 1 and the sole element equals k/2\n`Input: nums = [5], k = 10` → `Expected: 0`\n⚠️ Bug: using min(count[x], count[k-x]) = min(1, 1) = 1 instead of 1/2 = 0 → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if each element can be used in multiple operations (not removed after pairing)?",
+      "a": "The answer becomes the total count of index pairs (i, j) with i < j and nums[i] + nums[j] = k. Using the same frequency map, for each x < k−x add count(x) × count(k−x), and for x = k−x add count(x) × (count(x)−1) / 2. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if the array arrives as a streaming input too large to store?",
+      "a": "Process each element once with a hash map of available counts. For each incoming x, if count(k−x) > 0, increment the answer and decrement count(k−x); otherwise increment count(x). Time O(n), space O(n) worst case."
+    },
+    {
+      "q": "What if nums[i] can be negative (down to −10^9)?",
+      "a": "The same approach works, but k − x can range from −2×10^9 to 2×10^9, overflowing int. Use long long for the complement y. Time O(n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxOperations(vector<int>& nums, int k) {\n        unordered_map<int,int> cnt;\n        for (int x : nums) cnt[x]++;\n        int ans = 0;\n        for (auto& [x, c] : cnt) {\n            int y = k - x;\n            if (y < x) continue;\n            if (y == x) {\n                ans += c / 2;\n            } else {\n                auto it = cnt.find(y);\n                if (it != cnt.end()) {\n                    ans += min(c, it->second);\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

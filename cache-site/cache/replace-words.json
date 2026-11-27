@@ -1,0 +1,40 @@
+{
+  "slug": "replace-words",
+  "title": "Replace Words",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Trie",
+  "tc": "O(n + k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- Trie: up to k nodes (k = sum of dictionary word lengths), each with 26 pointers + 1 bool → O(k)\n- result string: returned output, not counted\n- integer/pointer locals (i, n, wordStart, matchEnd, idx, node, root): O(1)",
+  "approach": "Build a trie from the dictionary roots. For each word in the sentence, traverse the trie character-by-character using indices directly into the sentence string - no temporary word or prefix strings are created. The first word-end node encountered gives the shortest matching root; append that prefix slice to the result. If no root matches, append the original word. This is correct because the trie groups all roots by shared prefixes, and stopping at the first word-end guarantees the shortest match.",
+  "hints": [
+    "For a word like \"cattle\" with roots {\"cat\",\"bat\",\"rat\"}, what part of the word must match a root for a replacement to apply? Each root has length at most 100, and each word in the sentence has length at most 1000.",
+    "Use a trie built from the dictionary. For \"cattle\" with roots {cat, bat, rat}, walk c→a→t in the trie; node \"t\" is marked as a word-end, so \"cat\" replaces \"cattle\".",
+    "```\nbuild trie from dictionary\ni = 0\nwhile i < len(sentence):\n    wordStart = i\n    node = root\n    matchEnd = -1\n    while i < len and sentence[i] != ' ':\n        idx = sentence[i] - 'a'\n        if node has child idx:\n            node = child\n            i = i + 1\n            if node is word-end:\n                matchEnd = i - 1\n                break\n        else:\n            break\n    skip remaining chars of current word\n    append sentence[wordStart..matchEnd] or sentence[wordStart..i-1] to result\n    if sentence[i] == ' ': append space, i = i + 1\n```",
+    "**Single-character root** - root is one letter matching the word's first character\n`Input: dictionary = [\"a\"], sentence = \"apple\"` → `Expected: \"a\"`\n⚠️ Bug: setting matchEnd = i instead of i - 1 after advancing past the matched character → returns \"ap\"\n\n**Root longer than word** - word ends before any root-end node is reached\n`Input: dictionary = [\"cats\"], sentence = \"cat\"` → `Expected: \"cat\"`\n⚠️ Bug: returning an empty string when matchEnd stays -1 instead of the original word → returns \"\"\n\n**Multiple roots, shortest wins** - two roots where one is a prefix of the other\n`Input: dictionary = [\"ca\",\"cat\"], sentence = \"cattle\"` → `Expected: \"ca\"`\n⚠️ Bug: continuing traversal after the first word-end and using the last match found → returns \"cat\"\n\n**Single word, no trailing space** - sentence has one word with no spaces\n`Input: dictionary = [\"a\"], sentence = \"a\"` → `Expected: \"a\"`\n⚠️ Bug: appending a space after every word unconditionally → returns \"a \""
+  ],
+  "followUps": [
+    {
+      "q": "What if you must replace each derivative with the longest matching root instead of the shortest?",
+      "a": "Continue traversing the trie past the first word-end node, updating matchEnd each time a word-end is hit. When traversal ends (no child or word boundary), use the last recorded matchEnd. Time stays O(n + k), space O(k)."
+    },
+    {
+      "q": "What if the dictionary has 10^6 roots, each up to 100 characters?",
+      "a": "The trie uses O(k) = O(10^8) space, which may exceed memory. Use a compressed trie (radix tree) that merges single-child chains into edges labeled with substrings, cutting node count significantly. Alternatively, sort roots and binary-search the prefix range per word for O(n log k) time, O(k) space."
+    },
+    {
+      "q": "What if the sentence arrives as a character stream with unknown length?",
+      "a": "Buffer characters of the current word. As each character arrives, advance the trie pointer. On hitting a word-end, record the shortest match position. On a space, emit the match or buffered word, then reset the trie pointer and buffer. Space is O(k) for the trie plus O(max word length) for the buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct TrieNode {\n        TrieNode* children[26];\n        bool isEnd;\n        TrieNode() {\n            for (int i = 0; i < 26; i++) children[i] = nullptr;\n            isEnd = false;\n        }\n    };\npublic:\n    string replaceWords(vector<string>& dictionary, string sentence) {\n        TrieNode* root = new TrieNode();\n        for (const string& word : dictionary) {\n            TrieNode* node = root;\n            for (char c : word) {\n                int idx = c - 'a';\n                if (!node->children[idx]) {\n                    node->children[idx] = new TrieNode();\n                }\n                node = node->children[idx];\n            }\n            node->isEnd = true;\n        }\n\n        string result;\n        result.reserve(sentence.size());\n        int n = sentence.size();\n        int i = 0;\n        while (i < n) {\n            int wordStart = i;\n            TrieNode* node = root;\n            int matchEnd = -1;\n            while (i < n && sentence[i] != ' ') {\n                int idx = sentence[i] - 'a';\n                if (node->children[idx]) {\n                    node = node->children[idx];\n                    i++;\n                    if (node->isEnd) {\n                        matchEnd = i - 1;\n                        break;\n                    }\n                } else {\n                    break;\n                }\n            }\n            while (i < n && sentence[i] != ' ') i++;\n\n            if (matchEnd != -1) {\n                result.append(sentence, wordStart, matchEnd - wordStart + 1);\n            } else {\n                result.append(sentence, wordStart, i - wordStart);\n            }\n\n            if (i < n && sentence[i] == ' ') {\n                result.push_back(' ');\n                i++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

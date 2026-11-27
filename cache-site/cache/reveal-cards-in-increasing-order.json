@@ -1,0 +1,40 @@
+{
+  "slug": "reveal-cards-in-increasing-order",
+  "title": "Reveal Cards In Increasing Order",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Queue Simulation",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- deque<int> indices: up to n entries → O(n)\n- sort() stack: O(log n)\n- not counted: input deck (sorted in place), returned vector result",
+  "approach": "Sort the deck in increasing order. Then simulate the reveal process on a deque of indices [0..n-1]: pop the front index (this is where the next smallest sorted card goes), then move the new front index to the back. This maps each sorted card to the physical position it must occupy so that the reveal process outputs cards in increasing order. The simulation exactly mirrors the problem's reveal-and-rotate steps, guaranteeing correctness.",
+  "hints": [
+    "If you already knew the sorted order of the cards, what determines which physical position in the deck each card must occupy? All values in the deck are unique.",
+    "Use a deque of indices [0..n-1] and simulate the reveal-and-move-to-bottom process on the indices. For deck [17,13,11,2,3,5,7], sorted is [2,3,5,7,11,13,17]; the first revealed index is 0, so result[0]=2.",
+    "```\nsort deck\ncreate deque of indices 0..n-1\nfor each card in sorted deck:\n    idx = pop front of deque\n    result[idx] = card\n    if deque not empty:\n        move front of deque to back\nreturn result\n```",
+    "**Single element** - After the only reveal, the deque is empty; no move-to-bottom should follow.\n`Input: [5]` → `Expected: [5]`\n⚠️ Bug: calling front() on an empty deque without checking emptiness → undefined behavior / crash\n\n**Already sorted** - The correct answer interleaves elements rather than matching sorted order.\n`Input: [1,2,3]` → `Expected: [1,3,2]`\n⚠️ Bug: returning the sorted deck directly as the answer → returns [1,2,3] instead of [1,3,2]\n\n**Two elements** - Minimal case with exactly one move-to-bottom operation.\n`Input: [1,1000]` → `Expected: [1,1000]`\n⚠️ Bug: assigning sorted cards in reverse order (largest first) → returns [1000,1] instead of [1,1000]\n\n**Reverse sorted input** - Sorting is required before the simulation.\n`Input: [3,2,1]` → `Expected: [1,3,2]`\n⚠️ Bug: skipping the sort step and simulating on the original order → returns [3,1,2] instead of [1,3,2]"
+  ],
+  "followUps": [
+    {
+      "q": "What if after each reveal you move k cards to the bottom instead of one?",
+      "a": "Simulate the same process but rotate k elements to the back of the deque after each pop. For small k this is O(n·k); for large k, use modular index arithmetic to skip rotations in O(1) per step. TC O(n log n + n·k) or O(n log n + n) with modular skipping, SC O(n)."
+    },
+    {
+      "q": "What if the deck can contain duplicate values?",
+      "a": "Sort the deck and assign to positions exactly as before. Duplicate values are interchangeable, so any assignment within a group of equal values produces a valid increasing reveal. TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^7 and you need O(n) time?",
+      "a": "Replace the comparison sort with counting sort since values are bounded by 10^6. The deque simulation is already O(n). TC O(n + 10^6), SC O(n + 10^6)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> deckRevealedIncreasing(vector<int>& deck) {\n        int n = deck.size();\n        sort(deck.begin(), deck.end());\n        vector<int> result(n);\n        deque<int> indices;\n        for (int i = 0; i < n; i++) {\n            indices.push_back(i);\n        }\n        for (int i = 0; i < n; i++) {\n            int idx = indices.front();\n            indices.pop_front();\n            result[idx] = deck[i];\n            if (!indices.empty()) {\n                indices.push_back(indices.front());\n                indices.pop_front();\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

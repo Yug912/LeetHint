@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-kth-smallest-sum-of-a-matrix-with-sorted-rows",
+  "title": "Find the Kth Smallest Sum of a Matrix With Sorted Rows",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Min-Heap Merge of Sorted Lists",
+  "tc": "O(m · k · log k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> sums: up to k entries → O(k)\n- vector<int> next: up to k entries → O(k)\n- priority_queue pq: up to k entries → O(k)\n- vector<int>& row: alias, O(1)\n- recursion depth: none\n- not counted: input mat, returned int",
+  "approach": "Process rows one at a time, maintaining only the k smallest sums seen so far. When merging the current sorted list of k sums with a new sorted row, the candidate sums form a sorted matrix; a min-heap seeded with `sums[i]+row[0]` for every `i`, then repeatedly popping the smallest and advancing that row's pointer, yields the k smallest pair-sums in O(k log k). Repeating for all m−1 rows gives the kth smallest overall sum. This avoids generating all n^m combinations.",
+  "hints": [
+    "Each row is sorted. If you've kept a sorted list of the k smallest sums from the first r rows, what can you say about the sums formed by adding each element of row r+1 to that list? (k ≤ 200.)",
+    "Use a min-heap. With sorted A=[1,3,11] and sorted B=[2,4,6], seed the heap with A[i]+B[0] for each i, then pop the smallest and advance that i's pointer into B.",
+    "```\nsums = first min(k, n) elements of row 0\nfor r = 1 to m-1:\n    B = row r,  limit = min(k, |B|)\n    heap = min-heap of (sums[i]+B[0], i, 0) for all i\n    next = []\n    repeat k times while heap not empty:\n        (val, i, j) = pop heap\n        append val to next\n        if j+1 < limit: push (sums[i]+B[j+1], i, j+1)\n    sums = next\nreturn sums[k-1]\n```",
+    "**Single row** - m=1, no merging happens.\n`Input: mat=[[1,5,9]], k=2` → `Expected: 5`\n⚠️ Bug: initialising `sums` as empty `{}` and looping from r=0 → `next` stays empty, `sums[k-1]` is out of bounds.\n\n**k equals total combinations** - every sum must be collected.\n`Input: mat=[[1,2],[3,4]], k=4` → `Expected: 6`\n⚠️ Bug: collecting only `min(k, |sums|)` pops per merge instead of looping until k pops or heap empty → collects 2 of 4, `sums[3]` is out of bounds.\n\n**All equal values** - every sum is identical, count matters.\n`Input: mat=[[5,5],[5,5]], k=3` → `Expected: 10`\n⚠️ Bug: deduplicating heap entries by value → only one 10 kept, `sums[2]` is out of bounds.\n\n**k=1** - only the minimum sum is needed.\n`Input: mat=[[1,3],[2,4]], k=1` → `Expected: 3`\n⚠️ Bug: seeding heap with only `sums[0]+B[0]` instead of all i → misses (3+2)=5 path but still returns 3; however with mat=[[3,1],[2,4]] (unsorted) it would fail - sortedness is required."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as n^m (potentially 40^40)?",
+      "a": "Binary-search the target sum and count combinations with sum ≤ target using the same row-by-row k-capped merge (cap the count list at k). TC becomes O(m · n · k · log(maxSum)), SC stays O(k)."
+    },
+    {
+      "q": "What if the matrix has 10^5 rows but each row has at most 40 elements?",
+      "a": "The row-by-row merge already processes one row at a time and keeps only k sums, so it handles 10^5 rows directly. TC: O(m · k · log k), SC: O(k) - no change needed."
+    },
+    {
+      "q": "What if rows arrive as a stream and you must report the kth smallest after each new row?",
+      "a": "Maintain the k smallest sums incrementally; after each row arrives, merge it with the current k sums via the same min-heap approach. Each update costs O(k log k), total O(m · k log k), SC O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int kthSmallest(vector<vector<int>>& mat, int k) {\n        int m = mat.size();\n        int n = mat[0].size();\n\n        vector<int> sums(mat[0].begin(), mat[0].begin() + min(k, n));\n\n        for (int r = 1; r < m; r++) {\n            vector<int>& row = mat[r];\n            int limit = min(k, n);\n            priority_queue<pair<int, pair<int, int>>,\n                           vector<pair<int, pair<int, int>>>,\n                           greater<pair<int, pair<int, int>>>> pq;\n            for (int i = 0; i < (int)sums.size(); i++) {\n                pq.push({sums[i] + row[0], {i, 0}});\n            }\n            vector<int> next;\n            int cnt = k;\n            while (cnt > 0 && !pq.empty()) {\n                pair<int, pair<int, int>> top = pq.top();\n                pq.pop();\n                next.push_back(top.first);\n                int i = top.second.first;\n                int j = top.second.second;\n                if (j + 1 < limit) {\n                    pq.push({sums[i] + row[j + 1], {i, j + 1}});\n                }\n                cnt--;\n            }\n            sums = move(next);\n        }\n        return sums[k - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

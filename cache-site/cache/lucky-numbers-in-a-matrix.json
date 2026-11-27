@@ -1,0 +1,40 @@
+{
+  "slug": "lucky-numbers-in-a-matrix",
+  "title": "Lucky Numbers in a Matrix",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Running Aggregate / Streaming Min-Max",
+  "tc": "O(m*n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int r, c, rowMin, colMax, m, n: six scalars → O(1)\n- returned vector<int>: at most 1 element, not counted\n- not counted: input matrix",
+  "approach": "A lucky number must be the minimum of its row and the maximum of its column. With distinct elements, at most one such number exists: it equals the maximum of all row-minima and also the minimum of all column-maxima. Compute these two scalars in two streaming passes; if they are equal, that value is the unique lucky number, otherwise none exists.",
+  "hints": [
+    "With all matrix elements distinct, how many elements could simultaneously be the smallest in their row and the largest in their column?",
+    "Track two running scalars: the largest among all row-minima and the smallest among all column-maxima. In Example 1, row minima are 3, 9, 15 (largest = 15); column maxima are 15, 16, 17 (smallest = 15).",
+    "```\nr = -∞\nfor each row:\n    rm = min(row)\n    r = max(r, rm)\nc = +∞\nfor each column:\n    cm = max(column)\n    c = min(c, cm)\nif r == c: return [r]\nreturn []\n```",
+    "**No lucky number** - the largest row-minimum is strictly less than the smallest column-maximum.\n`Input: [[1,4],[3,2]]` → `Expected: []`\n⚠️ Bug: returning [r] without comparing r == c → returns [2]\n\n**Single element** - a 1×1 matrix where the sole element is trivially both row-min and col-max.\n`Input: [[5]]` → `Expected: [5]`\n⚠️ Bug: initializing colMax to INT_MIN and starting the inner loop at i=1 → colMax stays INT_MIN, c = INT_MIN, returns []\n\n**Single row** - m = 1, so each column maximum is the sole element in that column.\n`Input: [[2,1,3]]` → `Expected: [1]`\n⚠️ Bug: initializing colMax to INT_MIN and looping i from 1 to m−1 → loop never runs, c = INT_MIN, returns []\n\n**Single column** - n = 1, so each row minimum is the sole element in that row.\n`Input: [[3],[1],[2]]` → `Expected: [3]`\n⚠️ Bug: initializing rowMin to INT_MAX and looping j from 1 to n−1 → loop never runs, r = INT_MAX, returns []"
+  ],
+  "followUps": [
+    {
+      "q": "What if the matrix can contain duplicate values - how does the \"at most one\" property change?",
+      "a": "With duplicates, multiple lucky numbers can exist, so the max-of-mins / min-of-maxs equality no longer identifies all of them. Store every row-minimum and column-maximum in sets, then return the intersection. Time stays O(m*n) but space becomes O(m + n)."
+    },
+    {
+      "q": "What if the matrix is too large to fit in memory and arrives row by row as a stream?",
+      "a": "Compute the running maximum of row-minima in one streaming pass (O(1) memory). For column-maxima you must either store one max per column (O(n) memory) or make a second pass over the stream. The equality check then proceeds as before."
+    },
+    {
+      "q": "What if \"lucky\" is redefined as top-k smallest in its row and top-k largest in its column?",
+      "a": "The single-scalar trick breaks because there are now O(k) boundary values per row and column. Store the k smallest per row and k largest per column, then intersect; time is O(m*n*log k) and space is O(k*(m+n))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> luckyNumbers(vector<vector<int>>& matrix) {\n        int m = matrix.size();\n        int n = matrix[0].size();\n\n        int r = INT_MIN;\n        for (int i = 0; i < m; i++) {\n            int rowMin = matrix[i][0];\n            for (int j = 1; j < n; j++) {\n                if (matrix[i][j] < rowMin) rowMin = matrix[i][j];\n            }\n            if (rowMin > r) r = rowMin;\n        }\n\n        int c = INT_MAX;\n        for (int j = 0; j < n; j++) {\n            int colMax = matrix[0][j];\n            for (int i = 1; i < m; i++) {\n                if (matrix[i][j] > colMax) colMax = matrix[i][j];\n            }\n            if (colMax < c) c = colMax;\n        }\n\n        if (r == c) return {r};\n        return {};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

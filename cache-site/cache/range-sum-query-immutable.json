@@ -1,0 +1,39 @@
+{
+  "slug": "range-sum-query-immutable",
+  "title": "Range Sum Query - Immutable",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> prefix: n+1 entries → O(n)\n- recursion call-stack: none\n- not counted: input nums, returned int",
+  "approach": "Precompute a prefix sum array where `prefix[i]` holds the sum of `nums[0..i-1]` (with `prefix[0] = 0`). Then any range sum `nums[left..right]` equals `prefix[right+1] - prefix[left]` in O(1). This is correct because the sum from index `left` to `right` is exactly the cumulative sum up to `right` minus the cumulative sum up to `left-1`, and the `+1` offset handles the inclusive boundary. Preprocessing is O(n); each query is O(1).",
+  "hints": [
+    "With up to 10^4 queries each spanning up to 10^4 elements, what could you compute once at construction time so that answering any single query never requires looping over the range?",
+    "Use a prefix sum array: `prefix[i]` = sum of `nums[0..i-1]`, with `prefix[0] = 0`. For `nums = [-2, 0, 3, -5, 2, -1]`, `prefix = [0, -2, -2, 1, -4, -2, -3]`, so `sumRange(0, 2) = prefix[3] - prefix[0] = 1`.",
+    "```\nbuild:\n  prefix[0] = 0\n  for i from 0 to n-1:\n    prefix[i+1] = prefix[i] + nums[i]\n\nquery(left, right):\n  return prefix[right+1] - prefix[left]\n```",
+    "**Single element** - array has length 1, only query is the whole array\n`Input: nums=[5], sumRange(0,0)` → `Expected: 5`\n⚠️ Bug: using `prefix[right] - prefix[left]` instead of `prefix[right+1] - prefix[left]` → returns `prefix[0] - prefix[0] = 0`\n\n**All negatives** - every element is negative, so the range sum is negative\n`Input: nums=[-3,-1,-2], sumRange(0,2)` → `Expected: -6`\n⚠️ Bug: initializing `prefix` entries to 1 instead of 0 → returns `-7`\n\n**Full range** - query spans the entire array, testing prefix array sizing\n`Input: nums=[-2,0,3,-5,2,-1], sumRange(0,5)` → `Expected: -3`\n⚠️ Bug: sizing `prefix` to `n` instead of `n+1`, then accessing `prefix[right+1]` → out-of-bounds read, undefined behavior\n\n**Left equals right** - single-index range, off-by-one in the subtraction\n`Input: nums=[-2,0,3,-5,2,-1], sumRange(3,3)` → `Expected: -5`\n⚠️ Bug: using `prefix[right] - prefix[left-1]` with `left=0` → reads `prefix[-1]`, undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if elements can be updated between queries (point updates)?",
+      "a": "Replace the prefix array with a Fenwick tree (Binary Indexed Tree). Build is O(n), each update and each query is O(log n). The query still computes a range sum as two prefix queries subtracted."
+    },
+    {
+      "q": "What if the input is a 2D matrix and queries ask for the sum of a sub-rectangle?",
+      "a": "Use a 2D prefix sum where `prefix[i][j]` = sum of `matrix[0..i-1][0..j-1]`. Build is O(n·m); each rectangle query is O(1) via inclusion-exclusion of four corners."
+    },
+    {
+      "q": "What if the array is a streaming input too large to store, and you only need approximate range sums?",
+      "a": "Store a sampled set of prefix checkpoints every k-th index and keep a rolling buffer of recent elements. A query interpolates between the nearest checkpoint before `left` and the elements up to `right`, trading accuracy for O(k) query time and O(n/k + k) space."
+    }
+  ],
+  "code": {
+    "cpp": "class NumArray {\n    vector<int> prefix;\npublic:\n    NumArray(vector<int>& nums) {\n        int n = nums.size();\n        prefix.assign(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            prefix[i + 1] = prefix[i] + nums[i];\n        }\n    }\n    \n    int sumRange(int left, int right) {\n        return prefix[right + 1] - prefix[left];\n    }\n};\n\n/**\n * Your NumArray object will be instantiated and called as such:\n * NumArray* obj = new NumArray(nums);\n * int param_1 = obj->sumRange(left,right);\n */"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

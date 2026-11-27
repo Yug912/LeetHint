@@ -1,0 +1,40 @@
+{
+  "slug": "pseudo-palindromic-paths-in-a-binary-tree",
+  "title": "Pseudo-Palindromic Paths in a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS with Bitmask",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- int mask (passed by value): O(1)\n- int& count: O(1)\n- recursion call-stack depth: O(h), worst case O(n) for skewed tree, O(log n) for balanced\n- not counted: input tree, returned int",
+  "approach": "A sequence can be rearranged into a palindrome iff at most one digit has an odd frequency. Since node values are 1-9, we track each digit's parity with a 9-bit integer mask, toggling bit `v` when we visit a node with value `v`. We DFS from root to leaves; at each leaf we check `mask & (mask-1) == 0` (at most one bit set). This visits every node once, giving O(n) time and O(h) recursion depth.",
+  "hints": [
+    "A sequence can be rearranged into a palindrome only under what condition on how many of its elements appear an odd number of times? Node values here are restricted to 1 through 9.",
+    "Use DFS carrying a 9-bit mask where bit `v` tracks the parity of digit `v`; toggle it at each node. At a leaf, the path is pseudo-palindromic when `mask & (mask-1) == 0`. Example: path [2,3,3] yields mask = `100` (only bit 2 set), so it counts.",
+    "```\ndfs(node, mask):\n    if node is null: return\n    mask = mask XOR (1 << node.val)\n    if node is leaf:\n        if (mask AND (mask - 1)) == 0:\n            count = count + 1\n    else:\n        dfs(node.left, mask)\n        dfs(node.right, mask)\n```",
+    "**Single node** - The tree has exactly one node with no children.\n`Input: root = [9]` → `Expected: 1`\n⚠️ Bug: incrementing count only inside recursive child calls with no explicit leaf check → returns 0\n\n**All same values, odd path length** - Every node on the path has the same digit, appearing an odd number of times.\n`Input: root = [1,1,null,1]` → `Expected: 1`\n⚠️ Bug: checking `mask == 0` (all even) instead of `mask & (mask-1) == 0` → returns 0\n\n**All distinct values** - A path where every digit appears exactly once.\n`Input: root = [1,2,null,3]` → `Expected: 0`\n⚠️ Bug: checking `mask != 0` (any odd frequency) instead of at most one bit set → returns 1\n\n**Right-skewed tree** - The tree is a linked list going only through right children.\n`Input: root = [1,null,2,null,1]` → `Expected: 1`\n⚠️ Bug: checking only `!node->left` for leaf detection (ignoring right child) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if node values could be 0-9 instead of 1-9?",
+      "a": "The mask simply grows to 10 bits; `1 << node->val` still fits in a 32-bit int and `mask & (mask-1) == 0` works unchanged. Time and space complexity stay O(n) and O(h)."
+    },
+    {
+      "q": "What if we must count pseudo-palindromic paths between any two nodes, not just root-to-leaf?",
+      "a": "This becomes a path-pair counting problem: for each node as the LCA, combine parity masks from different subtrees and count pairs whose XOR has at most one bit set. Time becomes O(n · 10) with O(h) stack space, using subtree mask frequency arrays."
+    },
+    {
+      "q": "What if the tree has 10^7 nodes, too deep for recursion?",
+      "a": "Convert the DFS to an explicit stack-based iteration storing (node, mask) pairs. Time stays O(n); space becomes O(h) for the explicit stack instead of the call stack, avoiding stack overflow on skewed trees."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int pseudoPalindromicPaths (TreeNode* root) {\n        int count = 0;\n        dfs(root, 0, count);\n        return count;\n    }\nprivate:\n    void dfs(TreeNode* node, int mask, int& count) {\n        if (!node) return;\n        mask ^= (1 << node->val);\n        if (!node->left && !node->right) {\n            if ((mask & (mask - 1)) == 0) {\n                ++count;\n            }\n        } else {\n            dfs(node->left, mask, count);\n            dfs(node->right, mask, count);\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-days-to-make-m-bouquets",
+  "title": "Minimum Number of Days to Make m Bouquets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log(max(bloomDay)))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers, arrays, or strings allocated\n- No recursion\n- Only scalar variables (lo, hi, mid, bouquets, count, need) → O(1)",
+  "approach": "The key observation is monotonicity: if you can make m bouquets on day d, you can also make them on any day > d (more flowers bloom). This means we can binary search on the answer (the day). For each candidate day, we scan the array once, counting consecutive bloomed flowers and forming a bouquet every time we accumulate k in a row. The feasibility check is O(n), and binary search runs O(log(max(bloomDay))) iterations. We also pre-check feasibility: if m·k > n, return -1 immediately (using long long to avoid overflow since m·k can reach 10^11).",
+  "hints": [
+    "For Example 3, write down how many bouquets you can make on each day from 1 to 12. How do those numbers change as the day increases?",
+    "Binary search on the day. At day 7 in Example 3, the garden is [x,x,x,x,_,x,x]; scanning for runs of 3 adjacent bloomed flowers gives only 1 bouquet (indices 0-2), so we search higher.",
+    "```\nlo = 1, hi = max(bloomDay)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    bouquets = 0, run = 0\n    for each d in bloomDay:\n        if d <= mid: run += 1\n        else: run = 0\n        if run == k: bouquets += 1; run = 0\n    if bouquets >= m: hi = mid\n    else: lo = mid + 1\nreturn lo\n```",
+    "**Impossible** - m × k exceeds the number of flowers.\n`Input: bloomDay = [1,10,3,10,2], m = 3, k = 2` → `Expected: -1`\n⚠️ Bug: skipping the feasibility check → binary search never finds enough bouquets, returns 10 instead of -1.\n\n**Overflow** - m up to 10^6 and k up to 10^5, so m × k can reach 10^11.\n`Input: bloomDay = [1,1,...,1] (50000 ones), m = 50000, k = 50000` → `Expected: -1`\n⚠️ Bug: computing `int need = m * k` → 2.5×10^9 overflows signed 32-bit to negative, `need > n` is false, returns 1 instead of -1.\n\n**Gap handling** - an unbloomed flower breaks adjacency.\n`Input: bloomDay = [7,7,7,7,12,7,7], m = 2, k = 3` → `Expected: 12`\n⚠️ Bug: not resetting the consecutive counter when a flower hasn't bloomed → treats indices 3, 5, 6 as adjacent, returns 7 instead of 12.\n\n**Strict comparison** - flowers bloom ON their bloom day, not after.\n`Input: bloomDay = [3,3,3], m = 1, k = 3` → `Expected: 3`\n⚠️ Bug: using `bloomDay[i] < mid` instead of `<=` → at mid = 3 no flower counts as bloomed, returns 4 instead of 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if the garden is circular (the last flower is adjacent to the first)?",
+      "a": "In the check function, after the linear scan, if both the first and last flowers bloom, merge the suffix run from the end with the prefix run from the start to form one additional potential bouquet. TC stays O(n log(max(bloomDay))), SC stays O(1)."
+    },
+    {
+      "q": "What if each bouquet can use any k flowers (not necessarily adjacent)?",
+      "a": "The check simplifies to counting total bloomed flowers and comparing against m × k. Binary search on the day still applies. TC becomes O(n log(max(bloomDay))), SC O(1), but the check is a simple count with no run-tracking."
+    },
+    {
+      "q": "What if there are Q queries, each with different m and k, on the same bloomDay array?",
+      "a": "Each query is independent, so run binary search per query. TC is O(Q · n log(max(bloomDay))). Precomputing per-day bouquet counts for all k is infeasible (O(n²)), so per-query binary search is optimal unless Q is very large, in which case you could precompute a sparse table of consecutive-bloom run lengths."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDays(vector<int>& bloomDay, int m, int k) {\n        long long need = (long long)m * k;\n        if (need > (long long)bloomDay.size()) return -1;\n        \n        int lo = 1, hi = 0;\n        for (int b : bloomDay) hi = max(hi, b);\n        \n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            int bouquets = 0, count = 0;\n            for (int b : bloomDay) {\n                if (b <= mid) {\n                    count++;\n                    if (count == k) {\n                        bouquets++;\n                        count = 0;\n                    }\n                } else {\n                    count = 0;\n                }\n            }\n            if (bouquets >= m) hi = mid;\n            else lo = mid + 1;\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

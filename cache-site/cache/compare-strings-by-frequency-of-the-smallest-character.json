@@ -1,0 +1,40 @@
+{
+  "slug": "compare-strings-by-frequency-of-the-smallest-character",
+  "title": "Compare Strings by Frequency of the Smallest Character",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Array with Suffix Sums",
+  "tc": "O((W+Q)·L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[11]: L+1 = 11 integers → O(L)\n- int suffix[12]: L+2 = 12 integers → O(L)\n- vector<int> answer: Q entries - returned output, not counted\n- recursion depth: none\n- not counted: input vectors, returned vector",
+  "approach": "Compute f(s) (frequency of the smallest character) for each word and tally counts in a frequency array indexed by f-value (range 1 to L, where L = max string length = 10). Build a suffix-sum array where suffix[v] = number of words with f-value strictly greater than v. For each query, compute f(query) and return suffix[f(query)] in O(1). This avoids sorting and binary search entirely.",
+  "hints": [
+    "Given that each string has length between 1 and 10, how many distinct values can f(s) take across all possible strings?",
+    "Frequency array over f-values with suffix sums. For words = [\"a\",\"aa\",\"aaa\",\"aaaa\"], the f-values are [1,2,3,4], so freq[1..4] each equal 1. The suffix sum suffix[2] = freq[3]+freq[4] = 2 words with f > 2.",
+    "```\nfor each word w:\n    f = count of smallest char in w\n    freq[f]++\n\nfor i from L-1 down to 1:\n    suffix[i] = suffix[i+1] + freq[i+1]\n\nfor each query q:\n    f = count of smallest char in q\n    answer[q] = suffix[f]\n```",
+    "**All equal f-values** - query and all words share the same f-value\n`Input: queries = [\"a\"], words = [\"b\"]` → `Expected: [0]`\n⚠️ Bug: building suffix as count of f ≥ query_f (using `freq[i]` instead of `freq[i+1]`) → returns `[1]`\n\n**Maximum f-value** - query has f=10, no word can exceed it\n`Input: queries = [\"aaaaaaaaaa\"], words = [\"zzzzzzzzzz\"]` → `Expected: [0]`\n⚠️ Bug: suffix array sized `int suffix[10]` (indices 0-9), `suffix[10]` out of bounds → returns `[garbage]`\n\n**Single element each** - minimal valid input\n`Input: queries = [\"cbd\"], words = [\"zaaaz\"]` → `Expected: [1]`\n⚠️ Bug: suffix loop `for (i = 9; i >= 2; i--)` skipping i=1, leaving suffix[1]=0 → returns `[0]`\n\n**Non-consecutive smallest char** - smallest character appears in non-adjacent positions\n`Input: queries = [\"abac\"], words = [\"bb\"]` → `Expected: [0]`\n⚠️ Bug: counting only the first run of the smallest character gives f(\"abac\")=1 instead of 2, so suffix[1]=1 → returns `[1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if string lengths could be up to 10^5 instead of 10?",
+      "a": "The frequency array still works with size 10^5+1. Time is O((W+Q)·L) for computing f-values plus O(L) for suffix sums. The sorting alternative would add O(W·log W + Q·log W), which is worse for large W and Q."
+    },
+    {
+      "q": "What if words can be inserted between queries (online)?",
+      "a": "Replace the static frequency array with a Fenwick tree over f-values 1..L. Each insertion updates one position in O(log L), and each query computes the suffix sum in O(log L). Total: O((W+Q)·L + (W+Q)·log L)."
+    },
+    {
+      "q": "What if only the last K words in the stream count for each query?",
+      "a": "Maintain the frequency array with a sliding window of size K. Store the last K f-values in a deque. On each new word, increment freq[f], and if the window exceeds K, decrement freq[oldest] and pop the deque. Recompute suffix sums in O(L) before answering each query, or maintain them incrementally in O(L) per update. Space: O(L + K)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> numSmallerByFrequency(vector<string>& queries, vector<string>& words) {\n        int freq[11] = {0};\n        \n        for (const string& w : words) {\n            int f = computeF(w);\n            freq[f]++;\n        }\n        \n        int suffix[12] = {0};\n        for (int i = 9; i >= 1; i--) {\n            suffix[i] = suffix[i + 1] + freq[i + 1];\n        }\n        \n        vector<int> answer;\n        answer.reserve(queries.size());\n        for (const string& q : queries) {\n            int f = computeF(q);\n            answer.push_back(suffix[f]);\n        }\n        return answer;\n    }\n    \nprivate:\n    int computeF(const string& s) {\n        char smallest = 'z' + 1;\n        int count = 0;\n        for (char c : s) {\n            if (c < smallest) {\n                smallest = c;\n                count = 1;\n            } else if (c == smallest) {\n                count++;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

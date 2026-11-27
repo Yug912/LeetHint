@@ -1,0 +1,40 @@
+{
+  "slug": "restore-the-array-from-adjacent-pairs",
+  "title": "Restore the Array From Adjacent Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Graph Traversal on an Implicit Path",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> adj: n keys, 2(n-1) total neighbor entries → O(n)\n- vector<int> res: n entries (returned output, not counted)\n- recursion: none (iterative walk)",
+  "approach": "Each adjacent pair is an undirected edge, so the forgotten array is a simple path through n unique values. The two endpoints of the path appear in exactly one pair (degree 1), while every interior value appears in two pairs (degree 2). Build an adjacency map, locate any degree-1 node as the start, then iteratively walk along the path, always moving to the neighbor that is not the previously visited node. This reconstructs the array in linear time.",
+  "hints": [
+    "Count how many times each value appears across all the pairs. In [[2,1],[3,4],[3,2]], which values appear exactly once, and which appear twice?",
+    "Build an adjacency-list map (value → list of neighbors), pick a value with exactly one neighbor as the start, then walk along the chain avoiding the node you just came from. For [[2,1],[3,4],[3,2]], value 1 has one neighbor (2), so begin there and step 1→2→3→4.",
+    "```\nbuild map: each value -> list of neighbors\nstart = any value with exactly one neighbor\nprev = sentinel, cur = start\nloop:\n    append cur to result\n    find neighbor of cur that isn't prev\n    if none: break\n    prev, cur = cur, that neighbor\nreturn result\n```",
+    "**Smallest input** - only one pair, so the path has length 2.\n`Input: [[100000,-100000]]` → `Expected: [100000,-100000]`\n⚠️ Bug: forgetting to push the final element after the loop breaks → returns `[100000]`\n\n**Zero as a value** - 0 is a legal element, so it cannot serve as the \"unvisited\" sentinel.\n`Input: [[1,0],[0,2]]` → `Expected: [1,0,2]`\n⚠️ Bug: using 0 as the previous-node sentinel → at start cur=1, its only neighbor 0 equals sentinel 0, loop breaks immediately, returns `[1]`\n\n**Wrong start** - the first element of the first pair is not necessarily an endpoint.\n`Input: [[3,4],[3,2],[2,1]]` → `Expected: [4,3,2,1] or [1,2,3,4]`\n⚠️ Bug: starting from adjacentPairs[0][0] (=3) without checking degree → 3 has two neighbors, walk takes one branch and stops, returns `[3,4]`\n\n**Long skewed chain** - n = 10^5 forming a single path.\n`Input: [[1,2],[2,3],...,[99999,100000]]` → `Expected: [1,2,...,100000]`\n⚠️ Bug: recursive DFS from the start → call-stack depth 10^5 causes stack overflow / segfault"
+  ],
+  "followUps": [
+    {
+      "q": "What if the original array could contain duplicate values?",
+      "a": "Interior values could appear more than twice, turning the structure into a multigraph. Track consumed edges (mark each pair index used) instead of just avoiding the previous node. Time stays O(n), space O(n)."
+    },
+    {
+      "q": "What if adjacentPairs arrives as a stream and you cannot store all pairs at once?",
+      "a": "For arbitrary arrival order you still need the full adjacency structure to find an endpoint and traverse, so a true one-pass streaming solution is impossible. If pairs arrive in path order, you can extend the array online in O(1) extra space per step."
+    },
+    {
+      "q": "What if the original array could be a cycle (every value has degree 2)?",
+      "a": "There is no degree-1 start. Pick any value as the start, traverse until the next node equals the start, then stop. Time O(n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> restoreArray(vector<vector<int>>& adjacentPairs) {\n        unordered_map<int, vector<int>> adj;\n        adj.reserve(adjacentPairs.size() * 2);\n        for (auto& p : adjacentPairs) {\n            adj[p[0]].push_back(p[1]);\n            adj[p[1]].push_back(p[0]);\n        }\n        int start = 0;\n        for (auto& [k, v] : adj) {\n            if (v.size() == 1) { start = k; break; }\n        }\n        vector<int> res;\n        res.reserve(adj.size());\n        int prev = INT_MIN, cur = start;\n        while (true) {\n            res.push_back(cur);\n            bool found = false;\n            for (int nxt : adj[cur]) {\n                if (nxt != prev) {\n                    prev = cur;\n                    cur = nxt;\n                    found = true;\n                    break;\n                }\n            }\n            if (!found) break;\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-good-ways-to-split-a-string",
+  "title": "Number of Good Ways to Split a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Running Frequency Count",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int rightCount[26]: fixed 26 entries → O(1)\n- int leftCount[26]: fixed 26 entries → O(1)\n- scalar variables (rightDistinct, leftDistinct, result, n, i, idx): O(1)\n- no recursion, no dynamic allocation",
+  "approach": "Maintain two frequency arrays of size 26: one for characters in the left part and one for the right. Initialize the right array with all characters in the string and compute the total distinct count. Iterate through each possible split point (0 to n−2), moving one character at a time from right to left, updating the distinct count on each side in O(1). A split is good when the two distinct counts are equal. This works because consecutive split points differ by exactly one character transferring sides.",
+  "hints": [
+    "As the split point moves one step to the right, exactly one character transfers from the right part to the left part. How does this single transfer affect the distinct character count on each side?",
+    "Use two frequency arrays of size 26 - one for the left part, one for the right. Track the distinct count on each side and update in O(1) per step. For \"aacaba\", after moving 'c' to the left at index 2, left has {a,c} (2 distinct) and right has {a,b} (2 distinct) - a good split.",
+    "```\ninitialize rightFreq with all characters, rightDistinct = total distinct\nleftFreq empty, leftDistinct = 0, result = 0\nfor i from 0 to n-2:\n    move s[i] from rightFreq to leftFreq\n    update leftDistinct and rightDistinct\n    if leftDistinct == rightDistinct:\n        result++\nreturn result\n```",
+    "**All same characters** - every split is good\n`Input: s = \"aaa\"` → `Expected: 2`\n⚠️ Bug: incrementing leftDistinct on every character instead of only when count goes 0→1 → returns 1\n\n**All distinct characters** - only the balanced split is good\n`Input: s = \"abcd\"` → `Expected: 1`\n⚠️ Bug: not decrementing rightDistinct when a character's count drops to 0 → returns 0\n\n**Alternating characters** - distinct counts change non-monotonically\n`Input: s = \"abab\"` → `Expected: 1`\n⚠️ Bug: checking `rightCount[idx] == 0` before decrementing instead of after → returns 2\n\n**Minimum valid input** - n=2, single split point\n`Input: s = \"ab\"` → `Expected: 1`\n⚠️ Bug: not initializing rightDistinct (leaving it 0) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Return all good split indices instead of just the count.",
+      "a": "Replace the result counter with a vector. Append i to the vector whenever leftDistinct == rightDistinct. The logic is identical; only the output collection changes. TC: O(n), SC: O(n) for the output vector."
+    },
+    {
+      "q": "What if the alphabet is Unicode instead of 26 lowercase letters?",
+      "a": "Replace the fixed-size arrays with hash maps (unordered_map<char,int>). The approach is unchanged - track frequencies and distinct counts on both sides, moving one character at a time. TC: O(n), SC: O(min(n, alphabet_size))."
+    },
+    {
+      "q": "Count ways to split into three non-empty parts where all three have the same distinct count.",
+      "a": "Precompute suffix distinct counts. Then for each first split point i, iterate second split point j while maintaining the middle part's distinct count incrementally. This requires O(n²) in the worst case since for each i we scan all valid j. TC: O(n²), SC: O(n) for the suffix array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSplits(string s) {\n        int n = s.size();\n        int rightCount[26] = {0};\n        int leftCount[26] = {0};\n        int rightDistinct = 0;\n        int leftDistinct = 0;\n        int result = 0;\n        \n        for (char c : s) {\n            if (rightCount[c - 'a'] == 0) rightDistinct++;\n            rightCount[c - 'a']++;\n        }\n        \n        for (int i = 0; i < n - 1; i++) {\n            int idx = s[i] - 'a';\n            if (leftCount[idx] == 0) leftDistinct++;\n            leftCount[idx]++;\n            rightCount[idx]--;\n            if (rightCount[idx] == 0) rightDistinct--;\n            if (leftDistinct == rightDistinct) result++;\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

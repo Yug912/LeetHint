@@ -1,0 +1,40 @@
+{
+  "slug": "couples-holding-hands",
+  "title": "Couples Holding Hands",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> pos: up to n entries (n = row.size()) → O(n)\n- recursion depth: none\n- not counted: input row (modified in place)",
+  "approach": "The key insight is that each swap can fix at most one couch (make one couple sit together). Processing couches left to right, for each couch where the two people aren't partners, we find the partner of the left person and swap them into the right seat. This greedy strategy is optimal because the couch graph decomposes into cycles, and a cycle of length k requires exactly k−1 swaps; the greedy achieves this bound.",
+  "hints": [
+    "Pair seats into couches (0,1), (2,3), …. Each couch holds two people whose partners sit on some couches. What structure do these couch-to-couch connections form?",
+    "Greedy with a position map. For couch i (seats 2i, 2i+1), if row[2i] and row[2i+1] aren't partners, find where row[2i]'s partner sits and swap it into seat 2i+1. Example: row = [0,2,1,3], couch 0 has (0,2); partner of 0 is 1 at seat 2, so swap seat 1 with seat 2 → [0,1,2,3].",
+    "```\npos = map each person to their seat index\nswaps = 0\nfor i in 0, 2, 4, ..., len-2:\n    partner = row[i] XOR 1\n    if row[i+1] != partner:\n        swap row[i+1] with row[pos[partner]]\n        update pos for both swapped people\n        swaps += 1\nreturn swaps\n```",
+    "**Smallest input** - n=1, couple in reversed order\n`Input: row = [1,0]` → `Expected: 0`\n⚠️ Bug: checking `row[i] % 2 == 0 && row[i+1] == row[i] + 1` (only matching even-first) → returns 1\n\n**All reversed couples** - every couple sits together but in reversed order\n`Input: row = [1,0,3,2,5,4]` → `Expected: 0`\n⚠️ Bug: checking `row[i] + 1 == row[i+1]` instead of `row[i] ^ 1 == row[i+1]` → returns 3\n\n**Stale position map** - a swap moves a person who is needed later\n`Input: row = [0,2,3,5,4,1]` → `Expected: 2`\n⚠️ Bug: not updating `pos` after each swap → uses stale index for person 2, returns 3\n\n**Single cycle** - all couches form one cycle, needing n−1 swaps\n`Input: row = [0,7,1,2,3,4,5,6]` → `Expected: 3`\n⚠️ Bug: counting mismatched couches without swapping (just counting `row[i]^1 != row[i+1]`) → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if couples are given as an arbitrary list of pairs instead of (0,1), (2,3), …?",
+      "a": "Build a partner map from the pairs, then apply the same greedy: for each couch, if the two people aren't partners, find the partner's position and swap. Time stays O(n), space O(n) for the partner map and position map."
+    },
+    {
+      "q": "What if n can be up to 10^6 and you must use O(1) extra space?",
+      "a": "Drop the position map and scan the array linearly to find each partner. Each scan is O(n), and there are at most n/2 swaps, giving O(n²) time but O(1) extra space. The input array is modified in place."
+    },
+    {
+      "q": "What if instead of minimizing swaps, you want to minimize the total distance people travel?",
+      "a": "The greedy no longer applies directly because a swap that fixes a couch might move people far. You would need to weigh the cost of each swap, potentially requiring a different strategy that considers swap distances within each cycle of the couch graph."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSwapsCouples(vector<int>& row) {\n        int n = row.size();\n        vector<int> pos(n);\n        for (int i = 0; i < n; i++) pos[row[i]] = i;\n        int swaps = 0;\n        for (int i = 0; i < n; i += 2) {\n            int partner = row[i] ^ 1;\n            if (row[i + 1] != partner) {\n                int partnerPos = pos[partner];\n                int other = row[i + 1];\n                swap(row[i + 1], row[partnerPos]);\n                pos[partner] = i + 1;\n                pos[other] = partnerPos;\n                swaps++;\n            }\n        }\n        return swaps;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

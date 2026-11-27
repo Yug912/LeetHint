@@ -1,0 +1,40 @@
+{
+  "slug": "final-prices-with-a-special-discount-in-a-shop",
+  "title": "Final Prices With a Special Discount in a Shop",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> stk: up to n indices → O(n)\n- not counted: input prices, returned answer vector",
+  "approach": "Use a monotonic increasing stack of indices, scanning right to left. For each price, pop every stack-top index whose price is strictly greater than the current price; whatever remains on top (if anything) is the first index to the right with price ≤ current. The discount is that price, or 0 if the stack is empty. This is correct because any popped element is strictly greater than the current price, so it can never serve as the discount for any element further left-the current element is closer and has a smaller-or-equal price.",
+  "hints": [
+    "For prices = [8,4,6,2,3], indices 1 and 2 share the same discount source (index 3). What must be true about prices[2] relative to prices[1] for this to happen?",
+    "Use a monotonic increasing stack of indices, scanning right to left. For [8,4,6,2,3] at i=2 (price 6): the stack holds index 3 (price 2); since 2 ≤ 6, the discount is 2, giving answer[2] = 4. Push index 2.",
+    "```\nanswer = new array of size n\nstack = empty\nfor i from n-1 down to 0:\n    while stack not empty and prices[stack.top] > prices[i]:\n        stack.pop\n    answer[i] = prices[i] - (stack empty ? 0 : prices[stack.top])\n    stack.push(i)\nreturn answer\n```",
+    "**Single element** - no later item exists for a discount.\n`Input: [7]` → `Expected: [7]`\n⚠️ Bug: reading prices[stk.back()] without checking stk.empty() first → undefined behavior\n\n**All equal values** - every later equal item qualifies as a discount.\n`Input: [5,5,5]` → `Expected: [0,0,5]`\n⚠️ Bug: popping with `>=` instead of `>` → returns `[5,5,5]`\n\n**Strictly increasing** - no item has a qualifying successor.\n`Input: [1,2,3,4,5]` → `Expected: [1,2,3,4,5]`\n⚠️ Bug: using `<` instead of `>` in the pop condition → returns `[-1,-1,-1,-1,5]`\n\n**Valley-then-rise** - a larger element sits between an item and its discount.\n`Input: [8,6,4,5,3]` → `Expected: [2,2,1,2,3]`\n⚠️ Bug: checking the stack top without popping larger elements first → returns `[2,2,4,2,3]`"
+  ],
+  "followUps": [
+    {
+      "q": "For each item, find the index of the k-th smaller-or-equal element to its right (or -1 if fewer than k exist).",
+      "a": "A monotonic stack alone no longer suffices because you must count qualifying elements, not just find the first. Use a Fenwick tree (BIT) over compressed price values, scanning right to left: query how many elements ≤ prices[i] have been inserted, then insert prices[i]. This gives O(n log n) time and O(n) space."
+    },
+    {
+      "q": "The array is circular-j can wrap around-find each item's discount.",
+      "a": "Double the array (concatenate it with itself) and run the same right-to-left monotonic stack, but only consider indices within distance n-1 of the current position. Track each original index's answer when its discount is first found. Time stays O(n), space O(n)."
+    },
+    {
+      "q": "Prices arrive as a stream; output each item's final price as soon as it is determined.",
+      "a": "Scan left to right instead: maintain the same monotonic stack of unresolved indices. When a new price arrives, pop every index whose price is ≥ the new price and emit their final prices immediately. Any indices still on the stack when the stream ends get no discount. Time O(n), space O(n) for the stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> finalPrices(vector<int>& prices) {\n        int n = prices.size();\n        vector<int> answer(n);\n        vector<int> stk;\n        stk.reserve(n);\n        for (int i = n - 1; i >= 0; --i) {\n            while (!stk.empty() && prices[stk.back()] > prices[i]) {\n                stk.pop_back();\n            }\n            answer[i] = prices[i] - (stk.empty() ? 0 : prices[stk.back()]);\n            stk.push_back(i);\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "reducing-dishes",
+  "title": "Reducing Dishes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy on Sorted Suffix",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): in-place introsort, O(log n) stack (constant auxiliary under LeetCode convention)\n- total, sum, best, i: scalars → O(1)\n- not counted: input vector (modified in place)",
+  "approach": "Sort satisfaction ascending. Any optimal selection is a suffix of the sorted array (more-satisfying dishes should be cooked later to get larger time multipliers). Process from the largest satisfaction to the smallest, maintaining the running sum of selected dishes and the running total coefficient; adding dish x updates `total = total + (sum + x)` and `sum = sum + x`. Track the maximum total seen, floored at 0 (cook nothing if all hurt).",
+  "hints": [
+    "If you've already chosen which dishes to cook, in what order should you serve them so the most-satisfying dish gets the largest time multiplier?",
+    "Sort ascending, then the answer is the best suffix. For [-1,-8,0,5,-9] sorted = [-9,-8,-1,0,5]; processing right-to-left, adding 5 gives total 5, adding 0 gives 5+5=10, adding -1 gives 10+4=14.",
+    "sort array ascending\nsum = 0, total = 0, best = 0\nfor i from last index down to 0:\n    sum += array[i]\n    total += sum\n    best = max(best, total)\nreturn best",
+    "**Single negative dish** - n=1, the only dish hurts\n`Input: satisfaction = [-5]` → `Expected: 0`\n⚠️ Bug: initializing best to INT_MIN instead of 0 → returns -5\n\n**All negatives** - every dish has negative satisfaction\n`Input: satisfaction = [-1,-4,-5]` → `Expected: 0`\n⚠️ Bug: returning the final `total` instead of tracking the running max → returns -16\n\n**Zeros boost later dishes** - zero-satisfaction dishes still shift later dishes to higher times\n`Input: satisfaction = [0,0,5]` → `Expected: 15`\n⚠️ Bug: filtering out zero-satisfaction dishes before processing → returns 5\n\n**Input not ascending** - dishes can be cooked in any order\n`Input: satisfaction = [5,3,1]` → `Expected: 22`\n⚠️ Bug: skipping the sort and using input order → returns 14"
+  ],
+  "followUps": [
+    {
+      "q": "What if satisfaction values can be up to 10^9 and n up to 10^5?",
+      "a": "The same greedy suffix scan works unchanged in logic; just use `long long` for sum/total/best. The worst product is 10^9 × (1+2+…+10^5) ≈ 5×10^18, which fits in `long long`. TC O(n log n), SC O(1)."
+    },
+    {
+      "q": "What if each dish i has its own cooking time t[i] instead of 1 unit?",
+      "a": "This becomes a weighted-completion scheduling problem: sort by satisfaction[i]/t[i] descending (Smith's-rule style), then run the same suffix scan where adding dish x with time t updates `total += sum*t + x*t` and `sum += x`. TC O(n log n), SC O(1)."
+    },
+    {
+      "q": "What if you must cook at least k dishes (k given)?",
+      "a": "Sort ascending and force-include the k largest; then continue the right-to-left scan over the remaining dishes, adding each only if it increases the running total. TC O(n log n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSatisfaction(vector<int>& satisfaction) {\n        sort(satisfaction.begin(), satisfaction.end());\n        long long total = 0, sum = 0, best = 0;\n        for (int i = (int)satisfaction.size() - 1; i >= 0; i--) {\n            sum += satisfaction[i];\n            total += sum;\n            if (total > best) best = total;\n        }\n        return (int)best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

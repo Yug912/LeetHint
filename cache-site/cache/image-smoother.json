@@ -1,0 +1,40 @@
+{
+  "slug": "image-smoother",
+  "title": "Image Smoother",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Grid Simulation",
+  "tc": "O(m * n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<vector<int>> result (m × n): returned output, not counted\n- int dx[9], dy[9]: constant size → O(1)\n- loop variables (i, j, k, sum, count, ni, nj): O(1)\n- recursion depth: none\n- not counted: input img, returned result",
+  "approach": "For each cell in the image, compute the floor of the average of the cell and its valid (in-bounds) neighbors. Since each cell's result depends on original neighbor values, we write results to a separate output matrix. We use a direction array to enumerate the 9 possible neighbor offsets (including the cell itself) and skip out-of-bounds positions.",
+  "hints": [
+    "When you smooth cell (0,0) and then move to cell (0,1), which version of cell (0,0)'s value should cell (0,1) use in its average - the original or the just-computed one?",
+    "Use a separate output matrix and a 9-element direction array for the cell plus its 8 neighbors. For cell (0,0) in Example 1, only 4 of the 9 directions are in-bounds, giving sum=3 and count=4, so store 3/4=0.",
+    "```\ncreate result matrix of same dimensions\nfor each cell (i, j):\n    sum = 0, count = 0\n    for each direction (di, dj) in 9 directions:\n        ni, nj = i + di, j + dj\n        if 0 <= ni < m and 0 <= nj < n:\n            sum += img[ni][nj]\n            count += 1\n    result[i][j] = sum / count\nreturn result\n```",
+    "**Single cell** - 1×1 matrix, only the cell itself contributes\n`Input: [[5]]` → `Expected: [[5]]`\n⚠️ Bug: dividing by 9 instead of actual count → returns [[0]]\n\n**Single row** - 1×n matrix, cells have at most 3 neighbors\n`Input: [[1,2,3]]` → `Expected: [[1,2,2]]`\n⚠️ Bug: hardcoding count as 9 → returns [[0,0,0]]\n\n**All maximum values** - every cell is 255\n`Input: [[255,255],[255,255]]` → `Expected: [[255,255],[255,255]]`\n⚠️ Bug: using `sum / 9` instead of `sum / count` → returns [[113,113],[113,113]]\n\n**In-place overwrite** - writing results back to the input corrupts later reads\n`Input: [[100,200,100],[200,50,200],[100,200,100]]` → `Expected: [[137,141,137],[141,138,141],[137,141,137]]`\n⚠️ Bug: writing to img in-place → cell (0,1) reads updated (0,0)=137 instead of original 100, returns [[137,147,124],...]"
+  ],
+  "followUps": [
+    {
+      "q": "How would you perform the smoothing in-place using O(1) extra space?",
+      "a": "Since each value is 0-255, store the original value in the lower 8 bits and the computed result in bits 8-15 of the same int. After all results are computed, shift each cell right by 8. This avoids allocating a separate output matrix. TC: O(m*n), SC: O(1)."
+    },
+    {
+      "q": "If the smoother were a k×k kernel instead of 3×3, how would you optimize?",
+      "a": "Build a 2D prefix sum of the image so any rectangular region sum is O(1). For each cell, compute the sum of the k×k region centered on it (clamped to bounds) in O(1), then divide by the count of valid cells. TC: O(m*n), SC: O(m*n) for the prefix sum."
+    },
+    {
+      "q": "If the image arrives row-by-row and is too large to store entirely, how would you process it?",
+      "a": "Maintain a circular buffer of the last 3 rows. When a new row arrives, compute the smoothed values for the middle row using the 3 rows in the buffer, then output it. This requires O(n) space for the 3-row buffer. TC: O(m*n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> imageSmoother(vector<vector<int>>& img) {\n        int m = img.size();\n        int n = img[0].size();\n        vector<vector<int>> result(m, vector<int>(n));\n        int dx[] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};\n        int dy[] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                int sum = 0;\n                int count = 0;\n                for (int k = 0; k < 9; k++) {\n                    int ni = i + dx[k];\n                    int nj = j + dy[k];\n                    if (ni >= 0 && ni < m && nj >= 0 && nj < n) {\n                        sum += img[ni][nj];\n                        count++;\n                    }\n                }\n                result[i][j] = sum / count;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

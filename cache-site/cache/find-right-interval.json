@@ -1,0 +1,40 @@
+{
+  "slug": "find-right-interval",
+  "title": "Find Right Interval",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Sorted Array",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> starts: up to n entries → O(n)\n- recursion depth: none\n- sort() stack: O(log n)\n- not counted: input, returned vector ans",
+  "approach": "Sort the intervals by their start value while remembering each interval's original index. For each interval i, binary search (lower_bound style) in this sorted array for the smallest start that is ≥ end_i; the stored original index at that position is the answer, or −1 if no such start exists. This works because the starts are unique and sorting preserves the \"smallest start ≥ target\" relationship, which is exactly what a lower_bound finds.",
+  "hints": [
+    "For each interval you must locate another interval whose start is at least this interval's end. What single property of all the starts would let you answer each such query in logarithmic time instead of scanning every interval?",
+    "Sort the intervals by start (keeping original indices), then binary search each end_i. For [[3,4],[2,3],[1,2]] the sorted starts are [(1,2),(2,1),(3,0)]; for end_1=3 the first start ≥ 3 is (3,0), so answer[1]=0.",
+    "```\nsort intervals by start, keeping original index\nfor each interval i:\n    target = end_i\n    lo = lower_bound in sorted starts for first start >= target\n    if lo exists: ans[i] = original index at lo\n    else: ans[i] = -1\nreturn ans\n```",
+    "**Single interval** - only one interval exists, so no other interval can satisfy the condition.\n`Input: [[1,2]]` → `Expected: [-1]`\n⚠️ Bug: returning `starts[0].second` without checking `lo < n` when no start ≥ target exists → returns `0` instead of `-1`.\n\n**i may equal j** - an interval's own start can be ≥ its own end when start == end.\n`Input: [[1,1],[2,2]]` → `Expected: [0,1]`\n⚠️ Bug: using `starts[mid].first > target` instead of `>=` in the binary search skips equal starts; for end_0=1 it returns index 1 instead of 0 → `[1,1]`.\n\n**No right interval exists** - every start is smaller than some interval's end.\n`Input: [[1,4],[2,3],[3,4]]` → `Expected: [-1,2,-1]`\n⚠️ Bug: initializing `hi = n - 1` instead of `hi = n` makes the search miss the last element when it is the answer; for end_1=3 it could return -1 instead of 2.\n\n**Negative coordinates** - starts and ends can be negative, but the comparison logic is unchanged.\n`Input: [[-3,-2],[-4,-3],[-5,-4]]` → `Expected: [-1,0,1]`\n⚠️ Bug: assuming starts are non-negative and using them as array indices → undefined behavior / wrong output."
+  ],
+  "followUps": [
+    {
+      "q": "What if multiple intervals can share the same start value?",
+      "a": "Sorting still works because any interval with a qualifying start is acceptable; the binary search finds the leftmost one. Time and space stay O(n log n) and O(n)."
+    },
+    {
+      "q": "What if intervals arrive in an online stream and you must answer right-interval queries interleaved with insertions?",
+      "a": "Maintain a balanced BST (e.g., std::set) keyed by start with the original index as payload; each query is a lower_bound in O(log n) and each insertion is O(log n). Total time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if the right interval must have start_j strictly greater than end_i (not ≥)?",
+      "a": "Replace the lower_bound condition with an upper_bound: find the first start strictly greater than target. Complexity is unchanged at O(n log n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findRightInterval(vector<vector<int>>& intervals) {\n        int n = (int)intervals.size();\n        vector<pair<int,int>> starts; // (start, original index)\n        starts.reserve(n);\n        for (int i = 0; i < n; i++) {\n            starts.push_back({intervals[i][0], i});\n        }\n        sort(starts.begin(), starts.end());\n        vector<int> ans(n);\n        for (int i = 0; i < n; i++) {\n            int target = intervals[i][1];\n            int lo = 0, hi = n;\n            while (lo < hi) {\n                int mid = lo + (hi - lo) / 2;\n                if (starts[mid].first >= target) hi = mid;\n                else lo = mid + 1;\n            }\n            ans[i] = (lo < n) ? starts[lo].second : -1;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

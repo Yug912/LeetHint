@@ -1,0 +1,40 @@
+{
+  "slug": "partition-list",
+  "title": "Partition List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Dummy Heads / List Splitting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode lessDummy, geDummy: 2 stack-allocated dummy nodes → O(1)\n- Pointers lessTail, geTail, cur: 3 pointers → O(1)\n- No containers, no recursion → O(1)\n- Not counted: input list, returned list (reuses input nodes)",
+  "approach": "Use two dummy sentinel nodes to build two separate sub-lists in a single pass: one for nodes with val < x, one for nodes with val >= x. Walk the original list once, appending each node to the appropriate sub-list's tail. Finally, link the less-than tail to the head of the greater-or-equal sub-list, null-terminate the greater-or-equal tail, and return the less-than dummy's next. This preserves relative order within each partition because nodes are appended in encounter order.",
+  "hints": [
+    "In the output, every node that was originally before another node with the same side of x still appears before it. What does this tell you about how you must collect the two groups?",
+    "Build two separate linked lists using two dummy head nodes - one for values < x, one for values >= x - then join them. For `[1,4,3,2,5,2]` with x=3: node 1 appends to the \"less\" list, node 4 appends to the \"ge\" list, and so on; finally link less-tail → ge-head.",
+    "```\nlessDummy, geDummy\nlessTail = lessDummy, geTail = geDummy\ncur = head\nwhile cur:\n    if cur.val < x:\n        lessTail.next = cur; lessTail = cur\n    else:\n        geTail.next = cur; geTail = cur\n    cur = cur.next\ngeTail.next = null\nlessTail.next = geDummy.next\nreturn lessDummy.next\n```",
+    "**Empty list** - no nodes to partition.\n`Input: head = [], x = 0` → `Expected: []`\n⚠️ Bug: dereferencing `head` without a null check → crash / undefined behavior.\n\n**Nodes equal to x** - the boundary between `< x` and `>= x`.\n`Input: head = [3,1], x = 3` → `Expected: [1,3]`\n⚠️ Bug: using `<=` instead of `<` in the comparison → returns `[3,1]`.\n\n**All nodes >= x** - the \"less\" partition is empty.\n`Input: head = [3,4], x = 1` → `Expected: [3,4]`\n⚠️ Bug: returning `lessDummy.next` without linking `lessTail.next = geDummy.next` → returns `[]`.\n\n**Both partitions non-empty, last original node lands in ge** - stale `next` pointer.\n`Input: head = [1,4,3,2,5,2], x = 3` → `Expected: [1,2,2,4,3,5]`\n⚠️ Bug: not setting `geTail.next = nullptr` → node 5 still points to the last node 2, creating a cycle `[1,2,2,4,3,5,2,4,3,5,…]`."
+  ],
+  "followUps": [
+    {
+      "q": "Partition into three groups - values < x, values == x, and values > x - preserving relative order within each group.",
+      "a": "Use three dummy heads and three tail pointers instead of two. Walk the list once, appending each node to the appropriate group's tail, then link the three sub-lists in order and null-terminate. TC O(n), SC O(1)."
+    },
+    {
+      "q": "The list has up to 10^7 nodes and arrives as a forward-only stream you cannot re-traverse. Can you still partition stably?",
+      "a": "Yes - the two-dummy-head approach is already single-pass and uses O(1) extra memory, so it processes the stream in one forward scan without buffering. TC O(n), SC O(1)."
+    },
+    {
+      "q": "Partition the list in-place without allocating any dummy nodes.",
+      "a": "Find the first node with val < x to serve as the new head, then walk the list maintaining a \"less\" tail and a \"ge\" tail, re-linking nodes in place. You must special-case when the original head already belongs to the ge group. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\npublic:\n    ListNode* partition(ListNode* head, int x) {\n        ListNode lessDummy(0);\n        ListNode geDummy(0);\n        ListNode* lessTail = &lessDummy;\n        ListNode* geTail = &geDummy;\n        ListNode* cur = head;\n        while (cur) {\n            if (cur->val < x) {\n                lessTail->next = cur;\n                lessTail = cur;\n            } else {\n                geTail->next = cur;\n                geTail = cur;\n            }\n            cur = cur->next;\n        }\n        geTail->next = nullptr;\n        lessTail->next = geDummy.next;\n        return lessDummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

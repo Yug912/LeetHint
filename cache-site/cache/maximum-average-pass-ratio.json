@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-average-pass-ratio",
+  "title": "Maximum Average Pass Ratio",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Max-Heap",
+  "tc": "O((n + extraStudents) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<pair<int,int>>: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, return value",
+  "approach": "The key insight is that adding a brilliant student to a class with pass `p` and total `t` increases its pass ratio by `(p+1)/(t+1) − p/t = (t−p)/(t(t+1))`, and this marginal gain shrinks as more students are added to the same class (the numerator stays constant while the denominator grows). Because gains are diminishing per class, a greedy strategy is optimal: always assign the next student to the class with the largest current marginal gain. We maintain a max-heap ordered by this gain, pop the best class, increment its pass and total, and push it back - repeating for all `extraStudents`. Finally, we sum all pass ratios and divide by the number of classes.",
+  "hints": [
+    "If you add one brilliant student to a class, the pass ratio changes from p/t to (p+1)/(t+1). What happens to the size of this improvement as you keep adding more students to the same class?",
+    "Use a max-heap keyed by each class's marginal gain (p+1)/(t+1) − p/t. In Example 1, the initial gains are 1/6, 1/15, and 0, so the heap pops [1,2] first, updates it to [2,3], and re-inserts.",
+    "```\nbuild max-heap of (pass, total) ordered by gain\nrepeat extraStudents times:\n    (p, t) = pop top\n    push (p+1, t+1)\nsum all pass/total, divide by class count\n```",
+    "**Single class** - only one class exists, so every student must go there.\n`Input: classes = [[1,2]], extraStudents = 1` → `Expected: 0.66667`\n⚠️ Bug: returning the original ratio when n == 1 without processing → returns 0.5\n\n**Class at 100% pass** - gain is zero, so students must go elsewhere.\n`Input: classes = [[2,2],[1,2]], extraStudents = 1` → `Expected: 0.83333`\n⚠️ Bug: ordering by current pass ratio instead of marginal gain → picks [2,2], returns 0.75\n\n**All classes identical** - greedy must distribute students, not dump them all in one class.\n`Input: classes = [[1,2],[1,2]], extraStudents = 2` → `Expected: 0.66667`\n⚠️ Bug: popping once and assigning both students without re-heapifying → returns 0.625\n\n**Integer division in final sum** - large totals make p/t truncate to 0 in integer arithmetic.\n`Input: classes = [[1,2]], extraStudents = 100000` → `Expected: 0.99999`\n⚠️ Bug: writing `sum += p / t` without `(double)` cast → integer division yields 0, returns 0.0"
+  ],
+  "followUps": [
+    {
+      "q": "What if extraStudents can be up to 10^9 - you cannot simulate one student at a time?",
+      "a": "Binary search on a gain threshold λ. For each class, the gain after adding k students is (t−p)/((t+k)(t+k+1)), which is monotonically decreasing in k. Solve for the largest k per class keeping gain ≥ λ, sum all k's, and binary search λ until the sum equals extraStudents. TC: O(n log C) where C is the max students per class, SC: O(1)."
+    },
+    {
+      "q": "What if each class has a different weight w_i in the average?",
+      "a": "Replace the heap key with w_i × ((p+1)/(t+1) − p/t). The weighted marginal gain is still monotonically decreasing per class, so the greedy remains optimal. TC: O((n + extraStudents) log n), SC: O(n)."
+    },
+    {
+      "q": "What if classes and extra students both arrive in an online stream?",
+      "a": "Maintain the max-heap persistently across the stream. On each new class, push it; on each extra student, pop the top, increment, and push back. Each operation is O(log n). TC: O((n + extraStudents) log n) total, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double maxAverageRatio(vector<vector<int>>& classes, int extraStudents) {\n        struct Cmp {\n            bool operator()(const pair<int,int>& a, const pair<int,int>& b) const {\n                double ga = (double)(a.first + 1) / (a.second + 1) - (double)a.first / a.second;\n                double gb = (double)(b.first + 1) / (b.second + 1) - (double)b.first / b.second;\n                return ga < gb;\n            }\n        };\n        priority_queue<pair<int,int>, vector<pair<int,int>>, Cmp> pq;\n        for (auto& c : classes) {\n            pq.push({c[0], c[1]});\n        }\n        for (int i = 0; i < extraStudents; i++) {\n            auto [p, t] = pq.top();\n            pq.pop();\n            pq.push({p + 1, t + 1});\n        }\n        double sum = 0;\n        int n = classes.size();\n        while (!pq.empty()) {\n            auto [p, t] = pq.top();\n            pq.pop();\n            sum += (double)p / t;\n        }\n        return sum / n;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

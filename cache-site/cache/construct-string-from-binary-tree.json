@@ -1,0 +1,40 @@
+{
+  "slug": "construct-string-from-binary-tree",
+  "title": "Construct String from Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Preorder DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- string res: the returned output (not counted by LeetCode convention)\n- recursion call-stack depth: O(h), worst-case O(n) for a skewed tree, O(log n) for balanced",
+  "approach": "Use a recursive preorder traversal. For each node, append its value, then: if it has a left child OR a right child, wrap the left subtree (possibly empty) in parentheses; if it has a right child, wrap the right subtree in parentheses. The empty-parenthesis rule falls out naturally - when the left is null but the right exists, we still emit `()` because the first `if` triggers on the right child's presence.",
+  "hints": [
+    "Looking at `\"1(2(4))(3)\"` versus `\"1(2()(4))(3)\"`, what does the position of each child's parentheses relative to the parent's value tell you about how the string for a node relates to the strings for its subtrees?",
+    "Recursive preorder DFS building into one string. For node `1` with left `2` and right `3`: emit `\"1\"`, then `\"(\" + recurse(2) + \")\"`, then `\"(\" + recurse(3) + \")\"`.",
+    "```\nbuild(node, s):\n    if node is null: return\n    s += str(node.val)\n    if node.left or node.right:\n        s += \"(\"\n        build(node.left, s)\n        s += \")\"\n    if node.right:\n        s += \"(\"\n        build(node.right, s)\n        s += \")\"\n```",
+    "**Single node** - no children at all.\n`Input: [5]` → `Expected: \"5\"`\n⚠️ Bug: unconditionally appending `\"()\"` for both children → returns `\"5()()\"`\n\n**Right child only** - left is null but right exists.\n`Input: [1,null,2]` → `Expected: \"1()(2)\"`\n⚠️ Bug: skipping the left-parenthesis block when `node->left` is null → returns `\"1(2)\"`\n\n**Left child only** - right is null.\n`Input: [1,2]` → `Expected: \"1(2)\"`\n⚠️ Bug: always emitting a right-child parenthesis block → returns `\"1(2)()\"`\n\n**Negative value** - node value is negative.\n`Input: [-1]` → `Expected: \"-1\"`\n⚠️ Bug: casting `node.val` to `char` instead of using `to_string` → returns a garbage character\n\n**Skewed left chain** - tree is a linked list going left.\n`Input: [1,2,null,3,null,4]` → `Expected: \"1(2(3(4)))\"`\n⚠️ Bug: using `s = s + ...` instead of `s += ...` in recursion → O(n²) copying, TLE on large skewed inputs"
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve this iteratively to avoid recursion-stack overflow on a skewed tree with 10^7 nodes?",
+      "a": "Use an explicit stack of `(node, state)` pairs where state tracks whether you are entering, leaving-left, or leaving-right. Emit value on enter, push `\"(\"` before children, push `\")\"` after. Time stays O(n); space becomes O(h) for the explicit stack, same as recursion but without OS stack limits."
+    },
+    {
+      "q": "What if you needed to parse such a string back into the original tree?",
+      "a": "Walk the string with an index pointer: read the integer, then if the next char is `(`, recursively parse the left subtree; if another `(` follows, parse the right subtree. An immediate `()` (empty content) means a null left child. Time O(n), space O(h) for recursion."
+    },
+    {
+      "q": "What if values could be multi-digit strings up to 100 characters and the tree has 10^5 nodes?",
+      "a": "The algorithm is unchanged since `to_string` and `+=` handle arbitrary-length strings. Total output size is O(n · L) where L is max value length; using `string::reserve(n · L)` before building avoids reallocation. Time O(total output length), space O(h) plus the output."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    string tree2str(TreeNode* root) {\n        string res;\n        build(root, res);\n        return res;\n    }\nprivate:\n    void build(TreeNode* node, string& res) {\n        if (!node) return;\n        res += to_string(node->val);\n        if (node->left || node->right) {\n            res += \"(\";\n            build(node->left, res);\n            res += \")\";\n        }\n        if (node->right) {\n            res += \"(\";\n            build(node->right, res);\n            res += \")\";\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

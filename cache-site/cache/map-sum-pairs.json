@@ -1,0 +1,39 @@
+{
+  "slug": "map-sum-pairs",
+  "title": "Map Sum Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Trie",
+  "tc": "O(L)",
+  "sc": "O(N·L)",
+  "spaceBreakdown": "- Trie nodes: up to N·L nodes (N inserts × L chars), each holding 26 pointers + int → O(N·L)\n- unordered_map<string,int> vals: up to N entries, each key up to L chars → O(N·L)\n- recursion depth: none (iterative)\n- not counted: input strings, returned int",
+  "approach": "Use a Trie where each node stores the sum of all values whose key has the path-to-that-node as a prefix. Maintain a separate hash map of current key→value so that re-inserting an existing key computes the correct delta (new − old) to propagate down the path. On `sum(prefix)`, walk the trie along the prefix and return the stored sum at the terminal node (or 0 if the path doesn't exist).",
+  "hints": [
+    "If you needed to find all stored keys beginning with a given string, what property of those keys could you exploit to avoid checking every single one?",
+    "Use a trie where each node stores the sum of all values in its subtree. Inserting \"apple\"=3 walks root→a→p→p→l→e, adding 3 to each node's sum; sum(\"ap\") just walks to the 'p' node and reads its stored sum.",
+    "```\ninsert(key, val):\n    delta = val - oldVal[key]\n    oldVal[key] = val\n    node = root\n    for c in key:\n        node.sum += delta\n        node = node.child[c]   // create if missing\n    node.sum += delta\n\nsum(prefix):\n    node = root\n    for c in prefix:\n        if node.child[c] missing: return 0\n        node = node.child[c]\n    return node.sum\n```",
+    "**Override existing key** - inserting the same key twice with different values\n`Input: insert(\"a\",3), insert(\"a\",5), sum(\"a\")` → `Expected: 5`\n⚠️ Bug: always adding val to subtree sums without subtracting old value → returns 8\n\n**Non-existent prefix** - prefix matches no stored key\n`Input: insert(\"apple\",3), sum(\"xyz\")` → `Expected: 0`\n⚠️ Bug: not null-checking child before descending → dereferences nullptr, crashes\n\n**Key equals prefix** - the prefix is itself a complete stored key\n`Input: insert(\"ap\",3), insert(\"apple\",2), sum(\"ap\")` → `Expected: 5`\n⚠️ Bug: only accumulating value at leaf nodes, skipping the final node update after the loop → returns 2\n\n**Single character** - minimum key and prefix length\n`Input: insert(\"a\",1), sum(\"a\")` → `Expected: 1`\n⚠️ Bug: forgetting the post-loop `node->sum += delta` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if keys can be up to 10^5 characters long?",
+      "a": "The trie still works with O(L) per operation, but node count grows large. A compressed trie (radix tree) storing edge labels as substrings reduces both depth and node count, keeping operations O(L) with far less memory."
+    },
+    {
+      "q": "Add a remove(key) method that deletes a key from the map.",
+      "a": "Set delta = -oldVal[key], propagate it through the trie like insert, then set oldVal[key] = 0. Optionally prune nodes whose sum becomes 0 and have no children to reclaim memory. Time stays O(L)."
+    },
+    {
+      "q": "What if sum() supports wildcard prefixes like \"a?p\" where '?' matches any single character?",
+      "a": "At each '?', branch into all existing children and recursively sum their subtrees. Worst-case time becomes O(26^W * L) where W is the number of wildcards, since each '?' multiplies the search paths by up to 26."
+    }
+  ],
+  "code": {
+    "cpp": "class MapSum {\n    struct Node {\n        Node* children[26] = {};\n        int sum = 0;\n    };\n    Node* root;\n    unordered_map<string, int> vals;\npublic:\n    MapSum() {\n        root = new Node();\n    }\n    \n    void insert(string key, int val) {\n        int delta = val - vals[key];\n        vals[key] = val;\n        Node* cur = root;\n        cur->sum += delta;\n        for (char c : key) {\n            int idx = c - 'a';\n            if (!cur->children[idx]) cur->children[idx] = new Node();\n            cur = cur->children[idx];\n            cur->sum += delta;\n        }\n    }\n    \n    int sum(string prefix) {\n        Node* cur = root;\n        for (char c : prefix) {\n            int idx = c - 'a';\n            if (!cur->children[idx]) return 0;\n            cur = cur->children[idx];\n        }\n        return cur->sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

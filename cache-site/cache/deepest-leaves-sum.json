@@ -1,0 +1,40 @@
+{
+  "slug": "deepest-leaves-sum",
+  "title": "Deepest Leaves Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Level-Order Traversal",
+  "tc": "O(n)",
+  "sc": "O(w)",
+  "spaceBreakdown": "- queue<TreeNode*> q: holds one level at a time, up to w nodes → O(w)\n- int sum, n, i: O(1)\n- not counted: input tree, returned int",
+  "approach": "Use level-order traversal (BFS) with a queue. At each level, reset a running sum and accumulate the values of all nodes in that level. When the queue is empty, the last computed level sum is the sum of the deepest leaves - because BFS visits levels in increasing depth order, so the final level processed is exactly the deepest one. This is a single-pass solution: no need to first compute max depth.",
+  "hints": [
+    "Among all leaves in the tree, what single property distinguishes the ones whose values you must sum? The tree has up to 10^4 nodes, so visiting each node a constant number of times is affordable.",
+    "Use a queue for level-order (BFS) traversal. Process the tree one level at a time, keeping a running sum that you reset at the start of each level; the sum left after the last level is the answer. In Example 1, the final level holds nodes 7 and 8, summing to 15.",
+    "```\nqueue.push(root)\nwhile queue not empty:\n    levelSum = 0\n    levelSize = queue.size()\n    repeat levelSize times:\n        node = queue.pop()\n        levelSum += node.val\n        if node.left:  queue.push(node.left)\n        if node.right: queue.push(node.right)\n    answer = levelSum\nreturn answer\n```",
+    "**Single node** - the root is itself the only and deepest leaf.\n`Input: root = [5]` → `Expected: 5`\n⚠️ Bug: starting the traversal from `root->left` and `root->right` instead of `root` → returns `0`\n\n**Skewed (linked-list-shaped) tree** - every node has only a left child, so each level has exactly one node.\n`Input: root = [1,2,null,3,null,4,null,5]` → `Expected: 5`\n⚠️ Bug: pushing a child only when `node->left && node->right` both exist → never enqueues any child, returns `1`\n\n**Full balanced tree** - all leaves sit at the same depth, so the deepest level is the widest.\n`Input: root = [1,2,3,4,5,6,7]` → `Expected: 22`\n⚠️ Bug: returning the sum of the first level processed instead of the last → returns `1`\n\n**Two leaves at different depths** - only the deeper leaf counts.\n`Input: root = [1,2,null,3,4]` → `Expected: 4`\n⚠️ Bug: summing every leaf (node with no children) regardless of depth → returns `7` (3 + 4)"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed the sum of the k-th deepest level (k = 1 means deepest) instead of always the deepest?",
+      "a": "Store each level's sum in a vector during BFS, then index `sums[sums.size() - k]`. TC stays O(n); SC becomes O(h) where h is the tree height, since you keep one sum per level."
+    },
+    {
+      "q": "What if the tree is static but you must answer many \"deepest leaves sum\" queries, and the tree can be edited (insert/delete) between queries?",
+      "a": "For static trees, precompute a per-level sum array once and return its last entry per query in O(1). For dynamic edits, maintain a Fenwick/segment tree over an Euler tour together with per-level prefix sums, updating O(log n) per edit and querying the deepest non-empty level in O(log n)."
+    },
+    {
+      "q": "What if you must use O(1) extra space beyond the recursion call stack?",
+      "a": "Replace the queue with two DFS passes: first find max depth, then sum nodes whose depth equals it. The recursion stack is O(h) but no container is allocated; for true O(1) auxiliary space, use Morris traversal for both passes. TC remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int deepestLeavesSum(TreeNode* root) {\n        queue<TreeNode*> q;\n        q.push(root);\n        int sum = 0;\n        while (!q.empty()) {\n            int levelSize = q.size();\n            sum = 0;\n            for (int i = 0; i < levelSize; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                sum += node->val;\n                if (node->left)  q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

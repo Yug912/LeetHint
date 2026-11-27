@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-valid-words-in-a-sentence",
+  "title": "Number of Valid Words in a Sentence",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "String Parsing / Tokenization",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few int counters (i, start, count, hyphenCount, punctCount): constant → O(1)\n- no containers, no recursion, no extra strings allocated\n- not counted: input string (passed by reference), returned int",
+  "approach": "Split the sentence into tokens by skipping runs of spaces, then validate each token in a single left-to-right pass. For each token, reject any digit; allow at most one hyphen that must have lowercase letters on both sides; allow at most one punctuation mark that must sit at the last position. Increment a counter for every token that passes all three checks.",
+  "hints": [
+    "Tokens are separated by one or more spaces - what does that let you do to each piece before checking its three rules?",
+    "Split the string by spaces into tokens, then scan each token once counting hyphens, punctuation, and rejecting digits. For \"cat and dog\", the three tokens each have no digits, no hyphen, no punctuation → all valid → 3.",
+    "```\ncount = 0\nfor each token (delimited by runs of spaces):\n    hyphens = 0, punct = 0, ok = true\n    for i, c in token:\n        if c is digit: ok = false\n        if c == '-': hyphens++; if hyphens>1 or i==0 or i==last or neighbors not letters: ok=false\n        if c in {! , .}: punct++; if punct>1 or i != last: ok=false\n    if ok: count++\nreturn count\n```",
+    "**Single punctuation token** - token is just one punctuation mark, which the rules allow.\n`Input: \"!\"` → `Expected: 1`\n⚠️ Bug: requiring at least one letter in every token → returns 0\n\n**Hyphen at boundary** - hyphen with no letter on one side must be rejected.\n`Input: \"a-\"` → `Expected: 0`\n⚠️ Bug: only counting hyphens without checking both neighbors are letters → returns 1\n\n**Punctuation not at end** - punctuation in the middle is invalid.\n`Input: \"a!b\"` → `Expected: 0`\n⚠️ Bug: only counting punctuation marks without position check → returns 1\n\n**Multiple spaces between tokens** - runs of spaces must be collapsed, not treated as empty tokens.\n`Input: \"a  b\"` → `Expected: 2`\n⚠️ Bug: splitting on a single ' ' and validating empty strings as tokens → returns 0\n\n**Digit anywhere** - any digit makes the whole token invalid.\n`Input: \"b8d\"` → `Expected: 0`\n⚠️ Bug: only checking the first and last character for digits → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "The sentence arrives as a streaming character stream too large to store. How do you count valid words?",
+      "a": "Run a finite-state machine over characters: track whether you are inside a token, the running hyphen/punctuation counts, and whether the previous char was a letter. Emit a verdict at each space or end-of-stream. TC stays O(n), SC drops to O(1) with no input stored."
+    },
+    {
+      "q": "Hyphens may appear multiple times, but each must still be surrounded by lowercase letters. How does the check change?",
+      "a": "Drop the hyphen-count limit and keep only the neighbor check: every '-' must have a lowercase letter immediately before and after, and it cannot be the first or last character. TC remains O(n), SC O(1)."
+    },
+    {
+      "q": "Tokens may be wrapped in double quotes, allowing spaces inside (e.g., \"hello world\"). How do you adapt?",
+      "a": "Add a quote-state flag: when you see an opening '\"', accumulate until the closing '\"', treating inner spaces as part of the token. Validate the inner content with the same rules, ignoring the quote characters themselves. TC stays O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countValidWords(string sentence) {\n        int n = sentence.size();\n        int i = 0;\n        int count = 0;\n        while (i < n) {\n            while (i < n && sentence[i] == ' ') i++;\n            if (i >= n) break;\n            int start = i;\n            while (i < n && sentence[i] != ' ') i++;\n            if (isValid(sentence, start, i - 1)) count++;\n        }\n        return count;\n    }\n\nprivate:\n    bool isValid(const string& s, int l, int r) {\n        int hyphenCount = 0;\n        int punctCount = 0;\n        for (int i = l; i <= r; i++) {\n            char c = s[i];\n            if (c >= '0' && c <= '9') return false;\n            if (c == '-') {\n                hyphenCount++;\n                if (hyphenCount > 1) return false;\n                if (i == l || i == r) return false;\n                if (!isLower(s[i - 1]) || !isLower(s[i + 1])) return false;\n            }\n            if (c == '!' || c == '.' || c == ',') {\n                punctCount++;\n                if (punctCount > 1) return false;\n                if (i != r) return false;\n            }\n        }\n        return true;\n    }\n\n    bool isLower(char c) {\n        return c >= 'a' && c <= 'z';\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

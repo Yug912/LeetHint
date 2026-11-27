@@ -1,0 +1,40 @@
+{
+  "slug": "longer-contiguous-segments-of-ones-than-zeros",
+  "title": "Longer Contiguous Segments of Ones than Zeros",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Run-Length Tracking (Single Pass)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int max1, max0, run, i: scalars → O(1)\n- not counted: input string s",
+  "approach": "Scan the string once, tracking the current run of identical characters. When the character changes (or the string ends), record the run length into `max1` or `max0` depending on the character, then reset the run counter. At the end, return whether `max1 > max0`. This is correct because every maximal contiguous segment is finalized exactly once-either when the next character differs or at the end of the string.",
+  "hints": [
+    "As you scan the string left to right, when does the count of consecutive identical characters need to be recorded, and when does it simply grow by one?",
+    "Single pass with run-length tracking. In `\"1101\"`, the first two `'1'`s form a run of length 2; when `'0'` appears, record that run of 2 ones and start counting zeros.",
+    "```\nmax1 = 0, max0 = 0, run = 1\nfor i from 1 to n:\n    if i < n and s[i] == s[i-1]:\n        run = run + 1\n    else:\n        if s[i-1] == '1': max1 = max(max1, run)\n        else: max0 = max(max0, run)\n        run = 1\nreturn max1 > max0\n```",
+    "**Single character** - string has length 1, so the run counter starts and ends at 1\n`Input: s = \"1\"` → `Expected: true`\n⚠️ Bug: initializing `run` to 0 instead of 1 → `max1 = max(0, 0) = 0`, returns false\n\n**Last run skipped** - the final run of identical characters is never finalized if updates only happen on character change\n`Input: s = \"0111\"` → `Expected: true`\n⚠️ Bug: updating `max1`/`max0` only inside the \"character changed\" branch with no post-loop update → `max1` stays 0, returns false\n\n**Tie** - longest run of ones equals longest run of zeros\n`Input: s = \"111000\"` → `Expected: false`\n⚠️ Bug: using `>=` instead of `>` in the return statement → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "If the string arrives as an infinite stream and you must answer \"is the longest 1-run strictly longer than the longest 0-run so far?\" at any time, how would you adapt?",
+      "a": "Keep `max1`, `max0`, the current run length, and the current character. Each incoming character either extends the current run or finalizes it (updating `max1` or `max0`) and starts a new run of length 1. Answer `max1 > max0` on demand. TC O(1) per character, SC O(1)."
+    },
+    {
+      "q": "What if you must return true only when every 1-run is strictly longer than every 0-run adjacent to it?",
+      "a": "Collect runs as (char, length) pairs in one pass, then check each 1-run against its immediate neighboring 0-runs. TC O(n), SC O(n) for the run list (reducible to O(1) if you only keep the last two runs and stream-check)."
+    },
+    {
+      "q": "What if the string has up to 10^9 characters but is given as run-length encoded pairs (char, count)?",
+      "a": "Iterate through the pairs directly, updating `max1` and `max0` from the counts without expanding. TC O(k) where k is the number of runs, SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkZeroOnes(string s) {\n        int max1 = 0, max0 = 0, run = 1;\n        for (int i = 1; i <= (int)s.size(); i++) {\n            if (i < (int)s.size() && s[i] == s[i - 1]) {\n                run++;\n            } else {\n                if (s[i - 1] == '1')\n                    max1 = max(max1, run);\n                else\n                    max0 = max(max0, run);\n                run = 1;\n            }\n        }\n        return max1 > max0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

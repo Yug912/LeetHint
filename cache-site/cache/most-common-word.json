@@ -1,0 +1,40 @@
+{
+  "slug": "most-common-word",
+  "title": "Most Common Word",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Counting",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- unordered_set<string> ban: up to 100 entries of ≤10 chars → O(b), b ≤ 1000, dominated by O(n)\n- unordered_map<string,int> count: up to n distinct words, total chars ≤ n → O(n)\n- string word / best: at most one word at a time, ≤ n chars → O(n)\n- recursion depth: none\n- not counted: input paragraph, returned string",
+  "approach": "Parse the paragraph left to right, treating any maximal run of English letters as one word; every space or symbol (`!?',;.`) is a separator. Lowercase each word as it is built, skip it if it is in the banned set, otherwise increment its count in a hash map and track the running maximum. Because the answer is guaranteed unique, the first word that reaches the current maximum frequency is the final answer.",
+  "hints": [
+    "The paragraph only contains English letters, spaces, and the symbols `!?',;.`. What single property of a character tells you whether it continues a word or ends one?",
+    "Use an `unordered_set<string>` for the banned words and an `unordered_map<string,int>` for frequencies. For `\"Bob hit a ball,\"` you record `bob:1`, skip `hit`, record `a:1`, then `ball:1` - punctuation is just a separator, not part of the word.",
+    "```\nban = set(banned)\ni = 0\nwhile i < len(paragraph):\n    skip non-letter chars\n    read maximal run of letters, lowercased, into word\n    if word not in ban:\n        count[word] += 1\n        if count[word] > best_count:\n            best_count = count[word]\n            best = word\nreturn best\n```",
+    "**Punctuation attached to a word** - word immediately followed by a symbol with no space.\n`Input: paragraph = \"ball,ball\", banned = []` → `Expected: \"ball\"`\n⚠️ Bug: splitting on whitespace only → returns `\"ball,ball\"`\n\n**Case insensitivity** - the same word appears in different letter cases.\n`Input: paragraph = \"Ball ball BALL\", banned = []` → `Expected: \"ball\"`\n⚠️ Bug: not lowercasing before counting → counts `Ball`, `ball`, `BALL` separately, returns `\"Ball\"`\n\n**Most frequent word is banned** - the global max must be skipped.\n`Input: paragraph = \"hit hit ball\", banned = [\"hit\"]` → `Expected: \"ball\"`\n⚠️ Bug: updating the running best before checking the banned set → returns `\"hit\"`\n\n**Trailing punctuation** - paragraph ends with a symbol after the last word.\n`Input: paragraph = \"a.\", banned = []` → `Expected: \"a\"`\n⚠️ Bug: stopping the outer loop as soon as a non-letter is seen without re-scanning → returns `\"\"`"
+  ],
+  "followUps": [
+    {
+      "q": "The paragraph arrives as an unbounded stream and cannot fit in memory. How do you still report the most frequent non-banned word?",
+      "a": "Keep the banned set in memory and maintain a hash map of word counts updated as each token arrives; track the running max on every increment. Time stays O(n) total, space becomes O(distinct words) which is the unavoidable working state."
+    },
+    {
+      "q": "Instead of the single most common word, return the k most common non-banned words in descending frequency order. How does the approach change?",
+      "a": "Build the same frequency map, then use a min-heap of size k keyed by frequency (and the word as tiebreaker) to extract the top k. Time becomes O(n + d log k) where d is the number of distinct words; space is O(d + k)."
+    },
+    {
+      "q": "The banned list has 10^7 entries and must fit in limited memory. How do you adapt?",
+      "a": "Replace the exact banned set with a Bloom filter for membership tests, accepting a small false-positive rate that may wrongly skip a non-banned word; keep an exact fallback set only for words the filter reports as banned to confirm before skipping. Time stays O(n) with a small constant for the hash functions; space drops to O(banned count) bits instead of full strings."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string mostCommonWord(string paragraph, vector<string>& banned) {\n        unordered_set<string> ban(banned.begin(), banned.end());\n        unordered_map<string, int> count;\n        int n = (int)paragraph.size();\n        int i = 0;\n        string best;\n        int bestCount = 0;\n        while (i < n) {\n            while (i < n && !isLetter(paragraph[i])) i++;\n            if (i >= n) break;\n            string word;\n            while (i < n && isLetter(paragraph[i])) {\n                char c = paragraph[i];\n                if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';\n                word += c;\n                i++;\n            }\n            if (ban.find(word) == ban.end()) {\n                count[word]++;\n                if (count[word] > bestCount) {\n                    bestCount = count[word];\n                    best = word;\n                }\n            }\n        }\n        return best;\n    }\nprivate:\n    static bool isLetter(char c) {\n        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

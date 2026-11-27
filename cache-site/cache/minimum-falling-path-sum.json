@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-falling-path-sum",
+  "title": "Minimum Falling Path Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming on a Grid",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- in-place modification of `matrix`: no extra container → O(1)\n- scalar variables (n, i, j, best, ans): O(1)\n- recursion depth: none\n- not counted: input matrix",
+  "approach": "Use dynamic programming in place: for each cell (i, j), the minimum falling-path sum ending there equals matrix[i][j] plus the minimum of the three reachable sums from row i-1 (columns j-1, j, j+1, when valid). Process rows top to bottom; the answer is the minimum value in the last row. Correctness follows from optimal substructure: any optimal path to (i, j) must use an optimal path to one of its three predecessors.",
+  "hints": [
+    "When extending a path from row i to row i+1, what information about row i is actually needed to choose the best predecessor for each cell in row i+1?",
+    "Use in-place DP where matrix[i][j] becomes the minimum falling-path sum ending at (i, j). For matrix = [[2,1,3],[6,5,4],[7,8,9]], matrix[1][0] = 6 + min(matrix[0][0], matrix[0][1]) = 6 + 1 = 7.",
+    "for i from 1 to n-1:\n    for j from 0 to n-1:\n        best = matrix[i-1][j]\n        if j > 0: best = min(best, matrix[i-1][j-1])\n        if j < n-1: best = min(best, matrix[i-1][j+1])\n        matrix[i][j] += best\nreturn min over matrix[n-1][*]",
+    "**Single cell** - n = 1, no falling step exists\n`Input: [[5]]` → `Expected: 5`\n⚠️ Bug: initialising `ans = 0` then taking min with last row returns 0 instead of 5\n\n**All negatives** - every cell is negative, so the answer is the most negative path\n`Input: [[-1,-2,-3],[-4,-5,-6],[-7,-8,-9]]` → `Expected: -18`\n⚠️ Bug: initialising `ans = 0` instead of `matrix[n-1][0]` returns 0 instead of -18\n\n**Boundary column** - first and last columns have only two valid predecessors\n`Input: [[1,2],[3,4]]` → `Expected: 4`\n⚠️ Bug: reading `matrix[i-1][j-1]` without the `j > 0` guard at j = 0 accesses `matrix[i-1][-1]`, producing undefined/garbage output instead of 4"
+  ],
+  "followUps": [
+    {
+      "q": "Reconstruct and return one actual minimum falling path (list of columns chosen per row).",
+      "a": "After filling the DP table, start at the argmin of the last row and walk upward: at cell (i, j), pick the predecessor column among j-1, j, j+1 with the smallest DP value, breaking ties arbitrarily. Store columns in a vector and reverse. Time stays O(n²), space O(n) for the path."
+    },
+    {
+      "q": "Do not modify the input matrix; keep auxiliary space O(n).",
+      "a": "Keep only the previous row's DP values in a vector<int> prev of size n, and compute the current row into a vector<int> cur. Each cur[j] = matrix[i][j] + min of prev[j-1], prev[j], prev[j+1] (with bounds checks), then swap prev and cur. Time O(n²), space O(n)."
+    },
+    {
+      "q": "Make the matrix column-circular: column -1 wraps to n-1 and column n wraps to 0.",
+      "a": "Same DP, but the predecessor lookup uses modulo: best = min(prev[j], prev[(j-1+n)%n], prev[(j+1)%n]). No bounds checks needed. Time O(n²), space O(1) in-place or O(n) with two rows."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minFallingPathSum(vector<vector<int>>& matrix) {\n        int n = (int)matrix.size();\n        for (int i = 1; i < n; i++) {\n            for (int j = 0; j < n; j++) {\n                int best = matrix[i-1][j];\n                if (j > 0) best = min(best, matrix[i-1][j-1]);\n                if (j < n-1) best = min(best, matrix[i-1][j+1]);\n                matrix[i][j] += best;\n            }\n        }\n        int ans = matrix[n-1][0];\n        for (int j = 1; j < n; j++) ans = min(ans, matrix[n-1][j]);\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

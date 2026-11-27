@@ -1,0 +1,40 @@
+{
+  "slug": "redundant-connection-ii",
+  "title": "Redundant Connection II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Union-Find (Disjoint Set Union)",
+  "tc": "O(n α(n))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> par: n+1 entries → O(n)\n- int uf[1001]: fixed array, conceptually O(n)\n- not counted: input edges, returned vector",
+  "approach": "Adding one edge to a rooted tree causes exactly one of: (a) some node gains a second parent, or (b) a cycle forms (or both). First scan for a node with two incoming edges e1 (earlier) and e2 (later). If none exists, the extra edge is the one that first creates a cycle under Union-Find. If a two-parent node exists, tentatively skip e2 and run Union-Find on the rest: if acyclic, e2 is removable (and it's the later candidate, satisfying the tie-break); otherwise e1 is the culprit (e2 is needed to break the cycle, so e1 must be the added edge).",
+  "hints": [
+    "In a valid rooted tree every node has exactly one parent and there are no cycles. After one extra directed edge is added, what are the only two structural violations that can appear in the graph?",
+    "Use Union-Find (DSU). First detect a node with two parents; if found, skip the later of the two edges and DSU the rest - e.g. in [[1,2],[1,3],[2,3]] node 3 has parents 1 and 2, so skip [2,3] and union the remaining edges.",
+    "```\nscan edges; if some node v has two parent-edges, record e1 (earlier) and e2 (later)\nif no such node:\n    for each edge: if union(u,v) fails, return this edge\nelse:\n    for each edge except e2:\n        if union(u,v) fails, return e1     # cycle remains without e2\n    return e2                              # e2 was the extra edge\n```",
+    "**Two parents + cycle** - the extra edge both creates a second parent and closes a cycle.\n`Input: [[2,1],[3,1],[1,2]]` → `Expected: [2,1]`\n⚠️ Bug: always returning the later parent edge e2 without checking for a cycle → returns [3,1], but removing [3,1] leaves cycle 2→1→2.\n\n**Pure cycle, no two-parent node** - every node still has one parent.\n`Input: [[1,2],[2,3],[3,1]]` → `Expected: [3,1]`\n⚠️ Bug: only checking for two-parent nodes and returning the second parent edge → returns nothing / wrong edge, missing the cycle case entirely.\n\n**Tie-breaking among valid answers** - both parent edges are individually removable.\n`Input: [[1,2],[1,3],[2,3]]` → `Expected: [2,3]`\n⚠️ Bug: returning the earlier valid parent edge e1 → returns [1,3] instead of the last-occurring [2,3].\n\n**Smallest input n=3 with two parents** - minimal graph exercising the two-parent branch.\n`Input: [[1,2],[3,2],[2,3]]` → `Expected: [3,2]`\n⚠️ Bug: returning the earlier parent edge e1 → returns [1,2], but removing [1,2] leaves cycle 3→2→3."
+  ],
+  "followUps": [
+    {
+      "q": "What if up to k extra edges were added instead of just one - return all k removable edges?",
+      "a": "Generalize: collect all nodes with >1 parent and all cycle-closing edges, then backtrack over candidate removal sets, validating each with DSU. For small k this is O(n^k · α(n)); for larger k you'd need a more structural decomposition of the excess edges."
+    },
+    {
+      "q": "What if n can be up to 10^6 - does the approach still hold?",
+      "a": "Yes, the DSU logic is unchanged; just use iterative find with path compression and a single int array of size n+1. Time stays O(n α(n)), space O(n), with no recursion so no stack-overflow risk."
+    },
+    {
+      "q": "What if edges arrive in an online stream and after each edge you must report whether it is redundant?",
+      "a": "Maintain the DSU and a parent-count array incrementally. When an edge either gives a node its second parent or fails to union, flag it as redundant. Each edge is processed in O(α(n)), giving O(n α(n)) total with O(n) working memory."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int uf[1001];\npublic:\n    int find(int x) {\n        while (uf[x] != x) {\n            uf[x] = uf[uf[x]];\n            x = uf[x];\n        }\n        return x;\n    }\n    bool unite(int x, int y) {\n        int rx = find(x), ry = find(y);\n        if (rx == ry) return false;\n        uf[rx] = ry;\n        return true;\n    }\n    vector<int> findRedundantDirectedConnection(vector<vector<int>>& edges) {\n        int n = edges.size();\n        vector<int> par(n + 1, 0);\n        int e1 = -1, e2 = -1;\n        for (int i = 0; i < n; i++) {\n            int v = edges[i][1];\n            if (par[v] == 0) {\n                par[v] = i + 1;\n            } else {\n                e1 = par[v] - 1;\n                e2 = i;\n                break;\n            }\n        }\n        for (int i = 0; i <= n; i++) uf[i] = i;\n        if (e1 == -1) {\n            for (int i = 0; i < n; i++) {\n                if (!unite(edges[i][0], edges[i][1])) {\n                    return edges[i];\n                }\n            }\n        } else {\n            for (int i = 0; i < n; i++) {\n                if (i == e2) continue;\n                if (!unite(edges[i][0], edges[i][1])) {\n                    return edges[e1];\n                }\n            }\n            return edges[e2];\n        }\n        return {};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

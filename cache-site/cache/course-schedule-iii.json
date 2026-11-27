@@ -1,0 +1,40 @@
+{
+  "slug": "course-schedule-iii",
+  "title": "Course Schedule III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Exchange Argument",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<int> pq: up to n entries → O(n)\n- sort(): C++ introsort uses O(log n) stack\n- long long total: O(1)\n- not counted: input courses vector (modified in place)",
+  "approach": "Sort courses by deadline (lastDay). Iterate through them, maintaining a max-heap of durations of taken courses and a running total time. If the current course fits within its deadline, take it. If it doesn't fit but its duration is shorter than the longest taken course, swap them - this keeps the count the same but reduces total time, and since we process in deadline order, the swapped-in course's deadline is ≥ all taken courses' deadlines, so the swap is always legal. This greedy exchange argument guarantees the maximum count.",
+  "hints": [
+    "Among courses with different deadlines, which one risks becoming impossible to schedule if you postpone it? The constraints allow up to 10^4 courses.",
+    "Sort courses by deadline, then use a max-heap of taken durations. When a course doesn't fit, swap it with the longest taken course if that reduces total time. Example: after taking [100,200] and [1000,1250] (total 1100), course [200,1300] fits since 1100+200=1300 ≤ 1300.",
+    "```\nsort courses by lastDay\nmaxHeap = empty\ntotal = 0\nfor each (duration, deadline) in courses:\n    if total + duration <= deadline:\n        total += duration\n        push duration onto maxHeap\n    else if maxHeap not empty and maxHeap.top() > duration:\n        total += duration - maxHeap.pop()\n        push duration onto maxHeap\nreturn maxHeap.size()\n```",
+    "**Exact deadline fit** - course finishes exactly on its last day\n`[[1,1]]` → `Expected: 1`\n⚠️ Bug: using `<` instead of `<=` in the deadline check → returns 0\n\n**Sorting is essential** - processing in input order misses valid schedules\n`[[5,10],[3,5]]` → `Expected: 2`\n⚠️ Bug: not sorting courses by deadline → returns 1\n\n**Conditional swap** - swapping only when the new course is shorter preserves room for future courses\n`[[5,9],[6,10],[1,11],[5,11]]` → `Expected: 3`\n⚠️ Bug: always swapping when a course doesn't fit, without checking if new duration < max in heap → returns 2\n\n**Empty heap on first course** - first course doesn't fit, heap is empty\n`[[5,3],[4,3]]` → `Expected: 0`\n⚠️ Bug: calling pq.top() without checking if heap is empty → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "Each course has an additional value. Maximize total value of taken courses instead of count.",
+      "a": "The duration-based swap doesn't extend to values because a short low-value course isn't always better than a long high-value one. This becomes a weighted scheduling problem; with n ≤ 10^4, an O(n²) DP sorting by deadline and checking all previous compatible courses works."
+    },
+    {
+      "q": "Courses arrive in a stream and you must decide immediately whether to take each, without seeing future courses.",
+      "a": "Without sorting by deadline first, the swap may replace a course whose deadline has already passed, making the schedule invalid. An online algorithm needs a different strategy; the offline greedy achieves the optimal but online variants have competitive ratio > 1."
+    },
+    {
+      "q": "Durations and deadlines can be up to 10^9 instead of 10^4. Does the approach change?",
+      "a": "The algorithm is unchanged; only the total variable must be long long to avoid overflow (10^4 × 10^9 = 10^13 exceeds int range). TC and SC remain O(n log n) and O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int scheduleCourse(vector<vector<int>>& courses) {\n        sort(courses.begin(), courses.end(), [](const vector<int>& a, const vector<int>& b) {\n            return a[1] < b[1];\n        });\n        priority_queue<int> pq;\n        long long total = 0;\n        for (const auto& c : courses) {\n            if (total + c[0] <= c[1]) {\n                total += c[0];\n                pq.push(c[0]);\n            } else if (!pq.empty() && pq.top() > c[0]) {\n                total -= pq.top();\n                pq.pop();\n                total += c[0];\n                pq.push(c[0]);\n            }\n        }\n        return (int)pq.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

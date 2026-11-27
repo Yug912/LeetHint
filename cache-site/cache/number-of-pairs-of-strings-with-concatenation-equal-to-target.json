@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-pairs-of-strings-with-concatenation-equal-to-target",
+  "title": "Number of Pairs of Strings With Concatenation Equal to Target",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Map",
+  "tc": "O(n * L)",
+  "sc": "O(n * L)",
+  "spaceBreakdown": "- unordered_map<string, int> cnt: up to n entries, each key up to L chars → O(n * L)\n- string suffix: up to L chars → O(L), dominated by map\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Use a hash map to count the frequency of each string in `nums`. For each unique string `s`, check if `target` starts with `s`. If so, compute the suffix (the remainder of `target` after removing prefix `s`). If that suffix exists in the map, add `count[s] * count[suffix]` when `s ≠ suffix`, or `count[s] * (count[s] - 1)` when `s == suffix` (to exclude pairing an index with itself). Each ordered pair `(i, j)` is counted exactly once because every valid `nums[i]` is a prefix of `target` and its partner `nums[j]` is the corresponding suffix.",
+  "hints": [
+    "If `nums[i] + nums[j]` equals `target`, what must be true about where `nums[i]` appears within `target`? The constraints allow up to 100 strings of length up to 100.",
+    "Use an `unordered_map<string,int>` to count occurrences of each string. For `\"777\"` in Example 1, `target` `\"7777\"` starts with `\"777\"`, so the partner must be the suffix `\"7\"` - look up its count in the map.",
+    "```\ncount frequency of each string in nums\nfor each unique string s with count c:\n    if s is not a prefix of target: skip\n    suffix = target after removing prefix s\n    if suffix not in map: skip\n    if s == suffix: ans += c * (c - 1)\n    else: ans += c * count[suffix]\nreturn ans\n```",
+    "**All elements equal** - Every string is identical and target is two of them concatenated.\n`Input: nums = [\"1\",\"1\",\"1\"], target = \"11\"` → `Expected: 6`\n⚠️ Bug: Using `count[s] * count[s]` instead of `count[s] * (count[s] - 1)` when `s` equals suffix → returns 9\n\n**Substring not prefix** - A string appears inside target but not at the start.\n`Input: nums = [\"23\",\"34\"], target = \"1234\"` → `Expected: 0`\n⚠️ Bug: Using `target.find(s) != string::npos` instead of checking target starts with `s` → `\"23\"` found at position 1, suffix `\"34\"` found in map → returns 1\n\n**Ordered pairs** - Two identical strings that form target when concatenated.\n`Input: nums = [\"77\",\"77\"], target = \"7777\"` → `Expected: 2`\n⚠️ Bug: Dividing the final answer by 2 to \"avoid double counting\" → returns 1\n\n**String longer than target** - A string whose first characters match target but is longer.\n`Input: nums = [\"112\",\"1\"], target = \"11\"` → `Expected: 0`\n⚠️ Bug: Not checking `sLen >= tLen` before `target.substr(sLen)` → `\"112\"` matches target prefix, then `target.substr(3)` on `\"11\"` throws `std::out_of_range` → runtime error"
+  ],
+  "followUps": [
+    {
+      "q": "Count triples (i, j, k) with i, j, k distinct such that nums[i] + nums[j] + nums[k] == target.",
+      "a": "For each unique string s that is a prefix of target, recursively solve the 2-pair problem on the remaining suffix using the same frequency map. Handle the case where the same string is used in multiple positions by adjusting counts. TC: O(n * L * U) where U is unique strings, SC: O(n * L)."
+    },
+    {
+      "q": "What if target is not given upfront and you must answer multiple queries for different targets?",
+      "a": "Precompute all O(n²) concatenations of pairs and store them in a hash map from concatenation string to pair count. Each query is then an O(1) lookup. TC: O(n² * L) precomputation, O(1) per query, SC: O(n² * L)."
+    },
+    {
+      "q": "What if nums arrives as a stream too large to store, and you must maintain the running count of valid pairs?",
+      "a": "Keep a frequency map of seen strings. For each new string s, check if s is a prefix of target - if so, add count of the corresponding suffix. Also check if s is a suffix of target - if so, add count of the corresponding prefix. Then insert s into the map. TC: O(L) per insertion, SC: O(n * L)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numOfPairs(vector<string>& nums, string target) {\n        unordered_map<string, int> cnt;\n        for (const string& s : nums) cnt[s]++;\n        \n        int ans = 0;\n        int tLen = target.size();\n        \n        for (auto& [s, c] : cnt) {\n            int sLen = s.size();\n            if (sLen >= tLen) continue;\n            if (target.compare(0, sLen, s) != 0) continue;\n            \n            string suffix = target.substr(sLen);\n            auto it = cnt.find(suffix);\n            if (it == cnt.end()) continue;\n            \n            if (s == suffix) {\n                ans += c * (c - 1);\n            } else {\n                ans += c * it->second;\n            }\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

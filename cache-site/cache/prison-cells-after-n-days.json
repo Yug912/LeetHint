@@ -1,0 +1,40 @@
+{
+  "slug": "prison-cells-after-n-days",
+  "title": "Prison Cells After N Days",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Cycle Detection with Hash Map",
+  "tc": "O(min(n, 64))",
+  "sc": "O(64)",
+  "spaceBreakdown": "- unordered_map<int,int> seen: at most 64 entries → O(1)\n- local ints (state, day, next, cycle, remaining): O(1)\n- returned vector<int> result(8): not counted\n- recursion depth: none",
+  "approach": "With 8 cells and the two ends forced to 0 after day 1, only the middle 6 cells vary, so there are at most 2^6 = 64 reachable states - the sequence must repeat. Encode each state as an 8-bit integer and store the first day each state appears in a hash map. When a state recurs at day `d1` having first appeared at day `d0`, the cycle length is `d1 - d0`; skip ahead by setting `day = n - (n - day) % cycle`. Simulate the few remaining days. Correctness follows from the deterministic, periodic nature of the transition.",
+  "hints": [
+    "With 8 cells and the two end cells forced to 0 after day 1, how many distinct configurations can the middle six cells take? Recall n can be as large as 10^9.",
+    "Use a hash map keyed by the state (encoded as a bitmask) mapping to the day it first appeared; when a state repeats, the days between the two occurrences is the period, so skip ahead by it. In Example 2, the state 0b01001001 (=73) recurs after 14 days.",
+    "```\nseen = {}\nwhile day < n:\n    if state in seen:\n        cycle = day - seen[state]\n        day = n - (n - day) % cycle\n        seen.clear()\n        if day >= n: break\n    seen[state] = day\n    state = next_state(state)\n    day += 1\nreturn decode(state)\n```",
+    "**Smallest n** - only one transition is applied.\n`Input: cells=[0,1,0,1,1,0,0,1], n=1` → `Expected: [0,1,1,0,0,0,0,0]`\n⚠️ Bug: not forcing cells[0] and cells[7] to 0 → returns `[0,1,1,0,0,0,0,1]`\n\n**Largest n** - n = 10^9 forces cycle skipping.\n`Input: cells=[1,0,0,1,0,0,1,0], n=1000000000` → `Expected: [0,0,1,1,1,1,1,0]`\n⚠️ Bug: simulating all 10^9 days without cycle detection → TLE\n\n**Cycle divides evenly** - (n - day) % cycle == 0, so no extra transition is needed.\n`Input: cells=[1,0,0,1,0,0,1,0], n=15` → `Expected: [0,0,0,1,0,0,1,0]`\n⚠️ Bug: not breaking after setting day = n, doing one extra transition → returns `[0,1,0,1,0,0,1,0]`\n\n**All occupied** - every cell starts as 1.\n`Input: cells=[1,1,1,1,1,1,1,1], n=1` → `Expected: [0,1,1,1,1,1,1,0]`\n⚠️ Bug: updating only middle cells from neighbors without zeroing the ends → returns `[1,1,1,1,1,1,1,1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the prison had 32 cells instead of 8?",
+      "a": "The reachable state space (ends forced to 0) is 2^30, too large to store exhaustively. Use Floyd's tortoise-and-hare cycle detection on the state stream to find the period in O(cycle) time and O(1) space, then skip ahead. TC O(cycle), SC O(1)."
+    },
+    {
+      "q": "What if you must answer many n values for the same initial cells?",
+      "a": "Precompute the sequence once until a state repeats, storing the prefix length and the cycle of states. Each query is answered by indexing into the stored array in O(1). TC O(cycle) precompute + O(1) per query, SC O(cycle)."
+    },
+    {
+      "q": "What if n can be up to 10^18 and cells has 64 entries?",
+      "a": "The transition is a linear rule over GF(2), so k days equal applying the transition matrix k times; use binary matrix exponentiation. TC O(m^3 log n) with m = number of cells, SC O(m^2)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> prisonAfterNDays(vector<int>& cells, int n) {\n        unordered_map<int, int> seen;\n        int state = 0;\n        for (int i = 0; i < 8; i++) {\n            if (cells[i]) state |= (1 << i);\n        }\n        int day = 0;\n        while (day < n) {\n            if (seen.count(state)) {\n                int cycle = day - seen[state];\n                int remaining = n - day;\n                day = n - remaining % cycle;\n                seen.clear();\n                if (day >= n) break;\n            }\n            seen[state] = day;\n            int next = 0;\n            for (int i = 1; i < 7; i++) {\n                if (((state >> (i - 1)) & 1) == ((state >> (i + 1)) & 1)) {\n                    next |= (1 << i);\n                }\n            }\n            state = next;\n            day++;\n        }\n        vector<int> result(8, 0);\n        for (int i = 0; i < 8; i++) {\n            if (state & (1 << i)) result[i] = 1;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

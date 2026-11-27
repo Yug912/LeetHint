@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-sum-of-array-after-k-negations",
+  "title": "Maximize Sum Of Array After K Negations",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Counting Sort",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[201]: fixed 201 integers → O(1)\n- no recursion, no heap, no other containers\n- not counted: input vector nums, returned int",
+  "approach": "The key insight is that flipping the most negative numbers first maximizes the sum gain, and after all negatives are flipped, only the parity of remaining k matters. Since values are bounded to [-100, 100], use a frequency array to count occurrences of each value, then greedily flip negatives from most negative to least negative. If k remains odd after flipping all negatives, flip the smallest absolute value (zero if present, otherwise the smallest positive). This is correct because flipping a negative to positive always increases the sum, and an even k can be absorbed by flipping any element twice with no net change.",
+  "hints": [
+    "Which element, when negated, increases the sum the most? Each nums[i] is between -100 and 100.",
+    "Use a frequency array (counting sort) over the [-100, 100] range. For Example 3, nums = [2,-3,-1,5,-4] with k=2: count[-4]=1, flip it to +4, using one of k.",
+    "```\ncount occurrences of each value in [-100, 100]\nfor v from -100 to -1 while k > 0:\n    flip min(count[v], k) copies from v to -v, reduce k\nif k is odd:\n    if zero exists: do nothing\n    else: flip the smallest positive value\nreturn sum of (value × count) over all values\n```",
+    "**Zero present, odd k** - zero absorbs the odd flip harmlessly\n`Input: nums = [0,1], k = 1` → `Expected: 1`\n⚠️ Bug: flipping smallest positive without checking for zero first → returns -1\n\n**k even, no negatives** - even k needs no net change\n`Input: nums = [1,2,3], k = 2` → `Expected: 6`\n⚠️ Bug: flipping once when k is even instead of checking parity → returns 4\n\n**All same negative, k < n** - flip only k of the identical negatives\n`Input: nums = [-3,-3,-3], k = 2` → `Expected: 3`\n⚠️ Bug: flipping the same index twice instead of distributing across different negatives → returns -9\n\n**Single positive, odd k** - one element, must flip it\n`Input: nums = [5], k = 1` → `Expected: -5`\n⚠️ Bug: not handling odd k when no negatives exist → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "After flipping all negatives, only k mod 2 matters - an even remainder means no further change, an odd remainder means one more flip of the smallest absolute value. The frequency array approach still works in O(n) time and O(1) space since we never iterate k times."
+    },
+    {
+      "q": "What if nums[i] can be any 32-bit integer instead of bounded to [-100, 100]?",
+      "a": "The frequency array no longer fits in O(1) space. Sort the array in O(n log n) time, then apply the same greedy logic: flip negatives from smallest to largest, then handle odd k by flipping the smallest absolute value. TC becomes O(n log n), SC becomes O(log n) for the sort stack."
+    },
+    {
+      "q": "What if you must answer q queries with different k values on the same array?",
+      "a": "Precompute the frequency array once in O(n). For each query, copy the 201-element array and apply the greedy logic in O(1) time per query. Total TC: O(n + q), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestSumAfterKNegations(vector<int>& nums, int k) {\n        int count[201] = {0};\n        for (int x : nums) count[x + 100]++;\n        \n        for (int v = -100; v <= -1 && k > 0; v++) {\n            int idx = v + 100;\n            if (count[idx] > 0) {\n                int flip = count[idx] < k ? count[idx] : k;\n                count[idx] -= flip;\n                count[-v + 100] += flip;\n                k -= flip;\n            }\n        }\n        \n        if (k % 2 == 1) {\n            if (count[100] == 0) {\n                for (int v = 1; v <= 100; v++) {\n                    if (count[v + 100] > 0) {\n                        count[v + 100]--;\n                        count[-v + 100]++;\n                        break;\n                    }\n                }\n            }\n        }\n        \n        int sum = 0;\n        for (int v = -100; v <= 100; v++) {\n            sum += v * count[v + 100];\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

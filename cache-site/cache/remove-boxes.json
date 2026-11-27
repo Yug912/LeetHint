@@ -1,0 +1,40 @@
+{
+  "slug": "remove-boxes",
+  "title": "Remove Boxes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals",
+  "tc": "O(n⁴)",
+  "sc": "O(n³)",
+  "spaceBreakdown": "- int dp[100][100][101]: up to ~10⁶ ints → O(n³)\n- vector<int> b: copy of input, n entries → O(n) (not counted as it mirrors input)\n- recursion call stack: worst-case depth O(n)",
+  "approach": "The key insight is that removing middle boxes makes previously-separated boxes of the same color adjacent, so the optimal strategy may defer removing a box to merge it with a later same-colored box. We use interval DP with state dp[i][j][k]: the maximum points from boxes[i..j] given that k boxes of color boxes[i] are already accumulated to the left of i (and will be removed together with boxes[i]). At each state, we either remove boxes[i] with its k accumulated boxes now for (k+1)² points, or defer it-find a same-colored box at position m, solve boxes[i+1..m-1] independently, then solve boxes[m..j] with k+1 accumulated boxes. Memoization over all O(n³) states gives the answer.",
+  "hints": [
+    "When you remove boxes in the middle, boxes that were separated become adjacent. For a sub-range boxes[i..j], what extra fact about boxes just outside this range would change the maximum points you can get from it?",
+    "Interval DP with a third dimension: dp[i][j][k] = max points from boxes[i..j] given k boxes of color boxes[i] already accumulated to the left. For [1,1,1], dp[0][2][0] defers box 0 to merge with box 1: dp[1][0][0] + dp[1][2][1], eventually yielding 9.",
+    "```\nsolve(i, j, k):\n  if i > j: return 0\n  if cached[i][j][k]: return cache\n  res = (k+1)² + solve(i+1, j, 0)\n  for m in i+1..j:\n    if boxes[m] == boxes[i]:\n      res = max(res, solve(i+1, m-1, 0) + solve(m, j, k+1))\n  cache[i][j][k] = res\n  return res\n```",
+    "**Single box** - n=1, only one removal possible.\n`Input: [1]` → `Expected: 1`\n⚠️ Bug: returning 0 when i==j instead of computing (k+1)² → returns 0\n\n**All same color** - every box can merge into one removal.\n`Input: [1,1,1]` → `Expected: 9`\n⚠️ Bug: skipping the merge loop and only using option 1 → returns 3\n\n**Two same-colored boxes** - smallest merge case.\n`Input: [1,1]` → `Expected: 4`\n⚠️ Bug: using k² instead of (k+1)² in the square → returns 2\n\n**Separated same-colored boxes** - removing middle boxes merges them.\n`Input: [1,2,1]` → `Expected: 5`\n⚠️ Bug: not trying to defer box 0 to merge with box 2 → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if boxes.length could be up to 500?",
+      "a": "The O(n⁴) time becomes too slow at ~6×10¹⁰. We'd precompute the next occurrence of each color to skip non-matching positions in the inner loop, reducing to O(n³) ≈ 1.25×10⁸, which is feasible."
+    },
+    {
+      "q": "What if box colors could be 0 or negative?",
+      "a": "The algorithm only compares colors for equality, never uses them as array indices, so negative or zero values work without any code change."
+    },
+    {
+      "q": "What if you must remove exactly k boxes per round (fixed k, not any count)?",
+      "a": "The recurrence changes fundamentally: instead of (k+1)² for any contiguous block, you'd only allow removals of exactly k same-colored contiguous boxes, requiring a different state that tracks run lengths and only scores when a run reaches exactly k."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int dp[100][100][101];\n    vector<int> b;\n    int solve(int i, int j, int k) {\n        if (i > j) return 0;\n        if (dp[i][j][k] != -1) return dp[i][j][k];\n        int res = (k + 1) * (k + 1) + solve(i + 1, j, 0);\n        for (int m = i + 1; m <= j; m++) {\n            if (b[m] == b[i]) {\n                res = max(res, solve(i + 1, m - 1, 0) + solve(m, j, k + 1));\n            }\n        }\n        return dp[i][j][k] = res;\n    }\npublic:\n    int removeBoxes(vector<int>& boxes) {\n        int n = boxes.size();\n        b = boxes;\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                for (int k = 0; k <= n; k++)\n                    dp[i][j][k] = -1;\n        return solve(0, n - 1, 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

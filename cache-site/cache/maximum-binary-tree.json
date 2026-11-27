@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-binary-tree",
+  "title": "Maximum Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<TreeNode*> stk: up to n entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input vector, returned tree nodes",
+  "approach": "The key insight is that this constructs a Cartesian tree: each element's parent is the nearest larger element on whichever side is closer. Using a monotonic decreasing stack of tree nodes, we process elements left to right. For each new value, we pop all smaller nodes from the stack - the last popped becomes the new node's left child (it was the largest among those smaller and to its left), and the new node becomes the remaining stack top's right child. The bottom of the stack is always the global maximum, i.e., the root.",
+  "hints": [
+    "In the tree from [3,2,1,6,0,5], node 6 has 3 as its left child and 5 as its right child. For any element, what determines which existing element becomes its parent, and on which side it attaches?",
+    "Use a monotonic decreasing stack of tree nodes. Processing 6 in [3,2,1,6,0,5]: pop 1, 2, 3 (all smaller); last popped (3) becomes 6's left child; push 6.",
+    "```\nstack = empty\nfor each x in nums:\n    node = new TreeNode(x)\n    last = null\n    while stack not empty and stack.top.val < x:\n        last = stack.pop()\n    node.left = last\n    if stack not empty:\n        stack.top.right = node\n    stack.push(node)\nreturn stack[0]\n```",
+    "**Single element** - n=1, only one node\n`Input: [1]` → `Expected: [1]`\n⚠️ Bug: initializing `last` to `new TreeNode(0)` instead of `nullptr` → node 1 gets a spurious left child, output `[1,0]`\n\n**Sorted descending** - right-skewed tree, stack grows to size n\n`Input: [3,2,1]` → `Expected: [3,null,2,null,1]`\n⚠️ Bug: returning `stack.back()` instead of `stack.front()` → returns node 1, output `[1]`\n\n**Sorted ascending** - left-skewed tree, every element pops all previous\n`Input: [1,2,3]` → `Expected: [3,2,null,1]`\n⚠️ Bug: omitting `node->left = last` after the while loop → 3 has no left child, output `[3]`\n\n**Max at first position** - empty left subtree\n`Input: [5,1,2,3,4]` → `Expected: [5,null,4,3,null,2,null,1]`\n⚠️ Bug: using `>` instead of `<` in the while condition (popping larger elements) → 5 is popped by 1, output `[1,5,2,null,null,null,3,null,4]`"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^5, which approach would you use?",
+      "a": "The monotonic stack approach already runs in O(n) time and O(n) space, so it handles n = 10^5 without change. The naive recursive approach (finding the max in each subarray) would degrade to O(n²) on sorted input and time out."
+    },
+    {
+      "q": "What if you need to support appending a new element at the end and rebuilding the tree?",
+      "a": "The stack-based approach processes elements left to right, so appending one element requires only the final iteration: pop smaller nodes from the stack, link the last popped as the new node's left child, link the new node as the stack top's right child, and push it. This is O(k) where k is the number of popped nodes, amortized O(1) per insertion."
+    },
+    {
+      "q": "What if the array can contain duplicates?",
+      "a": "The problem guarantees uniqueness, but with duplicates the Cartesian tree is not uniquely defined. Using `<` (strict) in the stack comparison makes earlier duplicates parents of later ones; using `<=` makes later duplicates parents of earlier ones. Either choice produces a valid max-heap-ordered tree."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* constructMaximumBinaryTree(vector<int>& nums) {\n        vector<TreeNode*> stk;\n        for (int x : nums) {\n            TreeNode* node = new TreeNode(x);\n            TreeNode* last = nullptr;\n            while (!stk.empty() && stk.back()->val < x) {\n                last = stk.back();\n                stk.pop_back();\n            }\n            node->left = last;\n            if (!stk.empty()) {\n                stk.back()->right = node;\n            }\n            stk.push_back(node);\n        }\n        return stk.front();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

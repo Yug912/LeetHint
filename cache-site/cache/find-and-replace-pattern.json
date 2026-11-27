@@ -1,0 +1,40 @@
+{
+  "slug": "find-and-replace-pattern",
+  "title": "Find and Replace Pattern",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Isomorphic Strings",
+  "tc": "O(n * m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int fwd[26]: 26 ints → O(1)\n- int rev[26]: 26 ints → O(1)\n- recursion depth: none\n- not counted: input words, returned vector<string> result",
+  "approach": "A word matches the pattern iff the two strings are isomorphic: there exists a character bijection between them. Maintain two arrays - one mapping word→pattern and one mapping pattern→word. At each position, verify both directions stay consistent; a conflict in either direction means the mapping is not a bijection. This catches cases like \"ccc\" vs \"abb\" where the forward map is fine but two pattern letters would map to the same word letter.",
+  "hints": [
+    "If 'a' in the pattern maps to 'c' in the word, what must also be true about 'c' in the word for the overall mapping to be a valid permutation of letters? The constraints guarantee every word has the same length as the pattern.",
+    "Use two arrays of size 26: one for word→pattern, one for pattern→word. For \"mee\" vs \"abb\": position 0 sets m→a and a→m; position 1 sets e→b and b→e; position 2 confirms both - match.",
+    "```\nfor each word:\n  init fwd[26] and rev[26] to -1\n  for each position i:\n    w = word[i] - 'a', p = pattern[i] - 'a'\n    if fwd[w] == -1: fwd[w] = p\n    if rev[p] == -1: rev[p] = w\n    if fwd[w] != p or rev[p] != w:\n      skip this word\n  add word to result\n```",
+    "**All-same word, mixed pattern** - word has all identical letters but pattern has different letters\n`Input: words = [\"ccc\"], pattern = \"abb\"` → `Expected: []`\n⚠️ Bug: checking only forward mapping (pattern→word) without reverse → returns [\"ccc\"]\n\n**All-same pattern, mixed word** - pattern has all identical letters but word has different letters\n`Input: words = [\"abc\"], pattern = \"aaa\"` → `Expected: []`\n⚠️ Bug: checking only reverse mapping (word→pattern) without forward → returns [\"abc\"]\n\n**Identity mapping** - word equals pattern exactly\n`Input: words = [\"abc\"], pattern = \"abc\"` → `Expected: [\"abc\"]`\n⚠️ Bug: requiring that no letter maps to itself (treating permutation as derangement) → returns []\n\n**Single character** - minimum input size\n`Input: words = [\"z\"], pattern = \"a\"` → `Expected: [\"z\"]`\n⚠️ Bug: returning empty when word length is 1 (assuming no bijection possible with single character) → returns []"
+  ],
+  "followUps": [
+    {
+      "q": "What if the pattern could contain wildcard '*' that matches any single letter?",
+      "a": "Skip the forward consistency check at wildcard positions, but still enforce the reverse mapping for non-wildcard positions. A wildcard can map to any letter, but once a non-wildcard pattern letter is assigned, it must stay consistent. TC: O(n * m), SC: O(1)."
+    },
+    {
+      "q": "What if you need to answer many queries with different patterns against the same word list?",
+      "a": "Precompute a canonical form for each word - the sequence of first-occurrence indices (e.g., \"abb\" → [0,1,1], \"mee\" → [0,1,1]). Group words by canonical form in a hash map. Each query computes the pattern's canonical form in O(m) and looks up matches. Preprocessing: O(total_chars), per query: O(m). SC: O(total_chars)."
+    },
+    {
+      "q": "What if words arrive as a stream and you can only store O(1) auxiliary data?",
+      "a": "Process each word as it arrives: check isomorphism using two 26-element arrays, output matches immediately, then discard the word. Only the two arrays are needed beyond the current word reference. TC: O(m) per word, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> findAndReplacePattern(vector<string>& words, string pattern) {\n        vector<string> result;\n        for (const string& word : words) {\n            if (isIsomorphic(word, pattern)) {\n                result.push_back(word);\n            }\n        }\n        return result;\n    }\n    \nprivate:\n    bool isIsomorphic(const string& word, const string& pattern) {\n        int fwd[26], rev[26];\n        for (int i = 0; i < 26; i++) {\n            fwd[i] = -1;\n            rev[i] = -1;\n        }\n        int n = (int)word.size();\n        for (int i = 0; i < n; i++) {\n            int w = word[i] - 'a';\n            int p = pattern[i] - 'a';\n            if (fwd[w] == -1) fwd[w] = p;\n            if (rev[p] == -1) rev[p] = w;\n            if (fwd[w] != p || rev[p] != w) {\n                return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

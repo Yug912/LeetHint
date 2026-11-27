@@ -1,0 +1,40 @@
+{
+  "slug": "path-with-maximum-gold",
+  "title": "Path with Maximum Gold",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking DFS",
+  "tc": "O(k · 3^k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- dr[4], dc[4] arrays: constant size → O(1)\n- pointer g: O(1)\n- recursion call-stack depth: at most k (longest possible path) → O(k)\n- grid modified in place (no separate visited array) → O(1) extra\n- not counted: input grid, returned int",
+  "approach": "Since at most 25 cells contain gold, we can exhaustively explore all self-avoiding paths via backtracking. For each gold cell as a starting point, we run a DFS that marks the current cell as visited (by setting it to 0), recurses into all four valid neighbors, restores the cell, and returns the best path sum through that cell. The answer is the maximum over all starting cells. This is correct because every valid path is a self-avoiding walk through gold cells, and we enumerate all of them.",
+  "hints": [
+    "Given that at most 25 cells contain gold (out of a possible 225), what kind of exhaustive exploration becomes feasible that would be intractable on a full 15×15 grid of gold?",
+    "Backtracking DFS. Mark a cell visited by setting it to 0, recurse into valid neighbors, then restore it. In Example 1, starting from cell (2,1)=9, the path 9→8→7 collects 24.",
+    "```\nfor each cell (i,j) with gold > 0:\n    best = max(best, dfs(i, j))\n\ndfs(r, c):\n    val = grid[r][c]\n    grid[r][c] = 0\n    bestPath = 0\n    for each of 4 directions:\n        (nr, nc) = neighbor\n        if in bounds and grid[nr][nc] > 0:\n            bestPath = max(bestPath, dfs(nr, nc))\n    grid[r][c] = val\n    return val + bestPath\n```",
+    "**All zeros** - No gold anywhere in the grid.\n`Input: [[0,0],[0,0]]` → `Expected: 0`\n⚠️ Bug: initializing best to INT_MIN instead of 0 → returns -2147483648\n\n**Disconnected gold** - Two gold cells separated by a zero, so they cannot be on the same path.\n`Input: [[1,0,2]]` → `Expected: 2`\n⚠️ Bug: only starting DFS from the first gold cell found → returns 1\n\n**Branching structure** - Gold cells form a T-shape where the best path does not start from the first cell scanned.\n`Input: [[1,2,3],[0,4,0],[0,5,0]]` → `Expected: 14`\n⚠️ Bug: not restoring grid[r][c] after recursion → returns 12\n\n**Single cell** - Grid has exactly one cell with gold.\n`Input: [[7]]` → `Expected: 7`\n⚠️ Bug: returning bestPath instead of val + bestPath in dfs → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are at most 20 gold cells - can you avoid re-exploring overlapping subproblems?",
+      "a": "Use DP with bitmask: dp[mask][i] = max gold collectible starting from cell i with cells in mask already visited. Transition: dp[mask][i] = gold[i] + max(dp[mask | (1<<j)][j]) for all unvisited neighbors j. TC: O(2^k · k), SC: O(2^k · k)."
+    },
+    {
+      "q": "What if you must also return the actual path achieving the maximum gold?",
+      "a": "During backtracking, maintain a vector of (row, col) pairs for the current path. When dfs finds a better total, save a copy of the current path alongside the best value. TC unchanged, SC increases by O(k) for the path vector."
+    },
+    {
+      "q": "What if diagonal moves (8 directions) are also allowed?",
+      "a": "Add four diagonal directions to the direction array. The branching factor increases from 3 to 7 after the first step, so TC becomes O(k · 7^k). SC remains O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int m, n;\n    int dr[4] = {-1, 1, 0, 0};\n    int dc[4] = {0, 0, -1, 1};\n    vector<vector<int>>* g;\n\n    int dfs(int r, int c) {\n        int val = (*g)[r][c];\n        (*g)[r][c] = 0;\n        int bestPath = 0;\n        for (int d = 0; d < 4; d++) {\n            int nr = r + dr[d];\n            int nc = c + dc[d];\n            if (nr >= 0 && nr < m && nc >= 0 && nc < n && (*g)[nr][nc] > 0) {\n                bestPath = max(bestPath, dfs(nr, nc));\n            }\n        }\n        (*g)[r][c] = val;\n        return val + bestPath;\n    }\n\npublic:\n    int getMaximumGold(vector<vector<int>>& grid) {\n        m = grid.size();\n        n = grid[0].size();\n        g = &grid;\n        int best = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] > 0) {\n                    best = max(best, dfs(i, j));\n                }\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

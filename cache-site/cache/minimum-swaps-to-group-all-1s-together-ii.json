@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-swaps-to-group-all-1s-together-ii",
+  "title": "Minimum Swaps to Group All 1's Together II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, total, ones, maxOnes, start, i): O(1)\n- no containers allocated\n- no recursion\n- not counted: input vector nums",
+  "approach": "Count the total number of 1's (`total`). Any valid grouping occupies a contiguous block of exactly `total` positions (circularly). The minimum swaps for a given block equals the number of 0's inside it, i.e., `total − (1's in that block)`. So we maximize the count of 1's in every circular window of size `total` using a sliding window with modulo indexing, then return `total − maxOnes`. Early-return 0 when `total` is 0 or `n`.",
+  "hints": [
+    "The array has a fixed number of 1's. If they must all sit in one contiguous block, what determines how many swaps that block needs?",
+    "Sliding window of size `total` (the count of 1's). For nums = [0,1,0,1,1,0,0], total=3; the window [1,1,0] at index 3 has 2 ones, needing 3−2=1 swap.",
+    "```\ntotal = count of 1's in nums\nif total == 0 or total == n: return 0\nones = count of 1's in nums[0..total-1]\nmax_ones = ones\nfor start from 1 to n-1:\n    ones -= nums[start-1]\n    ones += nums[(start+total-1) mod n]\n    max_ones = max(max_ones, ones)\nreturn total - max_ones\n```",
+    "**Circular wrap** - the optimal window spans the end and beginning of the array.\n`Input: [1,1,0,0,1]` → `Expected: 0`\n⚠️ Bug: checking only linear windows without modulo, best linear window [1,1,0] has 2 ones → returns 1\n\n**All ones** - total=n, the window covers the entire array.\n`Input: [1,1,1,1]` → `Expected: 0`\n⚠️ Bug: sliding loop starting at start=0 instead of start=1, accessing nums[start-1] = nums[-1] → out of bounds, crash\n\n**Boundary index** - window starting at the last element wraps to index 0.\n`Input: [0,1,1,0,1]` → `Expected: 1`\n⚠️ Bug: accessing nums[start + total - 1] without modulo when start=4, total=3 → index 6, out of bounds for n=5 → crash"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is linear (non-circular) instead of circular?",
+      "a": "Remove the modulo indexing and only check windows from index 0 to n−total. The sliding window approach is identical, just without wrap-around. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the array arrives as a data stream too large to fit in memory?",
+      "a": "Make two passes: first count total 1's, then maintain a circular buffer of size `total` to track the current window. Process elements one at a time, adding new and removing old. TC: O(n), SC: O(total)."
+    },
+    {
+      "q": "What if we need to group all 1's into a block of exactly size k (k ≥ total)?",
+      "a": "Use a sliding window of size k instead of total. The answer is k minus the maximum number of 1's in any window of size k. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSwaps(vector<int>& nums) {\n        int n = nums.size();\n        int total = 0;\n        for (int x : nums) total += x;\n        if (total == 0 || total == n) return 0;\n        \n        int ones = 0;\n        for (int i = 0; i < total; i++) ones += nums[i];\n        int maxOnes = ones;\n        \n        for (int start = 1; start < n; start++) {\n            ones -= nums[start - 1];\n            ones += nums[(start + total - 1) % n];\n            if (ones > maxOnes) maxOnes = ones;\n        }\n        \n        return total - maxOnes;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

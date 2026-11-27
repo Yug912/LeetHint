@@ -1,0 +1,40 @@
+{
+  "slug": "matchsticks-to-square",
+  "title": "Matchsticks to Square",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask DP",
+  "tc": "O(n · 2^n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<long long> dp: 2^n entries → O(2^n)\n- recursion: none (iterative DP)\n- not counted: input vector",
+  "approach": "First check that the total length is divisible by 4 and no single stick exceeds `target = total/4`. Then use bitmask DP: `dp[mask]` stores `(sum of sticks in mask) mod target`, or `-1` if that subset cannot be built by filling sides one at a time without overflow. For each reachable mask, try adding each unused stick `i`; if `dp[mask] + sticks[i] ≤ target`, set `dp[mask | (1<<i)] = (dp[mask] + sticks[i]) mod target`. The answer is `dp[(1<<n)-1] == 0`, because any valid 4-partition can be ordered so the four sides fill sequentially and each completes exactly at `target`.",
+  "hints": [
+    "The four sides must each equal one quarter of the total length. With at most 15 matchsticks, what single quantity captures exactly which sticks have already been placed?",
+    "Use bitmask DP: `dp[mask]` = sum of placed sticks mod (total/4), or -1 if unreachable. For `[1,1,2,2,2]`, target = 2; from mask = 0, placing the stick of length 2 gives `dp = 2 % 2 = 0` (one side complete).",
+    "```\ntotal = sum(sticks); target = total / 4\ndp[0] = 0; all other dp = -1\nfor mask in 0 .. 2^n - 1:\n    if dp[mask] == -1: continue\n    for each stick i not in mask:\n        next = dp[mask] + sticks[i]\n        if next > target: continue\n        dp[mask | (1<<i)] = next % target\nreturn dp[2^n - 1] == 0\n```",
+    "**Single stick** - one matchstick cannot form four sides.\n`Input: matchsticks = [4]` → `Expected: false`\n⚠️ Bug: omitting the `dp[mask] + sticks[i] > target` guard → `dp[1] = (0+4) % 1 = 0`, returns true.\n\n**Sum not divisible by 4** - six 1-sticks sum to 6, not a multiple of 4.\n`Input: matchsticks = [1,1,1,1,1,1]` → `Expected: false`\n⚠️ Bug: skipping the `total % 4 != 0` check → target = 6/4 = 1, DP places all six sticks into sides of length 1, returns true.\n\n**All equal, exact fit** - each stick equals the target side length.\n`Input: matchsticks = [2,2,2,2]` → `Expected: true`\n⚠️ Bug: storing `dp[newMask] = next` without `% target` → after placing one stick dp = 2, the next gives 4 > 2 and is skipped, `dp[15]` stays -1, returns false.\n\n**Exact side completion** - a side is completed only when the running sum equals target.\n`Input: matchsticks = [1,1,2,2,2]` → `Expected: true`\n⚠️ Bug: using `next >= target` instead of `next > target` → completing a side (next == target) is skipped, `dp[31] = -1`, returns false."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to partitioning into k equal-sum subsets instead of 4.",
+      "a": "Replace the divisor 4 with k: target = total / k, and the same bitmask DP applies unchanged. The answer is still dp[(1<<n)-1] == 0. Time O(n·2^n), space O(2^n)."
+    },
+    {
+      "q": "What if matchsticks.length were up to 30?",
+      "a": "2^30 ≈ 10^9 is too large for the DP table. Switch to meet-in-the-middle: enumerate all subset sums of the first and second halves, then check whether four disjoint subsets each sum to target. Time O(2^(n/2) · poly(n)), space O(2^(n/2))."
+    },
+    {
+      "q": "Return the number of distinct ways to form the square.",
+      "a": "Store dp[mask] as a count of valid configurations instead of a reachability flag. Since the DP fills sides sequentially and orders sticks within each side, divide the final count by k! (side ordering) and by the product of factorials of each side's size. Time O(n·2^n), space O(2^n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool makesquare(vector<int>& matchsticks) {\n        int n = matchsticks.size();\n        long long total = 0;\n        for (int x : matchsticks) total += x;\n        if (total % 4 != 0) return false;\n        long long target = total / 4;\n        for (int x : matchsticks) if (x > target) return false;\n        int full = (1 << n) - 1;\n        vector<long long> dp(1 << n, -1);\n        dp[0] = 0;\n        for (int mask = 0; mask <= full; mask++) {\n            if (dp[mask] == -1) continue;\n            for (int i = 0; i < n; i++) {\n                if (mask & (1 << i)) continue;\n                long long next = dp[mask] + matchsticks[i];\n                if (next > target) continue;\n                dp[mask | (1 << i)] = next % target;\n            }\n        }\n        return dp[full] == 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

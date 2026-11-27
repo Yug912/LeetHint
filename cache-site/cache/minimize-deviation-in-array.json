@@ -1,0 +1,40 @@
+{
+  "slug": "minimize-deviation-in-array",
+  "title": "Minimize Deviation in Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Max-Heap",
+  "tc": "O(n log n log M)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<int> pq: holds up to n entries at all times → O(n)\n- recursion depth: none\n- not counted: input vector nums",
+  "approach": "Each number has a finite chain of reachable values: odd numbers can only go to {n, 2n}, even numbers can be halved repeatedly down to their odd root. By first doubling every odd number, all values become even and we can restrict ourselves to only halving. We start with all numbers at their maximum, use a max-heap to always halve the current largest even value, track the running minimum, and record the smallest deviation seen. When the maximum becomes odd, no further improvement is possible.",
+  "hints": [
+    "For any single number, how many distinct values can it reach through these operations, and what connects consecutive reachable values?",
+    "Use a max-heap. For [1,2,3,4], first double the odds to get [2,2,6,4]; pop max 6, halve it to 3, push back - deviation drops from 4 to 2.",
+    "```\nfor each num:\n    if num is odd: num *= 2\n    push num to max-heap\n    track global min\nans = INF\nloop:\n    mx = pop max from heap\n    ans = min(ans, mx - min)\n    if mx is odd: break\n    mx /= 2\n    update min\n    push mx back\nreturn ans\n```",
+    "**All equal even values** - every element is identical and reducible to the same odd number\n`Input: nums = [2,2,2]` → `Expected: 0`\n⚠️ Bug: not updating minVal after halving the max → returns -1\n\n**Both odd, minimum size** - two odd numbers where doubling is required to reach the optimum\n`Input: nums = [1,3]` → `Expected: 1`\n⚠️ Bug: skipping the initial doubling of odd numbers → returns 2\n\n**Optimal at last step** - the best deviation appears only after the final halving\n`Input: nums = [3,6]` → `Expected: 0`\n⚠️ Bug: checking the odd-break condition before updating ans → returns 3\n\n**Large odd near 10^9** - doubling a near-boundary odd stays within int range\n`Input: nums = [999999999,1000000000]` → `Expected: 1`\n⚠️ Bug: using `int16_t` for heap values → truncates 1999999998, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can perform at most k operations total instead of unlimited?",
+      "a": "You still use a max-heap, but each halving consumes one operation from your budget k. Track operations used and stop when budget is exhausted or max is odd. TC stays O(n log n log M), SC O(n)."
+    },
+    {
+      "q": "What if nums[i] can be up to 10^18?",
+      "a": "Switch to long long throughout; the number of halving steps per element grows to about 60. TC becomes O(n log n log M) with log M ≈ 60, SC remains O(n)."
+    },
+    {
+      "q": "What if you must use only O(1) extra space?",
+      "a": "Sort the array in place by each element's minimum reachable value, then repeatedly scan for the current minimum, double it if possible, and track the max. TC degrades to O(n · log M · n) = O(n^2 log M), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumDeviation(vector<int>& nums) {\n        priority_queue<int> pq;\n        int minVal = INT_MAX;\n        for (int x : nums) {\n            if (x & 1) x <<= 1;\n            pq.push(x);\n            if (x < minVal) minVal = x;\n        }\n        int ans = INT_MAX;\n        while (true) {\n            int mx = pq.top();\n            pq.pop();\n            if (mx - minVal < ans) ans = mx - minVal;\n            if (mx & 1) break;\n            mx >>= 1;\n            if (mx < minVal) minVal = mx;\n            pq.push(mx);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

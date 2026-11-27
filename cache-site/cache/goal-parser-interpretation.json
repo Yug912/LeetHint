@@ -1,0 +1,40 @@
+{
+  "slug": "goal-parser-interpretation",
+  "title": "Goal Parser Interpretation",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: up to n chars, but this is the returned output → not counted\n- int i, n: O(1)\n- recursion depth: none\n- not counted: input string, returned string",
+  "approach": "Scan the command left to right with an index pointer. Each token is unambiguously identified by at most two characters: 'G' starts a \"G\" token, and '(' followed by ')' starts a \"()\" token while '(' followed by 'a' starts an \"(al)\" token. Append the corresponding interpretation and advance the pointer by the token length (1, 2, or 4). This is correct because the grammar is prefix-free - no token is a prefix of another, so the parse is deterministic.",
+  "hints": [
+    "When scanning the command left to right, how many characters do you need to examine at each position to know which of the three tokens begins there? The command is built only from \"G\", \"()\", and \"(al)\".",
+    "Single-pass parsing with an index pointer. In \"G()(al)\", at index 0 you see 'G' and output \"G\"; at index 1 you see '(' and peek at index 2 to find ')', so you output \"o\" and advance by 2.",
+    "```\ni = 0\nwhile i < n:\n    if command[i] == 'G':\n        output 'G'; i += 1\n    else if command[i+1] == ')':\n        output 'o'; i += 2\n    else:\n        output \"al\"; i += 4\n```",
+    "**Smallest input** - the minimum valid command is a single token\n`Input: \"G\"` → `Expected: \"G\"`\n⚠️ Bug: peeking at command[i+1] before checking if command[i] == 'G' → out-of-bounds read when i is the last index\n\n**All same token** - string containing only \"()\" tokens\n`Input: \"()()()\"` → `Expected: \"ooo\"`\n⚠️ Bug: always outputting \"al\" and advancing by 4 when seeing '(' → returns \"alal\" instead of \"ooo\"\n\n**Token at boundary** - \"(al)\" as the final token\n`Input: \"G(al)\"` → `Expected: \"Gal\"`\n⚠️ Bug: treating every '(' as \"()\" (output \"o\", advance by 2) and skipping unrecognized characters → returns \"Go\" instead of \"Gal\""
+  ],
+  "followUps": [
+    {
+      "q": "If command length could be up to 10^9 and you only needed the k-th character of the interpretation, how would you avoid building the full string?",
+      "a": "Each source token maps to a known output length: \"G\"→1, \"()\"→1, \"(al)\"→2. Scan left to right, subtracting each token's output length from k until you land inside a token, then return the corresponding character. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if a new token \"(all)\" mapping to \"all\" were added to the alphabet?",
+      "a": "Add one more branch: when command[i] == '(' and command[i+1] == 'a', peek at command[i+2] to distinguish \"(al)\" from \"(all)\". The single-pass structure is unchanged. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if the command could contain invalid sequences and you must return the interpretation up to the first error?",
+      "a": "During the single pass, if you encounter a character that doesn't start a valid token (e.g., 'a' or 'l' at a token boundary, or '(' not followed by ')' or \"al\"), stop and return what you've built so far. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string interpret(string command) {\n        string result;\n        int i = 0;\n        int n = command.size();\n        while (i < n) {\n            if (command[i] == 'G') {\n                result += 'G';\n                i += 1;\n            } else if (command[i] == '(') {\n                if (i + 1 < n && command[i + 1] == ')') {\n                    result += 'o';\n                    i += 2;\n                } else {\n                    result += \"al\";\n                    i += 4;\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

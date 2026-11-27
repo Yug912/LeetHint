@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-a-word-occurs-as-a-prefix-of-any-word-in-a-sentence",
+  "title": "Check If a Word Occurs As a Prefix of Any Word in a Sentence",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers / Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- integer variables (n, m, wordIndex, i, j, k, match): constant → O(1)\n- no containers, no recursion, no extra strings allocated\n- not counted: input sentence and searchWord",
+  "approach": "Scan the sentence left to right, tracking word boundaries with two pointers: `i` marks the start of the current word, `j` advances to the next space. For each word, if its length is at least `m` (the searchWord length), compare its first `m` characters against `searchWord`; on the first match, return the current 1-indexed word number. If the scan finishes with no match, return -1. This is correct because a prefix is exactly the leading contiguous substring, and we examine words in order so the first match is the minimal index.",
+  "hints": [
+    "Words are separated by single spaces, so each word has a clear boundary. As you scan the sentence left to right, what two quantities must you track to know both which word you're on and where it begins?",
+    "Use a linear scan with two pointers: `i` marks the current word's start, `j` runs forward to the next space. For \"i love eating burger\" with searchWord \"burg\", at word \"burger\" (start index 14) compare its first 4 chars to \"burg\" - they match, so return word index 4.",
+    "```\nwordIndex = 1\ni = 0\nwhile i < length(sentence):\n    j = i\n    while j < length and sentence[j] != ' ': j = j + 1\n    if (j - i) >= length(searchWord):\n        if sentence[i .. i+m-1] == searchWord:\n            return wordIndex\n    wordIndex = wordIndex + 1\n    i = j + 1\nreturn -1\n```",
+    "**Single word, no spaces** - the whole sentence is one word.\n`Input: sentence = \"hello\", searchWord = \"he\"` → `Expected: 1`\n⚠️ Bug: only returning a result after encountering a space → returns -1\n\n**searchWord longer than the word** - a shorter word cannot contain a longer prefix.\n`Input: sentence = \"i am tired\", searchWord = \"you\"` → `Expected: -1`\n⚠️ Bug: comparing characters without first checking `wordLen >= m`, reading past the word into the space/next word → may falsely match and return a wrong index\n\n**searchWord equals the entire word** - an exact match is also a valid prefix.\n`Input: sentence = \"hello world\", searchWord = \"hello\"` → `Expected: 1`\n⚠️ Bug: using `wordLen > m` instead of `wordLen >= m` → returns -1\n\n**Match only in the last word** - the answer is the final word's index.\n`Input: sentence = \"a b c burger\", searchWord = \"burg\"` → `Expected: 4`\n⚠️ Bug: stopping the scan at the last space without checking the trailing word → returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "The sentence arrives as a character stream too large to hold in memory. How do you adapt?",
+      "a": "Buffer only one word at a time; when a space or end-of-stream arrives, compare the buffered word's first m characters to searchWord and track the word index. Time stays O(n); space drops to O(max word length)."
+    },
+    {
+      "q": "You must answer many different searchWord queries on the same fixed sentence. How do you speed up repeated queries?",
+      "a": "Preprocess the sentence once into a trie of all words, storing the smallest 1-indexed word number at each node. Each query then walks the trie along searchWord in O(m) time; preprocessing is O(total characters)."
+    },
+    {
+      "q": "searchWord may now match as a prefix, suffix, or substring of any word. How does the approach change?",
+      "a": "For each word, run KMP (or Aho-Corasick for many patterns) to detect any occurrence of searchWord, not just at position 0. Time per query is O(total characters + m); space is O(m) for the failure function."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int isPrefixOfWord(string sentence, string searchWord) {\n        int n = sentence.size();\n        int m = searchWord.size();\n        int wordIndex = 1;\n        int i = 0;\n        while (i < n) {\n            int j = i;\n            while (j < n && sentence[j] != ' ') j++;\n            int wordLen = j - i;\n            if (wordLen >= m) {\n                bool match = true;\n                for (int k = 0; k < m; k++) {\n                    if (sentence[i + k] != searchWord[k]) {\n                        match = false;\n                        break;\n                    }\n                }\n                if (match) return wordIndex;\n            }\n            wordIndex++;\n            i = j + 1;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

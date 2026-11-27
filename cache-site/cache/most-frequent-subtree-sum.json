@@ -1,0 +1,40 @@
+{
+  "slug": "most-frequent-subtree-sum",
+  "title": "Most Frequent Subtree Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order DFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n entries → O(n)\n- recursion call-stack depth: worst case O(n) for skewed tree, O(log n) for balanced → O(n)\n- not counted: input tree, returned vector",
+  "approach": "Compute each node's subtree sum via post-order DFS: the sum at a node equals its value plus the sums of its left and right subtrees. Store each sum's frequency in a hash map while tracking the maximum frequency seen. After DFS completes, collect every sum whose frequency equals the maximum. This is correct because post-order guarantees children are processed before parents, so each subtree sum is built from already-computed child sums.",
+  "hints": [
+    "Given up to 10^4 nodes, how does the sum of all values in a subtree rooted at a node relate to the sums already computed for its left and right children?",
+    "Use post-order DFS to compute each subtree sum, storing frequencies in a hash map. For Example 2: dfs(2)=2, dfs(-5)=-5, dfs(5)=2; sum 2 appears twice, so return [2].",
+    "```\nfunction dfs(node):\n    if node is null: return 0\n    left = dfs(node.left)\n    right = dfs(node.right)\n    sum = node.val + left + right\n    freq[sum] += 1\n    maxFreq = max(maxFreq, freq[sum])\n    return sum\n\ndfs(root)\nreturn all sums where freq[sum] == maxFreq\n```",
+    "**Single node** - n=1, only one subtree sum exists\n`Input: root = [1]` → `Expected: [1]`\n⚠️ Bug: returning empty when root has no children → returns []\n\n**Tie among all sums** - every subtree sum appears exactly once\n`Input: root = [5,2,-3]` → `Expected: [2,-3,4]`\n⚠️ Bug: returning only the first sum with max frequency instead of all → returns [2]\n\n**Duplicate subtree sum** - two subtrees yield the same sum\n`Input: root = [5,2,-5]` → `Expected: [2]`\n⚠️ Bug: pushing a sum into the result during DFS whenever its frequency equals the current maxFreq, without a final filtering pass → returns [2,-5]\n\n**Skewed right tree** - recursion depth equals n\n`Input: root = [1,null,2,null,3]` → `Expected: [3,5,6]`\n⚠️ Bug: adding immediate children's values instead of their subtree sums → returns [3]"
+  ],
+  "followUps": [
+    {
+      "q": "Return the k most frequent subtree sums instead of only the most frequent.",
+      "a": "After DFS populates the frequency map, use a min-heap of size k keyed by frequency to select the top k sums. TC: O(n log k), SC: O(n)."
+    },
+    {
+      "q": "Node values can change between queries; return the most frequent sum after each update.",
+      "a": "On a value change at node v, recompute the subtree sum for v and every ancestor up to the root, adjusting the frequency map incrementally. TC: O(h) per update where h is tree height, SC: O(n)."
+    },
+    {
+      "q": "Return the subtree sum with the second highest frequency.",
+      "a": "After DFS, scan the frequency map once to find the top two distinct frequency values, then collect all sums matching the second. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    unordered_map<int, int> freq;\n    int maxFreq = 0;\n\n    int dfs(TreeNode* node) {\n        if (!node) return 0;\n        int left = dfs(node->left);\n        int right = dfs(node->right);\n        int sum = node->val + left + right;\n        int f = ++freq[sum];\n        if (f > maxFreq) maxFreq = f;\n        return sum;\n    }\n\npublic:\n    vector<int> findFrequentTreeSum(TreeNode* root) {\n        freq.clear();\n        maxFreq = 0;\n        dfs(root);\n        vector<int> result;\n        for (auto& [sum, f] : freq) {\n            if (f == maxFreq) result.push_back(sum);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "reduce-array-size-to-the-half",
+  "title": "Reduce Array Size to The Half",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bucket Sort on Frequencies",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n entries → O(n)\n- vector<int> buckets(n+1, 0): n+1 ints → O(n)\n- not counted: input arr, returned int",
+  "approach": "Count how many times each value appears. Instead of sorting the frequencies (O(n log n)), place them into a bucket array indexed by frequency: `buckets[f]` = how many distinct values occur exactly `f` times. Sweep `f` from `n` down to `1`, greedily taking every value at that frequency until the number of removed elements reaches `n/2`. Each chosen value contributes its full frequency to the removal count, so picking the largest frequencies first minimizes the set size. This is O(n) because both the counting and the bucket sweep touch each element a constant number of times.",
+  "hints": [
+    "When you pick one integer to remove, what single quantity decides how many array elements disappear? The array length is even and at most 10^5, so the removal target is exactly n/2.",
+    "Count each value's frequency, then bucket the frequencies (array indexed by frequency) and sweep from the highest frequency downward. For arr = [3,3,3,3,5,5,5,2,2,7], the frequencies are {3:4, 5:3, 2:2, 7:1}, giving bucket[4]=1, bucket[3]=1, bucket[2]=1, bucket[1]=1.",
+    "```\nfreq = count occurrences of each value\nbuckets[f] = number of values with frequency exactly f\nremoved = 0, ans = 0\nfor f from n down to 1:\n    while buckets[f] > 0 and removed < n/2:\n        removed += f\n        ans += 1\n        buckets[f] -= 1\nreturn ans\n```",
+    "**All distinct** - every value appears once, so each pick removes only one element.\n`Input: arr = [1,2,3,4]` → `Expected: 2`\n⚠️ Bug: returning the number of distinct values (freq.size()) → returns 4\n\n**Ties hitting exactly half** - two values each appear n/2 times, so one pick already meets the target.\n`Input: arr = [1,1,2,2]` → `Expected: 1`\n⚠️ Bug: loop condition `removed <= target` instead of `removed < target` → returns 2\n\n**Wrong sweep direction** - picking small frequencies first wastes picks.\n`Input: arr = [3,3,3,3,5,5,5,2,2,7]` → `Expected: 2`\n⚠️ Bug: iterating f from 1 up to n → returns 3\n\n**Single dominant value** - one value's frequency alone equals n/2.\n`Input: arr = [5,5,5,5,1,2,3,4]` → `Expected: 1`\n⚠️ Bug: setting `target = n/2 + 1` (requiring more than half) → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if arr[i] can be up to 10^9 instead of 10^5?",
+      "a": "The frequency map is already a hash map keyed by value, so large values never index an array. The bucket array is indexed by frequency (at most n), so it stays size n+1. Time and space remain O(n)."
+    },
+    {
+      "q": "What if the array arrives as an unbounded stream with only O(k) memory for small k?",
+      "a": "Use a streaming heavy-hitters sketch such as Count-Min Sketch to estimate frequencies in one pass, then greedily pick the estimated top frequencies. This gives an approximate answer in O(n) time and O(k) space, with no optimality guarantee unless k covers all distinct values."
+    },
+    {
+      "q": "What if you must remove exactly n/2 elements, not at least n/2?",
+      "a": "This becomes a subset-sum problem: find the fewest frequencies summing to exactly n/2. A DP over achievable sums up to n/2 costs O(n·n/2) = O(n²) time and O(n) space, which is too slow for n = 10^5 and needs a different strategy."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSetSize(vector<int>& arr) {\n        int n = arr.size();\n        int target = n / 2;\n        unordered_map<int,int> freq;\n        for (int x : arr) freq[x]++;\n        vector<int> buckets(n + 1, 0);\n        for (auto& p : freq) buckets[p.second]++;\n        int removed = 0, ans = 0;\n        for (int f = n; f >= 1 && removed < target; f--) {\n            while (buckets[f] > 0 && removed < target) {\n                removed += f;\n                ans++;\n                buckets[f]--;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

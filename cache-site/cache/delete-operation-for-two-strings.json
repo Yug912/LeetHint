@@ -1,0 +1,40 @@
+{
+  "slug": "delete-operation-for-two-strings",
+  "title": "Delete Operation for Two Strings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Two Strings (LCS, space-optimised)",
+  "tc": "O(n*m)",
+  "sc": "O(min(n,m))",
+  "spaceBreakdown": "- vector<int> prev: min(n,m)+1 entries → O(min(n,m))\n- vector<int> curr: min(n,m)+1 entries → O(min(n,m))\n- recursion depth: none\n- not counted: input strings word1, word2",
+  "approach": "The minimum deletions equal `len(word1) + len(word2) − 2·LCS(word1, word2)`, because every character not in a longest common subsequence must be deleted from one of the two strings. We compute LCS with a classic 2-row rolling DP: `prev` holds row `i−1`, `curr` builds row `i`. To minimise space we swap the strings so the inner loop (and the dp arrays) are sized to the shorter string. After the loop, `prev[m]` is the LCS length.",
+  "hints": [
+    "After all deletions, the characters that remain in both strings must appear in the same relative order in each original string. Which such set of surviving characters lets you delete the fewest characters overall?",
+    "Compute the longest common subsequence (LCS) with a 2-row rolling DP array sized to the shorter string; answer = len1 + len2 − 2·LCS. For word1 = \"sea\", word2 = \"eat\", the LCS is \"ea\" (length 2), so 3 + 3 − 4 = 2.",
+    "```\nensure word2 is the shorter string\nprev, curr = arrays of size len(word2)+1, filled with 0\nfor i in 1..len(word1):\n    for j in 1..len(word2):\n        if word1[i-1] == word2[j-1]:\n            curr[j] = prev[j-1] + 1\n        else:\n            curr[j] = max(prev[j], curr[j-1])\n    swap(prev, curr)\nreturn len(word1) + len(word2) - 2 * prev[len(word2)]\n```",
+    "**Smallest input** - both strings are a single identical character.\n`Input: word1 = \"a\", word2 = \"a\"` → `Expected: 0`\n⚠️ Bug: sizing the dp array to `m` instead of `m+1`, then reading index `m` → out-of-bounds read.\n\n**No common characters** - the two strings share no letters.\n`Input: word1 = \"abc\", word2 = \"def\"` → `Expected: 6`\n⚠️ Bug: returning the LCS length (0) directly instead of `len1 + len2 − 2·LCS` → returns 0.\n\n**Repeated characters** - runs of the same letter in both strings.\n`Input: word1 = \"aaa\", word2 = \"aa\"` → `Expected: 1`\n⚠️ Bug: forgetting to swap `prev` and `curr` after each outer iteration → `prev` stays all zeros, LCS = 0, returns 5.\n\n**Identical strings** - word1 equals word2.\n`Input: word1 = \"abc\", word2 = \"abc\"` → `Expected: 0`\n⚠️ Bug: always taking `max(prev[j], curr[j-1])` even on character matches → LCS stays 0, returns 6."
+  ],
+  "followUps": [
+    {
+      "q": "What if you may only delete from word1 (word2 is fixed)?",
+      "a": "The answer becomes `len(word1) − LCS(word1, word2)`, since word2 is untouched and you simply remove every non-LCS character from word1. The DP is identical; only the final formula changes. TC O(n·m), SC O(min(n,m))."
+    },
+    {
+      "q": "What if both strings can be up to 10^5 characters?",
+      "a": "O(n·m) = 10^10 is too slow. With a small alphabet, bit-parallel LCS (Hyyrö's algorithm) runs in O(n·m/w) time using machine-word bitsets, where w = 64. If matching character pairs are rare, Hunt-Szymanski gives O((r + n) log n) where r is the number of matching pairs."
+    },
+    {
+      "q": "What if you must also return the actual deletion sequence?",
+      "a": "Store a back-pointer in each DP cell (match / skip-word1-char / skip-word2-char), then walk from dp[n][m] back to dp[0][0] collecting the deleted characters. This needs the full 2D table, raising SC to O(n·m); TC stays O(n·m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDistance(string word1, string word2) {\n        if (word1.size() < word2.size()) swap(word1, word2);\n        int n = word1.size(), m = word2.size();\n        vector<int> prev(m + 1, 0), curr(m + 1, 0);\n        for (int i = 1; i <= n; i++) {\n            for (int j = 1; j <= m; j++) {\n                if (word1[i - 1] == word2[j - 1]) {\n                    curr[j] = prev[j - 1] + 1;\n                } else {\n                    curr[j] = max(prev[j], curr[j - 1]);\n                }\n            }\n            swap(prev, curr);\n        }\n        int lcs = prev[m];\n        return n + m - 2 * lcs;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

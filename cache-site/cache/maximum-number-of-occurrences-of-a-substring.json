@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-occurrences-of-a-substring",
+  "title": "Maximum Number of Occurrences of a Substring",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n · minSize)",
+  "sc": "O(n · minSize)",
+  "spaceBreakdown": "- unordered_map<string,int> cnt: up to n entries, each key a string of length minSize → O(n · minSize)\n- int freq[26]: fixed 26 ints → O(1)\n- local variables (unique, ans, loop counters): O(1)\n- not counted: input string s",
+  "approach": "Any valid substring longer than minSize has a length-minSize prefix that occurs at least as many times (every occurrence of the longer string is also an occurrence of its prefix) and has no more unique characters. So only substrings of exactly minSize need to be checked. We slide a fixed-size window of length minSize across s, maintaining a 26-element frequency array to track the unique-character count in O(1) per step. For each valid window (unique ≤ maxLetters), we extract the substring, increment its count in a hash map, and track the running maximum.",
+  "hints": [
+    "If a substring of length 4 satisfies the unique-letter limit, what can you say about the unique letters in its first 3 characters? The constraints cap maxSize at 26.",
+    "Use a fixed-length sliding window of size minSize with a 26-element frequency array; store each valid window's substring in a hash map counting occurrences. For s = \"aababcaab\" with minSize = 3, window \"aab\" at index 0 has 2 unique letters ≤ 2, so increment map[\"aab\"].",
+    "```\nbuild freq[26] and unique count for window [0, minSize-1]\nif unique <= maxLetters: record substring, update answer\nfor i from minSize to n-1:\n    remove s[i - minSize] from window, update unique\n    add s[i] to window, update unique\n    if unique <= maxLetters: record substring, update answer\nreturn answer\n```",
+    "**Smallest input** - n = 1, only one possible window\n`Input: s = \"a\", maxLetters = 1, minSize = 1, maxSize = 1` → `Expected: 1`\n⚠️ Bug: skipping the first-window check before the sliding loop → returns 0\n\n**No valid answer** - every window exceeds maxLetters\n`Input: s = \"abc\", maxLetters = 1, minSize = 2, maxSize = 2` → `Expected: 0`\n⚠️ Bug: not checking `unique <= maxLetters` before recording → counts \"ab\", returns 1\n\n**All equal** - overlapping occurrences of the same substring\n`Input: s = \"aaaa\", maxLetters = 1, minSize = 3, maxSize = 3` → `Expected: 2`\n⚠️ Bug: stepping the window by minSize instead of 1 (non-overlapping) → checks only one window, returns 1\n\n**Boundary - only the last window is valid**\n`Input: s = \"baaa\", maxLetters = 1, minSize = 3, maxSize = 3` → `Expected: 1`\n⚠️ Bug: loop condition `i < n - 1` instead of `i < n` → misses the last window, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if maxSize could be up to 10^5 instead of 26 - how would you avoid extracting long substrings?",
+      "a": "Replace s.substr with a rolling hash (Rabin-Karp) so each window is hashed in O(1). Time drops to O(n), space to O(n) for the hash map of integer keys."
+    },
+    {
+      "q": "What if s arrives as a streaming input too large to store in memory?",
+      "a": "Keep a circular buffer of the last minSize characters and the frequency array. On each new character, slide the window, update frequencies, and if valid, compute a rolling hash to use as the map key. Time stays O(n), space O(n) for the map."
+    },
+    {
+      "q": "What if you must return the actual substring with the maximum occurrences instead of just the count?",
+      "a": "Store the substring (or its start index) alongside the count in the map entry. When a count exceeds the current best, record that substring. Time and space complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxFreq(string s, int maxLetters, int minSize, int maxSize) {\n        int n = s.size();\n        unordered_map<string, int> cnt;\n        int freq[26] = {0};\n        int unique = 0;\n        for (int i = 0; i < minSize; i++) {\n            if (freq[s[i] - 'a'] == 0) unique++;\n            freq[s[i] - 'a']++;\n        }\n        int ans = 0;\n        if (unique <= maxLetters) {\n            string sub = s.substr(0, minSize);\n            cnt[sub]++;\n            ans = cnt[sub];\n        }\n        for (int i = minSize; i < n; i++) {\n            freq[s[i - minSize] - 'a']--;\n            if (freq[s[i - minSize] - 'a'] == 0) unique--;\n            if (freq[s[i] - 'a'] == 0) unique++;\n            freq[s[i] - 'a']++;\n            if (unique <= maxLetters) {\n                string sub = s.substr(i - minSize + 1, minSize);\n                cnt[sub]++;\n                if (cnt[sub] > ans) ans = cnt[sub];\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

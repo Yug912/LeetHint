@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-the-confusion-of-an-exam",
+  "title": "Maximize the Confusion of an Exam",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int ans, left, cnt: scalar variables → O(1)\n- loop variable target: scalar → O(1)\n- not counted: input string answerKey",
+  "approach": "For any segment we want to make all-'T' or all-'F', the number of positions that differ from the target must be ≤ k. We run a sliding window twice - once targeting 'T', once targeting 'F'. In each pass, expand the right end; whenever the count of \"wrong\" characters exceeds k, shrink from the left until it's valid again. The maximum window size across both passes is the answer.",
+  "hints": [
+    "For any fixed segment of the answer key that you decide to make all the same, what must be true about the characters you need to change? The constraint k ≤ n means you can never flip more than k positions.",
+    "Sliding window. For target 'T' in \"TTFF\" with k = 2, expand right counting non-'T' chars (0, 0, 1, 2); the count never exceeds 2, so the whole window of size 4 is valid.",
+    "```\nfor each target in {T, F}:\n    left = 0, flips = 0\n    for right from 0 to n-1:\n        if key[right] != target: flips++\n        while flips > k:\n            if key[left] != target: flips--\n            left++\n        answer = max(answer, right - left + 1)\n```",
+    "**All same character** - entire string already uniform, zero flips needed\n`Input: answerKey = \"FFFF\", k = 1` → `Expected: 4`\n⚠️ Bug: only maximizing for 'T' and not also for 'F' → returns 1\n\n**Window shrink condition** - k flips are allowed, not k-1\n`Input: answerKey = \"TFTF\", k = 2` → `Expected: 4`\n⚠️ Bug: using `while (cnt >= k)` instead of `while (cnt > k)` → returns 3\n\n**Shrink must be a loop** - multiple positions may need removal in one step\n`Input: answerKey = \"TTFTTFTT\", k = 1` → `Expected: 5`\n⚠️ Bug: using `if (cnt > k)` instead of `while (cnt > k)` → returns 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if the answer key uses four choices (A/B/C/D) instead of two?",
+      "a": "Run the sliding window once per distinct character. With c choices, TC becomes O(c·n) and SC stays O(1). For a fixed small alphabet this is still linear."
+    },
+    {
+      "q": "What if the answer key arrives as a stream and you must report the answer online after each character?",
+      "a": "Maintain two sliding windows simultaneously - one targeting 'T', one targeting 'F' - updating both as each character arrives. TC O(n) total, SC O(1) since only window boundaries and two counters are stored."
+    },
+    {
+      "q": "What if you must return the answer for every k from 0 to n in one pass?",
+      "a": "During each sliding-window pass, whenever flips reaches k+1 and you shrink, record the pre-shrink window size as a candidate for result[k]. Fill an array of size n+1; since the answer is non-decreasing in k, propagate maximums upward. TC O(n), SC O(n) for the result array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxConsecutiveAnswers(string answerKey, int k) {\n        int n = answerKey.size();\n        int ans = 0;\n        for (char target : {'T', 'F'}) {\n            int left = 0, cnt = 0;\n            for (int right = 0; right < n; right++) {\n                if (answerKey[right] != target) cnt++;\n                while (cnt > k) {\n                    if (answerKey[left] != target) cnt--;\n                    left++;\n                }\n                ans = max(ans, right - left + 1);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

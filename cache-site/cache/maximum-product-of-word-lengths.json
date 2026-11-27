@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-product-of-word-lengths",
+  "title": "Maximum Product of Word Lengths",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask",
+  "tc": "O(n² + n·L)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> masks(n, 0): up to n=1000 entries → O(n)\n- recursion depth: none\n- not counted: input vector<string>, returned int",
+  "approach": "Since words contain only 26 lowercase letters, represent each word's letter set as a 26-bit integer bitmask. Two words share no common letters iff their bitmasks AND to zero. Compute all masks in one pass, then check every pair (i, j): if `masks[i] & masks[j] == 0`, update the maximum with `length[i] * length[j]`. This is correct because the bitmask captures exactly which letters appear, and the AND operation detects any shared letter in O(1).",
+  "hints": [
+    "Words contain only 26 possible lowercase letters. What representation of a word's letter set would let you check if two words share any letter with a single operation?",
+    "Use a bitmask: each of the 26 bits represents whether a letter appears in the word. For \"abcw\", bits 0, 1, 2, 22 are set. Two words share no letters iff `(mask[i] & mask[j]) == 0`.",
+    "```\nfor each word:\n    mask = 0\n    for each char: set bit (char - 'a') in mask\n    store mask\n\nmaxProd = 0\nfor i in 0..n-1:\n    for j in i+1..n-1:\n        if masks[i] & masks[j] == 0:\n            maxProd = max(maxProd, len[i] * len[j])\nreturn maxProd\n```",
+    "**No valid pair** - all words contain the letter 'a'\n`Input: words = [\"a\",\"aa\",\"aaa\",\"aaaa\"]` → `Expected: 0`\n⚠️ Bug: initializing maxProduct to -1 instead of 0 → returns -1\n\n**Operator precedence** - two single-letter words with no common letters\n`Input: words = [\"a\",\"b\"]` → `Expected: 1`\n⚠️ Bug: writing `masks[i] & masks[j] == 0` without outer parentheses (C++ parses as `masks[i] & (masks[j] == 0)`) → returns 0\n\n**All words identical** - every pair shares all letters\n`Input: words = [\"abc\",\"abc\"]` → `Expected: 0`\n⚠️ Bug: checking only `i != j` without mask overlap test → returns 9\n\n**Overlapping letter sets** - words share some but not all letters\n`Input: words = [\"ab\",\"bc\"]` → `Expected: 0`\n⚠️ Bug: checking `masks[i] != masks[j]` instead of `masks[i] & masks[j] == 0` → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if words can contain uppercase and lowercase letters (52 distinct characters)?",
+      "a": "Use a 64-bit integer (long long) as the bitmask. Map each of the 52 characters to a unique bit position. The algorithm structure is identical. TC: O(n² + total_chars), SC: O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "Group words by mask, keeping only the longest per mask. Use SOS (Sum Over Subsets) DP to precompute, for each mask, the maximum word length among all submasks. For each word, look up the complement mask's precomputed value. TC: O(n·L + 26·2^26), SC: O(2^26)."
+    },
+    {
+      "q": "What if words arrive one at a time and you must report the current maximum after each insertion?",
+      "a": "Maintain a hash map from mask to the longest word length seen. For each new word, compute its mask, scan all existing entries for disjoint masks, update the answer, then insert/update the map. TC: O(n·L + n·m) where m is distinct masks seen, SC: O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxProduct(vector<string>& words) {\n        int n = words.size();\n        vector<int> masks(n, 0);\n        for (int i = 0; i < n; i++) {\n            for (char c : words[i]) {\n                masks[i] |= (1 << (c - 'a'));\n            }\n        }\n        int maxProd = 0;\n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                if ((masks[i] & masks[j]) == 0) {\n                    int prod = (int)words[i].size() * (int)words[j].size();\n                    maxProd = max(maxProd, prod);\n                }\n            }\n        }\n        return maxProd;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

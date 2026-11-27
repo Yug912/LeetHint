@@ -1,0 +1,40 @@
+{
+  "slug": "keyboard-row",
+  "title": "Keyboard Row",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Table Lookup",
+  "tc": "O(N * M)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int row[26]: constant 26 entries → O(1)\n- string r1, r2, r3: constant-size temporaries → O(1)\n- vector<string> result: returned output, not counted per LeetCode convention\n- recursion depth: none",
+  "approach": "Map each of the 26 lowercase letters to its keyboard row (0, 1, or 2) using a direct-index array of size 26. For each word, lowercase every character, look up its row, and check if all characters share the same row as the first character. If they do, include the word in the result. This works because the problem reduces to a uniformity check across all letters in a word.",
+  "hints": [
+    "If you labeled every letter with a single number representing its keyboard row, what would be true of all the letters in a qualifying word?",
+    "Use a direct-index array of size 26 mapping each lowercase letter to its row (0, 1, or 2). For \"Alaska\": A→1, l→1, a→1, s→1, k→1, a→1 - all match row 1, so include it.",
+    "```\nbuild array row[26]: each lowercase letter → 0, 1, or 2\nfor each word:\n    target = row[lowercase(first char)]\n    if every char in word has row[lowercase(char)] == target:\n        add word to result\nreturn result\n```",
+    "**Single character** - A one-letter word uses exactly one row.\n`Input: [\"A\"]` → `Expected: [\"A\"]`\n⚠️ Bug: skipping words shorter than 2 characters → returns `[]`\n\n**All uppercase** - Every letter is uppercase, so case conversion is required before lookup.\n`Input: [\"ALASKA\"]` → `Expected: [\"ALASKA\"]`\n⚠️ Bug: indexing the row map with the raw uppercase char (`row['A' - 'a']` = `row[-32]`) → out-of-bounds access, crash or `[]`\n\n**Uppercase first letter** - The first letter is uppercase but the rest are lowercase.\n`Input: [\"Alaska\"]` → `Expected: [\"Alaska\"]`\n⚠️ Bug: checking membership in a lowercase-only row string without lowercasing the word's characters → 'A' not found in \"asdfghjkl\" → returns `[]`\n\n**First letter only** - Only the first letter's row is checked, ignoring the rest.\n`Input: [\"Peace\"]` → `Expected: []`\n⚠️ Bug: checking only the first character's row and assuming all match → returns `[\"Peace\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the keyboard layout is provided as input (arbitrary rows of characters)?",
+      "a": "Build the row map from the input layout instead of hardcoding the three rows. The algorithm is identical: map each letter to its row, then check each word for uniformity. TC stays O(N × M), SC stays O(1) for a fixed 26-letter alphabet."
+    },
+    {
+      "q": "What if words can contain non-alphabetic characters (digits, punctuation)?",
+      "a": "Assign non-alphabetic characters a sentinel row value (e.g., -1). A word containing any character with a sentinel row fails the single-row check unless you define which row those characters belong to. TC and SC are unchanged."
+    },
+    {
+      "q": "What if the input is an unbounded stream of words (too many to store)?",
+      "a": "Process each word as it arrives: compute row membership on the fly and emit it immediately if it qualifies. Only the current word and the constant-size row map need to be in memory. TC O(total characters), SC O(1) beyond the current word."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> findWords(vector<string>& words) {\n        int row[26];\n        string r1 = \"qwertyuiop\";\n        string r2 = \"asdfghjkl\";\n        string r3 = \"zxcvbnm\";\n        for (char c : r1) row[c - 'a'] = 0;\n        for (char c : r2) row[c - 'a'] = 1;\n        for (char c : r3) row[c - 'a'] = 2;\n\n        vector<string> result;\n        for (const string& w : words) {\n            int targetRow = row[tolower(w[0]) - 'a'];\n            bool same = true;\n            for (char c : w) {\n                if (row[tolower(c) - 'a'] != targetRow) {\n                    same = false;\n                    break;\n                }\n            }\n            if (same) result.push_back(w);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

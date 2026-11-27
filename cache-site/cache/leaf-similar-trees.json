@@ -1,0 +1,40 @@
+{
+  "slug": "leaf-similar-trees",
+  "title": "Leaf-Similar Trees",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Iterator/Generator DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- vector<TreeNode*> s1: up to h1 entries (height of tree 1) → O(h)\n- vector<TreeNode*> s2: up to h2 entries (height of tree 2) → O(h)\n- not counted: input trees, returned bool",
+  "approach": "Use an iterator-style DFS with an explicit stack for each tree. Each call to `nextLeaf` advances the DFS until it finds the next leaf, yielding one value at a time. Run both iterators in parallel, comparing leaves pairwise: return false on the first mismatch or when one tree exhausts before the other. This avoids collecting all leaves - only O(h) stack space is needed per tree, where h is tree height.",
+  "hints": [
+    "What do you need to remember about tree 1's leaves while you are still discovering tree 2's leaves? Each tree has at most 200 nodes.",
+    "Use an iterator-style DFS with an explicit stack that yields one leaf at a time. For tree 1 in Example 1, the first `nextLeaf` call pops 3, pushes 1 then 5, pops 5, pushes 2 then 6, pops 6 → yields 6.",
+    "```\nfunction nextLeaf(stack):\n    while stack not empty:\n        node = stack.pop()\n        if node.left is null and node.right is null:\n            return node.val\n        if node.right: stack.push(node.right)\n        if node.left:  stack.push(node.left)\n    return NONE\n\ns1 = [root1], s2 = [root2]\nloop:\n    v1 = nextLeaf(s1), v2 = nextLeaf(s2)\n    if both NONE: return true\n    if one NONE:  return false\n    if v1 != v2:  return false\n```",
+    "**Single node** - both trees are single leaves with the same value.\n`Input: root1 = [1], root2 = [1]` → `Expected: true`\n⚠️ Bug: initializing the stack empty instead of pushing root → `nextLeaf` returns NONE immediately → returns false\n\n**Different leaf counts** - one tree has more leaves than the other.\n`Input: root1 = [1,2], root2 = [1,2,3]` → `Expected: false`\n⚠️ Bug: returning true when the first iterator exhausts without checking the second → returns true\n\n**Same values, different order** - leaves have identical values but in different positions.\n`Input: root1 = [1,2,3], root2 = [1,3,2]` → `Expected: false`\n⚠️ Bug: storing leaves in an unordered_set instead of comparing in sequence → returns true (both sets are {2, 3})\n\n**Node with one child** - an internal node has only one child and must not be treated as a leaf.\n`Input: root1 = [3,2,null,1], root2 = [1]` → `Expected: true`\n⚠️ Bug: using `!node->left || !node->right` instead of `!node->left && !node->right` for leaf check → treats one-child nodes as leaves → tree 1 yields [3, 2, 1] instead of [1] → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if each tree has up to 10^9 nodes and you receive them as a stream - can you still decide leaf-similarity?",
+      "a": "The iterator approach already handles this. Each `nextLeaf` call only needs O(h) stack space and produces one leaf. You would implement `nextLeaf` as a stateful coroutine that pulls nodes from the stream on demand. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if you need to check leaf-similarity for k trees simultaneously?",
+      "a": "Run k iterators in parallel, comparing all k leaf values at each step. If any differ, return false. If all exhaust at the same step, return true. TC: O(n_total), SC: O(k · h_max)."
+    },
+    {
+      "q": "Can you reduce the space to O(1) if you are allowed to temporarily modify the trees?",
+      "a": "Use Morris traversal inside `nextLeaf` - temporarily redirect right pointers of nodes with left children to thread back to the successor, then restore them. Each call uses O(1) extra space beyond the tree itself. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool leafSimilar(TreeNode* root1, TreeNode* root2) {\n        vector<TreeNode*> s1, s2;\n        s1.push_back(root1);\n        s2.push_back(root2);\n        while (true) {\n            bool has1, has2;\n            int v1 = nextLeaf(s1, has1);\n            int v2 = nextLeaf(s2, has2);\n            if (!has1 && !has2) return true;\n            if (!has1 || !has2) return false;\n            if (v1 != v2) return false;\n        }\n    }\nprivate:\n    int nextLeaf(vector<TreeNode*>& s, bool& found) {\n        found = false;\n        while (!s.empty()) {\n            TreeNode* node = s.back();\n            s.pop_back();\n            if (!node->left && !node->right) {\n                found = true;\n                return node->val;\n            }\n            if (node->right) s.push_back(node->right);\n            if (node->left)  s.push_back(node->left);\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

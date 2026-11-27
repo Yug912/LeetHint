@@ -1,0 +1,40 @@
+{
+  "slug": "count-good-triplets",
+  "title": "Count Good Triplets",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Brute Force Enumeration",
+  "tc": "O(n³)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count: single variable → O(1)\n- int n: single variable → O(1)\n- loop indices i, j, k: scalars → O(1)\n- not counted: input vector arr",
+  "approach": "The constraints (n ≤ 100) make an O(n³) brute-force enumeration feasible: at most C(100,3) ≈ 161,700 triplets. We iterate over all index triples i < j < k and count those satisfying all three absolute-difference conditions. An early-exit on the first condition (|arr[i]−arr[j]| ≤ a) prunes the inner loops whenever the outer pair already fails.",
+  "hints": [
+    "The array length is at most 100. What is the maximum number of index triples (i, j, k) with i < j < k that you might need to examine?",
+    "Three nested loops enumerating every index triple i < j < k. For arr = [3,0,1,1,9,7] with a=7, b=2, c=3: the triple (i,j,k)=(0,1,2) gives |3−0|=3≤7, |0−1|=1≤2, |3−1|=2≤3, so it is counted.",
+    "```\ncount = 0\nfor i in 0 .. n-1:\n    for j in i+1 .. n-1:\n        if |arr[i] - arr[j]| > a: continue\n        for k in j+1 .. n-1:\n            if |arr[j] - arr[k]| <= b and |arr[i] - arr[k]| <= c:\n                count = count + 1\nreturn count\n```",
+    "**All equal values** - every triplet qualifies when thresholds are zero.\n`Input: arr = [7,7,7,7], a = 0, b = 0, c = 0` → `Expected: 4`\n⚠️ Bug: using strict `<` instead of `<=` in the condition checks → returns 0\n\n**No valid answer** - no triplet satisfies all three constraints.\n`Input: arr = [1,1,2,2,3], a = 0, b = 0, c = 1` → `Expected: 0`\n⚠️ Bug: inner k-loop starting at `j` instead of `j+1` (allowing j == k) → returns 2\n\n**Boundary indices** - the only valid triplet uses the first and last elements.\n`Input: arr = [0,5,10], a = 10, b = 10, c = 10` → `Expected: 1`\n⚠️ Bug: k-loop bound `k < n-1` instead of `k < n` → returns 0\n\n**Decreasing values** - absolute value matters when arr[i] < arr[j].\n`Input: arr = [1,6,1], a = 3, b = 5, c = 0` → `Expected: 0`\n⚠️ Bug: comparing `arr[i] - arr[j]` directly without `abs()` → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "If arr.length were up to 2000, how would you keep it efficient?",
+      "a": "Fix the middle index j and maintain a frequency array over arr values for indices i < j (values ≤ 1000, so the array is small). For each k > j with |arr[j]−arr[k]| ≤ b, query how many stored i-values fall in [arr[j]−a, arr[j]+a] ∩ [arr[k]−c, arr[k]+c]. This is O(n²) overall, feasible for n = 2000."
+    },
+    {
+      "q": "If array values could be up to 10⁹, how does that frequency-array approach change?",
+      "a": "Replace the direct-index frequency array with a Fenwick tree over coordinate-compressed values or a balanced BST. Each range query becomes O(log n) instead of O(1), giving O(n² log n) total. The original O(n³) brute force is unaffected since it only compares values pairwise."
+    },
+    {
+      "q": "If the array arrives as a stream and you must report the count after each new element, how would you adapt?",
+      "a": "Maintain the per-j frequency structures incrementally. When element at position k arrives, it can only be the third element of new triplets; for each existing j < k with |arr[j]−arr[k]| ≤ b, query how many i < j satisfy the a and c constraints. Amortized cost depends on how many j's qualify per new element."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countGoodTriplets(vector<int>& arr, int a, int b, int c) {\n        int n = (int)arr.size();\n        int count = 0;\n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                if (abs(arr[i] - arr[j]) > a) continue;\n                for (int k = j + 1; k < n; k++) {\n                    if (abs(arr[j] - arr[k]) <= b && abs(arr[i] - arr[k]) <= c) {\n                        count++;\n                    }\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

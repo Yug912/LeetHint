@@ -1,0 +1,40 @@
+{
+  "slug": "k-inverse-pairs-array",
+  "title": "K Inverse Pairs Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming with Sliding Window Sum",
+  "tc": "O(n·k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- prev: vector<int> of size k+1 → O(k)\n- cur: vector<int> of size k+1 → O(k)\n- recursion depth: none\n- not counted: input parameters n, k",
+  "approach": "Let dp[i][j] = number of permutations of 1..i with exactly j inverse pairs. When we insert the value i into a permutation of 1..(i−1), it can create between 0 and i−1 new inverse pairs (depending on its position). So dp[i][j] = Σ dp[i−1][j−t] for t in [0, min(j, i−1)]. Naively this is O(n²·k); we optimize with the sliding recurrence dp[i][j] = dp[i][j−1] + dp[i−1][j] − (j≥i ? dp[i−1][j−i] : 0), giving O(n·k). We keep only two rolling rows (prev, cur) to reduce space to O(k). All arithmetic is done modulo 10⁹+7 with careful handling of negative intermediate values.",
+  "hints": [
+    "When you build a permutation of 1..n by inserting the value n into some position of a permutation of 1..(n−1), how many *new* inverse pairs can that single insertion create, and what range of counts is possible?\nThe constraint n ≤ 1000, k ≤ 1000 means an O(n·k) table is affordable but O(n²·k) is not.",
+    "Use a 2-D DP dp[i][j] with a sliding-window recurrence. For n=3, k=1: dp[3][1] = dp[3][0] + dp[2][1] − 0 = 1 + 1 = 2, matching the two arrays [1,3,2] and [2,1,3].",
+    "```\nprev[0] = 1\nfor i = 2 to n:\n    cur[0] = 1\n    for j = 1 to k:\n        val = cur[j-1] + prev[j]\n        if j >= i: val -= prev[j-i]\n        cur[j] = val mod MOD\n    swap(prev, cur)\nreturn prev[k]\n```",
+    "**Smallest input** - n=1, k=0, only [1] exists with zero inversions.\n`Input: n = 1, k = 0` → `Expected: 1`\n⚠️ Bug: initializing prev[0] = 0 instead of 1 → returns 0\n\n**k exceeds maximum** - n=1, k=5, a single element cannot form any inverse pair.\n`Input: n = 1, k = 5` → `Expected: 0`\n⚠️ Bug: leaving prev[k] uninitialized (no zero-fill) → returns garbage\n\n**Maximum inversions** - n=3, k=3, only [3,2,1] has 3 inverse pairs.\n`Input: n = 3, k = 3` → `Expected: 1`\n⚠️ Bug: using `j > i` instead of `j >= i` in the subtraction guard → never subtracts prev[j−i], returns 2\n\n**k = 0 for any n** - n=5, k=0, only the sorted array qualifies.\n`Input: n = 5, k = 0` → `Expected: 1`\n⚠️ Bug: not resetting cur[0] = 1 at the start of each i → returns 0\n\n**Negative modulo** - n=3, k=3, the subtraction 2 + 0 − 1 = 1 is fine, but with large values cur[j−1] + prev[j] − prev[j−i] can go negative.\n`Input: n = 1000, k = 1000` → `Expected: 663677020`\n⚠️ Bug: applying `% MOD` without adding MOD back when the result is negative → returns a negative number"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10⁹ but k ≤ 1000, how would you adapt?",
+      "a": "When n > k, inserting n can create up to n−1 new inversions but we only care about totals ≤ k, so min(k, n−1) = k and the recurrence simplifies to dp[n][j] = dp[n][j−1] + dp[n−1][j] with no subtraction. The values stabilize once n > k, so compute only up to i = k+1 and return dp[k+1][k] for any larger n. Time O(k²), space O(k)."
+    },
+    {
+      "q": "If k can be as large as n·(n−1)/2 (the true maximum), how does complexity change?",
+      "a": "The table now has O(n²) columns per row, so time becomes O(n·k) = O(n³) and space O(k) = O(n²) with rolling arrays. For n = 1000 this is 10⁹ operations - too slow, so you would need a generating-function / polynomial approach instead."
+    },
+    {
+      "q": "If you must answer many (n_i, k_i) queries, how to preprocess?",
+      "a": "Precompute the full dp table for all i up to max_n and j up to max_k once in O(max_n·max_k) time and O(max_n·max_k) space, then answer each query in O(1). With max_n = max_k = 1000 this is 10⁶ entries, easily feasible."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int kInversePairs(int n, int k) {\n        const int MOD = 1000000007;\n        vector<int> prev(k + 1, 0), cur(k + 1, 0);\n        prev[0] = 1;\n        for (int i = 2; i <= n; i++) {\n            cur[0] = 1;\n            for (int j = 1; j <= k; j++) {\n                long long val = (long long)cur[j - 1] + prev[j];\n                if (j >= i) val -= prev[j - i];\n                val %= MOD;\n                if (val < 0) val += MOD;\n                cur[j] = (int)val;\n            }\n            swap(prev, cur);\n        }\n        return prev[k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

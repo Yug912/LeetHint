@@ -1,0 +1,40 @@
+{
+  "slug": "guess-number-higher-or-lower-ii",
+  "title": "Guess Number Higher or Lower II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals with Knuth Optimization",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<vector<int>> dp: (n+2)×(n+2) ints → O(n²)\n- vector<vector<int>> opt: (n+2)×(n+2) ints → O(n²)\n- recursion depth: none (iterative)\n- not counted: input n, returned int",
+  "approach": "This is a minimax problem on intervals: for range [lo, hi], we pick a guess k, pay k, then face the worse of the two subproblems [lo, k-1] or [k+1, hi]. We use interval DP where dp[lo][hi] = min over k of (k + max(dp[lo][k-1], dp[k+1][hi])). The crucial optimization is Knuth's: the optimal guess opt[lo][hi] is monotone, satisfying opt[lo][hi-1] ≤ opt[lo][hi] ≤ opt[lo+1][hi], which narrows the inner search range so the total work telescopes from O(n³) down to O(n²).",
+  "hints": [
+    "When the guessing range [lo, hi] widens by moving either endpoint outward, in which direction does the best first guess shift?",
+    "Interval DP with Knuth optimization. dp[lo][hi] = min_k (k + max(dp[lo][k-1], dp[k+1][hi])); the optimal k is monotone: opt[lo][hi-1] ≤ opt[lo][hi] ≤ opt[lo+1][hi]. For n=2, dp[1][2] checks k∈[1,2], picks k=1 → 1+max(0,0)=1.",
+    "```\ninitialize opt[i][i] = i for all i\nfor len = 2 to n:\n    for lo = 1 to n - len + 1:\n        hi = lo + len - 1\n        for k = opt[lo][hi-1] to opt[lo+1][hi]:\n            cost = k + max(dp[lo][k-1], dp[k+1][hi])\n            track minimum cost and best k\n        dp[lo][hi] = best cost\n        opt[lo][hi] = best k\nreturn dp[1][n]\n```",
+    "**Single element** - the length loop never executes, so the base case must be correct\n`Input: n = 1` → `Expected: 0`\n⚠️ Bug: initializing dp to INT_MAX instead of 0 → returns INT_MAX\n\n**Two elements** - must pay for the first wrong guess before the second is free\n`Input: n = 2` → `Expected: 1`\n⚠️ Bug: computing cost as `max(dp[lo][k-1], dp[k+1][hi])` without adding k → returns 0\n\n**Three elements** - optimal guess is the middle value, splitting into two singletons\n`Input: n = 3` → `Expected: 2`\n⚠️ Bug: using `min` instead of `max` to combine subproblems → returns 1\n\n**Boundary index access** - k=lo reads dp[lo][lo-1] and k=hi reads dp[hi+1][hi], both must be 0\n`Input: n = 2` → `Expected: 1`\n⚠️ Bug: sizing dp as (n+1)×(n+1) so dp[1][0] is out of bounds → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the solution to minimize the expected loss instead of the worst-case loss?",
+      "a": "Replace `max(dp[lo][k-1], dp[k+1][hi])` with a probability-weighted average: `(k-lo)/(hi-lo+1) * dp[lo][k-1] + (hi-k)/(hi-lo+1) * dp[k+1][hi]`. The Knuth monotonicity may not hold for the expected-value recurrence, so the inner loop would scan all k, giving O(n³) time and O(n²) space."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "O(n²) time and space are too large. The optimal strategy resembles a balanced binary search tree, so a greedy approximation that always guesses near the 1/3 point of each range gives a constant-factor approximation in O(n) time. An exact O(n log n) solution is not known for this minimax variant."
+    },
+    {
+      "q": "What if the numbers are an arbitrary sorted array of values, not 1 through n?",
+      "a": "Sort the array first, then run the same interval DP on indices. The cost of guessing index k becomes values[k] instead of k. The Knuth monotonicity still holds on indices, so time remains O(m²) and space O(m²) where m is the array length."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int getMoneyAmount(int n) {\n        vector<vector<int>> dp(n + 2, vector<int>(n + 2, 0));\n        vector<vector<int>> opt(n + 2, vector<int>(n + 2, 0));\n\n        for (int i = 1; i <= n; i++) {\n            opt[i][i] = i;\n        }\n\n        for (int len = 2; len <= n; len++) {\n            for (int lo = 1; lo + len - 1 <= n; lo++) {\n                int hi = lo + len - 1;\n                int best = INT_MAX;\n                int startK = opt[lo][hi - 1];\n                int endK = opt[lo + 1][hi];\n                for (int k = startK; k <= endK; k++) {\n                    int cost = k + max(dp[lo][k - 1], dp[k + 1][hi]);\n                    if (cost < best) {\n                        best = cost;\n                        opt[lo][hi] = k;\n                    }\n                }\n                dp[lo][hi] = best;\n            }\n        }\n\n        return dp[1][n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "long-pressed-name",
+  "title": "Long Pressed Name",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int i, j, n, m: four scalars → O(1)\n- no containers, no recursion, no heap allocation\n- not counted: input strings name, typed",
+  "approach": "Use two pointers: `i` walks through `name`, `j` walks through `typed`. At each step, if `name[i] == typed[j]`, advance both (a genuine match). Otherwise, `typed[j]` must be a long press - i.e., equal to `typed[j-1]` - in which case we advance only `j`. If neither condition holds, return false. After consuming all of `typed`, every character of `name` must have been matched (`i == name.length`). This is correct because long presses only add consecutive duplicates, so the character sequence of `typed` must be `name`'s sequence with some runs extended.",
+  "hints": [
+    "When scanning both strings left to right, what must be true about a character in `typed` that doesn't match the current character in `name`? Each character in `name` appears at least once in `typed`, in the same order.",
+    "Two pointers: `i` into `name`, `j` into `typed`. For `name=\"alex\"`, `typed=\"aaleex\"`: `name[0]='a'` matches `typed[0]='a'` (advance both), then `typed[1]='a'` doesn't match `name[1]='l'` but equals `typed[0]`, so it's a long press (advance `j` only).",
+    "```\ni = 0, j = 0\nwhile j < length of typed:\n    if i < length of name and name[i] == typed[j]:\n        i = i + 1,  j = j + 1\n    else if j > 0 and typed[j] == typed[j-1]:\n        j = j + 1\n    else:\n        return false\nreturn i == length of name\n```",
+    "**Name longer than typed in a group** - typed doesn't have enough copies of a character\n`Input: name = \"aa\", typed = \"a\"` → `Expected: false`\n⚠️ Bug: returning `true` at loop exit without checking `i == n` → returns true\n\n**Long press on last character** - typed has trailing repeats after name is fully consumed\n`Input: name = \"ab\", typed = \"abbb\"` → `Expected: true`\n⚠️ Bug: using `while (i < n && j < m)` and returning `j == m` → returns false (j=2, m=4)\n\n**First character mismatch** - typed's first character differs from name's\n`Input: name = \"b\", typed = \"ab\"` → `Expected: false`\n⚠️ Bug: checking `typed[j] == typed[j-1]` without a `j > 0` guard → accesses typed[-1], undefined behavior\n\n**Extra different character at end** - typed ends with a character not in name\n`Input: name = \"abc\", typed = \"abcd\"` → `Expected: false`\n⚠️ Bug: using `while (i < n && j < m)` as loop condition → exits when i=3, j=3, returns `i == n` = true"
+  ],
+  "followUps": [
+    {
+      "q": "If `typed` can also contain at most k inserted typo characters (not long presses), how do you adapt?",
+      "a": "Add a skip budget k. When `typed[j]` matches neither `name[i]` nor `typed[j-1]`, decrement k and advance j only. Return false if k drops below 0. O(n + m) time, O(1) space."
+    },
+    {
+      "q": "If name and typed are each up to 10^9 characters but given as run-length encoded lists of (char, count) pairs, how do you solve it?",
+      "a": "Walk both group lists with two pointers. For each name group (c, cnt), the corresponding typed group must have the same character c and count >= cnt; advance the typed pointer past that group. O(g1 + g2) time where g1, g2 are group counts, O(1) space."
+    },
+    {
+      "q": "If `typed` arrives as a one-character-at-a-time stream and cannot be stored, can you still decide?",
+      "a": "Yes. Keep index i into name and the last received character. For each incoming c: if i < n and name[i] == c, advance i; else if c equals the last character, it's a long press; else return false. After the stream ends, return i == n. O(n) space for name, O(1) additional."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isLongPressedName(string name, string typed) {\n        int i = 0, j = 0;\n        int n = name.size(), m = typed.size();\n        while (j < m) {\n            if (i < n && name[i] == typed[j]) {\n                i++;\n                j++;\n            } else if (j > 0 && typed[j] == typed[j - 1]) {\n                j++;\n            } else {\n                return false;\n            }\n        }\n        return i == n;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

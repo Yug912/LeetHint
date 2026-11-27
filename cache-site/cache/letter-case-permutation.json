@@ -1,0 +1,40 @@
+{
+  "slug": "letter-case-permutation",
+  "title": "Letter Case Permutation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking",
+  "tc": "O(2^n * n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string current: copy of input, length n → O(n)\n- recursion call stack: depth up to n → O(n)\n- not counted: input s, returned result vector",
+  "approach": "Use recursive backtracking with an in-place mutable copy of the input string. At each position, if the character is a letter, branch into two recursive calls-one setting it to lowercase, one to uppercase. If it's a digit, make a single recursive call. When the index reaches the string length, push the current string to the result. This systematically enumerates all 2^k permutations where k is the number of letters.",
+  "hints": [
+    "Each letter in the string can appear in two forms while each digit has only one. With s.length ≤ 12, what is the maximum number of result strings you might need to generate?",
+    "Use recursive backtracking. At each position, if the character is a letter, branch into two paths (lowercase and uppercase); if it's a digit, take a single path. For \"a1b2\", position 0 ('a') branches into 'a' and 'A', position 1 ('1') continues unchanged, position 2 ('b') branches into 'b' and 'B'.",
+    "```\nfunction backtrack(s, index, current, result):\n    if index == length(s):\n        add current to result\n        return\n    if s[index] is a letter:\n        set current[index] to lowercase(s[index])\n        backtrack(s, index+1, current, result)\n        set current[index] to uppercase(s[index])\n        backtrack(s, index+1, current, result)\n    else:\n        backtrack(s, index+1, current, result)\n```",
+    "**Smallest input, digit only** - single character with no letters to branch on\n`Input: \"1\"` → `Expected: [\"1\"]`\n⚠️ Bug: using `c ^ 32` to toggle case on all characters without `isalpha` check → returns `[\"1\", \"\\x11\"]` (chr(49^32)=chr(17))\n\n**Uppercase letter** - input contains an uppercase letter that must also produce its lowercase form\n`Input: \"A\"` → `Expected: [\"a\", \"A\"]`\n⚠️ Bug: checking `islower(s[index])` instead of `isalpha(s[index])` → 'A' is not lowercase, no branching → returns `[\"A\"]`\n\n**All equal letters** - repeated letters each branch independently\n`Input: \"aa\"` → `Expected: [\"aa\", \"aA\", \"Aa\", \"AA\"]`\n⚠️ Bug: base case checks `index == s.size() - 1` instead of `index == s.size()` → never branches on last character → returns `[\"aa\", \"Aa\"]`\n\n**Boundary: digit at first position** - digit appears before any letter\n`Input: \"1a\"` → `Expected: [\"1a\", \"1A\"]`\n⚠️ Bug: building result string by appending only letters, skipping digits → returns `[\"a\", \"A\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return only permutations with exactly k uppercase letters?",
+      "a": "Add a counter parameter tracking uppercase count. Only push to result when index == n AND uppercase count == k. Prune branches where remaining letters cannot reach k. TC: O(2^n * n), SC: O(n)."
+    },
+    {
+      "q": "What if s.length can be up to 20?",
+      "a": "With 20 letters, 2^20 ≈ 1M permutations. The same backtracking approach works but produces a large output vector. TC: O(2^n * n), SC: O(n) auxiliary."
+    },
+    {
+      "q": "What if you need to generate permutations one at a time without storing all in memory?",
+      "a": "Replace the result vector with a callback function that processes each permutation as it is generated. The recursion structure stays identical. TC: O(2^n * n) total, SC: O(n) for recursion stack only."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> letterCasePermutation(string s) {\n        vector<string> result;\n        string current = s;\n        backtrack(s, 0, current, result);\n        return result;\n    }\nprivate:\n    void backtrack(const string& s, size_t index, string& current, vector<string>& result) {\n        if (index == s.size()) {\n            result.push_back(current);\n            return;\n        }\n        if (isalpha((unsigned char)s[index])) {\n            current[index] = tolower((unsigned char)s[index]);\n            backtrack(s, index + 1, current, result);\n            current[index] = toupper((unsigned char)s[index]);\n            backtrack(s, index + 1, current, result);\n        } else {\n            backtrack(s, index + 1, current, result);\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "global-and-local-inversions",
+  "title": "Global and Local Inversions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Invariant Check on Permutation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- loop index `i` (int): O(1)\n- no containers, recursion, or auxiliary arrays allocated\n- not counted: input `nums`",
+  "approach": "Every local inversion is automatically a global inversion, so the two counts are equal exactly when every global inversion is also local - i.e., no element is \"too far\" from its sorted position. Because `nums` is a permutation of `[0, n-1]`, the value `v` belongs at index `v`. If any `nums[i]` differs from `i` by more than 1, then some smaller value is displaced far to the right, creating a global inversion that is not local. So we just scan once and reject if `|nums[i] - i| > 1`.",
+  "hints": [
+    "Every local inversion is automatically a global inversion. So for the two counts to be equal, what must be true about every global inversion that is NOT a local one - and where must each value sit relative to its position in the sorted permutation?",
+    "Check whether any element sits more than one index away from its value. In `[1,2,0]`, the value `0` is at index `2` but belongs at index `0` - distance `2` - so a non-local global inversion exists.",
+    "```\nfor i from 0 to n-1:\n    if abs(nums[i] - i) > 1:\n        return false\nreturn true\n```",
+    "**Smallest input** - only one element, no pairs to compare.\n`Input: nums = [0]` → `Expected: true`\n⚠️ Bug: special-casing `n < 2` to return `false` → returns `false`\n\n**Already sorted** - every element is exactly at home, zero inversions of either kind.\n`Input: nums = [0,1,2]` → `Expected: true`\n⚠️ Bug: returning `false` whenever `nums[i] != i` (forbidding any swap) → returns `false`\n\n**Reverse sorted** - the largest value is at the front, far from home.\n`Input: nums = [2,1,0]` → `Expected: false`\n⚠️ Bug: only checking `nums[i] - i > 1` (one direction, no abs) → at i=0, `2-0=2>1` catches it, but at i=2 `0-2=-2` is ignored; on `[1,2,0]` this bug returns `true` instead of `false`\n\n**Value displaced backward only** - no element is too large, but one is too small.\n`Input: nums = [1,2,0]` → `Expected: false`\n⚠️ Bug: checking only `nums[i] - i > 1` without the reverse direction → `0-2=-2` is not `>1`, returns `true`"
+  ],
+  "followUps": [
+    {
+      "q": "What if `nums` may contain duplicates (no longer a strict permutation)?",
+      "a": "The `|nums[i]-i| ≤ 1` invariant no longer holds, so count global inversions with a Fenwick tree over values and local inversions with a linear scan, then compare. Time becomes O(n log n), space O(n) for the BIT."
+    },
+    {
+      "q": "What if you must return the exact difference `global - local` instead of a boolean?",
+      "a": "When the invariant holds the difference is `0`; otherwise compute both counts (Fenwick for global, linear for local) and subtract. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if elements arrive in a stream and you must report `false` as soon as the property breaks?",
+      "a": "Keep the running maximum of `nums[0..i-2]`; when the next value arrives at index `i`, if that max exceeds `nums[i]`, a non-local global inversion exists. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isIdealPermutation(vector<int>& nums) {\n        int n = (int)nums.size();\n        for (int i = 0; i < n; ++i) {\n            int v = nums[i];\n            if (v - i > 1 || i - v > 1) return false;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

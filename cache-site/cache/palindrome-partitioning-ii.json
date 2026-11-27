@@ -1,0 +1,40 @@
+{
+  "slug": "palindrome-partitioning-ii",
+  "title": "Palindrome Partitioning II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Expand Around Center",
+  "tc": "O(n^2)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> cuts: up to n entries → O(n)\n- recursion depth: none\n- not counted: input, returned value",
+  "approach": "The key insight is that a palindrome mirrors around its center. By expanding from each center (both odd and even length palindromes), we can find all palindromic substrings in O(n^2) time. While expanding, we maintain a 1D array `cuts` where `cuts[i]` represents the minimum cuts needed for the prefix ending at index `i`. When a palindrome `s[l..r]` is found, we can update `cuts[r]` using `cuts[l-1] + 1`, or `0` if `l == 0`. This avoids the O(n^2) space of a full 2D palindrome table, reducing the auxiliary space to O(n).",
+  "hints": [
+    "For a given ending position in the string, what determines the minimum cuts needed up to that point? The string length is at most 2000.",
+    "Expand around center to find palindromes and update a 1D array of minimum cuts directly. For `s = \"aab\"`, expanding around center at index 0 (even length) finds `\"aa\"`, setting the minimum cuts for the prefix ending at index 1 to 0.",
+    "```\ninitialize cuts array where cuts[i] = i\nfor each center c from 0 to n-1:\n    for each expansion type (odd, even):\n        l = c, r = c (or c+1)\n        while l >= 0 and r < n and s[l] == s[r]:\n            if l == 0:\n                cuts[r] = 0\n            else:\n                cuts[r] = min(cuts[r], cuts[l-1] + 1)\n            l--, r++\nreturn cuts[n-1]\n```",
+    "**Smallest input** - A single character string requires zero cuts.\n`Input: s = \"a\"` → `Expected: 0`\n⚠️ Bug: Accessing `cuts[l-1]` when `l == 0` without a boundary check → out-of-bounds access\n\n**Already a palindrome** - The entire string is a palindrome, requiring zero cuts.\n`Input: s = \"aba\"` → `Expected: 0`\n⚠️ Bug: Not setting `cuts[r] = 0` when `l == 0`, but instead skipping the update → returns `2`\n\n**Even length palindrome** - The optimal partition uses an even length palindrome.\n`Input: s = \"abba\"` → `Expected: 0`\n⚠️ Bug: Only expanding for odd length palindromes (starting with `l = c, r = c`) → returns `3`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string contains uppercase letters and digits, and we want to consider only alphanumeric characters and ignore cases?",
+      "a": "We can preprocess the string to filter out non-alphanumeric characters and convert everything to lowercase. The expand around center approach remains the same, achieving O(n^2) time and O(n) space."
+    },
+    {
+      "q": "What if we need to return all possible palindrome partitionings instead of just the minimum cuts?",
+      "a": "We would use backtracking to explore all valid partitions. The time complexity becomes O(n * 2^n) in the worst case, as there are 2^(n-1) possible partitions, and space complexity is O(n) for the recursion stack."
+    },
+    {
+      "q": "What if the string is streamed and we can only keep O(k) space where k is much smaller than n?",
+      "a": "We cannot store the full string or the O(n) cuts array. We would have to process the string in blocks of size k, which makes finding exact minimum cuts impossible without storing the whole string, as palindromes can span the entire string length."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCut(string s) {\n        int n = s.size();\n        vector<int> cuts(n);\n        for (int i = 0; i < n; i++) {\n            cuts[i] = i;\n        }\n        \n        for (int c = 0; c < n; c++) {\n            // Odd length palindromes\n            int l = c, r = c;\n            while (l >= 0 && r < n && s[l] == s[r]) {\n                if (l == 0) {\n                    cuts[r] = 0;\n                } else {\n                    cuts[r] = min(cuts[r], cuts[l - 1] + 1);\n                }\n                l--;\n                r++;\n            }\n            \n            // Even length palindromes\n            l = c;\n            r = c + 1;\n            while (l >= 0 && r < n && s[l] == s[r]) {\n                if (l == 0) {\n                    cuts[r] = 0;\n                } else {\n                    cuts[r] = min(cuts[r], cuts[l - 1] + 1);\n                }\n                l--;\n                r++;\n            }\n        }\n        \n        return cuts[n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

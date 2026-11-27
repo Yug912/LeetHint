@@ -1,0 +1,40 @@
+{
+  "slug": "powerful-integers",
+  "title": "Powerful Integers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Enumeration with Hash Set",
+  "tc": "O(log²(bound))",
+  "sc": "O(log²(bound))",
+  "spaceBreakdown": "- unordered_set<int> result: up to O(log_x(bound) × log_y(bound)) entries → O(log²(bound))\n- returned vector<int>: same size, not counted (LeetCode convention)\n- no recursion, no other containers",
+  "approach": "Since bound ≤ 10^6, the number of distinct powers x^i ≤ bound is tiny (at most ~20 for x=2, and exactly 1 for x=1). We enumerate all valid x^i and y^j values with nested loops, compute each sum, and collect sums ≤ bound in a hash set to deduplicate. When x=1 or y=1, we break after the first iteration to avoid an infinite loop (since 1*1=1 forever).",
+  "hints": [
+    "Given that bound ≤ 10^6, how many distinct values can x^i take before it exceeds the bound?",
+    "Use a hash set to collect unique sums. For x=2, y=3, bound=10: enumerate x^i ∈ {1,2,4,8} and y^j ∈ {1,3,9}, then 2^0+3^0 = 1+1 = 2 goes into the set.",
+    "```\nresult = empty set\nfor xi = 1, x, x², ... while xi ≤ bound:\n    for yj = 1, y, y², ... while xi + yj ≤ bound:\n        result.add(xi + yj)\n        if y == 1: break\n    if x == 1: break\nreturn result as list\n```",
+    "**Zero bound** - the minimum possible sum is 1+1=2, so bound=0 yields nothing.\n`Input: x=2, y=3, bound=0` → `Expected: []`\n⚠️ Bug: using `xi < bound` instead of `xi <= bound` in the outer loop → returns `[2]` (inserts 1+1=2 even though 2 > 0)\n\n**Base equals 1** - x=1 means x^i = 1 for every i, so the power never grows.\n`Input: x=1, y=2, bound=10` → `Expected: [2,3,5,9]`\n⚠️ Bug: not breaking the inner loop when y==1 → infinite loop (yj stays 1, multiplying by 1 forever)\n\n**Duplicate representations** - the same value can arise from different (i,j) pairs (e.g., 5 = 2^1+3^1 = 2^2+3^0).\n`Input: x=2, y=3, bound=10` → `Expected: [2,3,4,5,7,9,10]`\n⚠️ Bug: pushing into a vector without a set → returns `[2,3,4,5,5,7,9,10]` with a duplicate 5\n\n**Both bases equal 1** - only one sum is possible: 1+1=2.\n`Input: x=1, y=1, bound=5` → `Expected: [2]`\n⚠️ Bug: not breaking the outer loop when x==1 → infinite loop (xi stays 1 forever)"
+  ],
+  "followUps": [
+    {
+      "q": "What if bound can be up to 10^18 and x, y up to 10^9?",
+      "a": "The algorithm is unchanged - use `long long` for all power variables. log₂(10^18) ≈ 60, so at most 60 distinct powers per base, giving ~3600 pairs. TC: O(log²(bound)), SC: O(log²(bound))."
+    },
+    {
+      "q": "What if you must return only the count of powerful integers, not the list?",
+      "a": "Same enumeration into a hash set, then return `result.size()`. You still need the set to deduplicate, so TC and SC are unchanged."
+    },
+    {
+      "q": "What if there are k bases and you need x₁^i₁ + x₂^i₂ + … + xₖ^iₖ ≤ bound?",
+      "a": "For small k, nest k loops over distinct powers - TC: O(logᵏ(bound)). For large k, split the bases into two halves, enumerate all partial sums for each half, sort one half, and binary-search the other - TC: O(log^(k/2)(bound) · log log(bound))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> powerfulIntegers(int x, int y, int bound) {\n        unordered_set<int> result;\n        for (long long xi = 1; xi <= bound; xi *= x) {\n            for (long long yj = 1; yj + xi <= bound; yj *= y) {\n                result.insert((int)(xi + yj));\n                if (y == 1) break;\n            }\n            if (x == 1) break;\n        }\n        return vector<int>(result.begin(), result.end());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

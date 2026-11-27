@@ -1,0 +1,40 @@
+{
+  "slug": "longest-happy-prefix",
+  "title": "Longest Happy Prefix",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "KMP Failure Function",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> lps: n entries → O(n)\n- recursion depth: none\n- not counted: input string s, returned string",
+  "approach": "The longest happy prefix is exactly the longest proper prefix of `s` that is also a suffix - the quantity computed by the KMP failure function at the last position. We build the LPS (Longest Prefix Suffix) array where `lps[i]` is the length of the longest proper prefix of `s[0..i]` that is also a suffix of `s[0..i]`. The answer is `s.substr(0, lps[n-1])`. The key insight is that on a mismatch we don't restart from zero; we fall back to `lps[len-1]`, reusing previously matched information, giving O(n) time.",
+  "hints": [
+    "When comparing a prefix against a suffix character by character and a mismatch occurs, must you restart from the beginning, or is there information from earlier comparisons you can reuse? The string can be up to 10^5 characters.",
+    "Build the KMP failure function (LPS array): `lps[i]` = length of the longest proper prefix of `s[0..i]` that is also a suffix. For `s = \"ababab\"`, `lps = [0,0,1,2,3,4]`, so the answer is `s.substr(0, lps[5]) = \"abab\"`.",
+    "```\nlps[0] = 0\nlen = 0, i = 1\nwhile i < n:\n    if s[i] == s[len]:\n        len += 1\n        lps[i] = len\n        i += 1\n    else if len > 0:\n        len = lps[len - 1]\n    else:\n        lps[i] = 0\n        i += 1\nreturn s[0 : lps[n-1]]\n```",
+    "**Single character** - n = 1, no proper prefix exists\n`Input: s = \"a\"` → `Expected: \"\"`\n⚠️ Bug: initializing `lps[0] = 1` → returns `\"a\"`\n\n**Partial match requiring fallback** - mismatch after a long match forces a chain of fallbacks\n`Input: s = \"abacabab\"` → `Expected: \"ab\"`\n⚠️ Bug: setting `len = 0` on mismatch instead of `len = lps[len-1]` → returns `\"\"`\n\n**No matching prefix-suffix** - all distinct characters\n`Input: s = \"abcde\"` → `Expected: \"\"`\n⚠️ Bug: returning `s.substr(0, lps[n-1] + 1)` → returns `\"a\"`\n\n**All same characters** - maximum possible overlap\n`Input: s = \"aaaa\"` → `Expected: \"aaa\"`\n⚠️ Bug: returning `s.substr(0, min(lps[n-1], n/2))` → returns `\"aa\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string arrives one character at a time in a stream and you must output the current longest happy prefix after each character?",
+      "a": "The KMP failure function is inherently incremental - each new character only updates `lps[i]` using the current `len` pointer and previous `lps` values. Maintain the `lps` array and `len` across calls; each character costs O(1) amortized. TC: O(n) total, SC: O(n) for the `lps` array needed during fallback."
+    },
+    {
+      "q": "Instead of only the longest, what if you must report the longest happy prefix for every prefix of `s`?",
+      "a": "The `lps` array already stores this - `lps[i]` is the answer for `s[0..i]`. Return the entire array. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you must count how many non-empty prefixes of `s` are also suffixes (not just the longest)?",
+      "a": "The `lps` values form a chain: starting from `lps[n-1]`, follow `lps[lps[n-1]-1]`, then `lps[that-1]`, and so on until reaching 0. Each link in this chain is a valid prefix-suffix. Count the chain length. TC: O(n) worst case (e.g., all same characters), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string longestPrefix(string s) {\n        int n = s.size();\n        vector<int> lps(n, 0);\n        int len = 0;\n        int i = 1;\n        while (i < n) {\n            if (s[i] == s[len]) {\n                len++;\n                lps[i] = len;\n                i++;\n            } else {\n                if (len != 0) {\n                    len = lps[len - 1];\n                } else {\n                    lps[i] = 0;\n                    i++;\n                }\n            }\n        }\n        return s.substr(0, lps[n - 1]);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

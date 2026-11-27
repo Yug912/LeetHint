@@ -1,0 +1,40 @@
+{
+  "slug": "nearest-exit-from-entrance-in-maze",
+  "title": "Nearest Exit from Entrance in Maze",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Breadth-First Search",
+  "tc": "O(m * n)",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- queue<pair<int,int>> q: up to m*n entries in worst case → O(m*n)\n- int dirs[4][2]: fixed 4×2 array → O(1)\n- maze modified in place (cells set to '+'): O(1) auxiliary\n- recursion depth: none",
+  "approach": "Use Breadth-First Search (BFS) from the entrance. BFS explores cells level by level, so the first border cell reached is guaranteed to be the nearest exit. Mark the entrance as visited immediately (by setting it to '+') so it is never counted as an exit. For each cell dequeued, check its four neighbors; if a neighbor is an empty border cell, return the current distance + 1. Otherwise, mark it visited and enqueue it. If the queue empties with no exit found, return -1.",
+  "hints": [
+    "When every move costs exactly one step, what property of the exploration order guarantees that the first exit you reach is the nearest one? The maze has at most 100 × 100 cells.",
+    "Use Breadth-First Search with a queue. Starting from entrance [1,2] in Example 1, the queue holds [1,2] at distance 0; its neighbor [0,2] is on the border, so the answer is 1.",
+    "```\nmark entrance as visited\nqueue = [entrance], dist = 0\nwhile queue not empty:\n    for each cell at current level:\n        for each valid neighbor (in bounds, not wall, not visited):\n            if neighbor is on border:\n                return dist + 1\n            mark neighbor visited, add to queue\n    dist += 1\nreturn -1\n```",
+    "**Single cell** - the maze has only one cell, which is the entrance\n`Input: maze = [[\".\"]], entrance = [0,0]` → `Expected: -1`\n⚠️ Bug: checking border condition on the starting cell before marking it visited → returns 0\n\n**Entrance at border** - entrance is on the border but must be excluded from exits\n`Input: maze = [[\".\",\".\",\".\"]], entrance = [0,1]` → `Expected: 1`\n⚠️ Bug: returning 0 when the current cell is at border without excluding the entrance → returns 0\n\n**No path to any exit** - entrance is surrounded by walls\n`Input: maze = [[\"+\",\"+\",\"+\"],[\"+\",\".\",\"+\"],[\"+\",\"+\",\"+\"]], entrance = [1,1]` → `Expected: -1`\n⚠️ Bug: returning the distance variable (0) as default when the queue empties → returns 0\n\n**DFS finds a farther exit first** - nearest exit is to the left but DFS goes right\n`Input: maze = [[\"+\",\"+\",\".\",\"+\"],[\".\",\".\",\".\",\".\"],[\"+\",\"+\",\"+\",\".\"]], entrance = [1,1]` → `Expected: 1`\n⚠️ Bug: using DFS that explores right before left → returns 2 (reaches [1,3] at distance 2 before [1,0] at distance 1)"
+  ],
+  "followUps": [
+    {
+      "q": "What if some empty cells have different traversal costs (e.g., 1 vs 5 steps)?",
+      "a": "Replace BFS with Dijkstra's algorithm using a min-heap priority queue keyed by accumulated cost. The border-checking logic stays identical. TC: O(m*n*log(m*n)), SC: O(m*n)."
+    },
+    {
+      "q": "What if you need the nearest exit distance for every cell in the maze?",
+      "a": "Reverse the search: run multi-source BFS starting from all border exit cells simultaneously. The resulting distance array gives the nearest exit for every cell in one pass. TC: O(m*n), SC: O(m*n)."
+    },
+    {
+      "q": "What if the maze contains keys (lowercase letters) and doors (uppercase letters) that require the matching key?",
+      "a": "Expand the state to (row, col, key_bitmask) and run BFS on this state space. With k distinct keys, the state space grows by a factor of 2^k. TC: O(m*n*2^k), SC: O(m*n*2^k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int nearestExit(vector<vector<char>>& maze, vector<int>& entrance) {\n        int m = maze.size(), n = maze[0].size();\n        queue<pair<int,int>> q;\n        q.push({entrance[0], entrance[1]});\n        maze[entrance[0]][entrance[1]] = '+';\n        int dist = 0;\n        int dirs[4][2] = {{-1,0},{1,0},{0,-1},{0,1}};\n        while (!q.empty()) {\n            int sz = q.size();\n            for (int i = 0; i < sz; i++) {\n                auto p = q.front(); q.pop();\n                int r = p.first, c = p.second;\n                for (int d = 0; d < 4; d++) {\n                    int nr = r + dirs[d][0], nc = c + dirs[d][1];\n                    if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;\n                    if (maze[nr][nc] == '+') continue;\n                    if (nr == 0 || nr == m-1 || nc == 0 || nc == n-1) {\n                        return dist + 1;\n                    }\n                    maze[nr][nc] = '+';\n                    q.push({nr, nc});\n                }\n            }\n            dist++;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "remove-zero-sum-consecutive-nodes-from-linked-list",
+  "title": "Remove Zero Sum Consecutive Nodes from Linked List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum with Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, ListNode*> mp: up to n+1 entries → O(n)\n- dummy node: 1 node → O(1)\n- not counted: input list, returned list",
+  "approach": "The key insight is that if two positions in the list have the same running (prefix) sum, the nodes between them sum to zero. We use a dummy node before the head (so head-removal is uniform), then make two passes. Pass 1 builds a hash map from each prefix sum to the **last** node where it occurs. Pass 2 re-traverses, recomputes prefix sums, and for each node relinks `node->next` to `map[sum]->next`, which skips over every zero-sum consecutive block - including nested ones - in one shot. This is correct because keeping the last occurrence guarantees that when we relink, we jump past the maximal zero-sum block ending at that prefix sum.",
+  "hints": [
+    "If you walk through the list keeping a running total of values seen so far, what does it mean if the same total appears at two different positions?",
+    "Use a hash map from running total to the **last** node where that total occurred. In `[1,2,-3,3,1]` the running totals are `0,1,3,0,3,4` - total `0` appears at the dummy and at node `-3`, so nodes `1,2,-3` sum to zero and get skipped.",
+    "```\ncreate dummy node, dummy.next = head\nmap = empty\nsum = 0\nfor each node from dummy:\n    sum += node.val\n    map[sum] = node          // keep last occurrence\nsum = 0\nfor each node from dummy:\n    sum += node.val\n    node.next = map[sum].next\nreturn dummy.next\n```",
+    "**Single zero** - the list is one node with value zero\n`Input: [0]` → `Expected: []`\n⚠️ Bug: returning the original `head` pointer without a dummy node → returns `[0]`\n\n**Head removed** - the first node is part of a zero-sum sequence\n`Input: [1,-1,2]` → `Expected: [2]`\n⚠️ Bug: returning `head` instead of `dummy->next` → returns `[1,-1,2]`\n\n**All zeros** - every node has value zero\n`Input: [0,0,0]` → `Expected: []`\n⚠️ Bug: removing only the first zero-sum pair found and stopping → returns `[0]`\n\n**Entire list sums to zero** - all nodes together sum to zero\n`Input: [1,2,-3]` → `Expected: []`\n⚠️ Bug: not using a dummy node so the head is never unlinked → returns `[1,2,-3]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must remove the longest zero-sum consecutive sequence first, then repeat?",
+      "a": "Scan for the widest pair of equal prefix sums, remove that block, and repeat until no zero-sum block remains. Each scan is O(n) and you may repeat up to O(n) times, giving O(n²) time. Space stays O(n) for the prefix-sum map."
+    },
+    {
+      "q": "What if each node value can be up to 10^9?",
+      "a": "The prefix sum can reach 1000 × 10^9 = 10^12, which overflows `int`. Use `long long` for the running sum and as the hash map key. Time and space remain O(n)."
+    },
+    {
+      "q": "What if the list is a streaming input you can only traverse once?",
+      "a": "The two-pass approach needs the full map before relinking. In one pass you can build the map and relink on the fly, but nested zero-sum blocks may not resolve completely, so you must repeat passes until stable - O(n²) worst case. Space remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* removeZeroSumSublists(ListNode* head) {\n        ListNode* dummy = new ListNode(0);\n        dummy->next = head;\n        unordered_map<int, ListNode*> mp;\n        int sum = 0;\n        for (ListNode* p = dummy; p; p = p->next) {\n            sum += p->val;\n            mp[sum] = p;\n        }\n        sum = 0;\n        for (ListNode* p = dummy; p; p = p->next) {\n            sum += p->val;\n            p->next = mp[sum]->next;\n        }\n        return dummy->next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

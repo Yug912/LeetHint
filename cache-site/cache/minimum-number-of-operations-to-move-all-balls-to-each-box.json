@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-operations-to-move-all-balls-to-each-box",
+  "title": "Minimum Number of Operations to Move All Balls to Each Box",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> ans: n elements → O(n), not counted (returned output)\n- int count, sum: O(1)\n- not counted: input string boxes, returned vector ans",
+  "approach": "For each target box i, the answer is the sum of abs(i − j) over all boxes j that contain a ball. Instead of recomputing this sum from scratch for each i (O(n²)), we use two prefix-sum passes. In the left-to-right pass we track how many balls lie to the left of i and the sum of their indices; the left contribution is i·leftCount − leftSum. The right-to-left pass does the symmetric computation. Each pass is O(n), giving O(n) total.",
+  "hints": [
+    "When the target box shifts one position to the right, how does each individual ball's travel distance change?",
+    "Prefix sums of ball counts and index sums, computed in two passes. For boxes = \"110\": at index 1, the left pass has count = 1, sum = 0, so it adds 1×1 − 0 = 1 to ans[1].",
+    "```\nans = array of n zeros\ncount = 0, sum = 0\nfor i from 0 to n-1:\n    ans[i] += i * count - sum\n    if boxes[i] == '1': count += 1, sum += i\nreset count = 0, sum = 0\nfor i from n-1 down to 0:\n    ans[i] += sum - i * count\n    if boxes[i] == '1': count += 1, sum += i\nreturn ans\n```",
+    "**All empty boxes** - no balls to move\n`Input: boxes = \"000\"` → `Expected: [0,0,0]`\n⚠️ Bug: initializing ans elements to 1 instead of 0 → returns [1,1,1]\n\n**All boxes have balls** - maximum total operations\n`Input: boxes = \"111\"` → `Expected: [3,2,3]`\n⚠️ Bug: comparing boxes[i] == 1 (integer) instead of boxes[i] == '1' (char) → returns [0,0,0]\n\n**Balls only at the two ends** - symmetric layout\n`Input: boxes = \"1001\"` → `Expected: [3,3,3,3]`\n⚠️ Bug: using i*count - sum in the right pass (same sign as left) → returns [-3,-1,1,3]\n\n**Ball only at the last box** - right-to-left pass is essential\n`Input: boxes = \"001\"` → `Expected: [2,1,0]`\n⚠️ Bug: only running the left-to-right pass → returns [0,0,0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The two-pass prefix sum approach already runs in O(n) time, so it handles 10^5 easily. A brute-force O(n²) solution checking every ball-target pair would do 10^10 operations and TLE."
+    },
+    {
+      "q": "What if each box can hold multiple balls, given as a digit '0'-'9'?",
+      "a": "Replace the boolean check with `int balls = boxes[i] - '0'` and add `balls` to count and `balls * i` to sum. The two-pass structure is unchanged; time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if you receive up to 10^5 online queries, each asking for the answer at a specific box index?",
+      "a": "Precompute the full answer array once in O(n) with the two-pass prefix sum. Each query is then an O(1) array lookup. Total: O(n) preprocessing + O(1) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> minOperations(string boxes) {\n        int n = boxes.size();\n        vector<int> ans(n, 0);\n        int count = 0, sum = 0;\n        for (int i = 0; i < n; i++) {\n            ans[i] += i * count - sum;\n            if (boxes[i] == '1') {\n                count++;\n                sum += i;\n            }\n        }\n        count = 0;\n        sum = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            ans[i] += sum - i * count;\n            if (boxes[i] == '1') {\n                count++;\n                sum += i;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
