@@ -1,0 +1,40 @@
+{
+  "slug": "check-array-formation-through-concatenation",
+  "title": "Check Array Formation Through Concatenation",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Direct-Index Array (Hash Table)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int idx[101]: fixed 101 ints, independent of input → O(1)\n- recursion depth: none\n- not counted: arr, pieces (input)",
+  "approach": "Since every value in `arr` and `pieces` lies in [1, 100], build a fixed-size `int idx[101]` mapping each value to the index of the piece that contains it (−1 if none). Then walk `arr` left to right: at position `i`, look up the piece containing `arr[i]`, verify the entire piece matches `arr[i..i+len-1]`, and advance `i` by the piece length. If any lookup fails or any element mismatches, return false; if the whole array is consumed, return true. Correctness follows from the distinctness guarantee: each value belongs to exactly one piece, so the piece starting at `arr[i]` is forced, and we only need to verify its contents in order.",
+  "hints": [
+    "Every value in `arr` and `pieces` is between 1 and 100. Given such a small, fixed key range, what can you do at each position of `arr` to find the piece it belongs to without a growing container?",
+    "Use a fixed-size `int idx[101]` (indexed by value) storing the piece index. For `arr = [91,4,64,78]`, `pieces = [[78],[4,64],[91]]`, set `idx[91]=2`, `idx[4]=idx[64]=1`, `idx[78]=0`, then walk `arr` matching whole pieces.",
+    "```\nfor p in 0..len(pieces)-1:\n    for v in pieces[p]:\n        idx[v] = p\ni = 0\nwhile i < len(arr):\n    p = idx[arr[i]]\n    if p == -1: return false\n    for j in 0..len(pieces[p])-1:\n        if arr[i+j] != pieces[p][j]: return false\n    i += len(pieces[p])\nreturn true\n```",
+    "**Single element not in any piece** - `arr` has one value absent from all pieces.\n`Input: arr = [5], pieces = [[6]]` → `Expected: false`\n⚠️ Bug: loop guard `while (i < n - 1)` to \"avoid\" bounds issues → body never runs for n=1, returns true.\n\n**Piece internal order must be preserved (Example 2)** - a piece contains the right values in the wrong order.\n`Input: arr = [49,18,16], pieces = [[16,18,49]]` → `Expected: false`\n⚠️ Bug: only checking `idx[arr[i]] != -1` without comparing piece contents → returns true.\n\n**Must advance by piece length, not by 1** - consecutive multi-element pieces.\n`Input: arr = [1,2,3,4], pieces = [[1,2],[3,4]]` → `Expected: true`\n⚠️ Bug: incrementing `i` by 1 instead of `pieces[p].size()` → at i=1 re-matches piece 0, `arr[1]=2` vs `pieces[0][0]=1` fails, returns false.\n\n**Pieces may be used in any order** - pieces given in non-arr order.\n`Input: arr = [1,2,3], pieces = [[3],[1],[2]]` → `Expected: true`\n⚠️ Bug: concatenating pieces in their given order then comparing to `arr` → produces `[3,1,2]`, returns false."
+  ],
+  "followUps": [
+    {
+      "q": "What if `arr[i]` and `pieces[i][j]` can be up to 10^9 instead of 100?",
+      "a": "Replace `idx[101]` with an `unordered_map<int,int>` mapping each value to its piece index. Time stays O(n) expected; space becomes O(n) to store one entry per value (or O(p) if you store only each piece's first element and walk within the piece)."
+    },
+    {
+      "q": "What if each piece can be reused zero or more times?",
+      "a": "This becomes a segmentation problem: let `dp[i]` be whether `arr[0..i-1]` is formable, with `dp[0]=true` and `dp[i] = any(dp[i-len] and arr[i-len..i-1] == some piece)`. Time O(n · L) where L is total piece length, space O(n)."
+    },
+    {
+      "q": "What if values may repeat across `arr` and `pieces`?",
+      "a": "A value can now start multiple pieces, so the single `idx` lookup is ambiguous. Map each value to a list of candidate pieces and try each at position `i`; worst case O(n · p) time and O(p) space for the map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canFormArray(vector<int>& arr, vector<vector<int>>& pieces) {\n        int idx[101];\n        for (int i = 0; i < 101; ++i) idx[i] = -1;\n        for (int p = 0; p < (int)pieces.size(); ++p) {\n            for (int v : pieces[p]) {\n                idx[v] = p;\n            }\n        }\n        int i = 0, n = (int)arr.size();\n        while (i < n) {\n            int p = idx[arr[i]];\n            if (p == -1) return false;\n            const vector<int>& pc = pieces[p];\n            int m = (int)pc.size();\n            if (i + m > n) return false;\n            for (int j = 0; j < m; ++j) {\n                if (arr[i + j] != pc[j]) return false;\n            }\n            i += m;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

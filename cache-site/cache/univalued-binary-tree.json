@@ -1,0 +1,40 @@
+{
+  "slug": "univalued-binary-tree",
+  "title": "Univalued Binary Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call-stack depth: worst case O(n) for a skewed tree, O(log n) for balanced\n- no containers/arrays allocated\n- not counted: input tree, returned bool",
+  "approach": "A tree is uni-valued iff every node's value equals the root's value. Recursively traverse the tree (DFS), comparing each visited node's `val` against `root->val`; the moment any node differs, return false. If the traversal completes without finding a mismatch, the tree is uni-valued. This visits each node once and short-circuits on the first mismatch.",
+  "hints": [
+    "If the tree is uni-valued, which existing node already fixes the one value every other node must have?",
+    "Recursive depth-first traversal comparing each node's value to the root's value. In Example 2, root.val = 2; reaching the left child's left child gives 5 ≠ 2, so return false immediately.",
+    "```\nfunction check(node, target):\n    if node is null:\n        return true\n    if node.val != target:\n        return false\n    return check(node.left, target) and check(node.right, target)\n\ncall check(root, root.val)\n```",
+    "**Single node** - the smallest allowed input has exactly one node.\n`Input: [5]` → `Expected: true`\n⚠️ Bug: returning `root->left == nullptr && root->right == nullptr` instead of comparing values → returns true here but breaks multi-node all-equal trees.\n\n**All equal values** - every node shares the root's value, including deep leaves.\n`Input: [1,1,1,1,1,null,1]` → `Expected: true`\n⚠️ Bug: comparing only `node->left->val` and `node->right->val` without null-checking children → null dereference on the `null` child.\n\n**Value of zero** - node values can be 0, which is falsy in some idioms.\n`Input: [0,0,0]` → `Expected: true`\n⚠️ Bug: using `if (node->val)` to skip comparison → treats 0 as \"no value\" and returns true even when a sibling is non-zero.\n\n**Skewed tree** - a left-chain of 100 nodes stresses recursion depth.\n`Input: [3,3,null,3,null,3,null,3,null,3]` → `Expected: true`\n⚠️ Bug: converting recursion to an explicit stack but pushing only one child → misses the other branch and returns true on a tree that actually has a mismatch."
+  ],
+  "followUps": [
+    {
+      "q": "Solve it with O(1) auxiliary space (no recursion stack, no explicit stack).",
+      "a": "Use Morris traversal: temporarily rewire right pointers of in-order predecessors to walk back up, comparing each visited node's value to root->val, then restore the tree. Time stays O(n), auxiliary space becomes O(1)."
+    },
+    {
+      "q": "What if the tree is huge and you only need to detect a mismatch as early as possible during a streaming read of the level-order array?",
+      "a": "Compare each incoming level-order value to the first value as you parse it, returning false on the first mismatch without materializing the whole tree. Time O(n) worst case but often sublinear in practice; space O(1) beyond the input stream."
+    },
+    {
+      "q": "Return the size of the largest uni-valued subtree instead of a boolean.",
+      "a": "Post-order DFS returning (subtreeUniVal, value, size); at each node, check whether both children are uni-valued with the same value as the node, and track the global max size. Time O(n), space O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    bool isUnivalTree(TreeNode* root) {\n        if (!root) return true;\n        int target = root->val;\n        return check(root, target);\n    }\nprivate:\n    bool check(TreeNode* node, int target) {\n        if (!node) return true;\n        if (node->val != target) return false;\n        return check(node->left, target) && check(node->right, target);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

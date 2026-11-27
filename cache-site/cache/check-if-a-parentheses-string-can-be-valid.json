@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-a-parentheses-string-can-be-valid",
+  "title": "Check if a Parentheses String Can Be Valid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Two-Pass Balance Check",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int balance: single integer → O(1)\n- int n: single integer → O(1)\n- no containers, no recursion → O(1) total",
+  "approach": "The key insight is that a valid parentheses string must have even length. We verify feasibility with a greedy two-pass balance check: left-to-right treats unlocked positions as '(' (increment) and locked ')' as decrement, catching excess closers; right-to-left treats unlocked positions as ')' (increment) and locked '(' as decrement, catching excess openers. If both passes never go negative and the length is even, a valid assignment always exists.",
+  "hints": [
+    "A valid parentheses string always has even length. As you scan left to right, at what point does a locked ')' become impossible to match - and is there a symmetric concern scanning right to left?",
+    "Use a greedy two-pass balance counter. Left-to-right: increment for '(' or unlocked, decrement for locked ')'; if balance < 0, return false. Example: s = \"))()))\", locked = \"010100\" → at i=1, locked ')' decrements balance from 1 to 0, never negative.",
+    "```\nif n is odd: return false\nbalance = 0\nfor i from 0 to n-1:\n    if locked[i]=='1' and s[i]==')': balance -= 1\n    else: balance += 1\n    if balance < 0: return false\nbalance = 0\nfor i from n-1 down to 0:\n    if locked[i]=='1' and s[i]=='(': balance -= 1\n    else: balance += 1\n    if balance < 0: return false\nreturn true\n```",
+    "**Odd length** - single character, odd total length\n`Input: s = \")\", locked = \"0\"` → `Expected: false`\n⚠️ Bug: omitting the `n % 2 == 1` check → both passes give balance = 1, returns true\n\n**Excess locked '(' at end** - two locked opening parens with no closers\n`Input: s = \"((\", locked = \"11\"` → `Expected: false`\n⚠️ Bug: only running the left-to-right pass → balance goes 1, 2, never negative, returns true\n\n**Excess locked ')' at start** - two locked closing parens with no openers\n`Input: s = \"))\", locked = \"11\"` → `Expected: false`\n⚠️ Bug: only running the right-to-left pass → balance goes 1, 2, never negative, returns true\n\n**All unlocked, already valid** - no changes needed\n`Input: s = \"()\", locked = \"00\"` → `Expected: true`\n⚠️ Bug: decrementing for unlocked positions instead of incrementing → balance goes -1 at i=0, returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if changing an unlocked position to '(' costs 1 and to ')' costs 2? Find the minimum total cost to make s valid.",
+      "a": "The two-pass greedy still applies but with costs. Left-to-right, when a locked ')' appears, match it with the cheapest available option (locked '(' for free, or unlocked changed to '(' for cost 1) using a min-heap of pending costs. Right-to-left similarly matches locked '(' with the cheapest ')' option. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if the string contains '(', ')', '[', ']', '{', '}' and locked works the same way?",
+      "a": "The two-pass balance trick does not generalize because bracket types must match. Use a stack: push locked openers and unlocked positions; when a locked closer appears, pop the nearest matching opener or unlocked position. Unlocked positions act as wildcards that can match any closer. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the input arrives as a stream and you can only make one pass with O(1) memory?",
+      "a": "A single left-to-right pass detects excess ')' but cannot detect excess '(' that only becomes apparent at the end. If the stream can be re-read, two passes with O(1) memory each solve it. If only one pass is allowed, the problem is unsolvable in general since future locked '(' cannot be anticipated."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canBeValid(string s, string locked) {\n        int n = s.size();\n        if (n % 2 == 1) return false;\n\n        // Left-to-right: treat unlocked as '(', locked ')' as decrement\n        int balance = 0;\n        for (int i = 0; i < n; i++) {\n            if (locked[i] == '1' && s[i] == ')') {\n                balance--;\n            } else {\n                balance++;\n            }\n            if (balance < 0) return false;\n        }\n\n        // Right-to-left: treat unlocked as ')', locked '(' as decrement\n        balance = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            if (locked[i] == '1' && s[i] == '(') {\n                balance--;\n            } else {\n                balance++;\n            }\n            if (balance < 0) return false;\n        }\n\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

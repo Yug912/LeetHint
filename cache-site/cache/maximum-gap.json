@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-gap",
+  "title": "Maximum Gap",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bucket Sort / Pigeonhole Principle",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> bucketMin: up to n+1 entries → O(n)\n- vector<int> bucketMax: up to n+1 entries → O(n)\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "Use the pigeonhole principle: with n numbers spanning range R = max−min, the largest gap between consecutive sorted values is at least ⌈R/(n−1)⌉. Partition [min, max] into buckets of size ⌊R/(n−1)⌋ (at least 1); then no two elements in the same bucket can be farther apart than the average gap, so the answer must come from the difference between the minimum of one non-empty bucket and the maximum of the previous non-empty bucket. Track only each bucket's min and max in two arrays, then scan consecutive non-empty buckets.",
+  "hints": [
+    "With n numbers spread between a minimum and a maximum, what is the smallest possible value that the largest gap between two consecutive sorted numbers could take? The constraints allow n up to 10^5.",
+    "Bucket sort by pigeonhole: split [min, max] into buckets of size floor((max−min)/(n−1)). For [3,6,9,1], min=1, max=9, bucket size = 8/3 = 2; place 1→bucket 0, 3→bucket 1, 6→bucket 2, 9→bucket 4, then compare adjacent non-empty buckets' min/max.",
+    "```\nif n < 2: return 0\nlo, hi = min(nums), max(nums)\nif lo == hi: return 0\nsize = max(1, (hi - lo) / (n - 1))\ncount = (hi - lo) / size + 1\nfor each bucket: track min and max\nfor num in nums:\n    idx = (num - lo) / size\n    update bucket[idx] min and max\ngap = 0\nprev = bucket[0].max\nfor i in 1..count-1:\n    if bucket[i] empty: skip\n    gap = max(gap, bucket[i].min - prev)\n    prev = bucket[i].max\nreturn gap\n```",
+    "**Single element** - Only one number, no pair to compare.\n`Input: [10]` → `Expected: 0`\n⚠️ Bug: skipping the n < 2 check and computing (hi−lo)/(n−1) → division by zero (n−1 = 0)\n\n**All equal** - Every value identical, range is zero.\n`Input: [7,7,7,7]` → `Expected: 0`\n⚠️ Bug: setting bucketSize = (hi−lo)/(n−1) without max(1, …) gives 0, then (num−lo)/0 → division by zero\n\n**Two elements far apart** - Bucket index must stay in bounds.\n`Input: [0,1000000000]` → `Expected: 1000000000`\n⚠️ Bug: computing bucketCount = (hi−lo)/bucketSize without +1 → index 1 out of bounds, returns garbage or crashes\n\n**Already sorted small gaps** - Tests initialization of prevMax.\n`Input: [1,2,3,4,5]` → `Expected: 1`\n⚠️ Bug: initializing prevMax to 0 instead of bucketMax[0] → first gap computed as 2−0 = 2, returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle a streaming input where you can only keep O(1) memory?",
+      "a": "Exact maximum gap cannot be computed in one pass with O(1) space; you must either store all elements (O(n) space) or use an approximate merging-bucket scheme that trades accuracy for memory, reporting a lower bound on the true gap."
+    },
+    {
+      "q": "What if nums[i] can be negative?",
+      "a": "No change is needed: the index formula (num − lo)/bucketSize still works because lo (the minimum, possibly negative) shifts every value to a non-negative offset, so bucket indices remain valid."
+    },
+    {
+      "q": "What if you need the k-th largest gap instead of the maximum?",
+      "a": "Bucket sort still yields all inter-bucket gaps in O(n); collect them and run quickselect to find the k-th largest in O(n) average time, keeping overall O(n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumGap(vector<int>& nums) {\n        int n = nums.size();\n        if (n < 2) return 0;\n        int lo = *min_element(nums.begin(), nums.end());\n        int hi = *max_element(nums.begin(), nums.end());\n        if (lo == hi) return 0;\n        int bucketSize = max(1, (hi - lo) / (n - 1));\n        int bucketCount = (hi - lo) / bucketSize + 1;\n        vector<int> bucketMin(bucketCount, INT_MAX);\n        vector<int> bucketMax(bucketCount, INT_MIN);\n        for (int num : nums) {\n            int idx = (num - lo) / bucketSize;\n            if (num < bucketMin[idx]) bucketMin[idx] = num;\n            if (num > bucketMax[idx]) bucketMax[idx] = num;\n        }\n        int maxGap = 0;\n        int prevMax = bucketMax[0];\n        for (int i = 1; i < bucketCount; i++) {\n            if (bucketMin[i] == INT_MAX) continue;\n            if (bucketMin[i] - prevMax > maxGap) maxGap = bucketMin[i] - prevMax;\n            prevMax = bucketMax[i];\n        }\n        return maxGap;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

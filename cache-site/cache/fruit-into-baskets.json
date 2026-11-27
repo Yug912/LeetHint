@@ -1,0 +1,40 @@
+{
+  "slug": "fruit-into-baskets",
+  "title": "Fruit Into Baskets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- unordered_map<int,int> count: at most 3 entries at any time → O(1)\n- int left, maxLen: scalars → O(1)\n- not counted: input vector<int>& fruits",
+  "approach": "This is the classic \"longest subarray with at most 2 distinct values\" problem. We use a sliding window with an unordered_map that tracks the count of each fruit type in the current window. We expand the right end of the window one tree at a time; whenever the map holds more than 2 distinct types, we shrink from the left until it holds at most 2. The answer is the maximum window size observed. Because we only ever insert a third type before immediately shrinking back to two, the map never holds more than 3 entries, giving O(1) auxiliary space.",
+  "hints": [
+    "If a segment from tree i to tree j already contains three different fruit types, what does that tell you about every longer segment that also starts at tree i?",
+    "Sliding window with an unordered_map tracking fruit-type counts. For fruits = [0,1,2,2], when index 2 (type 2) enters and the map holds {0,1,2}, shrink from the left: remove type 0, leaving {1,2}.",
+    "```\nleft = 0, best = 0, map = {}\nfor right from 0 to n-1:\n    map[fruits[right]] += 1\n    while map has more than 2 keys:\n        map[fruits[left]] -= 1\n        if map[fruits[left]] == 0: remove key\n        left += 1\n    best = max(best, right - left + 1)\nreturn best\n```",
+    "**Single tree** - only one element in the array\n`Input: fruits = [5]` → `Expected: 1`\n⚠️ Bug: updating `maxLen` only when `count.size() == 2` → returns 0\n\n**All same type** - one distinct fruit, window never shrinks\n`Input: fruits = [3,3,3,3]` → `Expected: 4`\n⚠️ Bug: using `count.size() >= 2` instead of `count.size() > 2` → returns 1\n\n**Third type at boundary** - shrink must remove exactly one type to stay valid\n`Input: fruits = [0,1,2,2]` → `Expected: 3`\n⚠️ Bug: not calling `count.erase()` when a count reaches 0 → `count.size()` never decreases → infinite loop\n\n**Two types only** - no third type ever appears, window grows to full length\n`Input: fruits = [1,2,1,2]` → `Expected: 4`\n⚠️ Bug: updating `maxLen` only inside the while loop (only on shrink) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you have k baskets instead of 2?",
+      "a": "Replace the condition `count.size() > 2` with `count.size() > k`. The map holds at most k+1 entries, so space becomes O(k). Time remains O(n) since each element is still added and removed at most once."
+    },
+    {
+      "q": "What if the fruit stream is infinite and you cannot store the array - can you still report the running maximum?",
+      "a": "Track the last-seen index of each fruit type in the map. When a third type arrives, evict the type with the smallest last-seen index and set `left` to that index + 1. This avoids needing random access to `fruits[left]`. Time is O(n) amortized; space is O(1) since at most 3 types are tracked."
+    },
+    {
+      "q": "Return the actual subarray of trees you pick from, not just its length.",
+      "a": "Store `bestLeft` alongside `maxLen`, updating both whenever a new maximum is found. Return `{fruits[bestLeft], ..., fruits[bestLeft + maxLen - 1]}` or the indices. Time and space complexity are unchanged: O(n) time, O(1) auxiliary space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int totalFruit(vector<int>& fruits) {\n        unordered_map<int, int> count;\n        int left = 0, maxLen = 0;\n        for (int right = 0; right < (int)fruits.size(); right++) {\n            count[fruits[right]]++;\n            while (count.size() > 2) {\n                count[fruits[left]]--;\n                if (count[fruits[left]] == 0) {\n                    count.erase(fruits[left]);\n                }\n                left++;\n            }\n            maxLen = max(maxLen, right - left + 1);\n        }\n        return maxLen;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

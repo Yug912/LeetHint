@@ -1,0 +1,40 @@
+{
+  "slug": "single-number-ii",
+  "title": "Single Number II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitwise Modulo Counter",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int ones: 1 word → O(1)\n- int twos: 1 word → O(1)\n- int threes (loop-local): 1 word → O(1)\n- not counted: input vector, returned int",
+  "approach": "The key insight is that each bit position can be tracked independently. Since every element except one appears exactly three times, the count of each bit set across all numbers is congruent to the bit in the unique number modulo 3. We maintain two variables, `ones` and `twos`, that together form a modulo-3 counter for each bit: `ones` holds bits seen once (mod 3) and `twos` holds bits seen twice (mod 3). When a bit reaches count 3, it is cleared from both. After processing all numbers, `ones` contains exactly the single element.",
+  "hints": [
+    "The constraint says every element appears three times except one. What does \"three times\" imply about the contribution of each bit position from the tripled elements, compared to the element appearing once?",
+    "Use a bitwise modulo-3 counter with two variables `ones` and `twos`. For [2,2,3,2]: after first 2 → ones=2,twos=0; after second 2 → ones=0,twos=2; after 3 → ones=1,twos=0; after third 2 → ones=3 → return 3.",
+    "```\nones = 0, twos = 0\nfor each num in nums:\n    twos = twos | (ones & num)\n    ones = ones ^ num\n    threes = ones & twos\n    ones = ones & ~threes\n    twos = twos & ~threes\nreturn ones\n```",
+    "**Single element (n=1)** - the array has only one element.\n`Input: [42]` → `Expected: 42`\n⚠️ Bug: looping from `i = 1` to `i < n` (skipping index 0) → returns 0\n\n**Negative single number** - the unique element is negative, requiring the sign bit.\n`Input: [-3, 7, 7, 7]` → `Expected: -3`\n⚠️ Bug: counting only bits 0-30 with `for (int i = 0; i < 31; i++)` → returns 2147483645\n\n**Double-counted first element** - processing nums[0] twice.\n`Input: [3, 1, 1, 1]` → `Expected: 3`\n⚠️ Bug: setting `ones = nums[0]` before the loop and iterating from `i = 0` → returns 0\n\n**Returning wrong counter** - the answer lives in `ones`, not `twos`.\n`Input: [0,1,0,1,0,1,99]` → `Expected: 99`\n⚠️ Bug: returning `twos` instead of `ones` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if every element appears k times instead of three, except one that appears once?",
+      "a": "Generalize the modulo counter to base k. Use ⌈log₂(k)⌉ bit-counters that reset when they reach k. For each input number, update the counters with the same carry-and-reset logic, but the reset threshold is k instead of 3. TC: O(n · 32), SC: O(1)."
+    },
+    {
+      "q": "What if two elements appear exactly once and all others appear three times?",
+      "a": "Run the same modulo-3 counter once to get the XOR of the two unique numbers. Pick any set bit in that XOR to partition the array into two groups, then run the counter on each group separately to isolate each unique number. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the input arrives as an unbounded stream and you can only store O(1) state?",
+      "a": "The current solution already processes elements one at a time with two integers of state, so it works as a streaming algorithm with no modification. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int singleNumber(vector<int>& nums) {\n        int ones = 0, twos = 0;\n        for (int num : nums) {\n            twos |= ones & num;\n            ones ^= num;\n            int threes = ones & twos;\n            ones &= ~threes;\n            twos &= ~threes;\n        }\n        return ones;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

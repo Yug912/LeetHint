@@ -1,0 +1,40 @@
+{
+  "slug": "best-team-with-no-conflicts",
+  "title": "Best Team With No Conflicts",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP with Fenwick Tree (Prefix Max BIT)",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> players: n entries → O(n)\n- vector<int> sortedScores: up to n unique scores → O(n)\n- vector<int> bit: m + 2 entries where m ≤ n → O(n)\n- sort(): introsort uses O(log n) stack\n- not counted: input scores and ages",
+  "approach": "Sort players by (age, score) so that any valid conflict-free team corresponds to a subsequence with non-decreasing scores. Coordinate-compress the scores, then use a Fenwick tree (BIT) that supports prefix-maximum queries: for each player in sorted order, query the best team score achievable with scores ≤ current score, add the current score, and update the tree. This replaces the O(n²) inner DP loop with O(log n) per player.",
+  "hints": [
+    "Among players lined up from youngest to oldest, what pattern must their scores follow for the team to be conflict-free?",
+    "Use a Fenwick tree (BIT) supporting prefix-maximum queries on coordinate-compressed scores. After sorting players by (age, score), for player (age=1, score=5) in Example 2, query the max team score among all scores ≤ 5 (currently 0), add 5, and update the tree at rank 2.",
+    "```\nsort players by (age, score)\ncompress scores to ranks 1..m\ninitialize BIT of size m with 0\nans = 0\nfor each player (age, score) in sorted order:\n    rank = compressed rank of score\n    best = BIT.prefixMax(rank)\n    cur = best + score\n    BIT.update(rank, cur)\n    ans = max(ans, cur)\nreturn ans\n```",
+    "**Same score, different ages** - equal scores never cause conflicts\n`Input: scores = [5,5], ages = [1,2]` → `Expected: 10`\n⚠️ Bug: querying prefix max for rank-1 (strictly less) instead of rank → returns 5\n\n**All same age, different scores** - tie-breaking in sort matters\n`Input: scores = [4,1,3], ages = [2,2,2]` → `Expected: 8`\n⚠️ Bug: sorting by age only without breaking ties by score → processes (2,4) before (2,1), returns 4\n\n**Younger player has higher score** - conflict must be excluded\n`Input: scores = [10,1], ages = [1,2]` → `Expected: 10`\n⚠️ Bug: sorting by score instead of (age, score) → processes (1,2) then (10,1), returns 11\n\n**Duplicate players** - same age and same score\n`Input: scores = [5,5], ages = [1,1]` → `Expected: 10`\n⚠️ Bug: deduplicating (age, score) pairs with a set before processing → only one player remains, returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if ages can be up to 10^9 instead of 1000?",
+      "a": "No change needed. The algorithm sorts by age and compresses scores, never indexing by age. Time remains O(n log n), space O(n)."
+    },
+    {
+      "q": "What if you must return the actual list of player indices, not just the score?",
+      "a": "Store a parent pointer alongside each BIT update: when updating rank r with value cur, record which player and which previous rank produced it. Reconstruct the team by following pointers from the player with the maximum score. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if players arrive in a stream ordered by age, and you must output the best score after each arrival?",
+      "a": "Process each player with the same BIT prefix-max query and update in O(log n) per arrival. Total time O(n log n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int bestTeamScore(vector<int>& scores, vector<int>& ages) {\n        int n = scores.size();\n        vector<pair<int,int>> players(n);\n        for (int i = 0; i < n; i++) {\n            players[i] = {ages[i], scores[i]};\n        }\n        sort(players.begin(), players.end());\n\n        vector<int> sortedScores(scores.begin(), scores.end());\n        sort(sortedScores.begin(), sortedScores.end());\n        sortedScores.erase(unique(sortedScores.begin(), sortedScores.end()), sortedScores.end());\n        int m = sortedScores.size();\n\n        vector<int> bit(m + 2, 0);\n\n        auto update = [&](int idx, int val) {\n            for (; idx <= m; idx += idx & (-idx))\n                bit[idx] = max(bit[idx], val);\n        };\n\n        auto query = [&](int idx) {\n            int res = 0;\n            for (; idx > 0; idx -= idx & (-idx))\n                res = max(res, bit[idx]);\n            return res;\n        };\n\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            int score = players[i].second;\n            int rank = lower_bound(sortedScores.begin(), sortedScores.end(), score)\n                       - sortedScores.begin() + 1;\n            int best = query(rank);\n            int cur = best + score;\n            update(rank, cur);\n            ans = max(ans, cur);\n        }\n\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "advantage-shuffle",
+  "title": "Advantage Shuffle",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Matching with Two Pointers",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> v2: up to n entries → O(n)\n- vector<int> result: n entries → O(n) (not counted: returned output)\n- sort(): O(log n) stack (introsort)\n- not counted: input nums1 (sorted in place), input nums2",
+  "approach": "Sort nums1 ascending and sort nums2 as (value, original_index) pairs ascending. Use two pointers on sorted nums1 (lo and hi). Process nums2 pairs from largest to smallest: if the largest available nums1 element beats the current nums2 value, assign it (this is the hardest opponent to beat, so use our best shot); otherwise, no available nums1 can beat it, so sacrifice the smallest remaining nums1 element. This greedy is optimal because beating a larger nums2 value is always at least as hard as beating a smaller one, so we should try our largest nums1 against the largest nums2 first.",
+  "hints": [
+    "If you could freely pair each element of nums1 against one element of nums2, which nums1 element would you spend to beat the largest value in nums2? The arrays can have up to 10^5 elements.",
+    "Sort nums1 and sort nums2 as (value, index) pairs. Two pointers on nums1: process nums2 from largest value down, assign largest available nums1 if it wins, else sacrifice smallest.\nExample 2 step: nums2's largest is 32 at index 2; 32 (largest nums1) is not > 32, so place smallest nums1 (8) at index 2.",
+    "```\nsort nums1\ncreate pairs (nums2[i], i), sort by value\nlo = 0, hi = n - 1\nfor i from n-1 down to 0:\n    if nums1[hi] > pairs[i].value:\n        result[pairs[i].index] = nums1[hi]\n        hi = hi - 1\n    else:\n        result[pairs[i].index] = nums1[lo]\n        lo = lo + 1\nreturn result\n```",
+    "**Tie values** - strict inequality matters when nums1 and nums2 share values.\n`Input: nums1 = [12,24,8,32], nums2 = [13,25,32,11]` → `Expected: [24,32,8,12]`\n⚠️ Bug: using `>=` instead of `>` in the comparison → returns [24,8,32,12] (advantage 2 instead of 3)\n\n**Processing order** - iterating nums2 ascending wastes large nums1 on easy targets.\n`Input: nums1 = [2,7,11,15], nums2 = [1,10,4,11]` → `Expected: [2,11,7,15]`\n⚠️ Bug: iterating nums2 pairs in ascending order → returns [15,2,11,7] (advantage 2 instead of 4)\n\n**Single element** - loop must execute exactly once with lo=hi=0.\n`Input: nums1 = [5], nums2 = [3]` → `Expected: [5]`\n⚠️ Bug: using `while (lo < hi)` as loop condition instead of a for-loop over all pairs → loop body never runs, result stays uninitialized → returns [0]\n\n**Index tracking** - sorting nums2 without preserving original indices places values at wrong positions.\n`Input: nums1 = [1,2,3], nums2 = [3,1,2]` → `Expected: [1,2,3]`\n⚠️ Bug: sorting nums2 values without storing original indices → returns [2,3,1] (advantage 1 instead of 2)"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums2 arrives as a stream - you see one element at a time and must assign a nums1 element immediately?",
+      "a": "Pre-sort nums1 and maintain available elements in an ordered structure (e.g., a Fenwick tree over value ranks or a sorted set). For each incoming nums2 value, binary search for the smallest available nums1 element strictly greater than it; if found, use it, otherwise use the smallest available. Each query is O(log n), total O(n log n) time, O(n) space."
+    },
+    {
+      "q": "What if you must maximize the total sum of (nums1[i] - nums2[i]) over winning indices instead of the count?",
+      "a": "When a win is possible, assign the smallest nums1 element that still wins (not the largest), preserving larger values for harder opponents where the margin matters. When no win is possible, still sacrifice the smallest. The two-pointer structure changes to a binary-search-per-step approach. Time complexity becomes O(n log n), space O(n)."
+    },
+    {
+      "q": "What if nums1 has length up to 10^9 and does not fit in memory?",
+      "a": "Use external merge sort on nums1, then process nums2 in sorted order with the same two-pointer logic using disk-based reads. Each element is read O(log n) times during external sort. Time complexity is O(n log n) with O(1) in-memory space (buffered I/O), where n is the array length."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> advantageCount(vector<int>& nums1, vector<int>& nums2) {\n        int n = nums1.size();\n        sort(nums1.begin(), nums1.end());\n        \n        vector<pair<int,int>> v2;\n        for (int i = 0; i < n; i++) {\n            v2.push_back({nums2[i], i});\n        }\n        sort(v2.begin(), v2.end());\n        \n        vector<int> result(n);\n        int lo = 0, hi = n - 1;\n        for (int i = n - 1; i >= 0; i--) {\n            if (nums1[hi] > v2[i].first) {\n                result[v2[i].second] = nums1[hi];\n                hi--;\n            } else {\n                result[v2[i].second] = nums1[lo];\n                lo++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

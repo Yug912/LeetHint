@@ -1,0 +1,40 @@
+{
+  "slug": "map-of-highest-peak",
+  "title": "Map of Highest Peak",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Multi-Source BFS",
+  "tc": "O(m * n)",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- vector<vector<int>> height: m*n ints → O(m*n)\n- queue<pair<int,int>>: up to m*n entries → O(m*n)\n- dirs[4][2]: O(1)\n- not counted: input isWater, returned height",
+  "approach": "Each land cell's height is bounded by its distance to the nearest water cell, because adjacent cells can differ by at most 1, so a cell at distance d from water can be at most d. Setting every cell's height to exactly its distance to the nearest water cell achieves this upper bound and is valid (water=0, neighbors differ by exactly 1 along shortest paths). This is computed with a multi-source BFS: enqueue all water cells at height 0, then expand layer by layer, assigning each newly reached cell `parent+1`.",
+  "hints": [
+    "For each land cell, what single quantity about the water cells most limits how tall that land cell can be? The grid can have up to 10^6 cells, so per-cell work must be constant.",
+    "Multi-source BFS. Enqueue every water cell with height 0, then expand layer by layer; each unvisited neighbor gets `current height + 1`. Example: from water at (0,1) height 0, neighbor (0,0) is enqueued with height 1.",
+    "```\nqueue = all water cells, each marked height 0 and visited\nwhile queue not empty:\n    (i, j) = queue.pop()\n    for each of 4 neighbors (ni, nj):\n        if in bounds and not visited:\n            height[ni][nj] = height[i][j] + 1\n            mark visited\n            queue.push((ni, nj))\nreturn height\n```",
+    "**Single cell** - the grid is 1×1 and must be water.\n`Input: [[1]]` → `Expected: [[0]]`\n⚠️ Bug: returning an empty grid when m==1 or n==1 → returns [[]]\n\n**Land adjacent to water** - land cells next to water must reach height 1.\n`Input: [[0,1],[0,0]]` → `Expected: [[1,0],[2,1]]`\n⚠️ Bug: initializing unvisited cells to 0 and using `== 0` as the unvisited check → returns [[0,0],[0,0]]\n\n**Single row** - 1×n grid, only horizontal neighbors matter.\n`Input: [[0,0,1]]` → `Expected: [[2,1,0]]`\n⚠️ Bug: looping `for d in dirs` but indexing `height[ni][j]` instead of `height[ni][nj]` → returns [[0,0,0]]\n\n**Multiple far-apart water sources** - two water cells at opposite ends.\n`Input: [[1,0,0,0,1]]` → `Expected: [[0,1,2,1,0]]`\n⚠️ Bug: single-source BFS from only the first water cell found → returns [[0,1,2,3,4]]\n\n**All water** - every cell is water, all heights must be 0.\n`Input: [[1,1],[1,1]]` → `Expected: [[0,0],[0,0]]`\n⚠️ Bug: skipping the initialization loop and leaving height uninitialized → returns garbage values"
+  ],
+  "followUps": [
+    {
+      "q": "What if diagonal adjacency (8 directions) also had to differ by at most 1?",
+      "a": "Add the four diagonal offsets to the neighbor list. Each cell's height becomes its Chebyshev distance to the nearest water cell. Time stays O(m*n), space O(m*n)."
+    },
+    {
+      "q": "What if some land cells are walls that cannot be assigned a height and block propagation?",
+      "a": "Mark wall cells as visited before BFS so they are never enqueued and never propagate to neighbors. Heights route around them naturally. Time O(m*n), space O(m*n)."
+    },
+    {
+      "q": "What if the grid arrives as a stream of rows and only O(n) auxiliary memory is allowed?",
+      "a": "Use two passes - forward (propagate from left and above) then backward (propagate from right and below) - keeping only the current and previous row. This is the standard 01-Matrix streaming trick. Time O(m*n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> highestPeak(vector<vector<int>>& isWater) {\n        int m = isWater.size();\n        int n = isWater[0].size();\n        vector<vector<int>> height(m, vector<int>(n, -1));\n        queue<pair<int,int>> q;\n        for (int i = 0; i < m; ++i) {\n            for (int j = 0; j < n; ++j) {\n                if (isWater[i][j] == 1) {\n                    height[i][j] = 0;\n                    q.push({i, j});\n                }\n            }\n        }\n        int dirs[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};\n        while (!q.empty()) {\n            auto [i, j] = q.front();\n            q.pop();\n            for (int d = 0; d < 4; ++d) {\n                int ni = i + dirs[d][0];\n                int nj = j + dirs[d][1];\n                if (ni >= 0 && ni < m && nj >= 0 && nj < n && height[ni][nj] == -1) {\n                    height[ni][nj] = height[i][j] + 1;\n                    q.push({ni, nj});\n                }\n            }\n        }\n        return height;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "alphabet-board-path",
+  "title": "Alphabet Board Path",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int pos[26][2]: fixed 26 entries → O(1)\n- string result: returned output, not counted → O(1) auxiliary\n- no recursion, no additional containers",
+  "approach": "The alphabet board is a 5×5 grid except the last row, which contains only 'z' at column 0. This irregularity means that when moving TO 'z', we must first move horizontally to column 0, then move down to row 5 (otherwise we'd try to enter row 5 at a non-existent column). When moving FROM 'z', we must first move up to leave row 5, then move horizontally. For all other character pairs, the 5×5 portion is a full rectangle so move order doesn't matter. We precompute each letter's (row, col), then for each target character generate vertical and horizontal moves in the correct order, followed by '!'.",
+  "hints": [
+    "The board is a 5×5 grid except the last row, which has only one cell at column 0. What does this shape imply about the order of horizontal and vertical moves when your destination is in that last row, or when you are starting from it?",
+    "Precompute each letter's (row, col) in a fixed array. For each target letter, compute row and column deltas from the current position. When the target is 'z', move horizontally first (to reach column 0) then vertically; otherwise move vertically first then horizontally. Example: from 'e'(0,4) to 'z'(5,0), output \"LLLL\" then \"DDDDD\".",
+    "```\npos = array mapping each letter to (row, col)\nr, c = 0, 0\nfor each char ch in target:\n    dr = pos[ch].row - r\n    dc = pos[ch].col - c\n    if ch == 'z':\n        append |dc| horizontal moves (L or R)\n        append |dr| vertical moves (U or D)\n    else:\n        append |dr| vertical moves (U or D)\n        append |dc| horizontal moves (L or R)\n    append '!'\n    r, c = pos[ch]\n```",
+    "**Single character at start** - target is \"a\", already at position (0,0)\n`Input: \"a\"` → `Expected: \"!\"`\n⚠️ Bug: only appending '!' when at least one move is generated → returns \"\"\n\n**Moving to 'z' from non-zero column** - destination is in the single-cell last row\n`Input: \"ez\"` → `Expected: \"RRRR!LLLLDDDDD!\"`\n⚠️ Bug: always using vertical-first ordering with no 'z' check → generates \"RRRR!DDDDLLLLL!\" which moves D from (4,4) to (5,4), a non-existent position\n\n**Moving from 'z' to non-zero column** - source is in the single-cell last row\n`Input: \"ze\"` → `Expected: \"DDDDD!UUUUURRRR!\"`\n⚠️ Bug: always using horizontal-first ordering with no 'z' check → generates \"DDDDD!RRRRUUUUU!\" which moves R from (5,0) to (5,1), a non-existent position\n\n**Repeated character** - same letter three times in a row\n`Input: \"zzz\"` → `Expected: \"DDDDD!!!\"`\n⚠️ Bug: not updating current position after each character → second 'z' computes delta from (0,0) instead of (5,0), generating \"DDDDD!DDDDD!DDDDD!\" which moves D from (5,0), a non-existent position"
+  ],
+  "followUps": [
+    {
+      "q": "What if the board layout is given as input with an arbitrary shape and holes?",
+      "a": "Precompute all valid positions, then run BFS from the current position to each target character's position. Since the board has at most 26 cells, BFS is O(1) per character, giving O(n) total time and O(26) space for the queue and visited set."
+    },
+    {
+      "q": "What if target length can be up to 10^6?",
+      "a": "The approach is unchanged - each character still requires O(1) moves to generate. Call result.reserve(n * 11) upfront to avoid reallocations. Time stays O(n), auxiliary space stays O(1)."
+    },
+    {
+      "q": "What if the board wraps around (moving left from column 0 goes to column 4)?",
+      "a": "For each axis, choose the shorter of the two directions: horizontal distance is min(|dc|, 5-|dc|). The 'z' row still has only column 0, so the special-case ordering for 'z' targets remains. Time and space complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string alphabetBoardPath(string target) {\n        int pos[26][2];\n        for (int i = 0; i < 26; i++) {\n            pos[i][0] = i / 5;\n            pos[i][1] = i % 5;\n        }\n        \n        string result;\n        int r = 0, c = 0;\n        \n        for (char ch : target) {\n            int idx = ch - 'a';\n            int tr = pos[idx][0], tc = pos[idx][1];\n            int dr = tr - r, dc = tc - c;\n            \n            if (ch == 'z') {\n                result += string(abs(dc), dc > 0 ? 'R' : 'L');\n                result += string(abs(dr), dr > 0 ? 'D' : 'U');\n            } else {\n                result += string(abs(dr), dr > 0 ? 'D' : 'U');\n                result += string(abs(dc), dc > 0 ? 'R' : 'L');\n            }\n            \n            result += '!';\n            r = tr;\n            c = tc;\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

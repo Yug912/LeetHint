@@ -1,0 +1,40 @@
+{
+  "slug": "video-stitching",
+  "title": "Video Stitching",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Interval Covering",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- scalar variables (count, covered, i, best, n): O(1)\n- not counted: input vector (sorted in place)",
+  "approach": "Sort clips by start time. Greedily extend coverage: at each step, among all clips whose start is ≤ current covered endpoint, pick the one with the largest end. Repeat until coverage reaches `time` or no clip can extend further (return -1). This is optimal because at each coverage frontier, any valid solution must use some clip starting ≤ frontier, and choosing the one extending furthest never hurts future choices.",
+  "hints": [
+    "If you lay the clips out in order of where they begin, at any moment you've covered up to some point - which still-unused clips are even eligible to help you extend from there?",
+    "Sort clips by start time, then greedily pick the clip (among those starting at or before the current coverage end) that reaches furthest. In Example 1, from coverage 0 you can only use [0,2]; from coverage 2 the best is [1,9] reaching 9; from 9 the best is [8,10] reaching 10 → 3 clips.",
+    "sort clips by start\ncovered = 0, count = 0, i = 0\nwhile covered < time:\n    best = covered\n    while i < n and clips[i].start <= covered:\n        best = max(best, clips[i].end)\n        i += 1\n    if best == covered: return -1\n    covered = best\n    count += 1\nreturn count",
+    "**No clip starts at 0** - coverage can never begin.\n`Input: clips = [[1,3],[2,5]], time = 5` → `Expected: -1`\n⚠️ Bug: initializing `best = time` instead of `best = covered` → returns 1.\n\n**Strict inequality on start** - adjacent clips that meet exactly must connect.\n`Input: clips = [[0,1],[1,2]], time = 2` → `Expected: 2`\n⚠️ Bug: using `clips[i][0] < covered` instead of `<=` in the inner loop → returns -1.\n\n**Gap in the middle** - no clip bridges two covered regions.\n`Input: clips = [[0,2],[5,10]], time = 10` → `Expected: -1`\n⚠️ Bug: omitting the `if (best == covered) return -1` check → infinite loop.\n\n**Duplicate clips** - identical intervals should count once.\n`Input: clips = [[0,3],[0,3],[0,3]], time = 3` → `Expected: 1`\n⚠️ Bug: incrementing `count` inside the inner loop per clip → returns 3."
+  ],
+  "followUps": [
+    {
+      "q": "If `time` could be up to 10^9, how would your solution change?",
+      "a": "Nothing changes. The greedy only iterates over clips and compares endpoints, never allocating an array of size `time`. Time stays O(n log n), space O(log n)."
+    },
+    {
+      "q": "If each clip had a positive cost and you wanted minimum total cost to cover [0, time], what would change?",
+      "a": "Greedy fails because the furthest-reaching clip may be expensive. Use DP: dp[t] = min cost to cover [0, t]; for each clip (a,b,c) sorted by a, update dp[b] from dp[a]. Time O(n·time), space O(time)."
+    },
+    {
+      "q": "If clips arrive in a streaming fashion and cannot all be stored, how would you handle it?",
+      "a": "Run an external sort by start time, then stream clips through the same greedy scan keeping only the current coverage frontier and the best candidate end. Time O(n log n) with O(1) working memory beyond the sort's external buffers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int videoStitching(vector<vector<int>>& clips, int time) {\n        sort(clips.begin(), clips.end());\n        int n = (int)clips.size();\n        int count = 0;\n        int covered = 0;\n        int i = 0;\n        while (covered < time) {\n            int best = covered;\n            while (i < n && clips[i][0] <= covered) {\n                if (clips[i][1] > best) best = clips[i][1];\n                i++;\n            }\n            if (best == covered) return -1;\n            covered = best;\n            count++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

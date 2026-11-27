@@ -1,0 +1,40 @@
+{
+  "slug": "find-k-th-smallest-pair-distance",
+  "title": "Find K-th Smallest Pair Distance",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer + Two Pointers",
+  "tc": "O(n log n + n log M)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() on nums: in-place introsort, O(log n) recursion stack\n- all other variables (lo, hi, mid, count, left, right): O(1) scalars\n- not counted: input array (modified in place)",
+  "approach": "Binary search on the answer (the distance value). For a candidate distance X, count how many pairs have distance ≤ X using a two-pointer sweep over the sorted array: for each right index, advance the left index while the gap exceeds X, then add (right − left) to the count. If the count ≥ k, the answer is ≤ X (search lower); otherwise search higher. Sorting makes the counting O(n) per check, giving O(n log n + n log M) total where M = max−min ≤ 10⁶.",
+  "hints": [
+    "There are up to n·(n−1)/2 ≈ 5×10⁷ pairs - too many to enumerate. The answer is a distance between 0 and max(nums)−min(nums). As you increase a threshold X, what happens to the number of pairs whose distance is ≤ X?",
+    "Binary search on the answer X; to count pairs with distance ≤ X, sort the array and use two pointers. For nums=[1,3,1] sorted to [1,1,3] with X=1: right=1 adds (1−0)=1 pair, right=2 advances left to 2 adding 0 - total 1 pair ≤ 1.",
+    "```\nsort array\nlo = 0, hi = max(array) - min(array)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    count = 0, left = 0\n    for right in 0 .. n-1:\n        while array[right] - array[left] > mid:\n            left = left + 1\n        count = count + (right - left)\n    if count >= k:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Ties (multiple pairs share the same distance)** - distances are [1,1,1,2,2,3], k=5 lands on a tie value\n`Input: nums = [1,2,3,4], k = 5` → `Expected: 2`\n⚠️ Bug: using `count > k` instead of `count >= k` → returns 3\n\n**Maximum distance boundary** - the answer equals max−min exactly\n`Input: nums = [0,1000000], k = 1` → `Expected: 1000000`\n⚠️ Bug: setting `hi = nums[n-1] - nums[0] - 1` → returns 999999\n\n**Smallest k with adjacent duplicates** - k=1 should return the smallest gap\n`Input: nums = [1,2,3,4], k = 1` → `Expected: 1`\n⚠️ Bug: using `while (nums[right] - nums[left] >= mid)` instead of `> mid` → returns 2\n\n**All elements equal** - every pair has distance 0\n`Input: nums = [1,1,1], k = 2` → `Expected: 0`\n⚠️ Bug: skipping the sort step → two-pointer counting produces wrong counts on unsorted input"
+  ],
+  "followUps": [
+    {
+      "q": "If the array arrives as an unbounded stream and cannot fit in memory, how would you adapt?",
+      "a": "Use external merge sort to sort the stream into sorted runs on disk, then run the same binary search. Each counting pass streams through the sorted data with two pointers, needing only O(1) elements in memory at a time. Time becomes O(n log n) for external sort plus O(n log M) per query."
+    },
+    {
+      "q": "If you must answer many different k queries on the same fixed array, how do you optimize?",
+      "a": "Sort once upfront. Each query then costs O(n log M) for the binary search with two-pointer counting, with no re-sorting. If n is small enough, precompute all pair distances into a sorted array and answer each k in O(1) via indexing, at O(n²) space."
+    },
+    {
+      "q": "If nums[i] can be negative, does the approach change?",
+      "a": "No. Sorting handles negatives naturally, and the two-pointer counting only relies on sorted order. The binary search range is still [0, max−min], which is non-negative regardless of sign. Time and space complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int smallestDistancePair(vector<int>& nums, int k) {\n        sort(nums.begin(), nums.end());\n        int n = (int)nums.size();\n        int lo = 0;\n        int hi = nums[n - 1] - nums[0];\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            int count = 0;\n            int left = 0;\n            for (int right = 0; right < n; ++right) {\n                while (nums[right] - nums[left] > mid) {\n                    ++left;\n                }\n                count += right - left;\n            }\n            if (count >= k) {\n                hi = mid;\n            } else {\n                lo = mid + 1;\n            }\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

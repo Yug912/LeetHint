@@ -1,0 +1,40 @@
+{
+  "slug": "knight-probability-in-chessboard",
+  "title": "Knight Probability in Chessboard",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "2D Dynamic Programming (rolling buffers)",
+  "tc": "O(k · n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<vector<double>> dp: n×n doubles → O(n²)\n- vector<vector<double>> next: n×n doubles → O(n²)\n- int dr[8], dc[8]: constant size → O(1)\n- recursion depth: none (iterative)\n- not counted: input scalars, returned double",
+  "approach": "Let dp[r][c] = probability the knight is at cell (r,c) after the moves made so far. Initialize dp[row][column] = 1. For each of the k steps, build a fresh `next` table: for every cell holding probability p, send p/8 to each of its 8 knight-neighbors that stay on the board (off-board probability is simply discarded). After k steps, sum all entries of dp - that is the probability the knight is still on the board. Correctness follows because each move is uniform over 8 choices and probabilities of disjoint paths add.",
+  "hints": [
+    "With n ≤ 25 and k ≤ 100, how many distinct (cell, moves-remaining) situations can the knight ever find itself in?",
+    "2D dynamic programming with two rolling n×n tables. On the 3×3 board, dp[0][0]=1 sends 1/8 to (1,2) and 1/8 to (2,1) after move 1.",
+    "```\ndp[row][column] = 1\nrepeat k times:\n    next = all zeros\n    for each cell (r,c) with dp[r][c] > 0:\n        for each of 8 knight moves (nr,nc):\n            if (nr,nc) on board:\n                next[nr][nc] += dp[r][c] / 8\n    dp = next\nreturn sum of all dp[r][c]\n```",
+    "**Zero moves** - k = 0 means the knight never moves.\n`Input: n = 1, k = 0, row = 0, column = 0` → `Expected: 1.00000`\n⚠️ Bug: initializing dp to all zeros instead of dp[row][column] = 1 → returns 0.00000\n\n**Single cell with moves** - n = 1 means every knight move leaves the board.\n`Input: n = 1, k = 1, row = 0, column = 0` → `Expected: 0.00000`\n⚠️ Bug: writing to next[nr][nc] without checking 0 ≤ nr,nc < n → returns 1.00000 (or crashes)\n\n**Corner start** - from (0,0) only 2 of 8 moves stay on a 3×3 board.\n`Input: n = 3, k = 2, row = 0, column = 0` → `Expected: 0.06250`\n⚠️ Bug: dividing by the count of on-board moves instead of always 8 → returns 1.00000\n\n**Large k, small board** - probability decays toward 0 but never underflows past 1e-300 here.\n`Input: n = 25, k = 100, row = 12, column = 12` → `Expected: ~0.00030`\n⚠️ Bug: using float instead of double → loses precision after ~24 halvings, returns 0.00000"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "Treat the n² cells as states of a Markov chain and build the n²×n² transition matrix M where M[(r,c)][(nr,nc)] = 1/8 for each valid knight move. Compute M^k applied to the initial unit vector via binary exponentiation. TC O(n^6 log k), SC O(n^4)."
+    },
+    {
+      "q": "What if n can be up to 10^9 but k stays ≤ 100?",
+      "a": "Only cells within k knight-moves of the start are reachable - at most O(k²) of them. Replace the 2D array with a hash map keyed by (r,c). TC O(k³), SC O(k²)."
+    },
+    {
+      "q": "What if each of the 8 directions has a different probability instead of 1/8?",
+      "a": "The DP structure is identical; just replace the constant 1/8 share with the given probability for that direction. TC O(k·n²), SC O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double knightProbability(int n, int k, int row, int column) {\n        int dr[8] = {-2, -2, -1, -1, 1, 1, 2, 2};\n        int dc[8] = {-1, 1, -2, 2, -2, 2, -1, 1};\n        vector<vector<double>> dp(n, vector<double>(n, 0.0));\n        vector<vector<double>> next(n, vector<double>(n, 0.0));\n        dp[row][column] = 1.0;\n        for (int step = 0; step < k; step++) {\n            for (int r = 0; r < n; r++)\n                for (int c = 0; c < n; c++)\n                    next[r][c] = 0.0;\n            for (int r = 0; r < n; r++) {\n                for (int c = 0; c < n; c++) {\n                    if (dp[r][c] == 0.0) continue;\n                    double share = dp[r][c] / 8.0;\n                    for (int i = 0; i < 8; i++) {\n                        int nr = r + dr[i];\n                        int nc = c + dc[i];\n                        if (nr >= 0 && nr < n && nc >= 0 && nc < n) {\n                            next[nr][nc] += share;\n                        }\n                    }\n                }\n            }\n            dp.swap(next);\n        }\n        double total = 0.0;\n        for (int r = 0; r < n; r++)\n            for (int c = 0; c < n; c++)\n                total += dp[r][c];\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

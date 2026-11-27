@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-distance-between-bst-nodes",
+  "title": "Minimum Distance Between BST Nodes",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Morris In-order Traversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- TreeNode* prev: 1 pointer → O(1)\n- int min_diff: 1 integer → O(1)\n- TreeNode* predecessor: 1 pointer → O(1)\n- recursion depth: none\n- not counted: input tree",
+  "approach": "The key insight is that an in-order traversal of a Binary Search Tree visits nodes in strictly ascending order of their values. Therefore, the minimum difference between any two nodes must occur between two adjacent nodes in this sorted sequence. To achieve O(1) auxiliary space, we use Morris in-order traversal, which temporarily modifies the tree's right pointers to traverse back up, restoring them as it goes, eliminating the need for a recursion stack or explicit stack.",
+  "hints": [
+    "In a Binary Search Tree, how does the in-order traversal sequence relate to the sorted order of node values? The constraints state node values are between 0 and 10^5.",
+    "Use Morris in-order traversal to visit nodes in sorted order while keeping track of the previously visited node. For example, in the tree [4,2,6,1,3], the in-order sequence is 1, 2, 3, 4, 6, so we compare 2-1, 3-2, 4-3, and 6-4 to find the minimum difference of 1.",
+    "```\nprev = null, min_diff = infinity\nwhile root:\n    if not root.left:\n        if prev: min_diff = min(min_diff, root.val - prev.val)\n        prev, root = root, root.right\n    else:\n        pred = root.left\n        while pred.right and pred.right != root: pred = pred.right\n        if not pred.right: pred.right, root = root, root.left\n        else: pred.right = null; if prev: min_diff = min(min_diff, root.val - prev.val); prev, root = root, root.right\nreturn min_diff\n```",
+    "**Smallest input** - Only two nodes in the tree.\n`Input: [1, null, 2]` → `Expected: 1`\n⚠️ Bug: Initializing `prev` to `root` before the loop starts → returns 0 because it computes the difference between the first node and itself.\n\n**Skewed tree** - A tree that is essentially a linked list, all left children.\n`Input: [4, 3, null, 2, null, 1]` → `Expected: 1`\n⚠️ Bug: Initializing `min_diff` to 0 instead of a large value → returns 0 because all differences are positive and greater than 0.\n\n**Duplicate values** - Two different nodes share the same value.\n`Input: [2, 2, 3]` → `Expected: 0`\n⚠️ Bug: Skipping the difference update when `root->val == prev->val` assuming no duplicates exist → returns the initial large value (e.g., 100001) instead of 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is extremely large and you need to find the minimum difference in a streaming fashion where you cannot modify the tree?",
+      "a": "You would use an iterative in-order traversal with an explicit stack. This maintains O(n) time complexity but uses O(h) space for the stack, where h is the height of the tree, avoiding tree modification."
+    },
+    {
+      "q": "What if you need to find the k-th smallest difference instead of the minimum?",
+      "a": "You can collect all adjacent differences during the in-order traversal into an array, then use a quickselect algorithm to find the k-th smallest difference. This would take O(n) time for traversal and O(n) average time for quickselect, with O(n) space to store the differences."
+    },
+    {
+      "q": "What if the tree is not a BST but a general binary tree?",
+      "a": "You would traverse the tree to collect all node values into an array, sort the array, and then find the minimum difference between adjacent elements. This takes O(n log n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDiffInBST(TreeNode* root) {\n        int min_diff = 100001;\n        TreeNode* prev = nullptr;\n        while (root != nullptr) {\n            if (root->left == nullptr) {\n                if (prev != nullptr) {\n                    int diff = root->val - prev->val;\n                    if (diff < min_diff) {\n                        min_diff = diff;\n                    }\n                }\n                prev = root;\n                root = root->right;\n            } else {\n                TreeNode* predecessor = root->left;\n                while (predecessor->right != nullptr && predecessor->right != root) {\n                    predecessor = predecessor->right;\n                }\n                if (predecessor->right == nullptr) {\n                    predecessor->right = root;\n                    root = root->left;\n                } else {\n                    predecessor->right = nullptr;\n                    if (prev != nullptr) {\n                        int diff = root->val - prev->val;\n                        if (diff < min_diff) {\n                            min_diff = diff;\n                        }\n                    }\n                    prev = root;\n                    root = root->right;\n                }\n            }\n        }\n        return min_diff;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

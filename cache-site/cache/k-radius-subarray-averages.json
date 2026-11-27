@@ -1,0 +1,40 @@
+{
+  "slug": "k-radius-subarray-averages",
+  "title": "K Radius Subarray Averages",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> avgs(n, -1): n elements → O(n) (returned output, not counted)\n- long long sum, windowSize: O(1)\n- no recursion, no other containers\n- not counted: input vector, returned vector",
+  "approach": "The key insight is that consecutive k-radius windows centered at i and i+1 share 2k elements-only one element enters and one leaves. We maintain a running sum of the current window of size 2k+1, updating it in O(1) per step by adding the new element and subtracting the departing one. Indices where i−k < 0 or i+k ≥ n are set to −1. Using `long long` for the sum prevents overflow since the maximum window sum is 10⁵ × 10⁵ = 10¹⁰, which exceeds 32-bit int range.",
+  "hints": [
+    "For two adjacent valid centers i and i+1, how many of the 2k+1 elements in their windows overlap? With n up to 10⁵, recomputing each window sum from scratch is too slow.",
+    "Use a sliding window of size 2k+1. In Example 1 (k=3), the first window [7,4,3,9,1,8,5] sums to 37; sliding right drops 7 and adds 2, giving sum 32 for the next center.",
+    "```\nfill result with -1\nwindowSize = 2*k + 1\nif windowSize > n: return result\nsum = sum of first windowSize elements\nresult[k] = sum / windowSize\nfor i from k+1 while i+k < n:\n    sum += nums[i+k] - nums[i-k-1]\n    result[i] = sum / windowSize\nreturn result\n```",
+    "**k = 0** - window size is 1, every element is its own average\n`Input: nums = [100000], k = 0` → `Expected: [100000]`\n⚠️ Bug: returning all -1 when k == 0 without computing → returns [-1]\n\n**Window larger than array** - 2k+1 exceeds n, no valid centers exist\n`Input: nums = [8], k = 100000` → `Expected: [-1]`\n⚠️ Bug: not checking windowSize > n before summing first window → out-of-bounds read on nums\n\n**Overflow** - max window sum = 99999 × 100000 = 9,999,900,000 > INT_MAX (2,147,483,647)\n`Input: nums = [100000,...,100000] (10⁵ elements), k = 49999` → `Expected: avgs[49999] = 100000`\n⚠️ Bug: using int for sum → 9,999,900,000 wraps to 1,409,965,408, returns 14099\n\n**Boundary indices** - first k and last k indices have no valid window\n`Input: nums = [7,4,3,9,1,8,5,2,6], k = 3` → `Expected: [-1,-1,-1,5,4,4,-1,-1,-1]`\n⚠️ Bug: starting the loop at i=0 instead of i=k → accesses nums[i-k-1] = nums[-4], out of bounds"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array arrives as a data stream and you can only store O(k) elements at a time?",
+      "a": "Maintain a circular buffer of size 2k+1 and a running sum. Each new element replaces the oldest in the buffer; update the sum by subtracting the evicted value and adding the new one. Emit the average for the center position when the buffer is full. TC: O(n), SC: O(k)."
+    },
+    {
+      "q": "What if k varies per index, given as an array radius[i]?",
+      "a": "Precompute a prefix sum array so each range sum from i−radius[i] to i+radius[i] is answered in O(1). For each valid i, output (prefix[i+radius[i]+1] − prefix[i−radius[i]]) / (2·radius[i]+1). TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you must return the exact average as a reduced fraction (numerator, denominator) instead of a truncated integer?",
+      "a": "Compute the window sum as before using long long, then reduce the fraction sum/(2k+1) by dividing both by their GCD via Euclid's algorithm. TC: O(n log M) where M is the max sum, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getAverages(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<int> avgs(n, -1);\n        long long windowSize = 2LL * k + 1;\n        if (windowSize > n) return avgs;\n        \n        long long sum = 0;\n        for (int i = 0; i < windowSize; i++) {\n            sum += nums[i];\n        }\n        avgs[k] = sum / windowSize;\n        \n        for (int i = k + 1; i + k < n; i++) {\n            sum += nums[i + k] - nums[i - k - 1];\n            avgs[i] = sum / windowSize;\n        }\n        \n        return avgs;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

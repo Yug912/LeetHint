@@ -1,0 +1,40 @@
+{
+  "slug": "additive-number",
+  "title": "Additive Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Brute-Force Enumeration with Greedy Verification",
+  "tc": "O(n³)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- num.substr temporaries (first/second number): up to O(n) each → O(n)\n- cs = to_string(c): up to ~18 chars → O(n)\n- recursion depth: none (iterative)\n- not counted: input string",
+  "approach": "Once the first two numbers are fixed, every subsequent number is forced (each equals the sum of the previous two), so we only need to enumerate all possible split lengths for the first two numbers and greedily verify the rest of the string. With n ≤ 35, there are O(n²) candidate pairs and each verification is O(n), which is trivially fast. Leading zeros are rejected by checking that any multi-digit number does not start with '0'.",
+  "hints": [
+    "If the first two numbers of the additive sequence were already chosen, how many valid completions of the remaining numbers exist? The string length is at most 35.",
+    "Brute-force enumeration over the split lengths of the first two numbers, then greedy verification of the rest. For \"199100199\", choosing first number \"1\" (length 1) and second \"99\" (length 2) forces 100, then 199, consuming the string exactly.",
+    "```\nfor each length i of first number:\n  for each length j of second number:\n    a = num[0:i], b = num[i:i+j]\n    if a or b has leading zero and length > 1: skip\n    pos = i + j\n    while pos < n:\n      c = a + b\n      if num[pos : pos+len(str(c))] != str(c): break\n      pos += len(str(c)); a = b; b = c\n    if pos == n: return true\nreturn false\n```",
+    "**Minimum valid** - Three single-digit numbers where the third is the sum of the first two.\n`Input: \"101\"` → `Expected: true`\n⚠️ Bug: requiring the loop to run at least twice (checking ≥4 numbers) → returns false\n\n**Leading zero in second number** - A multi-digit number starting with '0' must be rejected.\n`Input: \"1023\"` → `Expected: false`\n⚠️ Bug: skipping the leading-zero check on the second number → accepts \"1, 02, 3\" (2+3=5≠3 is never reached because 1+02=3 matches), returns true\n\n**All zeros** - Every number is \"0\", which is a valid single-digit number with no leading zero.\n`Input: \"000\"` → `Expected: true`\n⚠️ Bug: treating any number starting with '0' as invalid (instead of only multi-digit ones) → returns false\n\n**Sum overflow** - Two 10-digit numbers whose sum exceeds 2³¹−1.\n`Input: \"20000000002000000002200000000\"` → `Expected: true`\n⚠️ Bug: using `int` for the running sum → 2000000000 + 200000000 = 2200000000 overflows to -2094967296, `to_string` produces \"-2094967296\", comparison fails, returns false"
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle arbitrarily long strings (e.g., 10⁵ digits) where numbers far exceed any primitive integer type?",
+      "a": "Replace `long long` arithmetic with string-based big-integer addition. The greedy verification logic stays identical; only the sum and comparison become string operations. Time complexity rises to O(n³) per pair due to O(n)-digit addition, giving O(n⁴) overall, which may require pruning early mismatches to stay practical."
+    },
+    {
+      "q": "What if the string could contain negative numbers (with leading '-' signs)?",
+      "a": "The additive property still holds with signed arithmetic. Enumerate first-two-number splits as before, but allow an optional leading '-' when parsing each number. Use `long long` (or big integers) for signed sums. The leading-zero rule applies only to the digit portion, not the sign."
+    },
+    {
+      "q": "What if you needed to return one valid additive split (the list of numbers) instead of just true/false?",
+      "a": "Return the split the first time verification succeeds. Store the parsed numbers in a vector during the greedy walk and return it immediately when `pos == n`. Time and space complexity remain O(n³) and O(n) respectively, since you stop at the first valid split."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isAdditiveNumber(string num) {\n        int n = num.size();\n        for (int i = 1; i <= n - 2; i++) {\n            for (int j = 1; j <= n - i - 1; j++) {\n                if (check(num, i, j)) return true;\n            }\n        }\n        return false;\n    }\nprivate:\n    bool check(const string& num, int i, int j) {\n        int n = num.size();\n        if (num[0] == '0' && i > 1) return false;\n        if (num[i] == '0' && j > 1) return false;\n        long long a = stoll(num.substr(0, i));\n        long long b = stoll(num.substr(i, j));\n        int pos = i + j;\n        while (pos < n) {\n            long long c = a + b;\n            string cs = to_string(c);\n            if (pos + (int)cs.size() > n) return false;\n            if (num.compare(pos, cs.size(), cs) != 0) return false;\n            pos += cs.size();\n            a = b;\n            b = c;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

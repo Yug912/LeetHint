@@ -1,0 +1,40 @@
+{
+  "slug": "how-many-numbers-are-smaller-than-the-current-number",
+  "title": "How Many Numbers Are Smaller Than the Current Number",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Sort",
+  "tc": "O(n + 101)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[101]: fixed 101 ints → O(1)\n- int prefix[101]: fixed 101 ints → O(1)\n- vector<int> ans: returned output, not counted\n- recursion depth: none",
+  "approach": "Since every value is in [0, 100], we can tally how many times each value appears in a fixed-size count array of 101 entries. A running prefix sum over this array gives, for any value v, the total number of elements strictly less than v. We then map each nums[i] to prefix[nums[i]] in one pass. This avoids all pairwise comparisons and runs in linear time.",
+  "hints": [
+    "For nums[i] = 8 in Example 1, what determines the answer 4 - which specific elements are smaller, or something simpler about them? Every value satisfies 0 ≤ nums[i] ≤ 100.",
+    "Use a frequency array of size 101 to count occurrences of each value, then a running prefix sum so prefix[v] = total count of all values < v. For Example 1, count[2] = 2 and prefix[2] = count[0] + count[1] = 1, so each 2 maps to answer 1.",
+    "```\ncount[0..100] = 0\nfor each x in nums:\n    count[x]++\nprefix[0] = 0\nfor v from 1 to 100:\n    prefix[v] = prefix[v-1] + count[v-1]\nfor each i:\n    ans[i] = prefix[nums[i]]\nreturn ans\n```",
+    "**All equal values** - every element identical, so no element has any smaller number\n`Input: nums = [7,7,7,7]` → `Expected: [0,0,0,0]`\n⚠️ Bug: returning `count[nums[i]]` instead of `prefix[nums[i]]` → returns `[4,4,4,4]`\n\n**Duplicates mixed with unique values** - repeated values must all get the same answer\n`Input: nums = [8,1,2,2,3]` → `Expected: [4,0,1,1,3]`\n⚠️ Bug: computing prefix as `prefix[v] = prefix[v-1] + count[v]` (including current value) → returns `[5,1,3,3,4]`\n\n**Maximum value 100** - tests the upper boundary of the value range\n`Input: nums = [100,0]` → `Expected: [1,0]`\n⚠️ Bug: sizing the count array to 100 instead of 101 → out-of-bounds write for value 100\n\n**Minimum size with zeros** - smallest allowed input where every value is 0\n`Input: nums = [0,0]` → `Expected: [0,0]`\n⚠️ Bug: prefix loop starting at v = 0 and accessing `prefix[-1]` → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^5 instead of 100?",
+      "a": "Sort a copy of the array, then for each nums[i] use lower_bound on the sorted copy - the returned index equals the count of strictly smaller elements. TC: O(n log n), SC: O(n) for the sorted copy."
+    },
+    {
+      "q": "What if the array arrives as a stream too large to store entirely?",
+      "a": "Keep the count[101] array in memory and update it as each element arrives. For each query, compute the prefix sum up to the queried value on the fly. TC: O(101) per query, SC: O(1)."
+    },
+    {
+      "q": "What if you must support interleaved updates (change nums[i] to a new value) and queries?",
+      "a": "Maintain the count[101] array. On each update, decrement count[old_value] and increment count[new_value]. For each query, sum count[0..v-1]. TC: O(1) per update, O(101) per query, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> smallerNumbersThanCurrent(vector<int>& nums) {\n        int count[101] = {0};\n        for (int x : nums) count[x]++;\n        int prefix[101];\n        prefix[0] = 0;\n        for (int v = 1; v <= 100; v++) {\n            prefix[v] = prefix[v - 1] + count[v - 1];\n        }\n        vector<int> ans(nums.size());\n        for (int i = 0; i < (int)nums.size(); i++) {\n            ans[i] = prefix[nums[i]];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

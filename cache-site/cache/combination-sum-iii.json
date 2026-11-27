@@ -1,0 +1,40 @@
+{
+  "slug": "combination-sum-iii",
+  "title": "Combination Sum III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking",
+  "tc": "O(C(9,k) · k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> current: at most k elements → O(k)\n- recursion call stack: depth at most k → O(k)\n- not counted: input, returned vector<vector<int>> result",
+  "approach": "Use backtracking to enumerate all k-element subsets of {1,...,9} that sum to n. By always picking numbers in strictly increasing order (starting from `start`), we guarantee each subset is generated exactly once. Two prunings keep the search tight: break early when the current number exceeds the remaining sum, and return when there aren't enough numbers left to fill k slots.",
+  "hints": [
+    "With k ≤ 9 and only 9 numbers available, how large is the space of possible k-element selections you'd need to explore? The constraints give 2 ≤ k ≤ 9 and 1 ≤ n ≤ 60.",
+    "Backtracking with an increasing start index. For k=3, n=9: pick 1, then recurse from 2; pick 2, then recurse from 3; this guarantees each set appears once.",
+    "```\nfunction backtrack(start, k, remaining):\n    if k == 0:\n        if remaining == 0: add current to result\n        return\n    if 9 - start + 1 < k: return\n    for i from start to 9:\n        if i > remaining: break\n        add i to current\n        backtrack(i+1, k-1, remaining-i)\n        remove i from current\n```",
+    "**Minimum n** - k=4, n=1: the smallest sum of 4 distinct numbers from 1-9 is 1+2+3+4=10.\n`Input: k=4, n=1` → `Expected: []`\n⚠️ Bug: checking `remaining == 0` before `k == 0` → returns `[[1]]`\n\n**Largest pair** - k=2, n=17: only 8+9=17 works.\n`Input: k=2, n=17` → `Expected: [[8,9]]`\n⚠️ Bug: looping with `i < 9` instead of `i <= 9` → returns `[]`\n\n**Multiple answers** - k=3, n=9: three valid combinations exist.\n`Input: k=3, n=9` → `Expected: [[1,2,6],[1,3,5],[2,3,4]]`\n⚠️ Bug: checking `remaining == 0` before `k == 0` → returns `[[1,2,6],[1,3,5],[1,8],[2,3,4],[2,7],[3,6],[4,5],[9]]`\n\n**All numbers** - k=9, n=45: the sum of 1 through 9 is exactly 45.\n`Input: k=9, n=45` → `Expected: [[1,2,3,4,5,6,7,8,9]]`\n⚠️ Bug: looping with `i < 9` instead of `i <= 9` → returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if each number 1-9 could be used multiple times (unlimited reuse)?",
+      "a": "Change the recursive call from `backtrack(i+1, ...)` to `backtrack(i, ...)` so the same number can be picked again. TC becomes O(9^k) in the worst case since each of the k slots has up to 9 choices."
+    },
+    {
+      "q": "What if the number range was 1 to 99 instead of 1 to 9, with k up to 9?",
+      "a": "Backtracking still works but C(99,9) is enormous. Add stronger pruning: track the minimum possible remaining sum (sum of the next k smallest available numbers) and maximum possible remaining sum (sum of the next k largest), and prune branches where `remaining` falls outside that range. TC drops to O(C(99,k) · k) in the worst case but pruning makes it practical for small n."
+    },
+    {
+      "q": "What if you only need the count of valid combinations, not the list itself?",
+      "a": "Use DP: `dp[j][s]` = number of ways to pick j distinct numbers from {1,...,9} summing to s. Iterate over each number i from 1 to 9 and update `dp[j][s] += dp[j-1][s-i]` in reverse order of j and s. TC = O(9 · k · n), SC = O(k · n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> combinationSum3(int k, int n) {\n        vector<vector<int>> result;\n        vector<int> current;\n        backtrack(1, k, n, current, result);\n        return result;\n    }\nprivate:\n    void backtrack(int start, int k, int remaining, vector<int>& current, vector<vector<int>>& result) {\n        if (k == 0) {\n            if (remaining == 0) {\n                result.push_back(current);\n            }\n            return;\n        }\n        if (9 - start + 1 < k) return;\n        for (int i = start; i <= 9; i++) {\n            if (i > remaining) break;\n            current.push_back(i);\n            backtrack(i + 1, k - 1, remaining - i, current, result);\n            current.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

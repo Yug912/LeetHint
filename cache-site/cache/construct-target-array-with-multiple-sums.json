@@ -1,0 +1,40 @@
+{
+  "slug": "construct-target-array-with-multiple-sums",
+  "title": "Construct Target Array With Multiple Sums",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Reverse Simulation with Max-Heap",
+  "tc": "O((n + log V) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue pq: up to n entries → O(n)\n- sum, mx, rest, new_val: O(1) scalars\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Work backwards: the largest element was the last one set (to the total sum), so undo it by subtracting the sum of all other elements. Use a max-heap to always process the current largest. To avoid TLE when one element is much larger than the rest, use modulo (`mx % rest`) to skip many reverse steps at once. If at any point the largest is ≤ the sum of the rest (meaning the previous value would be ≤ 0), return false.",
+  "hints": [
+    "The sum strictly increases with every forward step. Which element must have been changed last, and what was its previous value?",
+    "Use a max-heap. The largest element equals the previous total sum; subtract the sum of the rest to undo one step. Example: [9,3,5] → max 9, rest 8, undo to [1,3,5].",
+    "```\nbuild max-heap from target, compute total sum\nwhile heap top > 1:\n    mx = pop top\n    rest = sum - mx\n    if mx <= rest: return false\n    new_val = mx % rest\n    if new_val == 0: new_val = rest\n    sum = sum - mx + new_val\n    push new_val\nreturn true\n```",
+    "**Single element** - n = 1 means the array can never change from [1].\n`Input: target = [5]` → `Expected: false`\n⚠️ Bug: not special-casing n == 1 and checking `rest <= 0` with rest = 0 → returns true instead of false.\n\n**Equal pair** - two equal large values can never arise from [1,1].\n`Input: target = [2,2]` → `Expected: false`\n⚠️ Bug: using `mx % rest` without checking `mx <= rest` first → 2 % 2 = 0, sets new_val = 2, infinite loop.\n\n**Overflow** - n = 5×10^4, each target[i] = 10^9 → sum = 5×10^13.\n`Input: target = [1000000000,1000000000,...]` → `Expected: false`\n⚠️ Bug: storing sum as int → overflow wraps to negative → `rest` negative → returns true incorrectly.\n\n**Rest exceeds max** - the largest was not actually set last.\n`Input: target = [1,1,1,2]` → `Expected: false`\n⚠️ Bug: not checking `mx <= rest` → computes new_val = 2 % 3 = 2, no progress, infinite loop.\n\n**Large gap** - one element dwarfs the rest, requiring modulo to skip steps.\n`Input: target = [1000000000,1]` → `Expected: true`\n⚠️ Bug: subtracting rest one at a time in a loop → 10^9 iterations, TLE."
+  ],
+  "followUps": [
+    {
+      "q": "What if target[i] can be up to 10^18?",
+      "a": "The same reverse-simulation approach works, but use `__int128` or Python-style big integers for sum and heap elements. Time complexity stays O(n log n); space stays O(n)."
+    },
+    {
+      "q": "Return the actual sequence of index choices that builds the target.",
+      "a": "During each reverse step, record the index of the element being reduced (track indices in the heap via pairs). After the reverse simulation completes, reverse the recorded sequence to get the forward order. Time stays O(n log n); space becomes O(n + k) where k is the number of steps."
+    },
+    {
+      "q": "What if n can be up to 10^6 and you have a streaming input (one element at a time)?",
+      "a": "Maintain the running sum and a max-heap, processing each element as it arrives. The heap holds at most n elements, so space is O(n). If only a yes/no answer is needed at the end, the same modulo-based reverse simulation applies once all elements are seen."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isPossible(vector<int>& target) {\n        int n = target.size();\n        if (n == 1) return target[0] == 1;\n        \n        long long sum = 0;\n        priority_queue<long long> pq;\n        for (int x : target) {\n            sum += x;\n            pq.push(x);\n        }\n        \n        while (pq.top() > 1) {\n            long long mx = pq.top();\n            pq.pop();\n            long long rest = sum - mx;\n            if (rest <= 0 || mx <= rest) return false;\n            long long new_val = mx % rest;\n            if (new_val == 0) new_val = rest;\n            sum = sum - mx + new_val;\n            pq.push(new_val);\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

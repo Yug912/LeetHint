@@ -1,0 +1,40 @@
+{
+  "slug": "set-mismatch",
+  "title": "Set Mismatch",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-Place Hash",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int dup, missing, idx, i: O(1) scalars\n- input vector nums: modified in place, not counted\n- returned vector: not counted",
+  "approach": "Use the array as its own hash table: for each value x, negate the element at index abs(x)-1. If that slot is already negative, x is the duplicate. After one pass, the one index still holding a positive value corresponds to the missing number (index + 1). This works because every value is in [1, n], so each value maps to a valid index, and exactly one value is duplicated while exactly one is missing.",
+  "hints": [
+    "The array has n slots indexed 0 to n-1, and every value is between 1 and n. What natural relationship exists between each value and a slot index?",
+    "Use the array as its own hash table: for each value x, negate the element at index abs(x)-1. In [1,2,2,4], the second 2 finds nums[1] already negative, identifying 2 as the duplicate.",
+    "```\nfor each value x in nums:\n    idx = abs(x) - 1\n    if nums[idx] < 0:\n        duplicate = abs(x)\n    else:\n        nums[idx] = -nums[idx]\nfor i from 0 to n-1:\n    if nums[i] > 0:\n        missing = i + 1\n        break\nreturn [duplicate, missing]\n```",
+    "**Smallest input** - n=2, the minimum allowed size\n`Input: nums = [1,1]` → `Expected: [1,2]`\n⚠️ Bug: using `nums[i]` instead of `abs(nums[i])` for the index → after marking nums[0] negative, second iteration reads -1, computes idx = -2, out of bounds\n\n**Missing is 1** - the first position is the missing one\n`Input: nums = [2,2]` → `Expected: [2,1]`\n⚠️ Bug: starting the missing-search loop at `i = 1` instead of `i = 0` → skips index 0, missing stays at 0, returns [2,0]\n\n**Duplicate is n** - the largest value is the duplicate\n`Input: nums = [1,2,3,3]` → `Expected: [3,4]`\n⚠️ Bug: returning `{missing, dup}` instead of `{dup, missing}` → returns [4,3]\n\n**Value negated before reuse** - a value gets negated, then a later element with the same value reads it\n`Input: nums = [3,2,3,1]` → `Expected: [3,4]`\n⚠️ Bug: using `nums[i]` instead of `abs(nums[i])` → third element reads nums[2]=-3, computes idx=-4, out of bounds"
+  ],
+  "followUps": [
+    {
+      "q": "What if you cannot modify the input array (read-only)?",
+      "a": "Use the sum and sum-of-squares method. Let S1 = n(n+1)/2 and S2 = n(n+1)(2n+1)/6. Compute actual sum a1 and actual sum of squares a2. Then dup - miss = a1 - S1 and dup² - miss² = a2 - S2, giving dup + miss = (a2 - S2)/(a1 - S1). Solve for both. TC: O(n), SC: O(1). Use long long for S2 since n(n+1)(2n+1)/6 reaches ~3.3×10^11 for n=10^4."
+    },
+    {
+      "q": "What if multiple numbers are duplicated and multiple are missing (k errors total)?",
+      "a": "Allocate a boolean array of size n. First pass: mark seen numbers; any already-seen number is a duplicate. Second pass: any unmarked index i means i+1 is missing. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the input is a stream and you can only make one pass with O(1) extra space?",
+      "a": "The sum and sum-of-squares method works in one pass: accumulate running sum and sum of squares as each element arrives, then solve the two equations at the end. TC: O(n), SC: O(1). Use long long for the sum of squares to avoid overflow."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findErrorNums(vector<int>& nums) {\n        int dup = -1;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            int idx = abs(nums[i]) - 1;\n            if (nums[idx] < 0) {\n                dup = abs(nums[i]);\n            } else {\n                nums[idx] = -nums[idx];\n            }\n        }\n        int missing = -1;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            if (nums[i] > 0) {\n                missing = i + 1;\n                break;\n            }\n        }\n        return {dup, missing};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

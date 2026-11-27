@@ -1,0 +1,40 @@
+{
+  "slug": "sorting-the-sentence",
+  "title": "Sorting the Sentence",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Multi-Pass Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: output, not counted\n- int n, i, start: O(1) each\n- char d: O(1)\n- no recursion, no containers, no heap",
+  "approach": "Each word in the shuffled sentence ends with a digit (1-9) indicating its original 1-indexed position. Since there are at most 9 words, we make exactly 9 linear passes over the string - one for each digit '1' through '9'. On each pass, we locate the word whose last character matches the target digit and append it (without the digit) to the result, adding a space before it if it is not the first word. This avoids allocating a words vector entirely, using only O(1) extra space beyond the output string.",
+  "hints": [
+    "The sentence has at most 9 words, each ending with a digit. What part of each word identifies where it belongs in the original sentence?",
+    "Make 9 linear scans of the string, one per digit '1'-'9'. On each scan, find the word ending with that digit and append it (minus the digit) to the result. Example: scanning \"is2 sentence4 This1 a3\" for digit '1' finds \"This1\", appends \"This\".",
+    "```\nresult = \"\"\nfor d = '1' to '9':\n    i = 0\n    while i < length(s):\n        start = i\n        advance i to end of current word\n        if last char of word == d:\n            if result not empty: append \" \"\n            append word without last char to result\n        skip the space\nreturn result\n```",
+    "**Single word** - input contains no spaces\n`Input: \"Hello1\"` → `Expected: \"Hello\"`\n⚠️ Bug: prepending a space before every appended word including the first → returns \" Hello\"\n\n**Nine words** - maximum word count, all digits 1 through 9 present\n`Input: \"i9 h8 g7 f6 e5 d4 c3 b2 a1\"` → `Expected: \"a b c d e f g h i\"`\n⚠️ Bug: looping d from '1' to '8' instead of '1' to '9' → returns \"a b c d e f g h\"\n\n**Single-character words** - each word is one letter plus one digit\n`Input: \"b2 a1\"` → `Expected: \"a b\"`\n⚠️ Bug: extracting `substr(start, i - start)` (includes the digit) instead of `substr(start, i - 1 - start)` → returns \"a1 b2\"\n\n**Already in order** - words already in their original positions\n`Input: \"This1 is2 a3 sentence4\"` → `Expected: \"This is a sentence\"`\n⚠️ Bug: appending a space after each word instead of before → returns \"This is a sentence \" (trailing space)"
+  ],
+  "followUps": [
+    {
+      "q": "What if word positions could be any integers up to 10^5, not just 1-9?",
+      "a": "The fixed 9-pass approach generalizes to k passes, giving O(n·k) time - too slow. Instead, do a single pass: split into words, parse the trailing number from each, place each word at its index in a pre-sized array, then join. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if words could contain digits as part of the word itself, not just as a suffix?",
+      "a": "The position marker must be distinguishable from word content. If it is always the last character that is a digit, scan backward from each word's end to extract it. If digits can appear mid-word, a delimiter between word and position would be needed."
+    },
+    {
+      "q": "What if the input arrives as a stream too large to fit in memory?",
+      "a": "Make 9 sequential passes over the stream, one per digit 1-9. On each pass, read word by word, check if the current word ends with the target digit, and if so, write it (without the digit) to the output. Only one word needs to be buffered at a time, using O(max word length) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string sortSentence(string s) {\n        string result;\n        int n = s.size();\n        for (char d = '1'; d <= '9'; d++) {\n            int i = 0;\n            while (i < n) {\n                int start = i;\n                while (i < n && s[i] != ' ') i++;\n                if (i > start && s[i - 1] == d) {\n                    if (!result.empty()) result += ' ';\n                    result.append(s, start, i - 1 - start);\n                }\n                if (i < n) i++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

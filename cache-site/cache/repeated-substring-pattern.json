@@ -1,0 +1,40 @@
+{
+  "slug": "repeated-substring-pattern",
+  "title": "Repeated Substring Pattern",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "KMP Failure Function",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> fail: n entries → O(n)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "The KMP failure function computes, for each position, the length of the longest proper prefix that is also a suffix. For a string of length n, the smallest period is p = n − fail[n−1]. The string can be constructed by repeating a substring if and only if p divides n and p < n. This works because a periodic string's prefix-suffix overlap is exactly n minus the period length.",
+  "hints": [
+    "For a string formed by repeating a block of length L, what is the longest proper prefix that also appears as a suffix of the entire string?",
+    "Compute the KMP failure array for s. For s = \"abab\", fail = [0,0,1,2], so the longest prefix-suffix overlap is 2, giving period 4 − 2 = 2, and 4 % 2 == 0 → true.",
+    "build KMP failure array fail[] for s\np = n - fail[n-1]\nif p < n and n mod p == 0:\n    return true\nreturn false",
+    "**Single character** - n = 1, fail[0] = 0, period = 1\n`Input: s = \"a\"` → `Expected: false`\n⚠️ Bug: omitting the `p < n` check → p = 1, 1 % 1 == 0 → returns true\n\n**Two distinct characters** - no prefix-suffix overlap, period equals n\n`Input: s = \"ab\"` → `Expected: false`\n⚠️ Bug: omitting the `p < n` check → p = 2, 2 % 2 == 0 → returns true\n\n**All same characters, prime length** - periodic despite prime n\n`Input: s = \"aaa\"` → `Expected: true`\n⚠️ Bug: only testing proper divisors of n as candidate periods → 3 is prime, no proper divisors → returns false\n\n**Prefix-suffix overlap but not a divisor** - overlap exists but doesn't imply periodicity\n`Input: s = \"aabaa\"` → `Expected: false`\n⚠️ Bug: checking only fail[n-1] > 0 without the divisibility test → fail[4] = 2 > 0 → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of returning true/false, return the smallest substring that repeats to form s.",
+      "a": "The failure array already gives the answer: the smallest period is p = n − fail[n−1]. If p < n and n % p == 0, return s.substr(0, p); otherwise return s itself. Same O(n) time and O(n) space."
+    },
+    {
+      "q": "What if s can contain any Unicode character and n ≤ 10^6?",
+      "a": "The algorithm compares characters by equality, so it works on any alphabet without modification. With n = 10^6, the failure array uses ~4 MB, well within limits. Time remains O(n)."
+    },
+    {
+      "q": "What if you need to answer periodicity queries on every prefix of s[0..i] for all i?",
+      "a": "The failure array already contains the answer for every prefix. For prefix of length i+1, the period is (i+1) − fail[i], and it is periodic if (i+1) % ((i+1) − fail[i]) == 0 and fail[i] > 0. Precompute fail[] once in O(n), then each query is O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool repeatedSubstringPattern(string s) {\n        int n = s.size();\n        vector<int> fail(n, 0);\n        for (int i = 1; i < n; i++) {\n            int j = fail[i - 1];\n            while (j > 0 && s[i] != s[j]) j = fail[j - 1];\n            if (s[i] == s[j]) j++;\n            fail[i] = j;\n        }\n        int p = n - fail[n - 1];\n        return p < n && n % p == 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

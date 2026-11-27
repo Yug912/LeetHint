@@ -1,0 +1,40 @@
+{
+  "slug": "reverse-pairs",
+  "title": "Reverse Pairs",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Merge Sort (Divide and Conquer)",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> tmp inside mergeSort: up to n elements at the top level → O(n)\n- recursion call-stack depth: balanced merge-sort tree, O(log n)\n- not counted: input nums (modified in place), returned int",
+  "approach": "Use merge sort: recursively sort the two halves while counting reverse pairs fully inside each half. After both halves are sorted, count cross pairs (i in left, j in right) with a single advancing pointer j, because for sorted left and right halves, the threshold nums[i] > 2·nums[j] is monotonic in both i and j. Then merge the two sorted halves in place. All comparisons use `long long` to avoid overflow when doubling INT_MIN/INT_MAX.",
+  "hints": [
+    "With n up to 5·10^4, all ~1.25·10^9 pairs cannot be checked individually. Suppose you split the array into two halves and already knew every reverse pair lying fully inside each half - what property would the two halves need so that counting cross pairs (i in left, j in right) takes linear time?",
+    "Use merge sort: recursively sort each half, count cross pairs with one advancing pointer over the sorted right half, then merge. For nums=[1,3,2,3,1], after sorting left=[1,2,3] and right=[1,3], only nums[i]=3 advances j past nums[j]=1 (3>2), adding 1 cross pair.",
+    "```\nfunction count(lo, hi):\n    if lo >= hi: return 0\n    mid = (lo + hi) / 2\n    ans = count(lo, mid) + count(mid+1, hi)\n    j = mid + 1\n    for i in lo..mid:\n        while j <= hi and nums[i] > 2 * nums[j]:\n            j = j + 1\n        ans += j - (mid + 1)\n    merge sorted nums[lo..mid] with nums[mid+1..hi]\n    return ans\n```",
+    "**Single element** - n = 1, no pair possible.\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: omitting the `lo >= hi` base case and reading `nums[mid+1]` → out-of-bounds access / crash.\n\n**INT_MAX doubling** - 2·(2^31−1) exceeds int range.\n`Input: [2147483647, 2147483647]` → `Expected: 0`\n⚠️ Bug: writing `nums[i] > 2 * nums[j]` with int arithmetic → 2·2147483647 wraps to −2, comparison is true → returns 1.\n\n**INT_MIN doubling** - 2·(−2^31) also overflows int.\n`Input: [-2147483648, -2147483648]` → `Expected: 1`\n⚠️ Bug: `2 * nums[j]` as int wraps to 0, so −2147483648 > 0 is false → returns 0.\n\n**All equal negatives** - equal values still satisfy x > 2x when x < 0.\n`Input: [-1, -1, -1]` → `Expected: 3`\n⚠️ Bug: skipping pairs where nums[i] == nums[j] → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "The array arrives as an unbounded stream and cannot be stored. How do you count reverse pairs online?",
+      "a": "Process elements right-to-left, inserting each into a balanced BST (or Fenwick tree over value compression). For each new nums[i], query how many already-inserted values are < nums[i]/2. TC O(n log n), SC O(n) for the structure."
+    },
+    {
+      "q": "Generalise to nums[i] > k·nums[j] for an arbitrary positive constant k (possibly fractional).",
+      "a": "Same merge-sort skeleton; replace `2LL * nums[j]` with `k * nums[j]` computed in double or long long. Monotonicity of the advancing j pointer is preserved because k > 0 keeps k·nums[j] monotonic in sorted nums[j]. TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "Return every reverse pair (i, j) instead of just the count.",
+      "a": "The output itself can be Θ(n^2) (e.g., all elements equal to −1), so no sub-quadratic bound is possible. Collect pairs during the counting pass of merge sort, enumerating each valid j for each i. TC O(n log n + P) where P is the number of pairs, SC O(n + P)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int mergeSort(vector<int>& nums, int lo, int hi) {\n        if (lo >= hi) return 0;\n        int mid = lo + (hi - lo) / 2;\n        int cnt = mergeSort(nums, lo, mid) + mergeSort(nums, mid + 1, hi);\n        // Count cross pairs: i in [lo, mid], j in [mid+1, hi].\n        // Both halves are sorted, so j only moves forward.\n        int j = mid + 1;\n        for (int i = lo; i <= mid; i++) {\n            while (j <= hi && (long long)nums[i] > 2LL * nums[j]) j++;\n            cnt += j - (mid + 1);\n        }\n        // Merge the two sorted halves in place.\n        vector<int> tmp;\n        tmp.reserve(hi - lo + 1);\n        int a = lo, b = mid + 1;\n        while (a <= mid && b <= hi) {\n            if (nums[a] <= nums[b]) tmp.push_back(nums[a++]);\n            else tmp.push_back(nums[b++]);\n        }\n        while (a <= mid) tmp.push_back(nums[a++]);\n        while (b <= hi) tmp.push_back(nums[b++]);\n        for (int t = 0; t < (int)tmp.size(); t++) nums[lo + t] = tmp[t];\n        return cnt;\n    }\n    int reversePairs(vector<int>& nums) {\n        if (nums.empty()) return 0;\n        return mergeSort(nums, 0, (int)nums.size() - 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

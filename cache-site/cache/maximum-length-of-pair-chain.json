@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-length-of-pair-chain",
+  "title": "Maximum Length of Pair Chain",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Interval Scheduling",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- int count, end, i: O(1) each\n- not counted: input vector (modified in place)",
+  "approach": "Sort the pairs by their right endpoint, then greedily build the chain: pick a pair whenever its left endpoint is strictly greater than the last picked pair's right endpoint. This is the classic interval-scheduling exchange argument-choosing the pair that ends earliest never reduces future options, so the greedy selection is optimal.",
+  "hints": [
+    "If two different pairs could both extend your current chain, what single property of each pair decides which one leaves more room for everything that comes after?",
+    "Sort the pairs by their right endpoint, then scan left to right, picking a pair whenever its left endpoint exceeds the last picked right endpoint. In Example 2, sorted by right gives [[1,2],[4,5],[7,8]] - pick [1,2] (end=2), then [4,5] since 4>2, then [7,8] since 7>5, yielding 3.",
+    "```\nsort pairs by right endpoint\ncount = 1\nend = first pair's right\nfor each remaining pair:\n    if pair.left > end:\n        count += 1\n        end = pair.right\nreturn count\n```",
+    "**Single pair** - n = 1, the loop body never executes\n`Input: [[5,10]]` → `Expected: 1`\n⚠️ Bug: initializing count to 0 and incrementing only inside the loop → returns 0\n\n**Touching endpoints** - b equals c, the follow rule needs strict inequality\n`Input: [[1,2],[2,3]]` → `Expected: 1`\n⚠️ Bug: using `>=` instead of `>` in the follow check → returns 2\n\n**Wide pair blocks narrow pairs** - one pair spans the others\n`Input: [[1,10],[2,3],[4,5]]` → `Expected: 2`\n⚠️ Bug: sorting by left endpoint instead of right → returns 1\n\n**Reverse-sorted input** - pairs arrive in decreasing right-endpoint order\n`Input: [[7,8],[4,5],[1,2]]` → `Expected: 3`\n⚠️ Bug: omitting the sort step → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if each pair has a weight and you want the maximum-weight chain instead of the longest?",
+      "a": "Sort by right endpoint. For each pair, its best chain weight equals its own weight plus the maximum chain weight among all previously processed pairs whose right endpoint is strictly less than this pair's left. Maintain a prefix-max array indexed by sorted right endpoints and binary-search the predecessor range. O(n log n) time, O(n) space."
+    },
+    {
+      "q": "What if pairs must be used in their original order (no reordering allowed)?",
+      "a": "This becomes a longest-increasing-subsequence variant. Process pairs in given order, maintaining a list where each position stores the minimum ending right endpoint achievable for a chain of that length. For each pair, binary-search the rightmost position whose stored right is strictly less than the pair's left, then extend. O(n log n) time, O(n) space."
+    },
+    {
+      "q": "What if you cannot modify the input array?",
+      "a": "Create a separate array of indices [0..n-1] and sort those indices by the corresponding right endpoints, then run the same greedy scan through the index array. Time stays O(n log n); space becomes O(n) for the index array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findLongestChain(vector<vector<int>>& pairs) {\n        sort(pairs.begin(), pairs.end(), [](const vector<int>& a, const vector<int>& b) {\n            return a[1] < b[1];\n        });\n        int count = 1;\n        int end = pairs[0][1];\n        for (int i = 1; i < (int)pairs.size(); i++) {\n            if (pairs[i][0] > end) {\n                count++;\n                end = pairs[i][1];\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

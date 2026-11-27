@@ -1,0 +1,40 @@
+{
+  "slug": "parallel-courses-iii",
+  "title": "Parallel Courses III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Topological Sort with DP",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- adj (vector<vector<int>>): n+1 lists holding m edges total → O(n + m)\n- indegree (vector<int>): n+1 entries → O(n)\n- completion (vector<long long>): n+1 entries → O(n)\n- queue<int>: at most n elements → O(n)\n- not counted: input relations, input time, returned int",
+  "approach": "The earliest a course can finish is its own duration plus the latest finish time among all its prerequisites. Since the graph is a DAG, we process courses in topological order (Kahn's algorithm): initialize each course's completion time to its own duration, then propagate forward - when we process a node u, we relax each neighbor v's completion time to max(completion[v], completion[u] + time[v]). The answer is the maximum completion time across all courses.",
+  "hints": [
+    "For a course with multiple prerequisites finishing at different months, what single moment determines when it can begin? The graph is guaranteed to be a directed acyclic graph.",
+    "Use topological sort via Kahn's algorithm (BFS by indegree), tracking `completion[u]` = earliest finish time for course u. In Example 1, courses 1 and 2 have indegree 0 and finish at months 3 and 2; course 3 finishes at `time[3] + max(3, 2) = 5 + 3 = 8`.",
+    "```\nbuild adjacency list and indegree array from relations\ncompletion[i] = time[i] for every course i\nqueue = all courses with indegree 0\nwhile queue not empty:\n    u = dequeue\n    for each neighbor v of u:\n        completion[v] = max(completion[v], completion[u] + time[v])\n        indegree[v] -= 1\n        if indegree[v] == 0: enqueue v\nreturn max(completion[1..n])\n```",
+    "**Single course** - the smallest valid input has one course and no prerequisites.\n`Input: n=1, relations=[], time=[7]` → `Expected: 7`\n⚠️ Bug: initializing completion to 0 and only updating through edges → returns 0\n\n**Diamond dependency** - a course depends on two paths of different lengths.\n`Input: n=4, relations=[[1,2],[1,3],[2,4],[3,4]], time=[1,5,1,5]` → `Expected: 11`\n⚠️ Bug: using `completion[v] = completion[u] + time[v]` (assignment, not max) → returns 7\n\n**Disconnected graph** - two independent chains of different lengths.\n`Input: n=4, relations=[[1,2],[3,4]], time=[1,5,2,3]` → `Expected: 6`\n⚠️ Bug: returning completion of the last popped node instead of the global max → returns 5\n\n**Linear chain** - all courses in sequence, each depends on the previous.\n`Input: n=4, relations=[[1,2],[2,3],[3,4]], time=[1,2,3,4]` → `Expected: 10`\n⚠️ Bug: propagating `completion[u]` without adding `time[v]` → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph might contain cycles?",
+      "a": "During topological sort, count how many nodes are dequeued. If fewer than n nodes are processed, a cycle exists - return -1. TC stays O(n + m), SC stays O(n + m)."
+    },
+    {
+      "q": "What if only k courses can be taken simultaneously (k workers)?",
+      "a": "This becomes resource-constrained project scheduling on a DAG, which is NP-hard. A practical heuristic assigns free workers to available courses, prioritizing those on the longest path to a sink. TC depends on the heuristic; SC remains O(n + m)."
+    },
+    {
+      "q": "What if you must also output one valid course order that achieves the minimum time?",
+      "a": "Track for each node the predecessor that produced its maximum completion value, then backtrack from the node with the overall maximum. TC O(n + m), SC O(n + m) for the parent array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumTime(int n, vector<vector<int>>& relations, vector<int>& time) {\n        vector<vector<int>> adj(n + 1);\n        vector<int> indegree(n + 1, 0);\n        for (auto& r : relations) {\n            adj[r[0]].push_back(r[1]);\n            indegree[r[1]]++;\n        }\n        vector<long long> completion(n + 1, 0);\n        for (int i = 1; i <= n; i++) completion[i] = time[i - 1];\n        \n        queue<int> q;\n        for (int i = 1; i <= n; i++) {\n            if (indegree[i] == 0) q.push(i);\n        }\n        \n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            for (int v : adj[u]) {\n                completion[v] = max(completion[v], completion[u] + time[v - 1]);\n                if (--indegree[v] == 0) q.push(v);\n            }\n        }\n        \n        long long ans = 0;\n        for (int i = 1; i <= n; i++) ans = max(ans, completion[i]);\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

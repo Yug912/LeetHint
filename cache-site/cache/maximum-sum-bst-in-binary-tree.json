@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-sum-bst-in-binary-tree",
+  "title": "Maximum Sum BST in Binary Tree",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order DFS / Tree DP",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- struct Info per recursion frame: O(1) each, h frames on stack → O(h)\n- recursion call-stack depth: worst case O(n) for skewed tree, O(log n) balanced\n- maxSum (long long): O(1)\n- not counted: input tree, returned int",
+  "approach": "Use post-order DFS. For each node, compute four values: subtree sum, whether it's a BST, the minimum value in the subtree, and the maximum value. A node forms a valid BST if both children are BSTs, the left subtree's max is less than the node's value, and the right subtree's min is greater than the node's value. Track the maximum sum among all valid BSTs globally, initialized to 0 (empty BST).",
+  "hints": [
+    "For a node's subtree to be a valid BST, what information must you collect from each child's subtree beyond just whether it is a BST? The tree can have up to 4 × 10^4 nodes.",
+    "Use post-order DFS returning a tuple (sum, isBST, min, max) per node. For node 3 in Example 1: left child returns (2, true, 2, 2), right child returns (15, true, 4, 6); since 2 < 3 < 4, node 3 is a BST with sum 20.",
+    "```\ndfs(node):\n    if node is null: return (0, true, +INF, -INF)\n    L = dfs(node.left)\n    R = dfs(node.right)\n    if L.isBST and R.isBST and L.max < node.val < R.min:\n        sum = L.sum + R.sum + node.val\n        update global max with sum\n        return (sum, true, L.min if left else node.val, R.max if right else node.val)\n    else:\n        return (0, false, 0, 0)\n```",
+    "**All negatives** - every valid BST has negative sum, so the answer is 0 (empty BST)\n`Input: [-4,-2,-5]` → `Expected: 0`\n⚠️ Bug: initializing maxSum to INT_MIN instead of 0 → returns -2\n\n**Duplicate values** - BST requires strict inequality, duplicates break validity\n`Input: [2,2,2]` → `Expected: 2`\n⚠️ Bug: using <= instead of < in the BST check (L.max <= node.val) → returns 6\n\n**Null child with existing sibling** - null child's sentinel min/max must not block validity\n`Input: [2,null,3]` → `Expected: 5`\n⚠️ Bug: setting null's minVal to 0 instead of LLONG_MAX → returns 0 (thinks 3 < 0 is false)\n\n**Single node** - the node itself is a valid BST\n`Input: [5]` → `Expected: 5`\n⚠️ Bug: only updating maxSum for internal nodes, skipping leaves → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Return the root node of the maximum-sum BST instead of just the sum.",
+      "a": "Alongside tracking maxSum, store a TreeNode pointer to the root of the best BST. Update it whenever a new valid BST sum exceeds the current maximum. TC stays O(n), SC stays O(h)."
+    },
+    {
+      "q": "The tree is extremely skewed (height = n). How do you avoid stack overflow?",
+      "a": "Convert the post-order DFS to an iterative version using an explicit stack. The logic remains identical-process children before parent, then compute the tuple. TC stays O(n), SC becomes O(n) for the explicit stack (same asymptotic bound but avoids OS stack limits)."
+    },
+    {
+      "q": "Find the k-th largest BST sum among all valid BST subtrees.",
+      "a": "Collect every valid BST's sum into a vector during the post-order traversal, then use nth_element or partial_sort to find the k-th largest. TC becomes O(n + n) = O(n) with nth_element, SC becomes O(n) for the vector."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    struct Info {\n        long long sum;\n        bool isBST;\n        long long minVal;\n        long long maxVal;\n    };\n\n    long long maxSum;\n\n    Info dfs(TreeNode* node) {\n        if (!node) {\n            return {0, true, LLONG_MAX, LLONG_MIN};\n        }\n        Info left = dfs(node->left);\n        Info right = dfs(node->right);\n\n        Info curr;\n        curr.sum = left.sum + right.sum + node->val;\n\n        if (left.isBST && right.isBST &&\n            left.maxVal < node->val && node->val < right.minVal) {\n            curr.isBST = true;\n            curr.minVal = node->left ? left.minVal : node->val;\n            curr.maxVal = node->right ? right.maxVal : node->val;\n            if (curr.sum > maxSum) maxSum = curr.sum;\n        } else {\n            curr.isBST = false;\n            curr.minVal = 0;\n            curr.maxVal = 0;\n        }\n        return curr;\n    }\n\n    int maxSumBST(TreeNode* root) {\n        maxSum = 0;\n        dfs(root);\n        return (int)maxSum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

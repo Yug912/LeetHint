@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-eaten-apples",
+  "title": "Maximum Number of Eaten Apples",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Min-Heap",
+  "tc": "O((n + max_days) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue pq: up to n entries (one per non-zero day) → O(n)\n- recursion depth: none\n- not counted: input arrays apples and days",
+  "approach": "Use a greedy strategy: always eat an apple from the batch that rots soonest. Maintain a min-heap of (expiration_day, count) pairs. On each day, add that day's new batch (if any), discard all batches that have already rotted, then eat one apple from the earliest-expiring fresh batch (decrement its count and re-push if any remain). Continue past day n until the heap is empty. This is optimal because postponing a sooner-rotting apple risks losing it, while a later-rotting apple can always be eaten later.",
+  "hints": [
+    "On a day when several batches of fresh apples are available, what single property determines which batch you cannot afford to postpone eating? The constraint apples[i] = 0 ⟺ days[i] = 0 means some days produce nothing.",
+    "Use a min-heap keyed by expiration day. In Example 1, on the 4th day the heap holds a batch expiring on day 4 (now rotten-discard it) and a batch expiring on day 8, so eat from the latter.",
+    "```\nday = 0\nwhile day < n or heap not empty:\n    if day < n and apples[day] > 0:\n        push (day + days[day], apples[day])\n    while heap not empty and top.expiration <= day:\n        pop\n    if heap not empty:\n        top = pop\n        answer += 1\n        if top.count > 1:\n            push (top.expiration, top.count - 1)\n    day += 1\n```",
+    "**Shelf life extends past day n** - apples grown near the end may still be fresh after the last growth day\n`Input: apples = [0,5], days = [0,3]` → `Expected: 3`\n⚠️ Bug: looping only while `day < n` (omitting `|| !pq.empty()`) → returns 1\n\n**Rotten check before eating** - a batch may expire exactly on the current day\n`Input: apples = [2,0], days = [1,0]` → `Expected: 1`\n⚠️ Bug: eating from the heap top before popping rotten entries → returns 2\n\n**Off-by-one in rotten check** - apples rot ON day i + days[i], not the day after\n`Input: apples = [2], days = [1]` → `Expected: 1`\n⚠️ Bug: using `<` instead of `<=` when comparing expiration to current day → returns 2\n\n**Single batch feeds multiple days** - must re-push remaining count after eating one\n`Input: apples = [3], days = [5]` → `Expected: 3`\n⚠️ Bug: popping the top without re-pushing the remaining count → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if apples[i] and days[i] can each be up to 10⁹?",
+      "a": "Iterating day-by-day becomes infeasible. Instead, pop the earliest-expiring batch and compute how many apples can be eaten from it before it either runs out or the next batch's expiration arrives: eat min(count, expiration − current_day), then advance current_day by that amount. This skips empty stretches and runs in O(n log n) time, O(n) space."
+    },
+    {
+      "q": "What if apple data arrives in a stream (you only learn day i's values on day i)?",
+      "a": "The min-heap approach is already online: add each day's batch as it arrives, discard rotten batches, and eat one from the top. No lookahead is needed, so the same algorithm works with O(n) memory for the heap."
+    },
+    {
+      "q": "What if you can eat up to k apples per day?",
+      "a": "After adding the day's batch and discarding rotten entries, repeat up to k times: pop the earliest-expiring fresh batch, eat one apple, re-push if any remain. Time complexity becomes O((n + max_days) · k · log n); space stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int eatenApples(vector<int>& apples, vector<int>& days) {\n        int n = apples.size();\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;\n        int eaten = 0;\n        int day = 0;\n        while (day < n || !pq.empty()) {\n            if (day < n && apples[day] > 0) {\n                pq.push({day + days[day], apples[day]});\n            }\n            while (!pq.empty() && pq.top().first <= day) {\n                pq.pop();\n            }\n            if (!pq.empty()) {\n                auto t = pq.top();\n                pq.pop();\n                eaten++;\n                if (t.second > 1) {\n                    pq.push({t.first, t.second - 1});\n                }\n            }\n            day++;\n        }\n        return eaten;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

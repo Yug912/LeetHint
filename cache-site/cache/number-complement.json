@@ -1,0 +1,40 @@
+{
+  "slug": "number-complement",
+  "title": "Number Complement",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bit Manipulation (Bit-Smearing Mask)",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `int mask`: single 32-bit integer → O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input `num`, returned `int`",
+  "approach": "The complement of `num` is `num XOR mask`, where `mask` has 1s in every bit position that `num` uses (its significant bits) and 0s above. We build this mask by **bit-smearing**: starting from `mask = num`, repeatedly OR it with itself shifted right by 1, 2, 4, 8, and 16. Each step doubles the run of contiguous 1s starting from the highest set bit, so after 5 fixed shifts the entire significant-bit range is filled. This is O(1) time (5 shifts regardless of input) and O(1) space. Finally, `mask ^ num` flips exactly the significant bits, yielding the complement.",
+  "hints": [
+    "The complement of 5 is 2, and 5 XOR 2 equals 7 (binary 111). What does 7's binary form have in common with 5's binary form (101)?",
+    "Bit-smearing mask: set `mask = num`, then OR it with itself shifted right by 1, 2, 4, 8, 16. For num = 5 (101): mask becomes 111 = 7, then return 7 ^ 5 = 2.",
+    "```\nmask = num\nmask = mask OR (mask shifted right by 1)\nmask = mask OR (mask shifted right by 2)\nmask = mask OR (mask shifted right by 4)\nmask = mask OR (mask shifted right by 8)\nmask = mask OR (mask shifted right by 16)\nreturn mask XOR num\n```",
+    "**Smallest input** - num = 1, only the lowest bit is set\n`Input: 1` → `Expected: 0`\n⚠️ Bug: initializing `mask = num >> 1` instead of `mask = num` → mask stays 0, returns 0 ^ 1 = 1\n\n**Power of two** - num = 8 (binary 1000), a single high bit with zeros below\n`Input: 8` → `Expected: 7`\n⚠️ Bug: returning `~num` directly (flips all 32 bits including leading zeros) → returns -9\n\n**All significant bits set** - num = 2147483647 (2³¹ − 1), every significant bit is 1\n`Input: 2147483647` → `Expected: 0`\n⚠️ Bug: XORing with a fixed 32-bit mask `0xFFFFFFFF` instead of a smeared mask → returns -2147483648\n\n**Largest power of two** - num = 1073741824 (2³⁰), highest bit at position 30\n`Input: 1073741824` → `Expected: 1073741823`\n⚠️ Bug: omitting the `mask |= mask >> 16` step → mask only reaches 0x7FFF8000, returns 1073709056"
+  ],
+  "followUps": [
+    {
+      "q": "What if num could be 0 (constraint relaxed to 0 <= num < 2^31)?",
+      "a": "The complement of 0 has no significant bits, so the answer is 0. The smear approach handles it naturally: mask starts at 0, all ORs keep it 0, and 0 ^ 0 = 0. No code change needed. TC O(1), SC O(1)."
+    },
+    {
+      "q": "What if num were a 64-bit integer (num < 2^63)?",
+      "a": "Add one more smear step: `mask |= mask >> 32`. The pattern generalizes by doubling the shift distance until it covers the full word width. TC O(1), SC O(1)."
+    },
+    {
+      "q": "What if you must process a stream of 10^9 numbers and return each complement with a tight per-query budget?",
+      "a": "The smear approach is already O(1) per query with no preprocessing or state, so it handles the stream directly - roughly 5 shifts and 1 XOR per number. TC O(1) per query, SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findComplement(int num) {\n        int mask = num;\n        mask |= mask >> 1;\n        mask |= mask >> 2;\n        mask |= mask >> 4;\n        mask |= mask >> 8;\n        mask |= mask >> 16;\n        return mask ^ num;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

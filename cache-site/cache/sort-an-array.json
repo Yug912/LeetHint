@@ -1,0 +1,40 @@
+{
+  "slug": "sort-an-array",
+  "title": "Sort an Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Sort",
+  "tc": "O(n + k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> count: 100001 ints → O(k)\n- vector<int> result: returned output, not counted (LeetCode convention)\n- recursion depth: none\n- not counted: input nums",
+  "approach": "The values are bounded in a small fixed range [-5×10^4, 5×10^4], so counting sort beats comparison-based sorts: tally each value's frequency in an offset-indexed array, then emit values in order. This runs in O(n + k) time where k = 100001 is the value range, faster than the required O(n log n). It is correct because every input value maps to exactly one bucket, and emitting buckets in index order produces a globally sorted sequence.",
+  "hints": [
+    "The values live in a fixed, narrow band: -5×10^4 ≤ nums[i] ≤ 5×10^4. What property of the *set of possible values* (not the array length) could let you avoid comparing elements at all?",
+    "Use counting sort: tally frequencies in an array indexed by value + offset, then walk it in order. For nums = [5,1,1,2,0,0], the bucket at index 0+50000 holds 2, at 1+50000 holds 2, at 2+50000 holds 1, at 5+50000 holds 1; emitting gives [0,0,1,1,2,5].",
+    "```\noffset = 50000\ncount = array of size 100001 filled with 0\nfor x in nums:\n    count[x + offset] += 1\nresult = []\nfor v in 0..100000:\n    repeat count[v] times:\n        result.append(v - offset)\nreturn result\n```",
+    "**Single element** - n = 1, the minimum allowed size.\n`Input: nums = [42]` → `Expected: [42]`\n⚠️ Bug: loop bound `v < 100000` (off-by-one) → returns `[]` because 42+50000 = 50042 < 100000 is fine, but value 50000 maps to index 100000 which is skipped → for `nums = [50000]` returns `[]`.\n\n**Negatives** - values below zero require the offset to reach a valid index.\n`Input: nums = [-3,-1,-2]` → `Expected: [-3,-2,-1]`\n⚠️ Bug: indexing `count[x]` without offset → negative indices, undefined behavior / crash.\n\n**Duplicates** - repeated values must accumulate, not overwrite.\n`Input: nums = [5,1,1,2,0,0]` → `Expected: [0,0,1,1,2,5]`\n⚠️ Bug: using `count[v] = 1` instead of `count[v]++` → returns `[0,1,2,5]`, dropping duplicates.\n\n**All equal** - every element lands in one bucket.\n`Input: nums = [7,7,7,7]` → `Expected: [7,7,7,7]`\n⚠️ Bug: emitting `count[v]` once instead of `count[v]` times → returns `[7]`.\n\n**Max positive value** - 5×10^4 maps to the last valid index 100000.\n`Input: nums = [50000,-50000]` → `Expected: [-50000,50000]`\n⚠️ Bug: count array sized 100000 instead of 100001 → out-of-bounds write at index 100000."
+  ],
+  "followUps": [
+    {
+      "q": "What if the value range were unbounded (e.g., arbitrary 32-bit ints) but you still needed O(n log n) worst-case?",
+      "a": "Switch to merge sort or introsort: partition/merge in O(n) per level over O(log n) levels. Time becomes O(n log n); auxiliary space O(n) for the merge buffer (or O(log n) stack for in-place introsort)."
+    },
+    {
+      "q": "What if the array were too large to fit in memory and arrived as a stream?",
+      "a": "Use an external k-way merge: split into sorted runs on disk, then merge with a min-heap of size k. Time stays O(n log n) with O(k) RAM; the counting-sort bucket array no longer fits the value range."
+    },
+    {
+      "q": "What if you needed a stable sort preserving the original relative order of equal keys?",
+      "a": "Counting sort is naturally stable if you build a prefix-sum of counts and place elements from right to left into an output array. Time stays O(n + k), space O(n + k) for the output buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> sortArray(vector<int>& nums) {\n        const int OFFSET = 50000;\n        const int RANGE = 100001;\n        vector<int> count(RANGE, 0);\n        for (int x : nums) {\n            count[x + OFFSET]++;\n        }\n        vector<int> result;\n        result.reserve(nums.size());\n        for (int v = 0; v < RANGE; v++) {\n            int c = count[v];\n            int value = v - OFFSET;\n            for (int i = 0; i < c; i++) {\n                result.push_back(value);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

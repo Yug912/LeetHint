@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-level-order-traversal-ii",
+  "title": "Binary Tree Level Order Traversal II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Level-Order",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: holds at most the widest level → O(n)\n- vector<int> level: holds one level's values, reused each iteration → O(n) temporary\n- reverse(): in-place, O(1) extra\n- not counted: input tree, returned vector<vector<int>>",
+  "approach": "Perform a standard BFS level-order traversal using a queue, capturing the queue size at the start of each iteration to delimit one level. Collect each level's node values into a vector and append it to the result. After the traversal completes, reverse the result vector so levels appear from leaf to root. This is correct because BFS groups nodes by depth, and reversing the level sequence preserves left-to-right order within each level while flipping top-to-bottom to bottom-to-top.",
+  "hints": [
+    "Within each level of the tree, how does the left-to-right ordering of nodes compare between the top-down and bottom-up traversals?",
+    "Use a queue for breadth-first traversal, processing one level per outer iteration. For root = [3,9,20,null,null,15,7]: start with queue = [3], pop 3, push 9 and 20, record level [3].",
+    "```\nqueue.push(root)\nwhile queue not empty:\n    size = queue.size()\n    level = []\n    repeat size times:\n        node = queue.pop()\n        level.append(node.val)\n        push children of node to queue\n    result.append(level)\nreverse(result)\n```",
+    "**Empty tree** - root is null, zero nodes to traverse\n`Input: root = []` → `Expected: []`\n⚠️ Bug: pushing root to queue without a null check → dereferences nullptr, crashes\n\n**Single node** - tree has only the root, one level\n`Input: root = [1]` → `Expected: [[1]]`\n⚠️ Bug: using `while (q.size() > 1)` as loop condition → skips the only node, returns []\n\n**Skewed tree** - left chain of 4 nodes, height equals node count\n`Input: root = [1,2,null,3,null,4,null]` → `Expected: [[4],[3],[2],[1]]`\n⚠️ Bug: forgetting `reverse(result.begin(), result.end())` → returns [[1],[2],[3],[4]]\n\n**All equal values** - every node has value 5\n`Input: root = [5,5,5,5,5]` → `Expected: [[5,5],[5,5],[5]]`\n⚠️ Bug: not capturing `int size = q.size()` before the inner loop, so children mix into the current level → returns [[5,5,5,5,5]]"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed zigzag level order (left-to-right on even levels, right-to-left on odd levels)?",
+      "a": "Keep the same BFS structure, but reverse the `level` vector on odd-numbered levels before appending. Time stays O(n), space stays O(n)."
+    },
+    {
+      "q": "What if the tree is too large to fit in memory and you can only hold one level at a time?",
+      "a": "Stream each level out as you process it, writing to external storage. Read levels back in reverse order at the end. Time O(n), auxiliary space drops to O(w) where w is the maximum level width."
+    },
+    {
+      "q": "What if you only need the rightmost node visible at each level (right side view)?",
+      "a": "During BFS, record only the last node of each level (index size−1 in the inner loop). No reversal needed. Time O(n), space O(w)."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    vector<vector<int>> levelOrderBottom(TreeNode* root) {\n        vector<vector<int>> result;\n        if (!root) return result;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int size = q.size();\n            vector<int> level;\n            level.reserve(size);\n            for (int i = 0; i < size; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                level.push_back(node->val);\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            result.push_back(move(level));\n        }\n        reverse(result.begin(), result.end());\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

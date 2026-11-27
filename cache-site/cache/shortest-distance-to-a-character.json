@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-distance-to-a-character",
+  "title": "Shortest Distance to a Character",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass Array Fill",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> ans: n entries → O(n) (returned output, not counted)\n- int prev, int n: O(1) each\n- not counted: input string s, returned vector ans",
+  "approach": "For each position, the closest occurrence of c is either the nearest one to its left or the nearest one to its right. A left-to-right pass records the distance to the nearest c on the left using a running pointer to the last seen c. A right-to-left pass then takes the minimum of the existing value and the distance to the nearest c on the right. Both passes are O(n), giving O(n) total.",
+  "hints": [
+    "For any position in the string, the nearest c must be either the closest one to its left or the closest one to its right. If you could compute, for every index, the distance to the nearest c on its left side only, what information would still be missing?",
+    "Two-pass array fill: a left-to-right pass stores the distance to the nearest c on the left, then a right-to-left pass takes the minimum with the nearest c on the right. For s = \"loveleetcode\", c = 'e': after the left pass, index 2 gets distance 14 (no e seen yet), which the right pass corrects to 1 (e at index 3).",
+    "```\nprev = -infinity\nfor i from 0 to n-1:\n    if s[i] == c: prev = i\n    ans[i] = i - prev\nprev = +infinity\nfor i from n-1 down to 0:\n    if s[i] == c: prev = i\n    ans[i] = min(ans[i], prev - i)\nreturn ans\n```",
+    "**c only at the end** - left pass alone cannot find right-side distances\n`Input: s = \"aab\", c = \"b\"` → `Expected: [2,1,0]`\n⚠️ Bug: only doing a left-to-right pass → returns [3,4,0] (indices 0 and 1 get sentinel-based distances)\n\n**c only at the start** - right-pass sentinel must be large enough\n`Input: s = \"eab\", c = \"e\"` → `Expected: [0,1,2]`\n⚠️ Bug: initializing right-pass prev to n instead of 2*n → returns [0,1,1] (index 2 gets distance 1 from sentinel n=3 instead of 2 from c at index 0)\n\n**Overwriting instead of taking min** - right pass must not discard left-pass results\n`Input: s = \"eabe\", c = \"e\"` → `Expected: [0,1,1,0]`\n⚠️ Bug: using `ans[i] = prev - i` instead of `ans[i] = min(ans[i], prev - i)` in the right pass → returns [0,2,1,0] (index 1 gets distance 2 from right-side e instead of 1 from left-side e)\n\n**Left-pass sentinel too small** - prev must start before index 0\n`Input: s = \"ba\", c = \"a\"` → `Expected: [1,0]`\n⚠️ Bug: initializing left-pass prev to 0 instead of -n → returns [0,0] (index 0 gets distance 0 as if c were at index 0)"
+  ],
+  "followUps": [
+    {
+      "q": "What if c is not guaranteed to occur in s?",
+      "a": "Track a boolean `found` during the left pass. If no c was ever seen, return a vector of -1 for all positions. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if you need the distance to the k-th closest occurrence of c instead of the closest?",
+      "a": "Collect all indices of c into a sorted array in one pass, then for each position binary search to find the k nearest indices. Time O(n log m) where m is the count of c, space O(m) for the index list."
+    },
+    {
+      "q": "What if there are multiple target characters and you need the distance to the closest of any of them?",
+      "a": "Store the targets in a hash set, then the same two-pass approach works - update prev whenever s[i] is in the target set. Time O(n), space O(|targets|) for the set."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> shortestToChar(string s, char c) {\n        int n = s.size();\n        vector<int> ans(n, n);\n        int prev = -n;\n        for (int i = 0; i < n; i++) {\n            if (s[i] == c) prev = i;\n            ans[i] = i - prev;\n        }\n        prev = 2 * n;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s[i] == c) prev = i;\n            ans[i] = min(ans[i], prev - i);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

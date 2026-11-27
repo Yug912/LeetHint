@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-level-sum-of-a-binary-tree",
+  "title": "Maximum Level Sum of a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Level-Order BFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: holds the widest level, up to ⌈n/2⌉ nodes → O(n)\n- bestSum, bestLevel, level, sum, sz, i: scalar variables → O(1)\n- not counted: input tree, returned int",
+  "approach": "The key insight is that we need the sum of node values at each depth level, then the smallest level achieving the maximum sum. We traverse level-by-level with a queue (BFS): for each level, process all nodes currently in the queue, summing their values and enqueueing their children. We track the best sum and the smallest level at which it occurs, using strict greater-than so ties favor the earlier level. long long for sums avoids any overflow concern (10⁴ × 10⁵ = 10⁹, close to INT_MAX).",
+  "hints": [
+    "If you wrote each node's value next to its distance from the root, what natural grouping appears among the entries?",
+    "Use a queue for level-order (BFS) traversal. In Example 1, level 2 holds nodes 7 and 0; their sum 7 beats level 1's sum 1, so the answer is 2.",
+    "```\nqueue = [root]\nbestSum = root.val\nbestLevel = 1\nlevel = 1\nwhile queue not empty:\n    sz = size of queue\n    sum = 0\n    repeat sz times:\n        node = pop front of queue\n        sum += node.val\n        if node.left:  push to queue\n        if node.right: push to queue\n    if sum > bestSum:\n        bestSum = sum\n        bestLevel = level\n    level += 1\nreturn bestLevel\n```",
+    "**All-negative values** - every level sum is negative, so a zero initialiser never gets beaten.\n`Input: root = [-1,-2,-3]` → `Expected: 1`\n⚠️ Bug: initialising bestSum to 0 instead of root->val → returns 0\n\n**Tie between two levels** - the smallest level must win, so the comparison must be strict.\n`Input: root = [3,1,2]` → `Expected: 1`\n⚠️ Bug: using >= instead of > → returns 2\n\n**Right-skewed tree** - all nodes are right children, so both child pointers must be enqueued.\n`Input: root = [1,null,2,null,3]` → `Expected: 3`\n⚠️ Bug: only pushing node->left → returns 1\n\n**Single negative node** - the root alone is the maximum, but a zero initialiser hides it.\n`Input: root = [-5]` → `Expected: 1`\n⚠️ Bug: initialising bestSum to 0 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Return ALL levels (in increasing order) that tie for the maximum sum.",
+      "a": "Maintain a list of levels achieving the current best sum. When a level's sum exceeds the best, clear the list and add the new level; when it ties, append. TC: O(n), SC: O(h) where h is tree height (worst case all levels tie)."
+    },
+    {
+      "q": "Node values can be up to 10⁹ and there are up to 10⁵ nodes - does anything change?",
+      "a": "A single level's sum can reach 10⁵ × 10⁹ = 10¹⁴, far exceeding int32. Use long long for the running sum (already done in the solution). TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "The tree is too large to hold in memory; nodes arrive as a stream of (value, level) pairs. How do you solve it?",
+      "a": "Keep a running sum per level in an array or hash map indexed by level, adding each incoming value to its level's accumulator. After the stream ends, scan for the level with the maximum sum. TC: O(n), SC: O(h) for the per-level sums."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxLevelSum(TreeNode* root) {\n        queue<TreeNode*> q;\n        q.push(root);\n        long long bestSum = root->val;\n        int bestLevel = 1;\n        int level = 1;\n        while (!q.empty()) {\n            int sz = q.size();\n            long long sum = 0;\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                sum += node->val;\n                if (node->left)  q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            if (sum > bestSum) {\n                bestSum = sum;\n                bestLevel = level;\n            }\n            level++;\n        }\n        return bestLevel;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

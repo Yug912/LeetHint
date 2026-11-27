@@ -1,0 +1,40 @@
+{
+  "slug": "beautiful-arrangement",
+  "title": "Beautiful Arrangement",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask DP",
+  "tc": "O(2^n * n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<int> dp: 2^n entries → O(2^n)\n- recursion call-stack depth: up to n → O(n)\n- not counted: input n, returned int",
+  "approach": "The key insight is that n ≤ 15, so the set of already-placed numbers can be represented as a 15-bit mask with only 2^15 = 32768 possible states. The current position is uniquely determined by popcount(mask) + 1, so the mask alone fully captures the state. We use memoized recursion: dp[mask] = sum over all valid unused numbers j (where j % pos == 0 or pos % j == 0) of dp[mask | bit(j-1)], with base case dp[full_mask] = 1. Every beautiful arrangement corresponds to exactly one path through this state space, so the sum at dp[0] counts them all.",
+  "hints": [
+    "With n ≤ 15, what does the set of numbers already placed uniquely determine about where you are in building the arrangement?",
+    "Bitmask DP with memoization: dp[mask] stores the count of valid completions when the numbers indicated by mask are already placed; the current position is popcount(mask)+1. For n=2, dp[0] branches into dp[1] (place 1 at pos 1) and dp[2] (place 2 at pos 1), each reaching dp[3]=1, giving 2.",
+    "```\nsolve(mask):\n    if mask == full: return 1\n    if dp[mask] != -1: return dp[mask]\n    pos = popcount(mask) + 1\n    res = 0\n    for j in 1..n:\n        if j not in mask and (j % pos == 0 or pos % j == 0):\n            res += solve(mask | bit(j-1))\n    dp[mask] = res\n    return res\nreturn solve(0)\n```",
+    "**Smallest input** - n=1, single element trivially satisfies 1%1==0\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: initializing base case dp[full] = 0 instead of 1 → returns 0\n\n**Both divisibility directions** - n=2, arrangement [2,1] requires pos % j == 0 at position 2 (2 % 1 == 0)\n`Input: n = 2` → `Expected: 2`\n⚠️ Bug: checking only `j % pos == 0`, omitting `pos % j == 0` → returns 1\n\n**Missing arrangement** - n=3, arrangement [3,2,1] needs pos % j == 0 at position 3 (3 % 1 == 0)\n`Input: n = 3` → `Expected: 3`\n⚠️ Bug: same one-direction check `j % pos == 0` only → returns 2\n\n**Largest input** - n=15, exercises all 2^15 = 32768 states\n`Input: n = 15` → `Expected: 24679`\n⚠️ Bug: allocating dp with size `1 << (n-1)` = 16384 instead of `1 << n` = 32768 → out-of-bounds access on masks ≥ 16384, undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 20, how would the approach scale?",
+      "a": "The bitmask DP would use 2^20 ≈ 1M states, each iterating over 20 numbers, totaling ~20M operations - still feasible within time limits. Memory for 1M ints (~4 MB) is also acceptable. Beyond n=20, the exponential growth becomes prohibitive."
+    },
+    {
+      "q": "What if you must return one valid arrangement instead of counting them?",
+      "a": "Replace the summation in dp[mask] with a single recursive call that returns the first valid path found. The bitmask state representation stays the same, but you stop early once one complete arrangement is reached, making it faster on average."
+    },
+    {
+      "q": "What if the condition changes to \"perm[i] is divisible by i\" only (one direction)?",
+      "a": "The same bitmask DP applies unchanged - just modify the check from `j % pos == 0 || pos % j == 0` to `j % pos == 0`. The count decreases but the algorithm structure and O(2^n * n) complexity remain identical."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int n;\n    vector<int> dp;\n\n    int solve(int mask) {\n        if (dp[mask] != -1) return dp[mask];\n        int pos = __builtin_popcount(mask) + 1;\n        int res = 0;\n        for (int j = 1; j <= n; j++) {\n            if (mask & (1 << (j - 1))) continue;\n            if (j % pos == 0 || pos % j == 0) {\n                res += solve(mask | (1 << (j - 1)));\n            }\n        }\n        dp[mask] = res;\n        return res;\n    }\n\npublic:\n    int countArrangement(int n) {\n        this->n = n;\n        dp.assign(1 << n, -1);\n        dp[(1 << n) - 1] = 1;\n        return solve(0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

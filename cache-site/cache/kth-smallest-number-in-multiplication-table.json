@@ -1,0 +1,40 @@
+{
+  "slug": "kth-smallest-number-in-multiplication-table",
+  "title": "Kth Smallest Number in Multiplication Table",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(min(m, n) * log(m * n))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar variables (lo, hi, mid, cnt, i): O(1)\n- no containers, arrays, or recursion allocated\n- not counted: input parameters, return value",
+  "approach": "Binary search on the answer value x. For a candidate x, count how many table entries are ≤ x by summing, for each row i (1 to m), the value min(n, x/i) - since row i contains i, 2i, 3i, …, ni, and x/i of them are ≤ x. This count is monotonic in x, so we find the smallest x whose count ≥ k. We swap m and n to iterate over the smaller dimension for efficiency.",
+  "hints": [
+    "Given a candidate value x, how many entries in the m×n table are ≤ x - and can you compute that count for each row in O(1)? The table has up to 3×10^4 × 3×10^4 = 9×10^8 entries, so listing them all is too slow.",
+    "Binary search on the answer. For x=5 in a 3×3 table: row 1 has min(3, 5/1)=3 entries ≤5, row 2 has min(3, 5/2)=2, row 3 has min(3, 5/3)=1, total 6 ≥ k=5, so search lower.",
+    "```\nlo, hi = 1, m*n\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    cnt = 0\n    for i in 1..m:\n        cnt += min(n, mid / i)\n    if cnt >= k:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Smallest input** - m=1, n=1, k=1: the table has a single entry.\n`Input: m=1, n=1, k=1` → `Expected: 1`\n⚠️ Bug: using `hi = mid - 1` with `lo <= hi` loop and `return hi` → returns 0 (hi drops below 1 when cnt(1)≥1).\n\n**Largest k** - m=2, n=3, k=6: k equals the total number of entries.\n`Input: m=2, n=3, k=6` → `Expected: 6`\n⚠️ Bug: using `cnt > k` instead of `cnt >= k` in a `lo <= hi` loop → returns 7 (cnt(6)=6 is not >6, so lo overshoots past the answer).\n\n**Duplicates** - m=3, n=3, k=4: the table has repeated values (two 2s, two 3s).\n`Input: m=3, n=3, k=4` → `Expected: 3`\n⚠️ Bug: using `hi = mid - 1` instead of `hi = mid` with `lo < hi` loop and `return hi` → returns 2 (hi undershoots when cnt(3)=5≥4).\n\n**Off-by-one upper bound** - m=1, n=5, k=5: single row, k is the last element.\n`Input: m=1, n=5, k=5` → `Expected: 5`\n⚠️ Bug: initializing `hi = m * n - 1` instead of `m * n` → returns 4 (never considers 5 as a candidate)."
+  ],
+  "followUps": [
+    {
+      "q": "What if m and n can each be up to 10^9?",
+      "a": "The row-by-row count becomes O(10^9) per check, which is too slow. Instead, count pairs (i, j) with i*j ≤ x by iterating i up to √x and summing min(n, x/i), then iterating j up to √x and summing min(m, x/j), subtracting the double-counted √x × √x square. TC becomes O(√(m*n) * log(m*n)), SC stays O(1)."
+    },
+    {
+      "q": "What if you must answer many queries (different k values) on the same m×n table?",
+      "a": "Each query is independent and runs in O(min(m,n) * log(m*n)), so just run the binary search per query. Sorting queries by k and reusing partial row counts gives marginal gains since the dominant cost is the log-factor binary search, not the linear scan."
+    },
+    {
+      "q": "What if the table is defined as mat[i][j] = i * j + i + j instead of i * j?",
+      "a": "Factor as (i+1)(j+1) - 1, so substitute i' = i+1, j' = j+1 and solve the standard problem on an (m)×(n) table (rows 2..m+1, cols 2..n+1), then subtract 1 from the answer. TC and SC are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findKthNumber(int m, int n, int k) {\n        if (m > n) swap(m, n);\n        long long lo = 1, hi = (long long)m * n;\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2;\n            long long cnt = 0;\n            for (int i = 1; i <= m; i++) {\n                cnt += min((long long)n, mid / i);\n            }\n            if (cnt >= k) hi = mid;\n            else lo = mid + 1;\n        }\n        return (int)lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

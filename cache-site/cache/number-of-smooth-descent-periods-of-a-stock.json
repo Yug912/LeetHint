@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-smooth-descent-periods-of-a-stock",
+  "title": "Number of Smooth Descent Periods of a Stock",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window / Running Counter",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int run: scalar → O(1)\n- long long total: scalar → O(1)\n- loop index i: scalar → O(1)\n- not counted: input vector prices, returned long long",
+  "approach": "Scan left to right. Maintain `run` = length of the longest smooth-descent run ending at the current index. If `prices[i] == prices[i-1] - 1`, extend the run; otherwise reset to 1. The number of smooth periods ending exactly at index `i` equals `run` (every suffix of a valid run is itself a valid period). Sum these counts. Correctness: every smooth period is a suffix of some maximal run, and each suffix is counted exactly once at its right endpoint.",
+  "hints": [
+    "For each day, ask: how many smooth descent periods end exactly on this day, and what single relationship between today's price and yesterday's decides whether that number is 1 or larger?",
+    "Single-pass running counter. For [3,2,1,4] at index 2 (value 1): since 1 == 2-1, the run grows to length 3, so 3 periods end here - [1], [2,1], [3,2,1].",
+    "```\ntotal = 0\nrun = 0\nfor i from 0 to n-1:\n    if i > 0 and prices[i] == prices[i-1] - 1:\n        run = run + 1\n    else:\n        run = 1\n    total = total + run\nreturn total\n```",
+    "**Single element** - n = 1, only one period exists.\n`Input: prices = [1]` → `Expected: 1`\n⚠️ Bug: initializing `run = 1` outside the loop and starting the loop at `i = 1` → returns 0\n\n**Longest descending run overflow** - n = 10^5 with prices [100000, 99999, ..., 1]; answer = 10^5 × (10^5+1)/2 = 5000050000 > 2^31 - 1.\n`Input: prices = [100000, 99999, ..., 1]` → `Expected: 5000050000`\n⚠️ Bug: declaring `total` as `int` → returns 705082704 (signed overflow wraparound)\n\n**All equal values** - no adjacent pair differs by exactly 1.\n`Input: prices = [7,7,7,7]` → `Expected: 4`\n⚠️ Bug: checking `prices[i] == prices[i-1]` instead of `prices[i] == prices[i-1] - 1` → returns 10\n\n**Boundary at i = 0** - the first element has no predecessor.\n`Input: prices = [5,4]` → `Expected: 3`\n⚠️ Bug: omitting the `i > 0` guard before reading `prices[i-1]` → out-of-bounds read on index -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if \"smooth descent\" meant decreasing by exactly k (a given parameter) instead of 1?",
+      "a": "Replace the check with `prices[i] == prices[i-1] - k`; the running-counter logic is unchanged. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if you must return the longest smooth descent period itself rather than the count?",
+      "a": "Track the run's start index alongside its length, and update the best (start, length) whenever `run` exceeds the current best. Slice the array at the end. TC O(n), SC O(1) extra (output excluded)."
+    },
+    {
+      "q": "What if prices arrive as an unbounded stream and you must report the running total after each new element?",
+      "a": "Keep `run` and `total` as persistent state; on each new price, update `run` by the same rule and add it to `total`, then emit `total`. TC O(1) per element, SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long getDescentPeriods(vector<int>& prices) {\n        long long total = 0;\n        int run = 0;\n        int n = (int)prices.size();\n        for (int i = 0; i < n; i++) {\n            if (i > 0 && prices[i] == prices[i - 1] - 1) {\n                run++;\n            } else {\n                run = 1;\n            }\n            total += run;\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

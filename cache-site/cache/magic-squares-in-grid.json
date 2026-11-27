@@ -1,0 +1,40 @@
+{
+  "slug": "magic-squares-in-grid",
+  "title": "Magic Squares In Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Fixed-Size Window Scan",
+  "tc": "O(rows × cols)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bool seen[10]: constant 10 elements → O(1)\n- no recursion, no dynamic allocation\n- not counted: input grid, returned int",
+  "approach": "The grid is at most 10×10, so there are at most 64 possible 3×3 subgrids. For each subgrid, verify two conditions: (1) all 9 values are distinct and in the range [1,9], and (2) every row, column, and both diagonals sum to 15. The magic constant is always 15 because 1+2+…+9=45 and 45÷3=15, so there is only one possible sum to check. If both conditions hold, the subgrid is a magic square.",
+  "hints": [
+    "With distinct numbers 1 to 9 filling a 3×3 grid, how many different values can the common row sum take?",
+    "Brute-force scan: slide a 3×3 window over every valid position and validate each. For the subgrid at (0,0) in Example 1 - [[4,3,8],[9,5,1],[2,7,6]] - all values are distinct 1-9 and every row, column, and diagonal sums to 15, so it counts.",
+    "```\nfor each top-left corner (r, c) where r+2 < rows and c+2 < cols:\n    verify all 9 values are distinct and in [1, 9]\n    verify all 3 rows sum to 15\n    verify all 3 columns sum to 15\n    verify both diagonals sum to 15\n    if all pass, increment count\nreturn count\n```",
+    "**All same value** - every cell is 5, all sums equal 15 but numbers aren't distinct\n`Input: [[5,5,5],[5,5,5],[5,5,5]]` → `Expected: 0`\n⚠️ Bug: checking only that all row/column/diagonal sums equal 15 → returns 1\n\n**Distinct 1-9 but wrong arrangement** - all values are 1-9 distinct but sums differ\n`Input: [[1,2,3],[4,5,6],[7,8,9]]` → `Expected: 0`\n⚠️ Bug: checking only that values are distinct 1-9, skipping sum verification → returns 1\n\n**Out-of-range values with valid sums** - values 0 and 10 appear, all sums equal 15\n`Input: [[10,0,5],[0,5,10],[5,10,0]]` → `Expected: 0`\n⚠️ Bug: checking only that all sums equal 15, skipping range validation → returns 1\n\n**Single column** - 3×1 grid, no 3×3 subgrid fits\n`Input: [[1],[2],[3]]` → `Expected: 0`\n⚠️ Bug: checking only `rows >= 3` without checking `cols >= 3`, then accessing `grid[r][c+2]` → out-of-bounds read"
+  ],
+  "followUps": [
+    {
+      "q": "If the magic square could be any odd size k×k, how would you generalize?",
+      "a": "The magic constant becomes k(k²+1)/2. Slide a k×k window and verify all values are distinct 1..k² and all 2k+2 lines sum to the constant. TC: O(rows × cols × k²), SC: O(k²) for the seen array."
+    },
+    {
+      "q": "If the grid arrives as a stream (one row at a time, limited memory), how do you count magic squares?",
+      "a": "Keep only the last 3 rows in a circular buffer. When a new row arrives, check all 3×3 windows spanning the last 3 rows. TC: O(rows × cols), SC: O(cols) for the 3-row buffer."
+    },
+    {
+      "q": "How many distinct 3×3 magic squares exist using numbers 1-9, and how does that help?",
+      "a": "Exactly 8 (4 rotations × 2 reflections of the Lo Shu square). Precompute all 8 and check if each 3×3 subgrid matches any of them, avoiding sum calculations entirely. TC: O(rows × cols), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numMagicSquaresInside(vector<vector<int>>& grid) {\n        int rows = grid.size();\n        int cols = grid[0].size();\n        int count = 0;\n        for (int i = 0; i + 2 < rows; i++) {\n            for (int j = 0; j + 2 < cols; j++) {\n                if (isMagic(grid, i, j)) count++;\n            }\n        }\n        return count;\n    }\nprivate:\n    bool isMagic(vector<vector<int>>& grid, int r, int c) {\n        bool seen[10] = {false};\n        for (int i = 0; i < 3; i++) {\n            for (int j = 0; j < 3; j++) {\n                int v = grid[r + i][c + j];\n                if (v < 1 || v > 9 || seen[v]) return false;\n                seen[v] = true;\n            }\n        }\n        for (int i = 0; i < 3; i++) {\n            if (grid[r + i][c] + grid[r + i][c + 1] + grid[r + i][c + 2] != 15) return false;\n        }\n        for (int j = 0; j < 3; j++) {\n            if (grid[r][c + j] + grid[r + 1][c + j] + grid[r + 2][c + j] != 15) return false;\n        }\n        if (grid[r][c] + grid[r + 1][c + 1] + grid[r + 2][c + 2] != 15) return false;\n        if (grid[r][c + 2] + grid[r + 1][c + 1] + grid[r + 2][c] != 15) return false;\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

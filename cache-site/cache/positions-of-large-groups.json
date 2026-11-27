@@ -1,0 +1,40 @@
+{
+  "slug": "positions-of-large-groups",
+  "title": "Positions of Large Groups",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan / Run Detection",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int start, i, n: scalars → O(1)\n- vector<vector<int>> res: returned output, not counted\n- no recursion, no auxiliary containers",
+  "approach": "Scan the string left to right, tracking the start index of the current run of identical characters. Whenever the character changes (or we reach the end of the string), the run [start, i-1] has ended; if its length (i - start) is ≥ 3, record it. This is correct because every maximal run is detected exactly once at its boundary, and runs are naturally encountered in increasing start order.",
+  "hints": [
+    "What single event tells you a run of identical characters has just ended? The string length is at most 1000.",
+    "Use a single linear scan with a `start` index marking where the current run began. In \"abbxxxxzzy\", when i=7 we see s[7]='z' ≠ s[6]='x', so the run [3,6] has length 4 ≥ 3 - record it.",
+    "```\nstart = 0\nfor i from 1 to n inclusive:\n    if i == n or s[i] != s[i-1]:\n        if i - start >= 3:\n            add [start, i-1] to result\n        start = i\n```",
+    "**Exactly 3 characters** - the boundary of the \"large\" definition.\n`Input: s = \"aaa\"` → `Expected: [[0,2]]`\n⚠️ Bug: using `i - start > 3` instead of `>= 3` → returns `[]`\n\n**Group at end of string** - the last run has no following different character to trigger detection.\n`Input: s = \"abaaa\"` → `Expected: [[2,4]]`\n⚠️ Bug: only recording groups when `s[i] != s[i-1]` inside the loop, with no end-of-string check → returns `[]`\n\n**All same characters** - the entire string is one run with zero transitions.\n`Input: s = \"aaaa\"` → `Expected: [[0,3]]`\n⚠️ Bug: checking only `s[i] != s[i-1]` transitions and never handling `i == n` → returns `[]`\n\n**Single character** - minimum valid input, no run can be large.\n`Input: s = \"a\"` → `Expected: []`\n⚠️ Bug: starting the loop at i=0 and comparing `s[i] != s[i-1]` reads s[-1] → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string arrives as a streaming input too large to store in memory?",
+      "a": "Keep only the previous character, the current run's start index, and the current index. Emit a group whenever the incoming character differs from the previous one or the stream ends. Time stays O(n), auxiliary space drops to O(1) with no string storage at all."
+    },
+    {
+      "q": "What if \"large\" means k or more characters for a given k instead of 3?",
+      "a": "Replace the threshold `3` with `k` in the length check; nothing else changes. Time remains O(n) and auxiliary space O(1)."
+    },
+    {
+      "q": "What if you must return the actual substrings instead of index intervals?",
+      "a": "Run the same scan, but when a run qualifies, push `s.substr(start, i - start)` into the result. Time stays O(n); auxiliary space is still O(1), but the returned output now holds up to O(n) characters total."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> largeGroupPositions(string s) {\n        vector<vector<int>> res;\n        int n = s.size();\n        int start = 0;\n        for (int i = 1; i <= n; i++) {\n            if (i == n || s[i] != s[i - 1]) {\n                if (i - start >= 3) {\n                    res.push_back({start, i - 1});\n                }\n                start = i;\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

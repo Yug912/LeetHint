@@ -1,0 +1,40 @@
+{
+  "slug": "bitwise-and-of-numbers-range",
+  "title": "Bitwise AND of Numbers Range",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bit Manipulation - Common Prefix",
+  "tc": "O(log V)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int shift: O(1)\n- no containers, no recursion",
+  "approach": "The AND of all numbers in [left, right] keeps only the bits that are 1 in every number. Any bit position where the range spans a power-of-2 boundary flips to 0, so only the common most-significant prefix of `left` and `right` survives. We repeatedly right-shift both numbers until they become equal (erasing the differing low bits), counting the shifts, then shift the common prefix back left.",
+  "hints": [
+    "For a given bit position, what must be true of every number in [left, right] for that bit to stay 1 in the final AND? Consider what happens to a bit once the range crosses a power-of-two boundary.",
+    "Find the common most-significant prefix of `left` and `right` by shifting both right until equal. For left=5 (101), right=7 (111): shift twice → both become 1, then shift back left by 2 → 100 = 4.",
+    "```\nshift = 0\nwhile left != right:\n    left = left >> 1\n    right = right >> 1\n    shift = shift + 1\nreturn left << shift\n```",
+    "**Single element** - left equals right, so the AND is the number itself.\n`Input: left = 0, right = 0` → `Expected: 0`\n⚠️ Bug: looping `while (left < right)` instead of `while (left != right)` skips the body and returns `left << 0 = 0` here, but on `left = 5, right = 5` returns 5 correctly only by luck; on `left = 6, right = 6` it returns 6, which is correct, but the loop condition is still wrong for the general invariant.\n\n**Full range to 2^31-1** - left=1, right=2147483647 spans many power-of-two boundaries.\n`Input: left = 1, right = 2147483647` → `Expected: 0`\n⚠️ Bug: iterating i from left to right and AND-ing naively → TLE / never finishes.\n\n**Adjacent numbers** - left and right differ only in the lowest bit.\n`Input: left = 6, right = 7` → `Expected: 6`\n⚠️ Bug: returning `left` without shifting back (forgetting `<< shift`) → returns 3 instead of 6.\n\n**Same high bits, low bits differ** - tests that only the differing suffix is cleared.\n`Input: left = 5, right = 7` → `Expected: 4`\n⚠️ Bug: using `right & (right - 1)` repeatedly but stopping when `right <= left` and returning `right` without final check → on left=5, right=7: 7&6=6, 6>5 so 6&5=4, returns 4 (correct here), but a version that does `right &= (right-1)` only once returns 6, wrong."
+  ],
+  "followUps": [
+    {
+      "q": "What if the range could be up to 2^63 - 1 (64-bit integers)?",
+      "a": "The same shift-until-equal logic works unchanged with `long long`; the loop runs at most 63 times. Time stays O(1), space O(1)."
+    },
+    {
+      "q": "What if you must also return the bitwise OR and XOR of the range efficiently?",
+      "a": "OR keeps any bit that is 1 in any number; since the range is contiguous, OR is the OR of `left` and `right` plus all bits below the highest set bit of `right` - computable as `right | (right - left)` style masks. XOR of a contiguous range has a closed form based on `n mod 4`. All O(1) time, O(1) space."
+    },
+    {
+      "q": "What if queries arrive in a stream of (left, right) pairs and you must answer each in O(1) with O(1) memory?",
+      "a": "Each query is independent and already O(1), so streaming changes nothing - process each pair with the same common-prefix method. Time O(1) per query, space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int rangeBitwiseAnd(int left, int right) {\n        int shift = 0;\n        while (left != right) {\n            left >>= 1;\n            right >>= 1;\n            shift++;\n        }\n        return left << shift;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

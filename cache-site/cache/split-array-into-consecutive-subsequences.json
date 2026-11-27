@@ -1,0 +1,40 @@
+{
+  "slug": "split-array-into-consecutive-subsequences",
+  "title": "Split Array into Consecutive Subsequences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- unordered_map<int,int> count: up to n entries (bounded by distinct values) → O(n)\n- unordered_map<int,int> tails: up to n entries (bounded by distinct values) → O(n)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Use a greedy strategy: for each number, prefer extending an existing subsequence that ends at num−1 (waiting for num). If none exists, start a new subsequence of length 3 by consuming num, num+1, num+2. If neither is possible, return false. Two hash maps track remaining counts and how many subsequences end at each value. Extending first is optimal because it uses only one number instead of three, preserving resources for future chains.",
+  "hints": [
+    "When you encounter a number that could either extend an existing chain or begin a new one, which choice leaves more flexibility for the remaining numbers? Each subsequence must be a consecutive increasing sequence of length 3 or more.",
+    "Use two hash maps: one tracking remaining count of each value, another tracking how many subsequences end at each value (waiting for the next). For [1,2,3,3,4,5], seeing the first 1 with no chain waiting for 1, we start a new chain [1,2,3] and record that a chain now waits at 3.",
+    "```\ncount = frequency map of nums\ntails = empty map\nfor each x in nums:\n    if count[x] == 0: continue\n    if tails[x-1] > 0:\n        tails[x-1]--, tails[x]++, count[x]--\n    else if count[x+1] > 0 and count[x+2] > 0:\n        count[x]--, count[x+1]--, count[x+2]--, tails[x+2]++\n    else:\n        return false\nreturn true\n```",
+    "**Single element** - n=1, cannot form any subsequence of length 3.\n`Input: [1]` → `Expected: false`\n⚠️ Bug: starting a new chain without checking count[x+1] > 0 and count[x+2] > 0 → returns true\n\n**All equal values** - no consecutive pairs exist in the array.\n`Input: [1,1,1]` → `Expected: false`\n⚠️ Bug: treating count[x] >= 3 as a valid consecutive subsequence → returns true\n\n**Insufficient followers** - second occurrence of 4 cannot start or extend.\n`Input: [1,2,3,4,4,5]` → `Expected: false`\n⚠️ Bug: starting a new chain for the second 4 without checking count[6] > 0 → returns true\n\n**Minimum valid input** - exactly three consecutive numbers.\n`Input: [1,2,3]` → `Expected: true`\n⚠️ Bug: requiring tails[x-1] > 0 before allowing any new chain to start → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input array is not sorted?",
+      "a": "Sort it first, then apply the same greedy. The algorithm relies on processing values in non-decreasing order so that when we encounter x, all chains ending before x have already been decided. TC becomes O(n log n), SC stays O(n)."
+    },
+    {
+      "q": "What if subsequences must have length at least k (given as a parameter) instead of 3?",
+      "a": "Replace the \"start new\" step to consume x, x+1, ..., x+k-1 and set tails[x+k-1]++. The extend-first greedy still applies unchanged. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if nums arrives as a sorted stream and you must report whether the split is still feasible after each element?",
+      "a": "Process each value incrementally, updating count and tails. The answer flips to false permanently once any element fails both extend and start-new. Since the stream is sorted, tails[x-1] can be discarded once x is fully consumed. TC: O(1) amortized per element, SC: O(distinct values in active window)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isPossible(vector<int>& nums) {\n        unordered_map<int,int> count, tails;\n        for (int x : nums) count[x]++;\n        for (int x : nums) {\n            if (count[x] == 0) continue;\n            if (tails[x - 1] > 0) {\n                tails[x - 1]--;\n                tails[x]++;\n                count[x]--;\n            } else if (count[x + 1] > 0 && count[x + 2] > 0) {\n                count[x]--;\n                count[x + 1]--;\n                count[x + 2]--;\n                tails[x + 2]++;\n            } else {\n                return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

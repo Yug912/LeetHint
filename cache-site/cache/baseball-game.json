@@ -1,0 +1,40 @@
+{
+  "slug": "baseball-game",
+  "title": "Baseball Game",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack Simulation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> st: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector<string>, returned int",
+  "approach": "Each operation only ever touches the most recently added scores: \"C\" removes the last, \"D\" doubles the last, \"+\" sums the last two. So a stack (here a `vector<int>`) is the natural structure - push integers, push `2*top` for \"D\", push `last+secondLast` for \"+\", and pop for \"C\". After processing all operations, sum the stack. The problem guarantees all intermediate values fit in 32-bit, so `int` suffices.",
+  "hints": [
+    "Every operation (\"C\", \"D\", \"+\") only ever reads or removes the most recent one or two scores on the record - never anything older. What does that tell you about which scores you ever need to access?",
+    "Use a stack. On [\"5\",\"2\",\"C\",\"D\",\"+\"]: after \"5\",\"2\" the stack is [5,2]; \"C\" pops to [5]; \"D\" pushes 2*5=10 → [5,10]; \"+\" pushes 5+10=15 → [5,10,15]; sum = 30.",
+    "```\nstack = []\nfor op in ops:\n    if op == \"C\":  stack.pop()\n    elif op == \"D\": stack.push(2 * stack.top())\n    elif op == \"+\": stack.push(stack[-1] + stack[-2])\n    else:           stack.push(int(op))\nreturn sum(stack)\n```",
+    "**Single integer** - the record is just one number.\n`Input: [\"5\"]` → `Expected: 5`\n⚠️ Bug: defaulting any unrecognized op to 0 → returns 0.\n\n**Negative number** - the integer string starts with '-'.\n`Input: [\"-2\",\"D\"]` → `Expected: -4`\n⚠️ Bug: detecting numbers with `op[0] >= '0' && op[0] <= '9'` misses \"-2\", pushes 0, then \"D\" pushes 0 → returns 0.\n\n**\"C\" then \"+\"** - a removal must actually shrink the record so the next \"+\" sums the right pair.\n`Input: [\"5\",\"2\",\"3\",\"C\",\"+\"]` → `Expected: 14`\n⚠️ Bug: zeroing the last element instead of popping → stack becomes [5,2,0,2] → returns 9.\n\n**Consecutive \"+\"** - the second \"+\" must use the score the first \"+\" just added.\n`Input: [\"1\",\"2\",\"+\",\"+\"]` → `Expected: 11`\n⚠️ Bug: for \"+\", pushing `stack.top() + stack.top()` (doubling the last) → [1,2,4,8] → returns 15."
+  ],
+  "followUps": [
+    {
+      "q": "What if a new operation \"K\" records the sum of the last k scores, where k is given per operation?",
+      "a": "Keep the stack plus a prefix-sum array over it so any last-k sum is `prefix[n] - prefix[n-k]` in O(1). Push the new score and its updated prefix entry. TC O(n), SC O(n)."
+    },
+    {
+      "q": "What if \"C\" is removed from the operation set and you only need the final total, not the record?",
+      "a": "Maintain a running total and just the last two scores. For an integer x: total += x, shift the last-two window. For \"D\": total += 2*last. For \"+\": s = last1+last2, total += s, shift window. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if a new operation \"R\" reverses the entire current record, and there can be many reversals?",
+      "a": "Use a deque with a direction flag; \"R\" only flips the flag (O(1)) instead of physically reversing (O(n) each). Push/pop operate on whichever end the flag indicates. TC O(n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int calPoints(vector<string>& operations) {\n        vector<int> st;\n        for (const string& op : operations) {\n            if (op == \"C\") {\n                st.pop_back();\n            } else if (op == \"D\") {\n                st.push_back(2 * st.back());\n            } else if (op == \"+\") {\n                int n = st.size();\n                st.push_back(st[n - 1] + st[n - 2]);\n            } else {\n                st.push_back(stoi(op));\n            }\n        }\n        int total = 0;\n        for (int x : st) total += x;\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

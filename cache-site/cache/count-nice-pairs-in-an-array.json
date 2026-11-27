@@ -1,0 +1,40 @@
+{
+  "slug": "count-nice-pairs-in-an-array",
+  "title": "Count Nice Pairs in an Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Counting",
+  "tc": "O(n log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long,long long> freq: up to n distinct d-values → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Rearrange the condition `nums[i] + rev(nums[j]) == nums[j] + rev(nums[i])` to `nums[i] - rev(nums[i]) == nums[j] - rev(nums[j])`. For each element, compute `d = nums[i] - rev(nums[i])`. Two indices form a nice pair exactly when their `d` values are equal. Sweep left to right with a hash map of `d`-frequencies: for each element, add the current frequency of its `d` to the answer (these are all earlier indices with the same `d`), then increment that frequency. Take modulo 10^9+7 at each addition.",
+  "hints": [
+    "The condition `nums[i] + rev(nums[j]) == nums[j] + rev(nums[i])` has two terms per index, and n can be 10^5 so checking every pair is infeasible. What algebraic step puts each index's two terms on the same side of the equation?",
+    "Use a hash map keyed by `nums[i] - rev(nums[i])`. For `nums = [42,11,1,97]` the keys are `18, 0, 0, 18`; at index 2 the map already holds one `0`, so add 1 to the answer.",
+    "```\nans = 0\nfreq = empty map\nfor each x in nums:\n    d = x - rev(x)\n    ans = (ans + freq[d]) mod (10^9 + 7)\n    freq[d] = freq[d] + 1\nreturn ans\n```",
+    "**Opposite-sign differences** - d can be positive or negative; values with opposite signs must not match.\n`Input: nums = [42,13]` → `Expected: 0`\n⚠️ Bug: using `abs(d)` as the map key → treats 18 and -18 as equal, returns 1.\n\n**All equal values** - every pair is nice, so increment order matters.\n`Input: nums = [7,7,7,7,7]` → `Expected: 10`\n⚠️ Bug: incrementing `freq[d]` before adding it to the answer → returns 15.\n\n**Overflow** - C(10^5, 2) = 4,999,950,000 exceeds 2^31−1 ≈ 2.1×10^9.\n`Input: nums = [1,1,...,1] (10^5 ones)` → `Expected: 999949972`\n⚠️ Bug: using `int` for the answer and applying modulo only at return → 4,999,950,000 overflows signed 32-bit, returns 704982704.\n\n**No nice pairs** - all d-values are distinct.\n`Input: nums = [1,12,123]` → `Expected: 0`\n⚠️ Bug: adding `freq[d] + 1` instead of `freq[d]` per element → returns 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^18 instead of 10^9?",
+      "a": "Use `long long` for x, the reversal accumulator, and d. The reversal loop handles up to 19 digits. The algorithm and complexity are unchanged: O(n) time, O(n) space."
+    },
+    {
+      "q": "What if the array arrives as a data stream and you cannot store all elements?",
+      "a": "Process each element as it arrives - compute d, add freq[d] to the answer, then increment freq[d]. You only need the hash map, not the full array. Time O(n), space O(n) in the worst case but typically much less."
+    },
+    {
+      "q": "What if you must return all nice pairs (i, j) instead of just the count?",
+      "a": "For each d value, store the list of indices seen so far. When a new index with the same d arrives, emit pairs with all previously stored indices. Time O(n + P) where P is the number of nice pairs (up to O(n^2)). Space O(n) for the index lists."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countNicePairs(vector<int>& nums) {\n        const int MOD = 1000000007;\n        unordered_map<long long, long long> freq;\n        long long ans = 0;\n        for (int x : nums) {\n            long long r = 0;\n            long long t = x;\n            while (t > 0) {\n                r = r * 10 + t % 10;\n                t /= 10;\n            }\n            long long d = (long long)x - r;\n            ans = (ans + freq[d]) % MOD;\n            freq[d]++;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

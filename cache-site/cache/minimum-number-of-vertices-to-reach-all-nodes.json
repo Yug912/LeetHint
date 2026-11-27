@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-vertices-to-reach-all-nodes",
+  "title": "Minimum Number of Vertices to Reach All Nodes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-degree Counting on DAG",
+  "tc": "O(n + E)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> indegree(n, 0): n entries → O(n)\n- vector<int> res: at most n entries → O(n) (returned output, but allocated here)\n- recursion / queue / stack: none",
+  "approach": "In a DAG, a node with no incoming edges can only be reached from itself, so it must be in the answer. Any node with at least one incoming edge is reachable from some other node, so it never needs to be a starting vertex. Therefore the smallest set is exactly the set of nodes with in-degree 0. Compute in-degrees by scanning edges once, then collect every node whose in-degree is 0.",
+  "hints": [
+    "For each node, ask: is there any other node from which it can be reached? What single structural property separates the nodes that must be starting points from those that don't?",
+    "Track each node's in-degree in an array. In Example 1, node 2 has in-degree 2 (edges 0→2 and 4→2), so it is reachable from elsewhere; nodes 0 and 3 have in-degree 0, so they must be chosen.",
+    "```\nindeg = array of size n filled with 0\nfor each edge (u, v):\n    indeg[v] += 1\nanswer = []\nfor i in 0..n-1:\n    if indeg[i] == 0:\n        answer.append(i)\nreturn answer\n```",
+    "**Minimum input** - n = 2 with one edge.\n`Input: n = 2, edges = [[0,1]]` → `Expected: [0]`\n⚠️ Bug: incrementing `indeg[e[0]]` instead of `indeg[e[1]]` → returns `[1]`\n\n**Disconnected graph** - several isolated nodes with no edges at all.\n`Input: n = 4, edges = [[0,1]]` → `Expected: [0,2,3]`\n⚠️ Bug: starting the collection loop at `i = 1` instead of `i = 0` → returns `[2,3]`\n\n**Long chain** - every node except the first has exactly one incoming edge.\n`Input: n = 4, edges = [[0,1],[1,2],[2,3]]` → `Expected: [0]`\n⚠️ Bug: collecting nodes with `indeg[i] > 0` instead of `== 0` → returns `[1,2,3]`\n\n**Multiple sources into one node** - Example 2 itself.\n`Input: n = 5, edges = [[0,1],[2,1],[3,1],[1,4],[2,4]]` → `Expected: [0,2,3]`\n⚠️ Bug: using a `set` of destinations and returning its complement but forgetting to insert every `e[1]` → returns `[0,2,3,4]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph may contain cycles?",
+      "a": "Compress each strongly connected component into one super-node, then count super-nodes with in-degree 0 in the condensed DAG. Use Tarjan's or Kosaraju's algorithm; time becomes O(n + E), space O(n + E)."
+    },
+    {
+      "q": "What if n is up to 10^9 and edges arrive as a stream that does not fit in memory?",
+      "a": "Keep only a hash set of nodes that have appeared as a destination, plus the set of all seen node ids. At the end, the answer is the seen nodes minus the destination set. Time O(E) expected, space O(E) in the worst case."
+    },
+    {
+      "q": "What if you must also return, for each chosen vertex, one path to every reachable node?",
+      "a": "Run BFS/DFS from each zero-in-degree vertex, recording a parent pointer per first visit. Total time O(n + E) since each edge is traversed once across all searches; space O(n + E) for the parent/adjacency storage."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findSmallestSetOfVertices(int n, vector<vector<int>>& edges) {\n        vector<int> indegree(n, 0);\n        for (const auto& e : edges) {\n            indegree[e[1]]++;\n        }\n        vector<int> result;\n        for (int i = 0; i < n; ++i) {\n            if (indegree[i] == 0) {\n                result.push_back(i);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

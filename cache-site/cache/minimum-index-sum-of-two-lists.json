@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-index-sum-of-two-lists",
+  "title": "Minimum Index Sum of Two Lists",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Lookup",
+  "tc": "O((n+m)·L)",
+  "sc": "O(n·L)",
+  "spaceBreakdown": "- unordered_map<string,int> idx: up to n entries → O(n)\n- recursion depth: none\n- not counted: input list1/list2, returned vector res",
+  "approach": "Build a hash map from each string in list1 to its index. Then scan list2: for each string present in the map, compute the index sum (map value + current j). Track the minimum sum seen so far; whenever a smaller sum is found, clear the result and start fresh, and when an equal sum is found, append. This is correct because every common string is examined exactly once, and we keep precisely those tied for the minimum.",
+  "hints": [
+    "If you process list2 one string at a time, you already know j. What do you need from list1 to compute i+j for each common string? Each list contains only unique strings.",
+    "Use an unordered_map<string,int> mapping each string in list1 to its index. For list1 = [\"Shogun\",\"Tapioca Express\",...], store Shogun→0; when list2[3]=\"Shogun\" is found, the sum is 0+3=3.",
+    "```\nbuild map: string -> index from list1\nminSum = infinity\nresult = []\nfor j, s in list2:\n    if s in map:\n        sum = map[s] + j\n        if sum < minSum:\n            minSum = sum\n            result = [s]\n        else if sum == minSum:\n            result.append(s)\nreturn result\n```",
+    "**Smallest input** - both lists have one element, the same string.\n`Input: list1 = [\"a\"], list2 = [\"a\"]` → `Expected: [\"a\"]`\n⚠️ Bug: initializing minSum to 0 instead of INT_MAX → returns [] (sum 0 is not < 0)\n\n**Ties** - two common strings share the minimum index sum.\n`Input: list1 = [\"happy\",\"sad\",\"good\"], list2 = [\"sad\",\"happy\",\"good\"]` → `Expected: [\"sad\",\"happy\"]`\n⚠️ Bug: only `if (s < minSum)` with no `else if (s == minSum)` branch → returns [\"sad\"]\n\n**Reset on smaller sum** - a common string with a larger sum appears before one with a smaller sum.\n`Input: list1 = [\"a\",\"b\",\"c\"], list2 = [\"c\",\"a\",\"b\"]` → `Expected: [\"a\"]`\n⚠️ Bug: appending to result without clearing when a smaller sum is found → returns [\"c\",\"a\"]\n\n**Wrong loop bound** - the only common string is the last element of list2.\n`Input: list1 = [\"a\",\"b\"], list2 = [\"x\",\"y\",\"a\"]` → `Expected: [\"a\"]`\n⚠️ Bug: looping `j < list1.size()` instead of `j < list2.size()` → stops at j=1, misses \"a\" at j=2, returns []"
+  ],
+  "followUps": [
+    {
+      "q": "What if list1 is too large to fit in memory but list2 is small?",
+      "a": "Build the hash map from the smaller list (list2) instead, then scan list1 looking up each string. The approach is symmetric. TC stays O(n+m), SC drops to O(min(n,m))."
+    },
+    {
+      "q": "What if you need all common strings with the k-th smallest index sum, not just the minimum?",
+      "a": "Collect every common string with its index sum, then use nth_element or a min-heap of size k to select the k-th smallest sum, and return all strings matching it. TC: O(n + m + c) where c is the count of common strings; SC: O(n + c)."
+    },
+    {
+      "q": "What if both lists arrive as streams and you cannot store all of list1?",
+      "a": "Buffer whichever stream you receive first into the hash map as it arrives, then process the second stream lookups on the fly. If neither can be fully buffered, partition by a hash of the string and run the same algorithm per partition. SC: O(buffered stream length)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> findRestaurant(vector<string>& list1, vector<string>& list2) {\n        unordered_map<string,int> idx;\n        idx.reserve(list1.size());\n        for (int i = 0; i < (int)list1.size(); ++i) {\n            idx[list1[i]] = i;\n        }\n        int minSum = INT_MAX;\n        vector<string> res;\n        for (int j = 0; j < (int)list2.size(); ++j) {\n            auto it = idx.find(list2[j]);\n            if (it != idx.end()) {\n                int s = it->second + j;\n                if (s < minSum) {\n                    minSum = s;\n                    res.clear();\n                    res.push_back(list2[j]);\n                } else if (s == minSum) {\n                    res.push_back(list2[j]);\n                }\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

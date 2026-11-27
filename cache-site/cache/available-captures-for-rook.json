@@ -1,0 +1,40 @@
+{
+  "slug": "available-captures-for-rook",
+  "title": "Available Captures for Rook",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Directional Simulation",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- dx[4], dy[4] arrays: 4 ints each → O(1)\n- scalar locals (rx, ry, ans, x, y, d): O(1)\n- recursion depth: none\n- not counted: input board",
+  "approach": "Locate the single white rook, then simulate a rook move in each of the four cardinal directions. In each direction, step square by square until you hit the board edge or any non-empty cell; if that first cell contains 'p', increment the count. Bishops and other pawns block the path, so only the first piece encountered in each direction matters. This is a direct simulation with constant work.",
+  "hints": [
+    "In each of the four directions the rook can move, which single square decides whether a pawn is attackable - the nearest piece, or every piece along that ray?",
+    "Simulate a rook move: from the rook's square, step one cell at a time in a fixed direction; stop at the first non-'.' cell and check if it is 'p'. In Example 1, going up from R at (2,3) hits 'p' at (1,3) → count it.",
+    "find (rx, ry) where board[rx][ry] == 'R'\nans = 0\nfor each of 4 directions (dr, dc):\n    r, c = rx+dr, ry+dc\n    while in bounds:\n        if board[r][c] != '.':\n            if board[r][c] == 'p': ans += 1\n            break\n        r += dr; c += dc\nreturn ans",
+    "**Rook in a corner** - only two rays are in bounds, so at most two pawns can be captured.\n`Input: board with 'R' at (0,0), 'p' at (0,3), 'p' at (3,0)` → `Expected: 2`\n⚠️ Bug: not bounds-checking before indexing board[r][c] → undefined behavior / wrong count.\n\n**Pawn blocked by another pawn** - a pawn is not transparent; the rook stops at the first one.\n`Input: rook at (0,0), 'p' at (0,2), 'p' at (0,5)` → `Expected: 1`\n⚠️ Bug: counting every 'p' along the ray instead of stopping at the first piece → returns 2.\n\n**Bishop adjacent to rook** - a bishop on a neighboring square blocks that entire direction.\n`Input: rook at (3,3), 'B' at (2,3), 'p' at (0,3)` → `Expected: 0` in that direction\n⚠️ Bug: only stopping on 'p' and skipping 'B' → returns 1.\n\n**Pawn adjacent to rook** - the first cell in a direction is already 'p'.\n`Input: rook at (3,3), 'p' at (2,3)` → `Expected: 1`\n⚠️ Bug: starting the scan one cell too far (e.g., rx+2*dr) → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to an N×N board with multiple rooks; return total pawns attacked by any rook.",
+      "a": "For each rook, run the same four-direction scan. Precomputing per-row and per-column nearest-piece neighbors in O(N²) lets each query be O(1), giving O(N²) total time and O(N²) space."
+    },
+    {
+      "q": "Pieces move each turn as a stream of updates (a piece moves from one square to another); report the live attack count after each update.",
+      "a": "Maintain, for each rook, the nearest piece in each of the four directions using four ordered maps keyed by coordinate per row/column. An update removes one coordinate and inserts another in at most four maps, costing O(log N) per move and O(N²) space overall."
+    },
+    {
+      "q": "Board is huge (10^9 × 10^9) but only K ≤ 10^5 pieces exist; count attacked pawns for a given rook.",
+      "a": "Store pieces in four sorted structures (one per row and column, split by direction). For the rook, binary-search its position in the row and column maps to find the nearest piece in each of the four directions in O(log K), giving O(log K) time and O(K) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numRookCaptures(vector<vector<char>>& board) {\n        int rx = 0, ry = 0;\n        for (int i = 0; i < 8; ++i) {\n            for (int j = 0; j < 8; ++j) {\n                if (board[i][j] == 'R') {\n                    rx = i;\n                    ry = j;\n                }\n            }\n        }\n        int dx[4] = {-1, 1, 0, 0};\n        int dy[4] = {0, 0, -1, 1};\n        int ans = 0;\n        for (int d = 0; d < 4; ++d) {\n            int x = rx + dx[d];\n            int y = ry + dy[d];\n            while (x >= 0 && x < 8 && y >= 0 && y < 8) {\n                if (board[x][y] != '.') {\n                    if (board[x][y] == 'p') ++ans;\n                    break;\n                }\n                x += dx[d];\n                y += dy[d];\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

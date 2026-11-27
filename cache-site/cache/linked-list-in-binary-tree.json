@@ -1,0 +1,27 @@
+{
+  "slug": "linked-list-in-binary-tree",
+  "title": "Linked List in Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "KMP String Matching on Tree",
+  "tc": "O(n + m)",
+  "sc": "O(m + h)",
+  "spaceBreakdown": "- int lps[105]: up to m entries → O(m)\n- int pattern[105]: up to m entries → O(m)\n- int trans[105][101]: (m+1) × 101 entries → O(m)\n- recursion depth (dfs): up to tree height h → O(h)\n- not counted: input linked list, input tree, returned bool",
+  "approach": "Build a KMP automaton from the linked list pattern: first compute the LPS (failure) array, then precompute a full transition table `trans[state][value]` for all states `0..m` and values `1..100`, so each tree node is processed in O(1). DFS the tree carrying the current automaton state; at each node, look up the transition. If the state reaches `m` (full match), return true. Since each root-to-leaf path is a linear sequence and KMP detects contiguous subsequences, this correctly finds any downward path matching the list.",
+  "hints": [
+    "When matching the list against a tree path, if a mismatch occurs, where could the next potential match start within the already-matched portion of the list? The tree branches, so a single mismatch shouldn't force restarting the search from the beginning of the list for every branch.",
+    "Use a KMP Deterministic Finite Automaton (DFA) built from the linked list to achieve O(1) transitions per tree node. For head = [4,2,8], the DFA transitions to state 1 on seeing 4, then state 2 on seeing 2, and state 3 on 8.",
+    "```\nbuild DFA from linked list values\nfunction dfs(node, state):\n    if node is null: return false\n    state = DFA[state][node.val]\n    if state == list_length: return true\n    return dfs(node.left, state) OR dfs(node.right, state)\nreturn dfs(root, 0)\n```",
+    "**Smallest input** - List and tree both have exactly one node.\n`Input: head = [1], root = [1]` → `Expected: true`\n⚠️ Bug: Checking `state == m` before updating the state with the current node's value → returns `false`\n\n**Siblings matching consecutive list elements** - Tree has two siblings that match consecutive elements in the list, but they are not on the same downward path.\n`Input: head = [1,2,3], root = [1,2,3]` → `Expected: false`\n⚠️ Bug: Using a global or reference variable for the KMP state instead of passing it by value to recursive calls → state from node 2 leaks to node 3, returning `true`\n\n**Failure link necessity** - Tree path contains a prefix of the list, followed by a mismatch, then the full list.\n`Input: head = [1,2,1,2,3], root = [1,null,2,null,1,null,2,null,1,null,2,null,3]` → `Expected: true`\n⚠️ Bug: Resetting the match state to 0 on a mismatch instead of using the KMP failure links → returns `false`\n\n**Leaf node match** - The list ends exactly at a leaf node of the tree.\n`Input: head = [1,2,3], root = [1,2,null,null,3]` → `Expected: true`\n⚠️ Bug: Returning false early if a node is a leaf before checking if `state == m` → returns"
+  ],
+  "followUps": [],
+  "code": {
+    "cpp": "class Solution {\n    int lps[105];\n    int pattern[105];\n    int trans[105][101];\n    int m;\n    \n    void build(ListNode* head) {\n        m = 0;\n        while (head) {\n            pattern[m++] = head->val;\n            head = head->next;\n        }\n        lps[0] = 0;\n        int len = 0, i = 1;\n        while (i < m) {\n            if (pattern[i] == pattern[len]) {\n                lps[i++] = ++len;\n            } else if (len != 0) {\n                len = lps[len - 1];\n            } else {\n                lps[i++] = 0;\n            }\n        }\n        for (int s = 0; s <= m; s++) {\n            for (int v = 1; v <= 100; v++) {\n                if (s < m && pattern[s] == v) {\n                    trans[s][v] = s + 1;\n                } else if (s == 0) {\n                    trans[s][v] = 0;\n                } else {\n                    trans[s][v] = trans[lps[s - 1]][v];\n                }\n            }\n        }\n    }\n    \n    bool dfs(TreeNode* node, int state) {\n        if (state == m) return true;\n        if (!node) return false;\n        int s = trans[state][node->val];\n        if (s == m) return true;\n        return dfs(node->left, s) || dfs(node->right, s);\n    }\n    \npublic:\n    bool isSubPath(ListNode* head, TreeNode* root) {\n        build(head);\n        return dfs(root, 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

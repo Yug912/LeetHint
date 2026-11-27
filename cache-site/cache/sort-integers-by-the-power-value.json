@@ -1,0 +1,40 @@
+{
+  "slug": "sort-integers-by-the-power-value",
+  "title": "Sort Integers by The Power Value",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Memoization + Selection",
+  "tc": "O(M + n)",
+  "sc": "O(M + n)",
+  "spaceBreakdown": "- unordered_map<int,int> memo: up to M entries → O(M)\n- vector<pair<int,int>> v: n entries → O(n)\n- recursion call-stack: up to longest Collatz chain, O(M) worst case\n- nth_element: O(log n) stack (introsort partition)\n- not counted: input parameters, returned int",
+  "approach": "Compute the power of each integer in [lo, hi] using memoized recursion: each distinct intermediate value's power is computed once and cached in a hash map. Then build a vector of (power, value) pairs and use std::nth_element to place the k-th smallest pair at index k-1 in O(n) average time, avoiding a full O(n log n) sort. The pair comparison naturally breaks ties by value.",
+  "hints": [
+    "The sequence from 12 passes through 10, and so does the sequence from 13. What does this overlap imply about computing powers for every integer in [lo, hi]?",
+    "Use a hash map to memoize each value's power, then call std::nth_element on pairs (power, value) to find the k-th smallest in O(n) without a full sort. For [12,13,14,15] with k=2, the pairs (9,12),(9,13),(17,14),(17,15) yield answer 13.",
+    "```\nmemo[1] = 0\nfunction power(x):\n    if x in memo: return memo[x]\n    next = x/2 if x even else 3*x+1\n    memo[x] = 1 + power(next)\n    return memo[x]\n\npairs = [(power(i), i) for i in lo..hi]\nnth_element(pairs, k-1)\nreturn pairs[k-1].value\n```",
+    "**Single element** - lo = hi = 1, k = 1, the only value is 1 with power 0.\n`Input: lo=1, hi=1, k=1` → `Expected: 1`\n⚠️ Bug: not setting memo[1]=0 as the base case → power(1) computes 3*1+1=4 and recurses 4→2→1→4→... infinitely, stack overflow\n\n**Ties broken by value** - 12 and 13 both have power 9; k=1 must return the smaller value 12.\n`Input: lo=12, hi=13, k=1` → `Expected: 12`\n⚠️ Bug: storing results in map<int,int> (power→value) instead of pairs → map[9]=13 (last insert overwrites 12), returns 13\n\n**k at boundary** - k equals the range size, so the answer is the element with the largest power.\n`Input: lo=7, hi=11, k=5` → `Expected: 9`\n⚠️ Bug: using nth_element(v.begin(), v.begin()+k, v.end()) instead of v.begin()+k-1 → nth equals v.end(), no reordering occurs, returns v[4]=11"
+  ],
+  "followUps": [
+    {
+      "q": "If hi can be up to 10^6, how does the approach change?",
+      "a": "The memoization approach still works, but M grows significantly. Precompute power bottom-up for all values 1..10^6 using an array, and use a hash map only for intermediate values exceeding 10^6. TC: O(M + n), SC: O(M + n) with larger M."
+    },
+    {
+      "q": "If you must answer many queries (different lo, hi, k) efficiently, how would you adapt?",
+      "a": "Precompute power for all x up to max_hi once, then sort all (power, x) pairs globally. For each query, binary-search the sorted array to count elements in [lo, hi] with power below a threshold, narrowing down the k-th element. TC: O(M log M + Q log M) for Q queries."
+    },
+    {
+      "q": "If the transformation rule is 5x+1 instead of 3x+1, what breaks?",
+      "a": "The 5x+1 variant does not always reach 1 (some sequences diverge or cycle). Add cycle detection: track visited values per computation; if a value repeats, the sequence never terminates. Return a sentinel or skip that value. TC: O(M + n) per terminating sequence, SC: O(M + n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    unordered_map<int,int> memo;\n    \n    int power(int x) {\n        if (memo.count(x)) return memo[x];\n        int nx = (x % 2 == 0) ? x / 2 : 3 * x + 1;\n        return memo[x] = 1 + power(nx);\n    }\n    \npublic:\n    int getKth(int lo, int hi, int k) {\n        memo[1] = 0;\n        vector<pair<int,int>> v;\n        for (int i = lo; i <= hi; i++) {\n            v.push_back({power(i), i});\n        }\n        nth_element(v.begin(), v.begin() + k - 1, v.end());\n        return v[k-1].second;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

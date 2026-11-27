@@ -1,0 +1,40 @@
+{
+  "slug": "array-of-doubled-pairs",
+  "title": "Array of Doubled Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- map<int,int> count: up to n entries → O(n)\n- vector<int> keys: up to n entries → O(n)\n- sort(): O(log n) stack\n- not counted: input",
+  "approach": "Sort the unique values by absolute value so that each element is processed before its double. Use a frequency map; for each value x (in sorted order), its count must be matched by an equal or greater count of 2*x. Subtract count[x] from count[2*x]. If at any point count[2*x] < count[x], return false. Sorting by absolute value ensures negatives pair correctly (e.g., -2 pairs with -4, not +4).",
+  "hints": [
+    "If each element must be paired with either its half or its double, which ordering of values guarantees you never \"use up\" a needed partner before its smaller companion is processed?",
+    "Sort unique values by absolute value and use a frequency map. For [4,-2,2,-4], sorted by abs gives [-2, 2, -4, 4]; pair -2→-4, then 2→4.",
+    "```\ncount frequencies of each value\nsort unique values by absolute value\nfor each value x in sorted order:\n    if count[x] == 0: continue\n    if count[2*x] < count[x]: return false\n    count[2*x] -= count[x]\nreturn true\n```",
+    "**Zeros** - all elements are zero, so each zero pairs with itself\n`Input: arr = [0,0]` → `Expected: true`\n⚠️ Bug: checking `count[2*x] < count[x]` before handling x==0 with `count[x]==0` skip → returns false\n\n**Negatives** - negative values must pair with their negative double, not positive\n`Input: arr = [4,-2,2,-4]` → `Expected: true`\n⚠️ Bug: sorting by value instead of absolute value → processes -4 before -2, pairs -4 with -8 (count 0) → returns false\n\n**Duplicates** - repeated values must each find a distinct partner\n`Input: arr = [2,2,4,4]` → `Expected: true`\n⚠️ Bug: decrementing count[2*x] by 1 instead of count[x] → leaves one 2 unpaired → returns false\n\n**No valid pairing** - counts don't line up\n`Input: arr = [3,1,3,6]` → `Expected: false`\n⚠️ Bug: not sorting and processing in arbitrary order → might pair 3 with 6 first, leaving 1 unmatched → returns true (wrong)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the relationship were arr[2*i+1] = 3*arr[2*i] instead of 2*?",
+      "a": "Same approach works - sort by absolute value and match each x with 3*x. The key property is that |3*x| > |x| for nonzero x, so sorting by absolute value still guarantees correct processing order. TC stays O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if arr is a streaming input of unknown length and you can only store O(k) elements?",
+      "a": "Maintain a bounded frequency map of the last k distinct values seen. When a value's partner arrives, consume the pair; otherwise evict oldest entries. This may produce false negatives when partners arrive far apart, so it becomes an approximate or sliding-window solution. TC O(n log k), SC O(k)."
+    },
+    {
+      "q": "What if values can be up to 10^9 and you need to handle the triple-relationship arr[2*i+1] ∈ {2*x, x/2}?",
+      "a": "Still sort by absolute value and use a hash map. For each x, greedily match with 2*x first (since |2*x| > |x|). Overflow is not an issue since 2*10^9 fits in a 64-bit integer. TC O(n log n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canReorderDoubled(vector<int>& arr) {\n        map<int, int> count;\n        for (int x : arr) count[x]++;\n        \n        vector<int> keys;\n        for (auto& p : count) keys.push_back(p.first);\n        sort(keys.begin(), keys.end(), [](int a, int b) {\n            return abs(a) < abs(b);\n        });\n        \n        for (int x : keys) {\n            if (count[x] == 0) continue;\n            if (count[2 * x] < count[x]) return false;\n            count[2 * x] -= count[x];\n            count[x] = 0;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

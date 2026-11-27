@@ -1,0 +1,40 @@
+{
+  "slug": "reverse-substrings-between-each-pair-of-parentheses",
+  "title": "Reverse Substrings Between Each Pair of Parentheses",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Wormhole Traversal",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> match: n entries → O(n)\n- stack<int> st: up to n/2 entries during matching phase → O(n)\n- string result: up to n chars (returned output, not counted)\n- not counted: input string s",
+  "approach": "Precompute matching parenthesis pairs using a stack. Traverse the string with a direction flag: at each parenthesis, jump to its match and flip direction; otherwise, append the character to the result. Each portal jump reverses the reading order for the enclosed region, so characters inside an odd number of nested pairs are read backward and those inside an even number are read forward, producing the correct final order in a single O(n) pass.",
+  "hints": [
+    "When a character sits inside two nested pairs of parentheses, its substring gets reversed twice. How does its final position compare to a character inside only one pair?",
+    "Use a stack to precompute matching parenthesis pairs, then traverse with a direction flag that flips each time you jump through a matched pair. In \"(abcd)\", index 0 '(' jumps to index 5, flips direction leftward, then reads d, c, b, a.",
+    "```\nprecompute match[] for each parenthesis pair using a stack\ni = 0, dir = +1\nwhile i in bounds:\n    if s[i] is a parenthesis:\n        i = match[i]\n        dir = -dir\n        i += dir\n    else:\n        append s[i] to result\n        i += dir\nreturn result\n```",
+    "**No parentheses** - string has no brackets at all\n`Input: \"abc\"` → `Expected: \"abc\"`\n⚠️ Bug: loop condition `i > 0 && i < n` instead of `i >= 0 && i < n` → loop never enters at i=0, returns \"\"\n\n**Nested parentheses** - two pairs where one is inside the other\n`Input: \"((ab))\"` → `Expected: \"ab\"`\n⚠️ Bug: only checking `s[i] == '('` (not `')'`) in the jump condition → appends ')' to result, returns \")ba\"\n\n**Single char in parentheses** - one letter wrapped in one pair\n`Input: \"(a)\"` → `Expected: \"a\"`\n⚠️ Bug: forgetting `i += dir` after the direction flip → infinite loop bouncing between matched parentheses\n\n**Empty pair** - adjacent parentheses with nothing between them\n`Input: \"a()b\"` → `Expected: \"ab\"`\n⚠️ Bug: appending `s[i]` before checking if it is a parenthesis → appends '(' to result, returns \"a((b\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the string length can be up to 10^6?",
+      "a": "The wormhole approach already runs in O(n) time and O(n) space, so it scales directly. Add `result.reserve(n)` to avoid reallocations. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if there are three bracket types - (), [], {} - and each reverses its own content independently?",
+      "a": "Extend the matching phase to track bracket type: push (type, index) on opening, match only when closing type matches the top. The wormhole traversal is unchanged since matched pairs still act as portals. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if you must solve it in a single left-to-right pass with no precomputation of matches?",
+      "a": "Use a stack of string buffers: push a new buffer on '(', pop and reverse on ')', append the reversed content to the parent buffer. Each character is copied O(depth) times in the worst case. Time O(n^2) worst case, space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string reverseParentheses(string s) {\n        int n = s.size();\n        vector<int> match(n, -1);\n        stack<int> st;\n        for (int i = 0; i < n; i++) {\n            if (s[i] == '(') {\n                st.push(i);\n            } else if (s[i] == ')') {\n                int j = st.top();\n                st.pop();\n                match[i] = j;\n                match[j] = i;\n            }\n        }\n        string result;\n        result.reserve(n);\n        int i = 0, dir = 1;\n        while (i >= 0 && i < n) {\n            if (s[i] == '(' || s[i] == ')') {\n                i = match[i];\n                dir = -dir;\n                i += dir;\n            } else {\n                result += s[i];\n                i += dir;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

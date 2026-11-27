@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-xor-of-two-numbers-in-an-array",
+  "title": "Maximum XOR of Two Numbers in an Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Bit Manipulation",
+  "tc": "O(n log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> prefixes: up to N entries per iteration → O(N)\n- recursion depth: none\n- not counted: input, returned scalar",
+  "approach": "The optimal approach builds the maximum XOR result bit by bit, starting from the most significant bit (MSB) down to the least significant bit. For each bit position `i`, we use a hash set to store all prefixes of the numbers (masked up to bit `i`). We then check if there exist two prefixes that XOR to `target = max_xor | (1 << i)`. If such a pair exists, we can set this bit in our result; otherwise, we leave it as 0. This works because XOR is its own inverse: `a ^ b = target` implies `a ^ target = b`.",
+  "hints": [
+    "If you want to maximize a number, which bit of the result should you try to set first? The array size is up to 2 * 10^5, so checking every pair is too slow.",
+    "Use a hash set to store bit prefixes and greedily build the maximum XOR bit by bit from most significant to least. For Example 1, to check if the 4th bit can be 1, we look for two prefixes that XOR to 16.",
+    "```\nmax_xor = 0, mask = 0\nfor i from 30 down to 0:\n    mask |= (1 << i)\n    target = max_xor | (1 << i)\n    prefixes = {num & mask for num in nums}\n    for p in prefixes:\n        if (p ^ target) in prefixes:\n            max_xor = target\n            break\nreturn max_xor\n```",
+    "**Smallest input** - Only one element is present, so no pair can be formed.\n`Input: nums = [5]` → `Expected: 0`\n⚠️ Bug: returning `nums[0]` instead of 0 when `n == 1` → returns `5`\n\n**All elements equal** - Every pair XORs to 0.\n`Input: nums = [7, 7, 7]` → `Expected: 0`\n⚠️ Bug: matching a prefix with itself when `target == 0` → returns `7`\n\n**Maximum values** - Values approach 2^31 - 1, requiring the 30th bit.\n`Input: nums = [2147483647, 0]` → `Expected: 2147483647`\n⚠️ Bug: starting loop from `i = 31` causes signed integer overflow in `1 << 31` → returns `0`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is streamed and cannot fit entirely in memory?",
+      "a": "Process the stream in chunks, maintaining the hash set of prefixes for the current bit iteration. The time complexity remains O(N) per bit, but memory usage becomes O(M) where M is the chunk size, though multiple passes over the stream are required."
+    },
+    {
+      "q": "What if we need to find the k-th largest XOR value among all pairs?",
+      "a": "We can use a min-heap of size k. Iterate through all valid pairs (or use a more advanced Trie-based approach to query the k-th largest), pushing XOR values into the heap. The time complexity becomes O(N^2 log K) for the brute force, or O(N log K) with a modified Trie traversal."
+    },
+    {
+      "q": "What if we want to find the maximum XOR of any contiguous subarray?",
+      "a": "The XOR of a subarray `nums[i...j]` is `prefix_xor[j] ^ prefix_xor[i-1]`. We can compute the prefix XOR array and then apply the same hash set bit manipulation approach on the prefix XOR values. The time and space complexity remain O(N)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMaximumXOR(vector<int>& nums) {\n        int max_xor = 0;\n        int mask = 0;\n        \n        for (int i = 30; i >= 0; --i) {\n            mask |= (1 << i);\n            int target = max_xor | (1 << i);\n            \n            unordered_set<int> prefixes;\n            for (int num : nums) {\n                prefixes.insert(num & mask);\n            }\n            \n            for (int p : prefixes) {\n                if (prefixes.count(p ^ target)) {\n                    max_xor = target;\n                    break;\n                }\n            }\n        }\n        \n        return max_xor;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

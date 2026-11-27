@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-product-of-splitted-binary-tree",
+  "title": "Maximum Product of Splitted Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS with Subtree Sum",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- long long totalSum, maxProd, int MOD: O(1) scalars\n- computeSum recursion stack: up to h frames → O(h)\n- dfs recursion stack: up to h frames → O(h) (not simultaneous with computeSum)\n- worst case skewed tree: h = n → O(n)\n- not counted: input tree, returned int",
+  "approach": "The key insight is that removing any edge splits the tree into a subtree and its complement. If we know the total tree sum T and a subtree sum S, the product is S × (T − S). We compute T in a first DFS, then in a second DFS compute each subtree sum and track the maximum product. We compare products as `long long` before taking the modulo at the end, since the maximum product can reach ≈6.25×10¹⁶.",
+  "hints": [
+    "Every edge in a binary tree connects a parent to one of its children. When you remove one edge, what can you say about the two resulting pieces?\nThe tree has up to 5 × 10⁴ nodes, so an O(n) approach is needed.",
+    "Two-pass DFS: first compute the total tree sum, then for each node compute its subtree sum and evaluate `subtree_sum × (total − subtree_sum)`.\nIn Example 1, total = 21; the subtree at node 2 has sum 11, giving product 11 × (21 − 11) = 110.",
+    "```\ntotal = dfs_sum(root)\nbest = 0\nfunction dfs(node):\n    if node is null: return 0\n    s = node.val + dfs(node.left) + dfs(node.right)\n    best = max(best, s * (total - s))\n    return s\ndfs(root)\nreturn best mod 1e9+7\n```",
+    "**Two nodes (minimum)** - only one edge exists to cut\n`Input: [1,2]` → `Expected: 2`\n⚠️ Bug: only computing the product at the root (subtree sum = total, product = 0) → returns 0\n\n**All equal values, optimal cut at internal node** - the best split is not at a leaf\n`Input: [5,5,5,5,5]` → `Expected: 150`\n⚠️ Bug: only evaluating products at leaf nodes → returns 100 (max leaf product is 5×20=100) instead of 150\n\n**Skewed tree** - all nodes chain in one direction, recursion depth = n\n`Input: [1,2,null,3,null,4,null,5]` → `Expected: 54`\n⚠️ Bug: computing subtree sum as node.val + immediate children only (not full subtree) → node 3 sum = 7 instead of 12, returns 56 instead of 54\n\n**Large product overflow** - 5×10⁴ nodes × 10⁴ = 5×10⁸ total; max product ≈ 6.25×10¹⁶\n⚠️ Bug: using `int` for the product variable → overflow (6.25×10¹⁶ exceeds 2.1×10⁹), returns wrong value"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must remove exactly k edges (k ≥ 1) to split the tree into k+1 subtrees, maximizing the product of their sums?",
+      "a": "Use tree DP where dp[node][j] = maximum product of j parts within the subtree of node. For each node, try every split of j parts among the left subtree, right subtree, and the node itself. Base case: dp[node][1] = subtree_sum(node). TC: O(n·k²), SC: O(n·k)."
+    },
+    {
+      "q": "What if node values can be negative?",
+      "a": "The formula subtree_sum × (total − subtree_sum) still holds, but the maximum may shift to extreme subtree sums rather than near total/2. The same two-pass DFS evaluates all cuts, so the algorithm structure is unchanged. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if the tree has 10⁸ nodes and recursion would overflow the call stack?",
+      "a": "Replace recursion with an iterative post-order traversal using an explicit stack. First pass computes the total sum; second pass computes each subtree sum bottom-up and tracks the max product. The explicit stack uses O(h) space. TC: O(n), SC: O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    long long totalSum = 0;\n    long long maxProd = 0;\n    static const int MOD = 1000000007;\n\n    long long computeSum(TreeNode* node) {\n        if (!node) return 0;\n        return (long long)node->val + computeSum(node->left) + computeSum(node->right);\n    }\n\n    long long dfs(TreeNode* node) {\n        if (!node) return 0;\n        long long left = dfs(node->left);\n        long long right = dfs(node->right);\n        long long subtreeSum = (long long)node->val + left + right;\n        long long product = subtreeSum * (totalSum - subtreeSum);\n        if (product > maxProd) maxProd = product;\n        return subtreeSum;\n    }\n\npublic:\n    int maxProduct(TreeNode* root) {\n        totalSum = 0;\n        maxProd = 0;\n        totalSum = computeSum(root);\n        dfs(root);\n        return (int)(maxProd % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

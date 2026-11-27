@@ -1,0 +1,40 @@
+{
+  "slug": "nth-digit",
+  "title": "Nth Digit",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Mathematical Digit Extraction",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long variables (N, len, count, start, num, d, right, i): constant number of scalars → O(1)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "The sequence is formed by concatenating numbers of increasing lengths: 1-9 (9 digits), 10-99 (180 digits), 100-999 (2700 digits), and so on. We can subtract the total digit counts of these blocks from $n$ until $n$ falls within the current block. Once the correct block (length $k$) is found, we determine the exact number containing the target digit using integer division, and then extract the specific digit using a loop of division and modulo, avoiding string allocation entirely.",
+  "hints": [
+    "The sequence is formed by concatenating numbers of increasing lengths: 1-9 (9 digits), 10-99 (180 digits), 100-999 (2700 digits). How can you use these fixed-size blocks to skip directly to the block containing the $n$-th digit?",
+    "Subtract the total digit count of each length block from $n$ until $n$ falls within the current block. For $n = 11$, subtract 9 (from 1-9) to get 2, meaning the target is the 2nd digit in the 2-digit block starting at 10.",
+    "```\nwhile n > len * count:\n    n -= len * count\n    len += 1\n    count *= 10\n    start *= 10\nnum = start + (n - 1) / len\nd = (n - 1) % len\nfor i = 0 to len - 1 - d:\n    num /= 10\nreturn num % 10\n```",
+    "**Smallest input** - $n = 1$ is the absolute minimum.\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: initializing `start = 0` instead of `1` → returns `0`.\n\n**Overflow** - $n = 2^{31}-1$ requires traversing up to 9-digit numbers, where `len * count` reaches $9 \\times 10^8 \\times 9 = 8.1 \\times 10^9$.\n`Input: n = 2147483647` → `Expected: 7`\n⚠️ Bug: using `int` for `len` and `count` → `len * count` overflows and loops infinitely or returns wrong digit.\n\n**Boundary index** - $n$ exactly at the end of a block, e.g., $n = 189$ (last 2-digit).\n`Input: n = 189` → `Expected: 9`\n⚠️ Bug: using `n / len` instead of `(n - 1) / len` to find the number → computes `num = 10 + 189 / 2 = 104`, returns `4`."
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to find the $n$-th digit of the sequence of prime numbers concatenated?",
+      "a": "Since there is no closed-form formula for the $n$-th prime, you would need to generate primes up to a sufficient bound using a sieve. The time complexity becomes $O(P \\log \\log P)$ where $P$ is the $n$-th prime, and space is $O(P)$ for the sieve."
+    },
+    {
+      "q": "What if $n$ can be up to $10^{18}$?",
+      "a": "The number of digits in the target number grows logarithmically, so the while loop still runs in $O(\\log n)$ time. However, `start` and `num` would exceed 64-bit integers around $n \\approx 10^{18}$, requiring big integer arithmetic for the division and modulo operations, increasing the time complexity by a factor dependent on the big integer library."
+    },
+    {
+      "q": "What if you need to answer multiple queries of $n$ efficiently?",
+      "a": "You can precompute the cumulative digit counts for each length block (up to 9 or 10 blocks for 32-bit integers). Each query then uses binary search on this tiny precomputed array to find the correct block in $O(1)$ time, making the overall time per query $O(1)$ and space $O(1)$."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findNthDigit(int n) {\n        long long N = n;\n        long long len = 1;\n        long long count = 9;\n        long long start = 1;\n        \n        while (N > len * count) {\n            N -= len * count;\n            len++;\n            count *= 10;\n            start *= 10;\n        }\n        \n        long long num = start + (N - 1) / len;\n        long long d = (N - 1) % len;\n        long long right = len - 1 - d;\n        \n        for (long long i = 0; i < right; i++) {\n            num /= 10;\n        }\n        \n        return num % 10;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

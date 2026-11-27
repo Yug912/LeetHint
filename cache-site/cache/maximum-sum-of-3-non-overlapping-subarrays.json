@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-sum-of-3-non-overlapping-subarrays",
+  "title": "Maximum Sum of 3 Non-Overlapping Subarrays",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix/Suffix Max with Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> w: up to n−k+1 entries → O(n)\n- vector<int> leftMax: up to n−k+1 entries → O(n)\n- vector<int> rightMax: up to n−k+1 entries → O(n)\n- vector<int> ans: 3 entries → O(1)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "Fix the middle subarray's starting index j. Then the best left subarray lies entirely before j (starting in [0, j−k]) and the best right subarray lies entirely after j (starting in [j+k, m−1]), and these two choices are independent. Precompute prefix-max and suffix-max index arrays over the length-k window sums so that, for each j, the optimal left and right partners are O(1) lookups. Sweep j, track the maximum combined sum, and because leftMax is non-decreasing and j increases, the first j achieving the max automatically yields the lexicographically smallest triple.",
+  "hints": [
+    "If you fix which length-k window is the middle one, what freedom remains for choosing the left and right windows, and are those two choices independent of each other?",
+    "Precompute prefix-max and suffix-max index arrays over the window sums. For Example 1 (k=2) the window sums are [3,3,3,8,13,12,6]; prefix-max indices are [0,0,0,3,4,4,4] and suffix-max indices are [4,4,4,4,4,5,6].",
+    "```\ncompute window sums w[0..m-1]\nleftMax[i]  = index of max w in [0..i]     (left→right, tie → smaller index)\nrightMax[i] = index of max w in [i..m-1]   (right→left, tie → smaller index)\nfor j from k to m-1-k:\n    l = leftMax[j-k],  r = rightMax[j+k]\n    if w[l] + w[j] + w[r] > best:\n        best = total,  ans = [l, j, r]\nreturn ans\n```",
+    "**Smallest input** - n=3, k=1, only one valid triple.\n`Input: nums = [3,1,2], k = 1` → `Expected: [0,1,2]`\n⚠️ Bug: writing the loop bound as `j < m-1-k` instead of `j + k <= m - 1` → returns `[-1,-1,-1]` (loop body never executes)\n\n**All equal values** - every window has the same sum, so lexicographic tie-breaking on the right side matters.\n`Input: nums = [1,1,1,1,1,1,1], k = 2` → `Expected: [0,2,4]`\n⚠️ Bug: using `>` instead of `>=` when building rightMax (keeps the larger index on tie) → returns `[0,2,5]`\n\n**Tie across middle positions** - multiple j values give the same total; the smallest j must win.\n`Input: nums = [5,5,5,5,5,5,5,5,5], k = 2` → `Expected: [0,2,4]`\n⚠️ Bug: using `>=` instead of `>` in the total comparison (updates on every tie) → returns `[0,5,7]`\n\n**Boundary indices** - the optimal left window starts at index 0 and the optimal right window ends at the last valid position.\n`Input: nums = [10,1,1,10,1,1,10], k = 1` → `Expected: [0,3,6]`\n⚠️ Bug: initialising `best` to 0 instead of −1 (all window sums are positive here so this passes, but with a modified input containing zeros it would fail to update) → returns `[-1,-1,-1]` on `nums = [0,0,0,0,0,0,0], k = 1`"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to finding m non-overlapping subarrays of length k with maximum sum.",
+      "a": "Use DP where dp[i][j] is the maximum sum using j subarrays chosen from windows 0..i. Transition: dp[i][j] = max(dp[i-1][j], dp[i-k][j-1] + w[i]). Reconstruct indices by backtracking. Time O(mn), space O(mn) reducible to O(n) with a rolling array, but reconstruction needs the full table or a divide-and-conquer approach."
+    },
+    {
+      "q": "Each of the three subarrays may have a different length k1, k2, k3.",
+      "a": "Compute three separate window-sum arrays with the respective lengths. The middle sweep adjusts offsets: left windows end before the middle starts, right windows start after the middle ends. The prefix-max and suffix-max arrays are built per window-sum array. Time O(n), space O(n)."
+    },
+    {
+      "q": "Reduce auxiliary space to O(1) extra (beyond the input array).",
+      "a": "Encode the suffix-max indices into the input array itself (values fit in 16 bits per the constraint, so pack the index into the upper bits or reuse the array after computing window sums). Then do a single left-to-right pass maintaining leftMax as a scalar. Time O(n), space O(1) extra by modifying the input in place."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maxSumOfThreeSubarrays(vector<int>& nums, int k) {\n        int n = nums.size();\n        int m = n - k + 1;\n        vector<long long> w(m);\n        long long s = 0;\n        for (int i = 0; i < k; i++) s += nums[i];\n        w[0] = s;\n        for (int i = 1; i < m; i++) {\n            s += nums[i + k - 1] - nums[i - 1];\n            w[i] = s;\n        }\n        vector<int> leftMax(m);\n        leftMax[0] = 0;\n        for (int i = 1; i < m; i++) {\n            leftMax[i] = (w[i] > w[leftMax[i - 1]]) ? i : leftMax[i - 1];\n        }\n        vector<int> rightMax(m);\n        rightMax[m - 1] = m - 1;\n        for (int i = m - 2; i >= 0; i--) {\n            rightMax[i] = (w[i] >= w[rightMax[i + 1]]) ? i : rightMax[i + 1];\n        }\n        long long best = -1;\n        vector<int> ans(3);\n        for (int j = k; j + k <= m - 1; j++) {\n            int l = leftMax[j - k];\n            int r = rightMax[j + k];\n            long long total = w[l] + w[j] + w[r];\n            if (total > best) {\n                best = total;\n                ans[0] = l;\n                ans[1] = j;\n                ans[2] = r;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

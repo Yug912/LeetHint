@@ -1,0 +1,40 @@
+{
+  "slug": "rearrange-spaces-between-words",
+  "title": "Rearrange Spaces Between Words",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, spaces, words, gaps, extra, wordCount): constant → O(1)\n- bool inWord: constant → O(1)\n- string result: returned output, not counted per LeetCode convention\n- recursion depth: none",
+  "approach": "Count total spaces and total words in a first pass over the string. Compute `gaps = spaces / (words - 1)` and `extra = spaces % (words - 1)` when there are at least two words; if there is only one word, all spaces go to the end. In a second pass, iterate through the input, copying each word character into the result and inserting `gaps` spaces before every word except the first, then append `extra` spaces at the end. This avoids storing words in a vector - output is built directly from the input.",
+  "hints": [
+    "What two quantities of the input fully determine how the spaces should be distributed among the words?",
+    "Two-pass string processing. First pass counts total spaces and words; second pass copies each word and inserts the computed number of spaces. For \"  this   is   a sentence  \": 9 spaces, 4 words → 3 between each pair, 0 extra.",
+    "```\ncount total_spaces and words in text\ngaps = words > 1 ? total_spaces / (words - 1) : 0\nextra = words > 1 ? total_spaces % (words - 1) : total_spaces\nfor each word in text in order:\n    if not first word: append gaps spaces to result\n    append word to result\nappend extra spaces to result\nreturn result\n```",
+    "**Single word** - words equals 1, so (words - 1) is zero\n`Input: \"  hello  \"` → `Expected: \"hello    \"`\n⚠️ Bug: computing gaps as spaces / (words - 1) without guarding words > 1 → division by zero, crash\n\n**Remainder at end** - spaces do not divide evenly by (words - 1)\n`Input: \"a  b c\"` → `Expected: \"a b c \"`\n⚠️ Bug: placing remainder spaces between words instead of at the end → \"a  b c\" (unequal spacing)\n\n**Even split** - spaces divide exactly, remainder is zero\n`Input: \"  a b c\"` → `Expected: \"a  b  c\"`\n⚠️ Bug: unconditionally appending one trailing space → \"a  b  c \" (wrong length)\n\n**Leading spaces** - all spaces come before the first word\n`Input: \"   ab cd\"` → `Expected: \"ab    cd\"`\n⚠️ Bug: copying leading spaces into the result → \"   ab    cd\" (preserves leading spaces, wrong length)"
+  ],
+  "followUps": [
+    {
+      "q": "If text.length could be up to 10^9 and you can only read the stream once, how would you adapt?",
+      "a": "You need total spaces and word count before computing the gap size, so a single streaming pass requires buffering all words in memory. Store words as (offset, length) pairs during the pass, then emit them with computed spacing. Time O(n), space O(number of words) for the buffer."
+    },
+    {
+      "q": "If the text could contain tabs and newlines in addition to spaces, how would you handle it?",
+      "a": "Treat every whitespace character as a space for counting. In the second pass, skip all consecutive whitespace between words and insert the computed number of space characters. The logic is identical since only the counting criterion changes. Time O(n), space O(1)."
+    },
+    {
+      "q": "If the output needed to be right-justified (extra spaces at the beginning instead of the end), how would you modify?",
+      "a": "Compute gaps and extra exactly as before, but prepend extra spaces before the first word instead of appending after the last. The second pass adds extra spaces first, then each word with gaps spaces between pairs. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string reorderSpaces(string text) {\n        int n = text.size();\n        int spaces = 0, words = 0;\n        bool inWord = false;\n        \n        for (int i = 0; i < n; i++) {\n            if (text[i] == ' ') {\n                spaces++;\n                inWord = false;\n            } else {\n                if (!inWord) {\n                    words++;\n                    inWord = true;\n                }\n            }\n        }\n        \n        int gaps = (words > 1) ? spaces / (words - 1) : 0;\n        int extra = (words > 1) ? spaces % (words - 1) : spaces;\n        \n        string result;\n        result.reserve(n);\n        int wordCount = 0;\n        inWord = false;\n        \n        for (int i = 0; i < n; i++) {\n            if (text[i] != ' ') {\n                if (!inWord) {\n                    if (wordCount > 0) {\n                        result.append(gaps, ' ');\n                    }\n                    inWord = true;\n                    wordCount++;\n                }\n                result.push_back(text[i]);\n            } else {\n                inWord = false;\n            }\n        }\n        \n        result.append(extra, ' ');\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-absolute-difference-in-bst",
+  "title": "Minimum Absolute Difference in BST",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Morris In-order Traversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- TreeNode* cur, prev, pred: three pointers, constant → O(1)\n- no recursion, no stack, no containers\n- not counted: input tree, returned int",
+  "approach": "In a BST, an in-order traversal visits values in strictly increasing order, so the minimum absolute difference between any two nodes equals the minimum difference between consecutive values in that order. Morris in-order traversal achieves this in O(n) time and O(1) extra space by temporarily setting each node's in-order predecessor's right pointer back to the node, replacing the recursion/stack. We keep a pointer to the previously visited node and update the answer with `cur->val - prev->val` at each visit.",
+  "hints": [
+    "For any three values a < b < c, how does |c − a| relate to |b − a| and |c − b|?",
+    "Morris in-order traversal threads each node's in-order predecessor back to itself, enabling O(1)-space sorted traversal of a BST. For root 4 with left child 2: find 2's rightmost descendant (node 3), set 3's right pointer to 4, then descend to 2.",
+    "cur = root, prev = null, ans = INF\nwhile cur != null:\n    if cur.left == null:\n        if prev != null: ans = min(ans, cur.val - prev.val)\n        prev = cur\n        cur = cur.right\n    else:\n        pred = cur.left\n        while pred.right != null and pred.right != cur: pred = pred.right\n        if pred.right == null:\n            pred.right = cur\n            cur = cur.left\n        else:\n            pred.right = null\n            if prev != null: ans = min(ans, cur.val - prev.val)\n            prev = cur\n            cur = cur.right\nreturn ans",
+    "**Smallest input** - only two nodes, no left subtree.\n`Input: [1,null,3]` → `Expected: 2`\n⚠️ Bug: initializing `prev` to 0 instead of null and skipping the null check → first comparison gives 1−0=1, returns 1.\n\n**Left-skewed tree** - every node has only a left child, deepest node visited first.\n`Input: [5,4,null,3,null,2,null,1]` → `Expected: 1`\n⚠️ Bug: using recursive in-order traversal → uses O(n) stack space, defeating the O(1) goal (and risks stack overflow on a skewed tree of 10^4 nodes if the limit is tight).\n\n**Boundary values** - node values at the constraint extremes 0 and 10^5.\n`Input: [0,null,100000]` → `Expected: 100000`\n⚠️ Bug: initializing `ans` to 0 instead of INT_MAX → min(0, 100000) = 0, returns 0.\n\n**Left child only** - root with one left child and no right subtree, so a thread must be created and removed.\n`Input: [5,3]` → `Expected: 2`\n⚠️ Bug: updating `prev` only in the \"left == null\" branch, not in the thread-removal branch → prev stays null when node 5 is visited via its thread, ans never updated, returns INT_MAX."
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is an arbitrary binary tree, not a BST?",
+      "a": "In-order no longer yields sorted values, so collect all node values into an array, sort it, then scan adjacent pairs for the minimum difference. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if you must find the k-th smallest absolute difference among all pairs?",
+      "a": "Binary search on the answer d; for each d, count pairs with difference ≤ d using two pointers over the in-order sequence (stored or streamed). Time O(n log(max−min)), space O(n) to store the sequence or O(1) with Morris if you re-traverse per check."
+    },
+    {
+      "q": "What if the tree is modified between queries (insertions/deletions) and you must answer min-difference queries online?",
+      "a": "Maintain a sorted set of values and a multiset of adjacent gaps; each insert/delete touches O(1) gaps. Query O(1), update O(log n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int getMinimumDifference(TreeNode* root) {\n        int ans = INT_MAX;\n        TreeNode* prev = nullptr;\n        TreeNode* cur = root;\n        while (cur != nullptr) {\n            if (cur->left == nullptr) {\n                if (prev != nullptr) {\n                    int d = cur->val - prev->val;\n                    if (d < ans) ans = d;\n                }\n                prev = cur;\n                cur = cur->right;\n            } else {\n                TreeNode* pred = cur->left;\n                while (pred->right != nullptr && pred->right != cur) {\n                    pred = pred->right;\n                }\n                if (pred->right == nullptr) {\n                    pred->right = cur;\n                    cur = cur->left;\n                } else {\n                    pred->right = nullptr;\n                    if (prev != nullptr) {\n                        int d = cur->val - prev->val;\n                        if (d < ans) ans = d;\n                    }\n                    prev = cur;\n                    cur = cur->right;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

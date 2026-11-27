@@ -1,0 +1,40 @@
+{
+  "slug": "can-i-win",
+  "title": "Can I Win",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask DP with Memoization",
+  "tc": "O(2^n · n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<char> memo: 2^n bytes → O(2^n)\n- recursion depth: at most n → O(n)\n- not counted: input parameters",
+  "approach": "The state of the game is fully captured by which integers have been used (a bitmask, since maxChoosableInteger ≤ 20) and the remaining total needed. From any state, the current player wins if they can pick an unused integer i such that either i ≥ remaining (immediate win) or the opponent loses from the resulting state. We memoize results per bitmask to avoid recomputation; the search space is 2^20 · 20 ≈ 2·10^7, well within budget. Two early exits: desiredTotal ≤ 0 ⇒ true, and if the sum 1+…+maxChoosableInteger < desiredTotal ⇒ false (no one can ever win).",
+  "hints": [
+    "With maxChoosableInteger ≤ 20, what single piece of information fully describes the position at any turn, and how large is the set of all such positions?",
+    "Use a bitmask of used integers as the memoization key. For maxChoosableInteger=10, desiredTotal=11: from the empty mask, picking 1 leaves the opponent with mask {1} and remaining 10, so the opponent picks 10 and wins - so picking 1 fails.",
+    "```\ndfs(used, remaining):\n    if memo[used] known: return it\n    for i in 1..maxInt:\n        if i not in used:\n            if i >= remaining or not dfs(used | i, remaining - i):\n                memo[used] = true; return true\n    memo[used] = false; return false\n```",
+    "**Zero desired total** - first player wins immediately without moving.\n`Input: maxChoosableInteger = 10, desiredTotal = 0` → `Expected: true`\n⚠️ Bug: skipping the `desiredTotal <= 0` check → returns false (or crashes on empty search).\n\n**Impossible total** - sum of all choosable integers is less than desiredTotal.\n`Input: maxChoosableInteger = 5, desiredTotal = 50` → `Expected: false`\n⚠️ Bug: omitting the `sum < desiredTotal` early exit → recurses and returns false anyway but wastes time, or worse, returns true if the recursion base case is wrong.\n\n**Mirror-win for second player** - every first move has a winning reply.\n`Input: maxChoosableInteger = 10, desiredTotal = 11` → `Expected: false`\n⚠️ Bug: returning true as soon as any move makes `i >= remaining` without checking the opponent's reply → returns true (wrong).\n\n**Single integer suffices** - first player picks the only needed number.\n`Input: maxChoosableInteger = 10, desiredTotal = 1` → `Expected: true`\n⚠️ Bug: using `i > remaining` instead of `i >= remaining` → returns false (wrong).\n\n**Exact-sum parity** - total equals sum of all numbers; outcome depends on play.\n`Input: maxChoosableInteger = 4, desiredTotal = 10` → `Expected: true`\n⚠️ Bug: memo keyed only on `remaining` (ignoring the mask) → returns wrong result because the same remaining can be reachable with different used sets."
+  ],
+  "followUps": [
+    {
+      "q": "What if maxChoosableInteger could be up to 40 - how would you keep it tractable?",
+      "a": "The bitmask no longer fits in a 64-bit word and 2^40 states are infeasible. You would need a different state representation, e.g., canonicalizing by the multiset of remaining gap sizes or switching to a Sprague-Grundy-style analysis for special structure. TC becomes problem-dependent, often pseudo-polynomial in desiredTotal."
+    },
+    {
+      "q": "What if there are three players instead of two, all playing optimally to win?",
+      "a": "The win/lose recursion becomes a 3-valued \"current player wins / next player wins / third player wins\" evaluation; memoize on (mask, whose turn). The recurrence checks whether any move leads to a state where the current player eventually wins. TC stays O(2^n · n) but with a larger constant."
+    },
+    {
+      "q": "What if desiredTotal can be up to 10^9 - does the bitmask approach still work?",
+      "a": "The mask still has 2^n states, but `remaining` only shrinks, so memoization on the mask alone is still valid because remaining is determined by the mask (sum of all integers minus sum of used). Replace `remaining` with a precomputed `usedSum` lookup. TC unchanged at O(2^n · n); SC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canIWin(int maxChoosableInteger, int desiredTotal) {\n        if (desiredTotal <= 0) return true;\n        int sum = maxChoosableInteger * (maxChoosableInteger + 1) / 2;\n        if (sum < desiredTotal) return false;\n        vector<char> memo(1 << maxChoosableInteger, -1);\n        return dfs(0, desiredTotal, maxChoosableInteger, memo);\n    }\nprivate:\n    bool dfs(int used, int remaining, int maxInt, vector<char>& memo) {\n        if (memo[used] != -1) return memo[used];\n        for (int i = 1; i <= maxInt; i++) {\n            int bit = 1 << (i - 1);\n            if (used & bit) continue;\n            if (i >= remaining || !dfs(used | bit, remaining - i, maxInt, memo)) {\n                return memo[used] = true;\n            }\n        }\n        return memo[used] = false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

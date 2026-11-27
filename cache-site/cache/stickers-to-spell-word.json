@@ -1,0 +1,40 @@
+{
+  "slug": "stickers-to-spell-word",
+  "title": "Stickers to Spell Word",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask DP",
+  "tc": "O(2^n · m · n)",
+  "sc": "O(2^n + m·26)",
+  "spaceBreakdown": "- vector<int> dp: 2^15 = 32768 ints → O(2^n)\n- vector<vector<int>> cnt: m × 26 ints → O(m·26)\n- vector<int> avail per iteration: 26 ints, reused → O(26)\n- not counted: input stickers/target, returned int",
+  "approach": "The target length is at most 15, so we can represent any subset of target positions already spelled as a bitmask (2^15 = 32768 states). For each state `mask`, we try every sticker: greedily match its available letters to the still-uncovered positions of `target`, producing a new mask with more bits set. We compute `dp[mask]` = minimum stickers to reach that mask, iterating masks in increasing order so all predecessors are finalized first. If the full mask is unreachable, return -1.",
+  "hints": [
+    "The target string has length at most 15. What does that small bound let you enumerate exhaustively about the progress of spelling the target?",
+    "Use bitmask dynamic programming: a state is a bitmask of which target positions are already covered, `dp[mask]` = min stickers used. From `mask=0` (nothing covered), applying sticker `\"with\"` to target `\"thehat\"` covers positions of `t`,`h`,`e`,`h`,`a`,`t` where the sticker has those letters, yielding a new mask with those bits set.",
+    "```\ndp[0] = 0, others = INF\nfor mask in 0 .. (1<<n)-1:\n    if dp[mask] == INF: continue\n    for each sticker s:\n        avail = letter counts of s\n        newMask = mask\n        for j in 0..n-1:\n            if bit j not in mask and avail[target[j]] > 0:\n                avail[target[j]]--\n                newMask |= (1<<j)\n        dp[newMask] = min(dp[newMask], dp[mask]+1)\nreturn dp[full] or -1\n```",
+    "**Single sticker, single letter** - target needs one letter present in the only sticker.\n`Input: stickers = [\"a\"], target = \"a\"` → `Expected: 1`\n⚠️ Bug: skipping the sticker when `newMask == mask` is correct, but initializing `dp[0]` to anything other than 0 → returns 0 or INF.\n\n**Impossible target letter** - target contains a letter absent from every sticker.\n`Input: stickers = [\"notice\",\"possible\"], target = \"basicbasic\"` → `Expected: -1`\n⚠️ Bug: returning `dp[full]` without the INT_MAX check → returns 2147483647 instead of -1.\n\n**Sticker used multiple times** - same sticker must be applied twice to cover duplicate letters.\n`Input: stickers = [\"ab\"], target = \"aabb\"` → `Expected: 2`\n⚠️ Bug: marking a sticker as \"used\" after one application (greedy single-use) → returns -1 or 4.\n\n**Empty contribution sticker** - a sticker shares no letters with target.\n`Input: stickers = [\"xyz\",\"ab\"], target = \"ab\"` → `Expected: 1`\n⚠️ Bug: not guarding `newMask != mask` before `dp[newMask] = min(...)` causes self-loops but is harmless here; the real bug is updating `dp[mask]` itself with `dp[mask]+1` → infinite growth."
+  ],
+  "followUps": [
+    {
+      "q": "What if target length could be up to 30?",
+      "a": "2^30 states is too large for full bitmask DP. Switch to DP over the multiset of remaining letter counts (encoded as a tuple), or use A*/BFS with a heuristic lower bound (sum of remaining letters divided by max per-sticker contribution) to prune."
+    },
+    {
+      "q": "What if each sticker could be used at most once?",
+      "a": "Add a second dimension to the state tracking which stickers have been used (bitmask over m). State becomes (targetMask, usedStickersMask); transitions only allow unused stickers. Complexity becomes O(2^n · 2^m · m · n), feasible only when m is small."
+    },
+    {
+      "q": "What if stickers stream in one at a time and you must answer after each?",
+      "a": "Maintain `dp[mask]` incrementally; when a new sticker arrives, run one relaxation pass over all masks using only that sticker (each mask can be improved by at most applying the new sticker once to a previously optimal sub-mask). Each update is O(2^n · n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minStickers(vector<string>& stickers, string target) {\n        int n = target.size();\n        int N = 1 << n;\n        vector<int> dp(N, INT_MAX);\n        dp[0] = 0;\n        \n        int m = stickers.size();\n        vector<vector<int>> cnt(m, vector<int>(26, 0));\n        for (int i = 0; i < m; i++) {\n            for (char c : stickers[i]) cnt[i][c - 'a']++;\n        }\n        \n        for (int mask = 0; mask < N; mask++) {\n            if (dp[mask] == INT_MAX) continue;\n            for (int i = 0; i < m; i++) {\n                vector<int> avail = cnt[i];\n                int newMask = mask;\n                for (int j = 0; j < n; j++) {\n                    if ((mask >> j) & 1) continue;\n                    int idx = target[j] - 'a';\n                    if (avail[idx] > 0) {\n                        avail[idx]--;\n                        newMask |= (1 << j);\n                    }\n                }\n                if (newMask != mask && dp[mask] + 1 < dp[newMask]) {\n                    dp[newMask] = dp[mask] + 1;\n                }\n            }\n        }\n        return dp[N - 1] == INT_MAX ? -1 : dp[N - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

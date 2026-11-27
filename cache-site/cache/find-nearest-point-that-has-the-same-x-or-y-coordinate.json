@@ -1,0 +1,40 @@
+{
+  "slug": "find-nearest-point-that-has-the-same-x-or-y-coordinate",
+  "title": "Find Nearest Point That Has the Same X or Y Coordinate",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with Tracking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int bestDist, bestIdx, i, a, b, d: all scalars → O(1)\n- no containers, no recursion\n- not counted: input points, returned int",
+  "approach": "Scan the points left to right. A point is valid if its x equals the query x or its y equals the query y. For each valid point, compute the Manhattan distance and keep the smallest; because we scan in index order and only replace the best on a strictly smaller distance, ties automatically resolve to the smallest index. If no valid point is ever found, the initial sentinel value -1 is returned.",
+  "hints": [
+    "If two valid points tie on Manhattan distance, the problem wants the smallest index - so in what order should you scan, and when should you replace your current best?",
+    "Linear scan tracking the best distance and index. In Example 1, point [2,4] (index 2) gives distance 1; later [4,4] (index 4) also gives distance 1, but since it is not strictly smaller we keep index 2.",
+    "```\nbest = +infinity\nbestIdx = -1\nfor i in 0..n-1:\n    if points[i].x == x or points[i].y == y:\n        d = |x - points[i].x| + |y - points[i].y|\n        if d < best:\n            best = d\n            bestIdx = i\nreturn bestIdx\n```",
+    "**Same-location point** - the valid point coincides with your location, distance 0.\n`x = 3, y = 4, points = [[3,4]]` → `Expected: 0`\n⚠️ Bug: treating distance 0 as \"not a real match\" and skipping it → returns -1\n\n**No valid points** - no point shares x or y.\n`x = 3, y = 4, points = [[2,3]]` → `Expected: -1`\n⚠️ Bug: initializing bestIdx to 0 instead of -1 → returns 0\n\n**Tie on distance** - two valid points have equal distance, different indices.\n`x = 3, y = 4, points = [[2,4],[4,4]]` → `Expected: 0`\n⚠️ Bug: using `<=` instead of `<` in the distance comparison → returns 1\n\n**All points invalid** - every point differs in both coordinates.\n`x = 3, y = 4, points = [[1,2],[2,3],[5,6]]` → `Expected: -1`\n⚠️ Bug: returning bestIdx without checking whether any valid point was found → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the points array is static but you receive many (x, y) queries?",
+      "a": "Preprocess into two hash maps: one keyed by x-coordinate mapping to a list of (index, y), and one keyed by y-coordinate mapping to a list of (index, x). Each query gathers valid candidates from both maps and scans them for the minimum distance. TC O(n + Q·v) where v is the average number of valid points per query, SC O(n) for the maps."
+    },
+    {
+      "q": "What if you must return the k nearest valid points instead of just one?",
+      "a": "Collect every valid point with its distance, then maintain a max-heap of size k keyed by distance (and index for tie-breaking). Push each valid point; when the heap exceeds k, pop the largest. TC O(n log k), SC O(k)."
+    },
+    {
+      "q": "What if coordinates can be up to 10^9?",
+      "a": "The algorithm is unchanged - validity is still coordinate equality and Manhattan distance is at most 2×10^9, which fits in a 32-bit signed int but is safer in long long. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int nearestValidPoint(int x, int y, vector<vector<int>>& points) {\n        int bestDist = INT_MAX;\n        int bestIdx = -1;\n        for (int i = 0; i < (int)points.size(); i++) {\n            int a = points[i][0];\n            int b = points[i][1];\n            if (a == x || b == y) {\n                int d = abs(x - a) + abs(y - b);\n                if (d < bestDist) {\n                    bestDist = d;\n                    bestIdx = i;\n                }\n            }\n        }\n        return bestIdx;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

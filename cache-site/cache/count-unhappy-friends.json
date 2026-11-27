@@ -1,0 +1,40 @@
+{
+  "slug": "count-unhappy-friends",
+  "title": "Count Unhappy Friends",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation with Precomputed Lookup Table",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<vector<int>> rank: n×n matrix → O(n²)\n- vector<int> match: n entries → O(n)\n- recursion depth: none\n- not counted: input preferences, input pairs, returned int",
+  "approach": "Precompute a rank matrix where `rank[i][j]` is the position of friend `j` in `i`'s preference list, enabling O(1) preference comparisons. Build a `match` array mapping each friend to their assigned partner. For each friend `x`, iterate through their preference list in order; for each friend `u` that `x` prefers over their partner `y`, check whether `u` also prefers `x` over `u`'s partner `v`. If so, `x` is unhappy - count and break immediately.",
+  "hints": [
+    "For a single friend x, how many other friends u might you need to compare against x's partner, and given n ≤ 500, what per-comparison cost keeps the total feasible?",
+    "Precompute an n×n rank matrix where `rank[i][j]` = index of j in preferences[i]. In Example 1, `rank[1][3] = 0` and `rank[1][0] = 2`, so friend 1 prefers 3 over 0 in O(1).",
+    "```\nbuild rank[i][j] = position of j in preferences[i]\nbuild match[x] = x's partner from pairs\nfor each x:\n    y = match[x]\n    for each u in preferences[x]:\n        if rank[x][u] >= rank[x][y]: break\n        if rank[u][x] < rank[u][match[u]]:\n            mark x unhappy; break\nreturn count of unhappy\n```",
+    "**Double counting** - friend x is unhappy through two different u's\n`Input: n=4, preferences=[[1,2,3],[0,3,2],[0,3,1],[1,2,0]], pairs=[[0,3],[1,2]]` → `Expected: 4`\n⚠️ Bug: incrementing ans for each qualifying u without breaking after the first → returns 8\n\n**Partner most preferred** - x's partner is first in x's preference list, so no u is preferred over y\n`Input: n=4, preferences=[[1,2,3],[0,2,3],[0,1,3],[0,1,2]], pairs=[[0,1],[2,3]]` → `Expected: 0`\n⚠️ Bug: skipping the \"x prefers u over y\" check, only testing \"u prefers x over v\" → returns 2\n\n**Reversed comparison** - checking friends x likes less than y instead of more\n`Input: n=4, preferences=[[1,3,2],[2,3,0],[1,3,0],[0,2,1]], pairs=[[1,3],[0,2]]` → `Expected: 4`\n⚠️ Bug: using `rank[x][u] > rank[x][y]` instead of `<` → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 10^5 but each preference list had only k ≤ 20 entries, how would you adapt?",
+      "a": "Replace the n×n rank matrix with a hash map per person storing only k entries. Each friend's check iterates k entries with O(1) lookups. TC drops to O(n·k), SC to O(n·k)."
+    },
+    {
+      "q": "Instead of counting unhappy friends, find a pairing that makes everyone happy.",
+      "a": "This is equivalent to finding a stable matching, which always exists. Run Gale-Shapley using the same rank matrix for O(1) comparisons. TC: O(n²), SC: O(n²)."
+    },
+    {
+      "q": "What if you must also report, for each unhappy friend x, the specific u that makes them unhappy?",
+      "a": "The algorithm already finds the first qualifying u before breaking. Store that u in a parallel array instead of just incrementing a counter. TC and SC remain O(n²) and O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int unhappyFriends(int n, vector<vector<int>>& preferences, vector<vector<int>>& pairs) {\n        vector<vector<int>> rank(n, vector<int>(n));\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < n - 1; j++) {\n                rank[i][preferences[i][j]] = j;\n            }\n        }\n        vector<int> match(n);\n        for (auto& p : pairs) {\n            match[p[0]] = p[1];\n            match[p[1]] = p[0];\n        }\n        int ans = 0;\n        for (int x = 0; x < n; x++) {\n            int y = match[x];\n            for (int u : preferences[x]) {\n                if (rank[x][u] >= rank[x][y]) break;\n                int v = match[u];\n                if (rank[u][x] < rank[u][v]) {\n                    ans++;\n                    break;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

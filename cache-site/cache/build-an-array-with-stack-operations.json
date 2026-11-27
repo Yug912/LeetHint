@@ -1,0 +1,40 @@
+{
+  "slug": "build-an-array-with-stack-operations",
+  "title": "Build an Array With Stack Operations",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int idx, int i: scalars → O(1)\n- vector<string> ops: returned output, not counted\n- recursion depth: none",
+  "approach": "Iterate through the stream 1, 2, …, n while maintaining an index `idx` into `target`. For each stream value `i`: if `i == target[idx]`, emit \"Push\" and advance `idx`; otherwise (i must be less than the next target value since target is strictly increasing and we stop once matched) emit \"Push\" then \"Pop\" to discard it. Stop as soon as `idx` reaches `target.size()` so we never read past what's needed. This is correct because the stream is ordered and target is strictly increasing, so every value between consecutive target elements must be pushed then popped.",
+  "hints": [
+    "The stream is 1, 2, 3, …, n in fixed order and `target` is strictly increasing. For each target element, which stream values between it and the previous target element never appear in the final stack?",
+    "Use a single index pointer into `target` and walk the stream 1..n. For `target = [1,3]`, n = 3: at i = 1 emit \"Push\" (match, advance), at i = 2 emit \"Push\",\"Pop\" (discard), at i = 3 emit \"Push\" (match, advance, done).",
+    "```\nidx = 0\nfor i in 1..n:\n    if idx == len(target): break\n    if i == target[idx]:\n        emit \"Push\"\n        idx += 1\n    else:\n        emit \"Push\"\n        emit \"Pop\"\n```",
+    "**Stop early** - target ends before n, so extra stream values must not be read.\n`Input: target = [1,2], n = 4` → `Expected: [\"Push\",\"Push\"]`\n⚠️ Bug: looping `for i in 1..n` without breaking when `idx == target.size()` → returns `[\"Push\",\"Push\",\"Push\",\"Pop\",\"Push\",\"Pop\"]` (reads 3 and 4, violating the rule).\n\n**Large gap before first target** - many discarded values precede the first kept value.\n`Input: target = [100], n = 100` → `Expected: [\"Push\",\"Pop\"] × 99 then [\"Push\"]` (199 operations)\n⚠️ Bug: looping only `target.size()` times instead of up to `target.back()` → returns `[\"Push\"]` (1 operation), never emitting the 99 Push/Pop pairs for 1..99.\n\n**Missing Pop on discard** - non-matching stream values must be removed from the stack.\n`Input: target = [1,3], n = 3` → `Expected: [\"Push\",\"Push\",\"Pop\",\"Push\"]`\n⚠️ Bug: emitting only \"Push\" for non-matching `i` (no \"Pop\") → returns `[\"Push\",\"Push\",\"Push\"]`, leaving stack `[1,2,3]` instead of `[1,3]`.\n\n**Single element, single stream value** - smallest valid input.\n`Input: target = [1], n = 1` → `Expected: [\"Push\"]`\n⚠️ Bug: using `i < n` instead of `i <= n` in the loop → returns `[]` (loop body never executes)."
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^9 but `target.length` stays ≤ 100, how do you avoid iterating the entire stream?",
+      "a": "Iterate over `target` directly instead of 1..n. For each consecutive pair, the gap `target[k] - target[k-1] - 1` tells how many \"Push\",\"Pop\" pairs to emit before the next \"Push\". This drops TC to O(target.length()) and SC stays O(1)."
+    },
+    {
+      "q": "If `target` is not guaranteed sorted, how does the approach change?",
+      "a": "Sort `target` first (O(m log m) where m = target.length), then run the same pointer-based simulation. If duplicates exist after sorting, the problem becomes unsolvable with a strictly increasing stream unless re-reading is allowed - you'd need to detect and reject that."
+    },
+    {
+      "q": "If you must minimize the total number of operations, is the current solution already optimal?",
+      "a": "Yes. Every target element requires exactly one \"Push\", and every non-target value below `target.back()` requires exactly one \"Push\" and one \"Pop\" since the stream is consumed in order. No alternative ordering exists, so the operation count is fixed and minimal."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> buildArray(vector<int>& target, int n) {\n        vector<string> ops;\n        int idx = 0;\n        int sz = (int)target.size();\n        for (int i = 1; i <= n && idx < sz; i++) {\n            if (i == target[idx]) {\n                ops.push_back(\"Push\");\n                idx++;\n            } else {\n                ops.push_back(\"Push\");\n                ops.push_back(\"Pop\");\n            }\n        }\n        return ops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

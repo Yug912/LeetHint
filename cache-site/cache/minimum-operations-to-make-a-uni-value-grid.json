@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-make-a-uni-value-grid",
+  "title": "Minimum Operations to Make a Uni-Value Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Median Selection",
+  "tc": "O(m·n)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- vector<int> vals: up to m·n entries → O(m·n)\n- nth_element internal stack: O(log(m·n)) → dominated by above\n- not counted: input grid, returned int",
+  "approach": "All elements must share the same remainder mod x; if any two differ, no single target is reachable from both via ±x steps. When all remainders match, the median minimizes the total number of operations (sum of absolute differences). Flatten the grid, verify remainders, use std::nth_element to find the median in average O(n) time, then sum |v − median| / x across all elements.",
+  "hints": [
+    "Given that each operation changes a value by exactly x, which values in the grid could possibly become equal to each other?\nThe grid has up to 10^5 elements (m·n ≤ 10^5).",
+    "Flatten the grid into a 1D array and use std::nth_element to find the median in average O(n) time. For grid [[2,4],[6,8]] with x=2, the flattened array is [2,4,6,8] and nth_element places 6 at index 2.",
+    "```\nflatten grid into array vals\nif any v % x differs from vals[0] % x, return -1\nmedian = nth_element(vals, len(vals) / 2)\nops = sum of |v - median| / x for all v in vals\nreturn ops\n```",
+    "**Single element** - 1×1 grid, no operations needed\n`Input: grid = [[5]], x = 3` → `Expected: 0`\n⚠️ Bug: using index `total/2 - 1` for the median → accesses vals[-1], undefined behavior\n\n**Even count, mean of medians** - averaging the two middle elements gives an unreachable target\n`Input: grid = [[2,4],[6,8]], x = 2` → `Expected: 4`\n⚠️ Bug: using `(vals[n/2-1] + vals[n/2]) / 2 = 5` as target → 5 is unreachable by ±2, integer division gives total 2 instead of 4\n\n**Impossible remainders** - elements have different remainders mod x\n`Input: grid = [[1,2],[3,4]], x = 2` → `Expected: -1`\n⚠️ Bug: skipping the remainder check → computes ops with target 3, returns 1 instead of -1\n\n**Two elements, different remainders** - smallest impossible case\n`Input: grid = [[1,2]], x = 2` → `Expected: -1`\n⚠️ Bug: skipping remainder check and using integer division → |1-2|/2 = 0, returns 0 instead of -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is too large to fit in memory and elements arrive in a single pass?",
+      "a": "Use two heaps (max-heap for the lower half, min-heap for the upper half) to track the median online. Also track the first element's remainder mod x and reject any element with a different remainder. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if x can be different for each operation (you choose x each time)?",
+      "a": "Then any target value is reachable from any starting value in one operation. The problem reduces to finding the median and computing the sum of absolute differences without dividing by x. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the target value t is given as input instead of being chosen?",
+      "a": "Check that every element has the same remainder as t mod x. If so, compute the sum of |v - t| / x by iterating the grid directly-no need to flatten or find a median. TC: O(m·n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<vector<int>>& grid, int x) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int total = m * n;\n        \n        vector<int> vals;\n        vals.reserve(total);\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                vals.push_back(grid[i][j]);\n            }\n        }\n        \n        int r = vals[0] % x;\n        for (int v : vals) {\n            if (v % x != r) return -1;\n        }\n        \n        nth_element(vals.begin(), vals.begin() + total / 2, vals.end());\n        int median = vals[total / 2];\n        \n        long long ops = 0;\n        for (int v : vals) {\n            ops += abs(v - median) / x;\n        }\n        \n        return (int)ops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

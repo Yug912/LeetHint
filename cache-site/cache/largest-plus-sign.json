@@ -1,0 +1,40 @@
+{
+  "slug": "largest-plus-sign",
+  "title": "Largest Plus Sign",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming (4-directional arm lengths)",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- grid: n×n ints → O(n²)\n- left, right, up, down: four n×n int matrices → O(n²) total\n- ans: single int → O(1)\n- recursion depth: none\n- not counted: input mines",
+  "approach": "For each cell (r,c), the largest plus sign centered there has order equal to the minimum of the lengths of consecutive 1s extending up, down, left, and right from it. Precompute these four \"arm lengths\" with four linear DP sweeps over the grid (left-to-right, right-to-left, top-to-bottom, bottom-to-top), where dp[r][c] = dp[r][c±1]+1 if grid[r][c]==1 else 0. The answer is the max over all cells of the min of the four arm lengths. This is correct because a plus sign of order k centered at (r,c) requires k consecutive 1s in each direction including the center, and the min arm length is exactly the largest such k.",
+  "hints": [
+    "For a cell to be the center of a plus sign of order k, what must be true about the run of 1s in each of the four cardinal directions starting from it? The grid is at most 500×500, so an O(n²) precomputation per direction fits comfortably.",
+    "Use four DP matrices: left[r][c], right[r][c], up[r][c], down[r][c], each storing the count of consecutive 1s from (r,c) in that direction. In Example 1 (n=5, mine at (4,2)), at center (2,2) the down arm hits the zero at (4,2), so down[2][2]=2 while the others are 3, giving order min(3,3,3,2)=2.",
+    "```\nfor each cell: grid[r][c] = 0 if mined else 1\nfor r in 0..n-1:\n    for c in 0..n-1:    left[r][c]  = grid[r][c] ? left[r][c-1]+1  : 0\n    for c in n-1..0:    right[r][c] = grid[r][c] ? right[r][c+1]+1 : 0\nfor c in 0..n-1:\n    for r in 0..n-1:    up[r][c]    = grid[r][c] ? up[r-1][c]+1    : 0\n    for r in n-1..0:    down[r][c]  = grid[r][c] ? down[r+1][c]+1  : 0\nans = max over (r,c) of min(left, right, up, down)\n```",
+    "**Single cell, no mines** - only one cell exists, all 1s.\n`Input: n = 1, mines = []` → `Expected: 1`\n⚠️ Bug: initialising arm-length matrices to 1 instead of 0 and skipping the grid check → returns 1 even when the cell is mined.\n\n**Single cell, mined** - the only cell is 0.\n`Input: n = 1, mines = [[0,0]]` → `Expected: 0`\n⚠️ Bug: not guarding the final max with `if (grid[r][c])` and using min of arm lengths that default to 0 → still returns 0 by luck, but if defaults were 1 → returns 1.\n\n**Mine on the arm, not the center** - the largest plus is cut by a zero far from any center.\n`Input: n = 5, mines = [[4,2]]` → `Expected: 2`\n⚠️ Bug: computing only left and up (forgetting right/down) → at (2,2) returns min(3,3)=3 instead of 2.\n\n**Entire grid mined except one cell** - only isolated 1s, no arm of length >1 anywhere.\n`Input: n = 3, mines = [[0,0],[0,1],[0,2],[1,0],[1,2],[2,0],[2,1],[2,2]]` → `Expected: 1`\n⚠️ Bug: treating a mined cell's arm length as 1 instead of 0 → propagates +1 across zeros → returns 2.\n\n**Boundary center** - the optimal plus sits in a corner region where two arms are length 1.\n`Input: n = 2, mines = []` → `Expected: 1`\n⚠️ Bug: indexing left[r][c-1] without a c==0 guard → out-of-bounds read / wrong value → returns 0 or garbage."
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^5 but there are at most 5000 mines, how would you avoid the O(n²) grid?",
+      "a": "Only cells within distance 5000 of a mine (or the border) can be centers of large pluses; collect candidate rows/columns via coordinate compression of mine coordinates plus their neighbors, then run the same four-direction DP only on the compressed coordinate set. Time becomes O(mines²) and space O(mines)."
+    },
+    {
+      "q": "What if plus signs could also extend diagonally (8 arms total)?",
+      "a": "Add four more DP sweeps for the diagonal directions (up-left, up-right, down-left, down-right) using the same recurrence with offsets (-1,-1), (-1,+1), etc., then take the min of all eight arm lengths per cell. Time stays O(n²), space doubles to still O(n²)."
+    },
+    {
+      "q": "Instead of the largest order, return the count of plus signs achieving that largest order.",
+      "a": "During the final pass, track both the maximum order and how many cells attain it; when a new max is found reset the count to 1, when equal increment it. Time and space complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int orderOfLargestPlusSign(int n, vector<vector<int>>& mines) {\n        vector<vector<int>> grid(n, vector<int>(n, 1));\n        for (auto& m : mines) grid[m[0]][m[1]] = 0;\n\n        vector<vector<int>> left(n, vector<int>(n, 0));\n        vector<vector<int>> right(n, vector<int>(n, 0));\n        vector<vector<int>> up(n, vector<int>(n, 0));\n        vector<vector<int>> down(n, vector<int>(n, 0));\n\n        for (int r = 0; r < n; r++) {\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c]) left[r][c] = (c == 0 ? 1 : left[r][c - 1] + 1);\n            }\n            for (int c = n - 1; c >= 0; c--) {\n                if (grid[r][c]) right[r][c] = (c == n - 1 ? 1 : right[r][c + 1] + 1);\n            }\n        }\n        for (int c = 0; c < n; c++) {\n            for (int r = 0; r < n; r++) {\n                if (grid[r][c]) up[r][c] = (r == 0 ? 1 : up[r - 1][c] + 1);\n            }\n            for (int r = n - 1; r >= 0; r--) {\n                if (grid[r][c]) down[r][c] = (r == n - 1 ? 1 : down[r + 1][c] + 1);\n            }\n        }\n\n        int ans = 0;\n        for (int r = 0; r < n; r++) {\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c]) {\n                    int k = min(min(left[r][c], right[r][c]), min(up[r][c], down[r][c]));\n                    if (k > ans) ans = k;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

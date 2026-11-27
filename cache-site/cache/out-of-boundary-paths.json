@@ -1,0 +1,27 @@
+{
+  "slug": "out-of-boundary-paths",
+  "title": "Out of Boundary Paths",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming (2D grid, rolling layer over moves)",
+  "tc": "O(maxMove * m * n)",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- vector<vector<long long>> dp: m x n → O(m*n)\n- vector<vector<long long>> ndp: m x n → O(m*n)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Use DP over the number of moves: `dp[r][c]` is the number of ways to be at cell `(r,c)` after the current number of moves. Start with `dp[startRow][startColumn] = 1`. For each move, build a new grid where each cell distributes its count to its four neighbors; if a neighbor is outside the grid, add that count to the answer. This counts every path exactly once at the move where it first exits, and avoids exponential enumeration.",
+  "hints": [
+    "With maxMove up to 50 and a 50×50 grid, the ball can arrive at the same cell via many different move sequences. What minimal information about the ball's current state fully determines how many ways it can still exit the grid?",
+    "Dynamic programming with a 2D table `dp[r][c]` = ways to be at `(r,c)` after the current move count, rolled forward one move at a time. In Example 1, the first move from `(0,0)` with `dp=1` sends 1 path up (out) and 1 left (out), giving `ans=2`, while 1 lands at `(1,0)` and 1 at `(0,1)`.",
+    "```\ndp[startRow][startColumn] = 1\nans = 0\nfor move in 1..maxMove:\n    ndp = all zeros\n    for each cell (r, c) where dp[r][c] > 0:\n        for each direction (dr, dc):\n            (nr, nc) = (r + dr, c + dc)\n            if (nr, nc) is out of bounds:\n                ans += dp[r][c]\n            else:\n                ndp[nr][nc] += dp[r][c]\n    dp = ndp\nreturn ans mod (10^9 + 7)\n```",
+    "**Zero moves** - maxMove is 0, so the ball"
+  ],
+  "followUps": [],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findPaths(int m, int n, int maxMove, int startRow, int startColumn) {\n        const int MOD = 1000000007;\n        vector<vector<long long>> dp(m, vector<long long>(n, 0));\n        dp[startRow][startColumn] = 1;\n        long long ans = 0;\n        const int dr[4] = {-1, 1, 0, 0};\n        const int dc[4] = {0, 0, -1, 1};\n\n        for (int move = 0; move < maxMove; ++move) {\n            vector<vector<long long>> ndp(m, vector<long long>(n, 0));\n            for (int r = 0; r < m; ++r) {\n                for (int c = 0; c < n; ++c) {\n                    long long cnt = dp[r][c];\n                    if (cnt == 0) continue;\n                    for (int d = 0; d < 4; ++d) {\n                        int nr = r + dr[d];\n                        int nc = c + dc[d];\n                        if (nr < 0 || nr >= m || nc < 0 || nc >= n) {\n                            ans = (ans + cnt) % MOD;\n                        } else {\n                            ndp[nr][nc] = (ndp[nr][nc] + cnt) % MOD;\n                        }\n                    }\n                }\n            }\n            dp.swap(ndp);\n        }\n\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

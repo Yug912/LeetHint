@@ -1,0 +1,40 @@
+{
+  "slug": "non-decreasing-array",
+  "title": "Non-decreasing Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, modified, i: three scalars → O(1)\n- no containers, no recursion\n- not counted: input vector (modified in place)",
+  "approach": "Scan left to right and count positions where `nums[i] > nums[i+1]`. If a second violation is found, return false immediately. For the first violation, greedily repair in place: if `i == 0` or `nums[i-1] <= nums[i+1]`, lower `nums[i]` to `nums[i+1]` (safe because the left neighbor is satisfied); otherwise raise `nums[i+1]` to `nums[i]` (the only option that keeps the left side valid). This greedy choice is optimal because lowering is always preferred when it doesn't break the left neighbor-it keeps values small for future comparisons.",
+  "hints": [
+    "When you encounter a single position where `nums[i] > nums[i+1]`, what information from the elements just outside this pair determines whether lowering `nums[i]` or raising `nums[i+1]` is the safe repair?",
+    "Linear scan with greedy in-place repair. In `[4,2,3]`, at `i=0` we see `4 > 2`; since `i == 0` (no left neighbor to violate), lower `nums[0]` to `2`, giving `[2,2,3]`.",
+    "```\nmodified = 0\nfor i from 0 to n-2:\n    if nums[i] > nums[i+1]:\n        if modified > 0: return false\n        modified = 1\n        if i == 0 or nums[i-1] <= nums[i+1]:\n            nums[i] = nums[i+1]\n        else:\n            nums[i+1] = nums[i]\nreturn true\n```",
+    "**Boundary index (first element)** - the dip is at `i = 0`, so there is no left neighbor to check.\n`Input: nums = [4,2,3]` → `Expected: true`\n⚠️ Bug: always raising `nums[i+1]` instead of checking the left neighbor → produces `[4,4,3]`, sees `4 > 3`, returns `false`\n\n**Must raise, not lower** - lowering `nums[i]` would break the left neighbor `nums[i-1]`.\n`Input: nums = [5,7,1,8]` → `Expected: true`\n⚠️ Bug: always setting `nums[i] = nums[i+1]` (lowering the left element) → produces `[5,1,1,8]`, sees `5 > 1`, returns `false`\n\n**All elements equal** - no strict decrease exists anywhere.\n`Input: nums = [1,1,1]` → `Expected: true`\n⚠️ Bug: using `nums[i] >= nums[i+1]` as the violation test → counts two \"violations\", returns `false`\n\n**Two dips, unfixable** - two separate decreases; one edit cannot fix both.\n`Input: nums = [4,2,1]` → `Expected: false`\n⚠️ Bug: not tracking that a modification was already made (no `modified` counter) → fixes first dip to `[2,2,1]`, then fixes second to `[2,1,1]`, returns `true`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can modify at most `k` elements instead of at most one?",
+      "a": "Replace the early `return false` on the second violation with a counter that allows up to `k` fixes. The same greedy choice (lower when the left neighbor allows, otherwise raise) remains optimal because each fix is local and lowering keeps values minimal for future comparisons. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the array arrives as a stream and you must decide online whether each new element keeps the array fixable?",
+      "a": "Buffer the last two seen values in scalars and maintain the modification count. When a new element creates a dip, apply the same greedy decision using the buffered previous value as `nums[i-1]`. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you cannot modify the input array at all?",
+      "a": "Track an `effectivePrev` scalar representing the value the previous element would have after any applied fix, plus the value before it for the neighbor check. When a dip is found, decide the fix by comparing the buffered left-neighbor value with `nums[i+1]`, then update `effectivePrev` to reflect the chosen repair. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkPossibility(vector<int>& nums) {\n        int n = nums.size();\n        int modified = 0;\n        for (int i = 0; i + 1 < n; i++) {\n            if (nums[i] > nums[i + 1]) {\n                if (modified) return false;\n                modified = 1;\n                if (i == 0 || nums[i - 1] <= nums[i + 1]) {\n                    nums[i] = nums[i + 1];\n                } else {\n                    nums[i + 1] = nums[i];\n                }\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

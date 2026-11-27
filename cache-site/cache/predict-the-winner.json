@@ -1,0 +1,40 @@
+{
+  "slug": "predict-the-winner",
+  "title": "Predict the Winner",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n entries → O(n)\n- recursion: none (iterative)\n- not counted: input nums",
+  "approach": "Track the score difference (current player − opponent) rather than individual scores. For subarray [i..j], the current player picks an end, then the opponent plays optimally on the remainder: diff = max(nums[i] − diff(i+1,j), nums[j] − diff(i,j−1)). Since length-L subproblems depend only on length-(L−1) subproblems, a single 1D array updated left-to-right by increasing length suffices. Player 1 wins iff the difference for the full array is ≥ 0.",
+  "hints": [
+    "With both players playing optimally, what single quantity about any remaining contiguous subarray fully determines the outcome, instead of tracking each player's score separately?",
+    "1D dynamic programming on intervals: dp[i] stores the best score difference (current player minus opponent) for the subarray of the current length starting at index i. For [1,5,233,7], the length-2 window [5,233] yields dp = max(5−233, 233−5) = 228.",
+    "```\ndp[i] = nums[i]  for all i  (length 1)\nfor len = 2 to n:\n    for i = 0 to n - len:\n        j = i + len - 1\n        dp[i] = max(nums[i] - dp[i+1], nums[j] - dp[i])\nreturn dp[0] >= 0\n```",
+    "**Single element** - only one number exists, Player 1 takes it immediately\n`Input: [0]` → `Expected: true`\n⚠️ Bug: using `dp[0] > 0` instead of `dp[0] >= 0` → returns false\n\n**Tie** - both players end with equal scores\n`Input: [5,5]` → `Expected: true`\n⚠️ Bug: using `>` instead of `>=` in the final return → returns false\n\n**Greedy fails** - always picking the larger end is suboptimal\n`Input: [1,5,233,7]` → `Expected: true`\n⚠️ Bug: greedy strategy (pick max of both ends each turn) → P1 picks 7, P2 picks 233, P1 picks 5, P2 picks 1; P1=12 < P2=234 → returns false\n\n**Off-by-one loop bound** - skipping the last subarray of each length\n`Input: [1,5,2]` → `Expected: false`\n⚠️ Bug: writing `i < n - len` instead of `i <= n - len` → length-2 loop only processes i=0, length-3 loop never runs, dp[0]=4 ≥ 0 → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array length is up to 10^5?",
+      "a": "When n is even, Player 1 can always force at least a tie by choosing to collect all even-indexed or all odd-indexed elements (whichever sum is larger), so return true in O(n). When n is odd, the general case still requires O(n²) interval DP, so additional constraints would be needed."
+    },
+    {
+      "q": "What if there are three players instead of two?",
+      "a": "The zero-sum assumption breaks: maximizing your score is no longer equivalent to minimizing total opponent score. The state must track all three players' scores, making the DP state O(n² × S²) where S is the total sum. The 1D space optimization no longer applies because dependencies span multiple opponent score dimensions."
+    },
+    {
+      "q": "What if elements are appended to the right one at a time and you must answer after each append?",
+      "a": "Each new element extends every interval ending at the new right boundary. Recomputing the full DP from scratch gives O(n²) per query and O(n³) total. A more efficient approach reuses prior length computations but still requires O(n) work per append in the worst case, yielding O(n²) total."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool predictTheWinner(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> dp(nums.begin(), nums.end());\n        for (int len = 2; len <= n; len++) {\n            for (int i = 0; i <= n - len; i++) {\n                int j = i + len - 1;\n                dp[i] = max(nums[i] - dp[i + 1], nums[j] - dp[i]);\n            }\n        }\n        return dp[0] >= 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

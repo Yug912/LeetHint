@@ -1,0 +1,40 @@
+{
+  "slug": "longest-word-in-dictionary-through-deleting",
+  "title": "Longest Word in Dictionary through Deleting",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Next-Occurrence Table (Subsequence Matching)",
+  "tc": "O(n + S)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> next: (n+1) × 26 ints → O(n)\n- string best: returned output, not counted\n- loop variables (n, i, c, pos, idx, ok): O(1)",
+  "approach": "Preprocess `s` into a next-occurrence table: `next[i][c]` gives the smallest index `j ≥ i` where `s[j] == c` (or -1 if none), built right-to-left in O(26·n) time. Each dictionary word is then verified as a subsequence in O(|w|) time by jumping through the table instead of re-scanning `s`. Track the longest valid word, breaking ties by lexicographic order. Total: O(n + S) time where S = total dictionary characters, O(n) space.",
+  "hints": [
+    "Every dictionary word is checked against the same string `s`. What information about `s`, computed just once, would let each word be verified without re-reading all of `s`?\n`s` consists of lowercase English letters, so there are only 26 possible characters.",
+    "Build a next-occurrence table: `next[i][c]` = smallest index `j ≥ i` with `s[j] = c`, or -1. For `s = \"abpcplea\"`, `next[0]['p'] = 2`, so verifying `\"apple\"` jumps 0→2→4→5→6 in five lookups instead of scanning `s`.",
+    "```\nbuild next[i][c] = smallest j≥i with s[j]=c (or -1), right-to-left\nbest = \"\"\nfor each word w in dictionary:\n    pos = 0\n    for each char c in w: pos = next[pos][c]; if pos == -1: break; pos++\n    if all chars matched and (len(w) > len(best) or (len(w) == len(best) and w < best)): best = w\nreturn best\n```",
+    "**No valid word** - no dictionary word is a subsequence of `s`.\n`Input: s = \"abc\", dictionary = [\"xyz\"]` → `Expected: \"\"`\n⚠️ Bug: initializing `best` to `dictionary[0]` → returns `\"xyz\"`\n\n**Tie in length** - multiple valid words share the same maximum length.\n`Input: s = \"abc\", dictionary = [\"c\",\"b\",\"a\"]` → `Expected: \"a\"`\n⚠️ Bug: comparing only lengths, skipping the lexicographic tie-break → returns `\"c\"` (first valid word of max length)\n\n**Word longer than s** - a dictionary word longer than `s` can never be a subsequence.\n`Input: s = \"a\", dictionary = [\"ab\"]` → `Expected: \"\"`\n⚠️ Bug: two-pointer check without bounds on the `s` index → reads `s[1]` (out of bounds), may return `\"ab\"`\n\n**Single character input** - smallest valid input.\n`Input: s = \"a\", dictionary = [\"a\"]` → `Expected: \"a\"`\n⚠️ Bug: building the table with `for (i = n; i >= 0; i--)` and accessing `s[i]` at `i = n` → out-of-bounds read → returns `\"\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if `s` has length up to 10^9 and cannot fit in memory?",
+      "a": "The next-occurrence table needs O(n) space, which is infeasible at 10^9. Fall back to the two-pointer subsequence check per word, streaming `s` from external storage for each word. TC becomes O(D × n) time, O(1) auxiliary space per word check."
+    },
+    {
+      "q": "What if the dictionary has 10^9 words but `s` is short (n ≤ 1000)?",
+      "a": "The next table stays O(n) = O(26 × 1000) ints. Stream dictionary words one at a time, checking each in O(|w|) and keeping only the best. TC: O(n + S) where S is total dictionary characters, SC: O(n)."
+    },
+    {
+      "q": "What if you must return all longest valid words instead of just the lexicographically smallest?",
+      "a": "First pass finds the maximum valid length; second pass collects all words matching it, then sort lexicographically. TC: O(n + S + K log K) where K is the count of longest valid words, SC: O(n + K)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string findLongestWord(string s, vector<string>& dictionary) {\n        int n = s.size();\n        // next[i][c] = smallest index j >= i with s[j] == c, or -1\n        vector<vector<int>> next(n + 1, vector<int>(26, -1));\n        for (int i = n - 1; i >= 0; --i) {\n            for (int c = 0; c < 26; ++c)\n                next[i][c] = next[i + 1][c];\n            next[i][s[i] - 'a'] = i;\n        }\n        string best;\n        for (const string& w : dictionary) {\n            int pos = 0;\n            bool ok = true;\n            for (char ch : w) {\n                int idx = next[pos][ch - 'a'];\n                if (idx == -1) {\n                    ok = false;\n                    break;\n                }\n                pos = idx + 1;\n            }\n            if (ok && (w.size() > best.size() ||\n                       (w.size() == best.size() && w < best))) {\n                best = w;\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

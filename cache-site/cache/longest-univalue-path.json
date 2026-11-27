@@ -1,0 +1,40 @@
+{
+  "slug": "longest-univalue-path",
+  "title": "Longest Univalue Path",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DP (Post-order DFS)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call stack: depth up to h (≤ 1000 by constraint, O(n) worst case for skewed tree) → O(h)\n- int ans / locals: O(1)\n- no containers allocated",
+  "approach": "The longest univalue path has a unique \"highest\" node (closest to the root) where the path bends; from that node it extends downward through at most one child on each side. For each node, compute the longest univalue \"arm\" going down through one child (in edges), then the best path with this node as the peak is leftArm + rightArm where each arm only counts children matching the node's value. A post-order DFS returns the max single arm upward while updating a global answer with the two-arm sum at every node.",
+  "hints": [
+    "For any path in a tree, there is exactly one node on it that is closest to the root - at that node, how does the path split, and how many downward directions can it take?",
+    "Use a post-order DFS that returns the longest single downward arm of equal value from each node. At the node with value 4 in Example 2 (`[1,4,5,4,4,null,5]`), both children equal 4, so the path through it is arm(1) + arm(1) = 2 edges.",
+    "```\ndfs(node, ans):\n    if node is null: return 0\n    L = dfs(node.left, ans)\n    R = dfs(node.right, ans)\n    leftArm  = (node.left  and node.left.val  == node.val) ? L + 1 : 0\n    rightArm = (node.right and node.right.val == node.val) ? R + 1 : 0\n    ans = max(ans, leftArm + rightArm)\n    return max(leftArm, rightArm)\n```",
+    "**Empty tree** - root is null, no nodes exist\n`Input: []` → `Expected: 0`\n⚠️ Bug: omitting the `if (!node) return 0` guard and dereferencing node → undefined behavior / crash\n\n**Single node** - a path of one node has zero edges\n`Input: [1]` → `Expected: 0`\n⚠️ Bug: returning `leftArm + rightArm + 1` (counting nodes instead of edges) → returns 1\n\n**Path not through root** - the longest univalue path lives entirely in a subtree\n`Input: [1,4,5,4,4,null,5]` → `Expected: 2`\n⚠️ Bug: only computing the path through the root → returns 0\n\n**Skewed all-equal tree** - linked-list shape, every edge valid\n`Input: [1,1,null,1,null,1]` → `Expected: 3`\n⚠️ Bug: only tracking the max single arm instead of summing leftArm + rightArm at each peak → returns 3 (correct here) but fails balanced case `[1,1,1,1,1]` → returns 2 instead of 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if the path must start and end at leaves?",
+      "a": "Still post-order DFS, but each arm only counts if it reaches a leaf - propagate a flag indicating whether the arm terminates at a leaf, and only add arms that are leaf-terminated. TC stays O(n), SC stays O(h)."
+    },
+    {
+      "q": "What if values can be updated between queries (dynamic tree values)?",
+      "a": "Use a link-cut tree or heavy-light decomposition to maintain subtree arm lengths under point updates; each update costs O(log² n). TC becomes O((n + q) log² n), SC O(n)."
+    },
+    {
+      "q": "What if the tree is given as a stream and you must answer after each insertion?",
+      "a": "Maintain for each node its best left/right arm and recompute only along the path from the inserted node to the root, updating the global max incrementally. Each insertion costs O(h), so total TC is O(n·h), SC O(n) for storing the tree."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    int longestUnivaluePath(TreeNode* root) {\n        int ans = 0;\n        dfs(root, ans);\n        return ans;\n    }\nprivate:\n    int dfs(TreeNode* node, int& ans) {\n        if (!node) return 0;\n        int left = dfs(node->left, ans);\n        int right = dfs(node->right, ans);\n        int leftArm = 0, rightArm = 0;\n        if (node->left && node->left->val == node->val) leftArm = left + 1;\n        if (node->right && node->right->val == node->val) rightArm = right + 1;\n        if (leftArm + rightArm > ans) ans = leftArm + rightArm;\n        return leftArm > rightArm ? leftArm : rightArm;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

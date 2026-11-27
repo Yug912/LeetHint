@@ -1,0 +1,40 @@
+{
+  "slug": "heaters",
+  "title": "Heaters",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sorting + Binary Search",
+  "tc": "O((n + m) log m)",
+  "sc": "O(log m)",
+  "spaceBreakdown": "- sort(heaters): in-place introsort, O(log m) stack - counted as O(1) per in-place convention\n- iterator `it`, int `ans`, int `dist`: O(1) scalars\n- no additional containers allocated\n- not counted: input vectors `houses` and `heaters`",
+  "approach": "For each house, the minimum radius needed to warm it is the distance to its nearest heater. The overall answer is the maximum of these per-house minimum distances. Sort the heaters, then for each house use `lower_bound` to find the first heater at or above the house position; the closest heater is either that one or the one just before it. Take the max over all houses.",
+  "hints": [
+    "For each house individually, what is the smallest radius that would warm just that one house?",
+    "Sort the heaters, then for each house use binary search (`lower_bound`) to find the closest heater. For house 2 in `[1,2,3,4]` with heaters `[1,4]`, `lower_bound` finds heater 4 (distance 2), but the previous heater 1 is closer (distance 1).",
+    "```\nsort heaters\nans = 0\nfor each house h:\n    it = first heater >= h   (binary search)\n    dist = INF\n    if it exists: dist = *it - h\n    if it has a predecessor: dist = min(dist, h - predecessor)\n    ans = max(ans, dist)\nreturn ans\n```",
+    "**Single element, same position** - one house and one heater at the same spot\n`houses = [5], heaters = [5]` → `Expected: 0`\n⚠️ Bug: initializing `ans` to `INT_MAX` and taking `min` of all distances instead of `max` → returns `INT_MAX`\n\n**House beyond all heaters** - house is to the right of every heater\n`houses = [10], heaters = [1,2,3]` → `Expected: 7`\n⚠️ Bug: only checking `*it` when `it != end`, never checking `prev(it)` → returns `INT_MAX`\n\n**House before all heaters** - house is to the left of every heater\n`houses = [1], heaters = [5,6,7]` → `Expected: 4`\n⚠️ Bug: accessing `prev(it)` without verifying `it != begin` → undefined behavior, crash or garbage value\n\n**Unsorted heaters** - heater positions given in arbitrary order\n`houses = [1], heaters = [3,1,2]` → `Expected: 0`\n⚠️ Bug: skipping the sort step → `lower_bound` on `[3,1,2]` returns iterator to value 3, giving distance 2 instead of 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must select the minimum number of heaters from a candidate set to cover all houses with a fixed radius r?",
+      "a": "Sort houses and candidates. Greedily scan houses left to right; for each uncovered house, pick the rightmost candidate within distance r that still covers it. Each selected heater covers a maximal suffix of remaining houses. TC: O(n log n + m log m), SC: O(1)."
+    },
+    {
+      "q": "What if houses and heaters arrive as sorted streams too large to store in memory?",
+      "a": "Use a two-pointer merge: advance through both sorted streams simultaneously, keeping track of the nearest heater seen so far for each house. You never need random access, only the current and previous heater. TC: O(n + m), SC: O(1)."
+    },
+    {
+      "q": "What if you can place exactly k heaters at any integer position to minimize the radius?",
+      "a": "Binary search on the radius. For each candidate radius r, greedily place heaters from left to right: the first heater goes as far right as possible while still covering the leftmost house, then skip all houses it covers and repeat. If k heaters suffice, try a smaller radius. TC: O(n log(max_pos)), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findRadius(vector<int>& houses, vector<int>& heaters) {\n        sort(heaters.begin(), heaters.end());\n        int ans = 0;\n        for (int h : houses) {\n            auto it = lower_bound(heaters.begin(), heaters.end(), h);\n            int dist = INT_MAX;\n            if (it != heaters.end()) dist = *it - h;\n            if (it != heaters.begin()) dist = min(dist, h - *prev(it));\n            ans = max(ans, dist);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "the-number-of-full-rounds-you-have-played",
+  "title": "The Number of Full Rounds You Have Played",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Math / Interval Counting",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few int locals: O(1)\n- no containers, no recursion\n- not counted: input strings, returned int",
+  "approach": "Convert each time to minutes since midnight. If logout ≤ login, add 1440 to logout so the session is treated as crossing midnight. A round starting at minute S (a multiple of 15) is fully played iff login ≤ S and S+15 ≤ logout, i.e. S ∈ [login, logout−15]. The smallest valid S is ⌈login/15⌉·15 and the largest is ⌊(logout−15)/15⌋·15; the count is (largest−smallest)/15 + 1, or 0 if smallest > largest.",
+  "hints": [
+    "Each round occupies a fixed 15-minute slot starting on a 15-minute boundary. What must be true about your login time relative to a slot's start, and your logout time relative to that slot's end, for the slot to count as fully played?",
+    "Convert each \"hh:mm\" to total minutes; if logout ≤ login, add 1440 to logout (next-day wrap). For Example 1, login=571, logout=614, so valid round-starts are multiples of 15 in [571, 599] → only 585 (09:45), giving 1.",
+    "login = hh*60 + mm\nlogout = HH*60 + MM\nif logout <= login: logout += 1440\nlo = ceil(login / 15) * 15\nhi = floor((logout - 15) / 15) * 15\nif lo > hi: return 0\nreturn (hi - lo) / 15 + 1",
+    "**Boundary exact fit** - session exactly fills one round.\n`Input: loginTime=\"00:00\", logoutTime=\"00:15\"` → `Expected: 1`\n⚠️ Bug: computing smallest as (login/15 + 1)*15 (always strict next boundary) → returns 0.\n\n**Wrap across midnight** - logout earlier than login.\n`Input: loginTime=\"23:30\", logoutTime=\"00:15\"` → `Expected: 3`\n⚠️ Bug: not adding 1440 when logout ≤ login → logout=15, hi=0, lo=1410, returns 0.\n\n**No full round fits** - session shorter than 15 minutes.\n`Input: loginTime=\"00:01\", logoutTime=\"00:14\"` → `Expected: 0`\n⚠️ Bug: using floor for smallest, smallest=(1/15)*15=0, hi=0, returns 1.\n\n**Full day minus last partial** - login at 00:00, logout at 23:59.\n`Input: loginTime=\"00:00\", logoutTime=\"23:59\"` → `Expected: 95`\n⚠️ Bug: counting rounds with S ≤ logout instead of S+15 ≤ logout → hi=1425, returns 96."
+  ],
+  "followUps": [
+    {
+      "q": "Rounds now start every k minutes (k divides 60) instead of every 15. How does the solution change?",
+      "a": "Replace every 15 with k. The formula becomes (⌊(logout−k)/k⌋ − ⌈login/k⌉) + 1, still O(1) time and O(1) space."
+    },
+    {
+      "q": "You are given a list of (login, logout) sessions and must report, for each 15-minute round, how many sessions fully played it. Constraints: up to 10^5 sessions.",
+      "a": "For each session compute [lo, hi] as multiples of 15, then do a difference array of size 96 (or 192 for wrap) incremented by 1 on [lo/15, hi/15]. Time O(n + 96), space O(96)."
+    },
+    {
+      "q": "Sessions can span multiple days (logout up to 7 days after login). Return total full rounds.",
+      "a": "Add the appropriate multiple of 1440 to logout so it exceeds login, then the same formula works with logout up to ~7·1440; values stay well under 2^31, so int is fine. Time O(1), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfRounds(string loginTime, string logoutTime) {\n        int lh = (loginTime[0] - '0') * 10 + (loginTime[1] - '0');\n        int lm = (loginTime[3] - '0') * 10 + (loginTime[4] - '0');\n        int rh = (logoutTime[0] - '0') * 10 + (logoutTime[1] - '0');\n        int rm = (logoutTime[3] - '0') * 10 + (logoutTime[4] - '0');\n        int login = lh * 60 + lm;\n        int logout = rh * 60 + rm;\n        if (logout <= login) logout += 1440;\n        int smallest = ((login + 14) / 15) * 15;\n        int largest = ((logout - 15) / 15) * 15;\n        if (smallest > largest) return 0;\n        return (largest - smallest) / 15 + 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-height-trees",
+  "title": "Minimum Height Trees",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Leaf-Peeling / Topological Centroid",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> adj: 2(n-1) ints → O(n)\n- vector<int> degree: n entries → O(n)\n- queue<int> q: up to n entries → O(n)\n- vector<int> res: ≤ 2 entries → O(1)\n- recursion depth: none\n- not counted: input edges, returned vector",
+  "approach": "The MHT roots are the centroids of the tree - at most 2 of them. Find them by leaf-peeling (Kahn-style BFS): repeatedly remove all current leaves (degree-1 nodes) level by level until 1-2 nodes remain. Those survivors are the centroids, which are exactly the MHT roots, because the height from a centroid equals ⌈diameter/2⌉, the minimum possible.",
+  "hints": [
+    "The minimum possible height equals half the tree's longest path (diameter). Where on that path would a root sit to minimize height, and how many such positions can exist?",
+    "Use leaf-peeling (Kahn-style BFS): strip all degree-1 nodes level by level. In Example 1, leaves {0,2,3} vanish first, leaving node 1 - the answer.",
+    "```\nbuild adjacency list and degree array\nenqueue all nodes with degree == 1\nremaining = n\nwhile remaining > 2:\n    for each node in current queue level:\n        remove it; remaining--\n        for each neighbor: decrement its degree\n            if degree becomes 1: enqueue\nreturn nodes left in queue\n```",
+    "**Single node** - n=1, no edges at all\n`Input: n = 1, edges = []` → `Expected: [0]`\n⚠️ Bug: building adjacency from edges without an `n==1` early return → returns `[]`\n\n**Two nodes** - both are leaves simultaneously\n`Input: n = 2, edges = [[0,1]]` → `Expected: [0,1]`\n⚠️ Bug: loop condition `remaining > 1` instead of `> 2` → returns `[1]`\n\n**Star graph** - one center, all others leaves\n`Input: n = 4, edges = [[1,0],[1,2],[1,3]]` → `Expected: [1]`\n⚠️ Bug: popping one leaf at a time instead of level-by-level → returns `[3,1]`\n\n**Path graph** - even-length chain has two centroids\n`Input: n = 6, edges = [[0,1],[1,2],[2,3],[3,4],[4,5]]` → `Expected: [2,3]`\n⚠️ Bug: `while (!q.empty())` with no `remaining` counter → strips everything, returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input graph may contain cycles (not guaranteed to be a tree)?",
+      "a": "Leaf-peeling still removes all tree-like parts; the survivors lie on cycles and are all equivalent candidates per 2-edge-connected component. Return all survivors. TC: O(V+E), SC: O(V+E)."
+    },
+    {
+      "q": "What if n can be up to 10^7 and edges arrive as a streaming input you cannot store fully?",
+      "a": "Leaf-peeling needs neighbor access, so stream edges twice: first pass to compute degrees, then maintain a queue of newly-created leaves and re-scan edges that touch them. TC: O(n) with two passes, SC: O(n) for degrees only."
+    },
+    {
+      "q": "Return the MHT roots AND the minimum height value.",
+      "a": "The minimum height equals the number of peeling rounds performed. Count rounds in the existing loop and return both the survivors and the round count. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findMinHeightTrees(int n, vector<vector<int>>& edges) {\n        if (n == 1) return {0};\n        vector<vector<int>> adj(n);\n        vector<int> degree(n, 0);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n            degree[e[0]]++;\n            degree[e[1]]++;\n        }\n        queue<int> q;\n        for (int i = 0; i < n; i++) {\n            if (degree[i] == 1) q.push(i);\n        }\n        int remaining = n;\n        while (remaining > 2) {\n            int sz = q.size();\n            remaining -= sz;\n            for (int i = 0; i < sz; i++) {\n                int u = q.front(); q.pop();\n                for (int v : adj[u]) {\n                    if (--degree[v] == 1) q.push(v);\n                }\n            }\n        }\n        vector<int> res;\n        while (!q.empty()) {\n            res.push_back(q.front());\n            q.pop();\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

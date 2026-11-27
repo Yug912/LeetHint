@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-substrings-containing-all-three-characters",
+  "title": "Number of Substrings Containing All Three Characters",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[3]: fixed 3-element array → O(1)\n- no recursion, no dynamic containers\n- not counted: input string s",
+  "approach": "Use a sliding window with two pointers. For each left index, advance right until the window [left, right-1] contains at least one 'a', 'b', and 'c'. Once it does, every extension [left, right-1], [left, right], …, [left, n-1] is also valid, contributing (n − right + 1) substrings. Then move left forward (removing s[left] from the counts) without resetting right, since the window only needs to grow. Each character is added and removed at most once, giving linear time.",
+  "hints": [
+    "For a fixed starting index, once a substring first contains all three characters, what is true about every longer substring that shares that same start? The string length can reach 5 × 10^4, so checking every (start, end) pair is too slow.",
+    "Sliding window with a 3-element count array. In \"abcabc\", when left = 0 the window reaches right = 3 (after adding s[0..2] = \"abc\"); all three counts are positive, so substrings ending at indices 2,3,4,5 are valid - that's 6 − 3 + 1 = 4.",
+    "```\ncnt = [0, 0, 0], right = 0, ans = 0\nfor left in 0 .. n-1:\n    while right < n and any cnt[k] == 0:\n        cnt[s[right]] += 1\n        right += 1\n    if all cnt[k] > 0:\n        ans += n - right + 1\n    cnt[s[left]] -= 1\nreturn ans\n```",
+    "**Minimum valid input** - exactly three characters, window completes at the last index.\n`Input: \"abc\"` → `Expected: 1`\n⚠️ Bug: writing `ans += n - right` (off-by-one) → returns 0\n\n**No valid substring** - string lacks one or more required characters.\n`Input: \"aaaaa\"` → `Expected: 0`\n⚠️ Bug: adding `n - right + 1` unconditionally after the while loop → returns 5\n\n**Window completes at the very last character** - right reaches n exactly when all three appear.\n`Input: \"aaacb\"` → `Expected: 3`\n⚠️ Bug: using `while (right < n)` as the sole loop condition (no count check) → right jumps to n on the first iteration, returns 5\n\n**Repeated complete pattern** - multiple valid windows, right must not reset.\n`Input: \"abcabc\"` → `Expected: 10`\n⚠️ Bug: resetting `right = left` at the start of each iteration → O(n²) and returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to k distinct characters instead of 3.",
+      "a": "Replace the fixed count array with a hash map of character frequencies and a `distinct` counter incremented when a count goes 0→1. The same window logic applies. TC: O(n), SC: O(k)."
+    },
+    {
+      "q": "Count substrings with exactly k distinct characters.",
+      "a": "Compute \"at most k distinct\" minus \"at most k−1 distinct\" using the same sliding window twice. Each run is O(n). TC: O(n), SC: O(k)."
+    },
+    {
+      "q": "Characters arrive in a stream; you cannot store the whole string.",
+      "a": "Track the most recent index of each character. When a new character arrives at position i, the number of new valid substrings ending at i equals min(lastPos[a], lastPos[b], lastPos[c]) + 1. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfSubstrings(string s) {\n        int n = s.size();\n        int cnt[3] = {0, 0, 0};\n        int right = 0;\n        int ans = 0;\n        for (int left = 0; left < n; left++) {\n            while (right < n && (cnt[0] == 0 || cnt[1] == 0 || cnt[2] == 0)) {\n                cnt[s[right] - 'a']++;\n                right++;\n            }\n            if (cnt[0] > 0 && cnt[1] > 0 && cnt[2] > 0) {\n                ans += n - right + 1;\n            }\n            cnt[s[left] - 'a']--;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

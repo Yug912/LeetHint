@@ -1,0 +1,40 @@
+{
+  "slug": "best-sightseeing-pair",
+  "title": "Best Sightseeing Pair",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Running Maximum (Linear Scan)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar variables (maxLeft, maxScore, j, n): O(1)\n- no containers, arrays, or recursion allocated\n- not counted: input vector `values`",
+  "approach": "The score `values[i] + values[j] + i - j` splits into `(values[i] + i) + (values[j] - j)`. For each position `j`, the best `i < j` is the one with the largest `values[i] + i`. Scan left to right, maintaining the running maximum of `values[i] + i`; at each `j`, compute `maxLeft + values[j] - j` and update the answer. This is correct because for any fixed `j`, the optimal `i` is exactly the index maximizing `values[i] + i` among all earlier indices, and the running max captures exactly that.",
+  "hints": [
+    "With n up to 5·10^4, checking every (i, j) pair is too many. For a fixed j, which part of the score depends only on the earlier index i, and could you already know the best such i by the time you reach j?",
+    "Track the running maximum of `values[i] + i` as you scan left to right; for each j, the best pair ending at j is `maxLeft + values[j] - j`.\nAt j = 2 in [8,1,5,2,6]: maxLeft = 8 (from i = 0), score = 8 + 5 − 2 = 11.",
+    "```\nmaxLeft = values[0] + 0\nbest = -infinity\nfor j from 1 to n-1:\n    best = max(best, maxLeft + values[j] - j)\n    maxLeft = max(maxLeft, values[j] + j)\nreturn best\n```",
+    "**Smallest input** - n = 2, the loop runs exactly once\n`Input: values = [1,2]` → `Expected: 2`\n⚠️ Bug: starting the loop at `j = 2` (off-by-one from 0-indexed thinking) → returns `INT_MIN` (or `0` if initialized that way)\n\n**Update order** - updating maxLeft before using it lets i = j\n`Input: values = [1,5,1]` → `Expected: 5`\n⚠️ Bug: updating `maxLeft` before computing the score for j → returns `10` (uses i = j = 1)\n\n**Missing +i term** - the distance penalty must be balanced by the +i bonus\n`Input: values = [1,5,10]` → `Expected: 14`\n⚠️ Bug: tracking `max(values[i])` instead of `max(values[i] + i)` → returns `13`\n\n**Off-by-one loop bound** - the last element must be reachable as j\n`Input: values = [1,1,100]` → `Expected: 100`\n⚠️ Bug: looping `for j in [1, n-1)` → returns `1`"
+  ],
+  "followUps": [
+    {
+      "q": "Return the top K sightseeing pair scores instead of just the best one.",
+      "a": "Maintain a min-heap of size K for the answer. For each j, combine `values[j] - j` with the top K values of `values[i] + i` seen so far (kept in a second min-heap of size K). Time O(n·K·log K), space O(K)."
+    },
+    {
+      "q": "The array arrives as a streaming input you cannot store - can you still solve it?",
+      "a": "Yes. The current solution already makes one left-to-right pass using only `maxLeft` and `maxScore`, so it works on a stream. Time O(n), space O(1)."
+    },
+    {
+      "q": "Add the constraint that the two spots must be at least distance D apart (j − i ≥ D).",
+      "a": "Delay each `values[i] + i` from entering `maxLeft` by D steps using a queue of size D. At position j, first push `values[j-D] + (j-D)` into the queue and update maxLeft, then compute the score. Time O(n), space O(D)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxScoreSightseeingPair(vector<int>& values) {\n        int n = values.size();\n        int maxLeft = values[0]; // values[0] + 0\n        int maxScore = INT_MIN;\n        for (int j = 1; j < n; j++) {\n            maxScore = max(maxScore, maxLeft + values[j] - j);\n            maxLeft = max(maxLeft, values[j] + j);\n        }\n        return maxScore;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

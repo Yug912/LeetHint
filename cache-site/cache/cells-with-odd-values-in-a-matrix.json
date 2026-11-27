@@ -1,0 +1,40 @@
+{
+  "slug": "cells-with-odd-values-in-a-matrix",
+  "title": "Cells with Odd Values in a Matrix",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Counting with Parity",
+  "tc": "O(L + m + n)",
+  "sc": "O(m + n)",
+  "spaceBreakdown": "- vector<int> rowInc(m): up to m entries → O(m)\n- vector<int> colInc(n): up to n entries → O(n)\n- recursion depth: none\n- not counted: input indices, returned int",
+  "approach": "Instead of simulating the matrix (which would be O(L·(m+n)) per operation), observe that cell (i,j)'s final value equals rowCnt[i] + colCnt[j], where rowCnt[i] is how many times row i was incremented and colCnt[j] is how many times column j was incremented. A cell is odd iff exactly one of rowCnt[i] and colCnt[j] is odd. Count oddRows (rows with odd count) and oddCols (columns with odd count); the answer is oddRows·(n−oddCols) + (m−oddRows)·oddCols - cells with odd-row/even-col plus even-row/odd-col.",
+  "hints": [
+    "For a single cell (i, j), what is the minimum information you need to determine its final value - do you need the full list of operations, or something simpler? Each operation [r_i, c_i] adds 1 to every cell in row r_i and every cell in column c_i.",
+    "Use two frequency arrays - rowCnt[m] and colCnt[n] - tracking how many times each row and column is incremented. For Example 1 with indices = [[0,1],[1,1]]: rowCnt = [1,1] and colCnt = [0,2,0].",
+    "```\nfor each [r, c] in indices:\n    rowCnt[r] += 1\n    colCnt[c] += 1\noddRows = count of rowCnt[i] that are odd\noddCols = count of colCnt[j] that are odd\nreturn oddRows * (n - oddCols) + (m - oddRows) * oddCols\n```",
+    "**Smallest input** - single cell incremented once on both its row and column\n`m = 1, n = 1, indices = [[0,0]]` → `Expected: 0`\n⚠️ Bug: returning oddRows + oddCols instead of the parity cross-product → returns 1 + 1 = 2\n\n**All operations on same cell** - three operations all target [0,0]\n`m = 2, n = 2, indices = [[0,0],[0,0],[0,0]]` → `Expected: 2`\n⚠️ Bug: returning oddRows * n + oddCols * m (double-counting cells where both row and col are odd) → returns 1*2 + 1*2 = 4\n\n**Single row matrix** - m = 1 so row increments affect all columns equally\n`m = 1, n = 3, indices = [[0,0],[0,1]]` → `Expected: 2`\n⚠️ Bug: returning oddRows * n only (ignoring column contributions) → returns 0 * 3 = 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if indices.length can be up to 10^9 and you receive operations in a stream you can only read once?",
+      "a": "The same approach works unchanged - maintain rowCnt and colCnt arrays, incrementing as each operation arrives. Use long long for the count arrays since a single row could be incremented up to 10^9 times. TC: O(L), SC: O(m + n)."
+    },
+    {
+      "q": "Instead of counting all odd cells, you must answer Q point queries: \"is cell (i, j) odd?\"",
+      "a": "Precompute boolean parity arrays rowParity[m] and colParity[j] from the count arrays. Each query is O(1): cell (i, j) is odd iff rowParity[i] != colParity[j]. TC: O(L + m + n + Q), SC: O(m + n)."
+    },
+    {
+      "q": "What if a cell is \"special\" when its value is divisible by k (not just odd, k > 2)?",
+      "a": "The cross-product trick only works for parity (k = 2) because \"odd + odd = even\" is the only case where two same-parity values cancel. For general k you must iterate all m·n cells and check (rowCnt[i] + colCnt[j]) % k == 0. TC: O(L + m·n), SC: O(m + n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int oddCells(int m, int n, vector<vector<int>>& indices) {\n        vector<int> rowInc(m, 0), colInc(n, 0);\n        for (auto& idx : indices) {\n            rowInc[idx[0]]++;\n            colInc[idx[1]]++;\n        }\n        int oddRows = 0, oddCols = 0;\n        for (int i = 0; i < m; i++) {\n            if (rowInc[i] % 2 == 1) oddRows++;\n        }\n        for (int j = 0; j < n; j++) {\n            if (colInc[j] % 2 == 1) oddCols++;\n        }\n        return oddRows * (n - oddCols) + (m - oddRows) * oddCols;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

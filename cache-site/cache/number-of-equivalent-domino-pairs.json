@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-equivalent-domino-pairs",
+  "title": "Number of Equivalent Domino Pairs",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[10][10]: fixed 100 entries, constant size → O(1)\n- No recursion, no dynamic allocation\n- Not counted: input vector",
+  "approach": "Normalize each domino by sorting its two values so [a,b] and [b,a] map to the same canonical form (min, max). Since values are 1-9, use a fixed 10×10 array as a count table. For each domino in order, add the current count of its normalized form to the answer (these are all previously seen equivalent dominoes), then increment that count. This counts every pair (i, j) with i < j exactly once.",
+  "hints": [
+    "If [1,2] and [2,1] are equivalent, what single form could you assign to both so they look identical? Domino values range from 1 to 9.",
+    "Use a fixed 10×10 count array (or hash map) keyed by the normalized domino (min, max). For [2,1], normalize to (1,2), add the current count of (1,2) to the answer, then increment it.",
+    "```\nans = 0\ncounts = empty map\nfor each domino [a, b]:\n    key = (min(a, b), max(a, b))\n    ans += counts[key]\n    counts[key] += 1\nreturn ans\n```",
+    "**Single domino** - only one domino exists, so zero pairs\n`Input: [[1,2]]` → `Expected: 0`\n⚠️ Bug: returning the final count of the domino (1) instead of the accumulated pair count → returns 1\n\n**Rotated duplicates** - [a,b] and [b,a] must count as the same domino\n`Input: [[1,2],[2,1],[1,2],[2,1]]` → `Expected: 6`\n⚠️ Bug: using the raw [a,b] as the key without normalizing to (min,max) → returns 2\n\n**No equivalent pairs** - every domino is distinct\n`Input: [[1,2],[3,4],[5,6]]` → `Expected: 0`\n⚠️ Bug: returning the number of unique keys in the map (3) instead of the pair count → returns 3\n\n**All identical** - four copies of the same domino\n`Input: [[1,2],[1,2],[1,2],[1,2]]` → `Expected: 6`\n⚠️ Bug: incrementing count[key] before adding it to ans → returns 10"
+  ],
+  "followUps": [
+    {
+      "q": "What if domino values can be up to 10^9 instead of 1-9?",
+      "a": "Replace the fixed 10×10 array with a hash map keyed by the normalized pair (min, max). The algorithm is identical-normalize, look up, add to answer, increment. Time stays O(n); space becomes O(min(n, distinct dominoes))."
+    },
+    {
+      "q": "What if dominoes arrive as a stream and you can only store O(k) entries?",
+      "a": "Use a bounded cache of size k with eviction. For each domino, look up its count in the cache, add to the answer, and increment. Pairs where both dominoes fit within the window are counted exactly; pairs separated by more than k distinct dominoes may be missed. Time is O(n), space is O(k)."
+    },
+    {
+      "q": "What if you must return all pairs (i, j) instead of just the count?",
+      "a": "Store a list of indices for each normalized domino. For each new domino j, iterate over all previously stored indices for that key and emit (i, j). The output can be O(n²) in the worst case (all identical), so output size dominates. Time is O(n + P) where P is the number of pairs, space is O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numEquivDominoPairs(vector<vector<int>>& dominoes) {\n        int count[10][10] = {};\n        int ans = 0;\n        for (const auto& d : dominoes) {\n            int a = d[0], b = d[1];\n            if (a > b) {\n                int t = a;\n                a = b;\n                b = t;\n            }\n            ans += count[a][b];\n            count[a][b]++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

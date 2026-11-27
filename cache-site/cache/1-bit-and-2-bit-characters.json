@@ -1,0 +1,40 @@
+{
+  "slug": "1-bit-and-2-bit-characters",
+  "title": "1-bit and 2-bit Characters",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n: single integer → O(1)\n- int i: single integer → O(1)\n- no containers, no recursion, no heap allocation\n- not counted: input vector",
+  "approach": "The decoding is deterministic: a `1` must begin a two-bit character (since `1` alone is not a valid one-bit character), and a `0` begins a one-bit character. Scan left to right with an index `i`, jumping 2 positions when `bits[i] == 1` and 1 position when `bits[i] == 0`. After consuming everything before the last bit, if `i` lands exactly on `n-1`, the final `0` is a standalone one-bit character.",
+  "hints": [
+    "If you read the bits left to right and must decide where each character begins, what does the bit value at your current position force about how far forward the next character starts?",
+    "Use a single index pointer scanning left to right: if the current bit is `1`, jump 2 positions; if `0`, jump 1. For `[1,0,0]`, start at index 0, see `1` → jump to index 2, which is the last bit → one-bit character.",
+    "```\ni = 0\nwhile i < n - 1:\n    if bits[i] == 1:\n        i = i + 2\n    else:\n        i = i + 1\nreturn i == n - 1\n```",
+    "**Single element** - the array is just `[0]`, the only valid one-bit character.\n`Input: bits = [0]` → `Expected: true`\n⚠️ Bug: loop condition `i < n` instead of `i < n - 1` → enters loop at i=0, advances past the only bit, returns false\n\n**Minimal two-bit** - the entire array is one two-bit character.\n`Input: bits = [1,0]` → `Expected: false`\n⚠️ Bug: always advancing by 1 regardless of bit value → i goes 0→1, i==1==n-1, returns true\n\n**Four ones then zero** - an even run of leading 1s pairs up, leaving the final 0 standalone.\n`Input: bits = [1,1,1,1,0]` → `Expected: true`\n⚠️ Bug: checking only `bits[n-2]` to decide → bits[3]=1, returns false\n\n**All zeros** - every character is one-bit, so the last is trivially one-bit.\n`Input: bits = [0,0]` → `Expected: true`\n⚠️ Bug: advancing by 2 when seeing a 0 → i goes 0→2, i==2≠1=n-1, returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if both `0` and `1` could be single-bit characters, making the decoding ambiguous - count the number of valid decodings?",
+      "a": "Use DP where `dp[i] = dp[i-1] + dp[i-2]` with validity checks on whether `bits[i-1]` and `bits[i-2..i-1]` form legal characters. Two rolling variables suffice. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if `bits.length` can be up to 10^9 and you can only call `getBit(i)` - can you do better than O(n)?",
+      "a": "No. Every bit affects the parse position, so you must examine each one. The linear scan is optimal. TC O(n), SC O(1)."
+    },
+    {
+      "q": "Process bits as a one-pass network stream with no random access and decide after the last bit arrives.",
+      "a": "Maintain a single position counter `i`. Each incoming bit either confirms a one-bit character (advance 1) or commits to a two-bit character (advance 2 after reading the pair). No array storage needed. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isOneBitCharacter(vector<int>& bits) {\n        int n = bits.size();\n        int i = 0;\n        while (i < n - 1) {\n            if (bits[i] == 1) i += 2;\n            else i += 1;\n        }\n        return i == n - 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

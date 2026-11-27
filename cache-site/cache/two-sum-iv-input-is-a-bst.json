@@ -1,0 +1,40 @@
+{
+  "slug": "two-sum-iv-input-is-a-bst",
+  "title": "Two Sum IV - Input is a BST",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- vector<TreeNode*> nxt_stk: up to h entries → O(h)\n- vector<TreeNode*> prv_stk: up to h entries → O(h)\n- not counted: input tree, returned boolean",
+  "approach": "The key insight is that an in-order traversal of a Binary Search Tree (BST) yields elements in strictly ascending order. By maintaining two iterators-one advancing to the next smallest element (in-order) and one advancing to the next largest element (reverse in-order)-we can simulate a two-pointer approach on a sorted array. If the sum of the two pointers is less than `k`, we advance the left pointer; if greater, we advance the right pointer. This finds the target sum in O(n) time using only O(h) stack space, where h is the tree height.",
+  "hints": [
+    "What property of a binary search tree allows us to access its elements in sorted order without explicitly flattening it into an array?",
+    "Use two BST iterators: one for in-order traversal (next smallest) and one for reverse in-order traversal (next largest). For `root = [5,3,6,2,4,null,7]`, the smallest is 2 and the largest is 7; if their sum is too small, move the smallest forward.",
+    "initialize left iterator at minimum, right iterator at maximum\nwhile left value < right value:\n    if left value + right value == k: return true\n    if sum < k: advance left iterator\n    else: advance right iterator\nreturn false",
+    "**Single node** - The tree has only one node, so no pair exists.\n`Input: root = [1], k = 2` → `Expected: false`\n⚠️ Bug: Using `while (left <= right)` instead of `<` → returns `true` (uses the same node twice)\n\n**No valid pair** - The target sum is exactly twice a node's value, but only one such node exists.\n`Input: root = [5,3,6,2,4,null,7], k = 14` → `Expected: false`\n⚠️ Bug: Using `while (left <= right)` → returns `true` (uses node 7 twice)\n\n**Skewed tree** - The tree is a linked list (e.g., all right children), testing stack depth.\n`Input: root = [1,null,2,null,3], k = 5` → `Expected: true` (2+3)\n⚠️ Bug: Using recursion without an explicit stack → stack overflow on large skewed trees"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is extremely large and cannot fit in memory, but you can access it via network requests to `next()` and `prev()`?",
+      "a": "The two-pointer iterator approach is already optimal for this. Since it only requires O(h) state for each iterator, you can fetch elements on demand without loading the entire tree into memory."
+    },
+    {
+      "q": "What if you need to find all unique pairs that sum to k?",
+      "a": "Continue the two-pointer scan instead of returning immediately upon finding a match. When a match is found, record it and advance both pointers, skipping duplicate values to ensure uniqueness. Time complexity remains O(n), space O(h)."
+    },
+    {
+      "q": "What if the tree is not a BST but a general binary tree?",
+      "a": "The sorted property is lost, so two pointers no longer work. Fall back to a hash set: traverse the tree (DFS/BFS) and for each node, check if `k - node.val` is in the set. This takes O(n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    void pushLeft(TreeNode* node, vector<TreeNode*>& stk) {\n        while (node) {\n            stk.push_back(node);\n            node = node->left;\n        }\n    }\n    \n    void pushRight(TreeNode* node, vector<TreeNode*>& stk) {\n        while (node) {\n            stk.push_back(node);\n            node = node->right;\n        }\n    }\n    \n    int next(vector<TreeNode*>& stk) {\n        TreeNode* node = stk.back();\n        stk.pop_back();\n        pushLeft(node->right, stk);\n        return node->val;\n    }\n    \n    int prev(vector<TreeNode*>& stk) {\n        TreeNode* node = stk.back();\n        stk.pop_back();\n        pushRight(node->left, stk);\n        return node->val;\n    }\n\npublic:\n    bool findTarget(TreeNode* root, int k) {\n        vector<TreeNode*> nxt_stk;\n        vector<TreeNode*> prv_stk;\n        \n        pushLeft(root, nxt_stk);\n        pushRight(root, prv_stk);\n        \n        int l = next(nxt_stk);\n        int r = prev(prv_stk);\n        \n        while (l < r) {\n            int sum = l + r;\n            if (sum == k) return true;\n            if (sum < k) l = next(nxt_stk);\n            else r = prev(prv_stk);\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
