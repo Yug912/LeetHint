@@ -1,0 +1,40 @@
+{
+  "slug": "reconstruct-itinerary",
+  "title": "Reconstruct Itinerary",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Eulerian Path (Hierholzer's Algorithm)",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<string, priority_queue<string, vector<string>, greater<string>>> graph: n edges total → O(n)\n- recursion call stack: up to n+1 frames → O(n)\n- not counted: input tickets, returned result vector",
+  "approach": "Build a graph mapping each airport to a min-heap of destinations. Run Hierholzer's DFS from JFK: greedily take the smallest available destination, recurse, and when no outgoing edges remain, append the airport to the result. Reverse the result at the end. Dead ends encountered during DFS are suffixes of the Eulerian path, so post-order recording places them correctly.",
+  "hints": [
+    "If you trace a path from JFK, using one ticket at a time, and you reach an airport with no remaining outgoing tickets before all tickets are used - where must that airport sit in the final itinerary? The problem guarantees at least one valid itinerary exists.",
+    "Hierholzer's algorithm with a min-heap (priority_queue with greater<string>) per airport. In Example 2, JFK's heap has {ATL, SFO}; pop ATL first, recurse, and when an airport has no remaining edges, append it to the result - the answer is the reverse of this append order.",
+    "```\ngraph = map each airport to min-heap of destinations\nfunction dfs(airport):\n    while graph[airport] not empty:\n        next = pop smallest from graph[airport]\n        dfs(next)\n    append airport to result\ndfs(\"JFK\")\nreverse result\nreturn result\n```",
+    "**Dead end before all tickets used** - greedy smallest pick leads to a dead end with unused tickets remaining\n`Input: [[\"JFK\",\"AAA\"],[\"JFK\",\"BBB\"],[\"BBB\",\"JFK\"]]` → `Expected: [\"JFK\",\"BBB\",\"JFK\",\"AAA\"]`\n⚠️ Bug: greedily picking smallest destination without post-order recording → returns [\"JFK\",\"AAA\"] (stuck at AAA with 2 unused tickets)\n\n**Single ticket** - smallest valid input\n`Input: [[\"JFK\",\"ATL\"]]` → `Expected: [\"JFK\",\"ATL\"]`\n⚠️ Bug: not reversing the result vector → returns [\"ATL\",\"JFK\"]\n\n**Duplicate edges** - same ticket appears multiple times\n`Input: [[\"JFK\",\"ATL\"],[\"ATL\",\"JFK\"],[\"JFK\",\"ATL\"]]` → `Expected: [\"JFK\",\"ATL\",\"JFK\",\"ATL\"]`\n⚠️ Bug: using a set instead of a priority_queue (deduplicates edges) → returns [\"JFK\",\"ATL\",\"JFK\"] (one ticket unused)\n\n**Lexical ordering** - multiple valid paths, need smallest\n`Input: [[\"JFK\",\"SFO\"],[\"JFK\",\"ATL\"],[\"SFO\",\"ATL\"],[\"ATL\",\"JFK\"],[\"ATL\",\"SFO\"]]` → `Expected: [\"JFK\",\"ATL\",\"JFK\",\"SFO\",\"ATL\",\"SFO\"]`\n⚠️ Bug: using max-heap instead of min-heap → returns [\"JFK\",\"SFO\",\"ATL\",\"JFK\",\"ATL\",\"SFO\"] (valid but not smallest lexical order)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the starting airport is not given?",
+      "a": "Count in-degree and out-degree for each airport. The start has out-degree = in-degree + 1 (Eulerian path). If all are equal, it's an Eulerian circuit - start at any airport with outgoing edges. Same Hierholzer's algorithm otherwise. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if you need to return all valid itineraries, not just the lexically smallest?",
+      "a": "Use backtracking with edge-tracking instead of greedy heap consumption. At each airport, try each remaining destination in order, recurse, and undo. Worst case is exponential in the number of edges. TC: O(n! × n), SC: O(n)."
+    },
+    {
+      "q": "What if the graph is undirected (each ticket can be used in either direction)?",
+      "a": "Track edges by unique ID rather than by destination string, since the same pair of airports can be connected by multiple edges. Use a multiset of (neighbor, edge_id) pairs and mark edge IDs as used. Same Hierholzer's structure. TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> findItinerary(vector<vector<string>>& tickets) {\n        unordered_map<string, priority_queue<string, vector<string>, greater<string>>> graph;\n        for (auto& t : tickets) {\n            graph[t[0]].push(t[1]);\n        }\n        vector<string> result;\n        dfs(\"JFK\", graph, result);\n        reverse(result.begin(), result.end());\n        return result;\n    }\n    \nprivate:\n    void dfs(string airport, \n             unordered_map<string, priority_queue<string, vector<string>, greater<string>>>& graph, \n             vector<string>& result) {\n        auto it = graph.find(airport);\n        while (it != graph.end() && !it->second.empty()) {\n            string next = it->second.top();\n            it->second.pop();\n            dfs(next, graph, result);\n        }\n        result.push_back(airport);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-and-say",
+  "title": "Count and Say",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Iterative Simulation",
+  "tc": "O(1.3^n)",
+  "sc": "O(1.3^n)",
+  "spaceBreakdown": "- string s: up to L_n ≈ 1.3^n characters (this becomes the returned output) → O(1.3^n)\n- string next: up to L_n ≈ 1.3^n characters (auxiliary, overwritten each iteration) → O(1.3^n)\n- recursion depth: none (iterative)\n- not counted: input n, returned string",
+  "approach": "The count-and-say sequence is defined recursively: each term is the run-length encoding of the previous one, starting from \"1\". Since each term depends only on its immediate predecessor, we can build the answer iteratively - start with \"1\" and apply RLE exactly n−1 times. RLE scans the string left to right, counting consecutive identical digits, then appends the count followed by the digit for each maximal run. The string length grows roughly as 1.3^n (Conway's constant), so for n ≤ 30 the final string is at most 5808 characters - easily tractable.",
+  "hints": [
+    "If you write out the first four terms by hand, what is the minimum information you need to go from one term to the next? n is at most 30.",
+    "Iterative run-length encoding. Start with \"1\" and apply RLE n−1 times. Example: RLE of \"21\" → one '2' gives \"12\", one '1' gives \"11\", concatenated → \"1211\".",
+    "```\ns = \"1\"\nrepeat n - 1 times:\n    next = \"\"\n    j = 0\n    while j < length(s):\n        count = 1\n        while j + count < length(s) and s[j + count] == s[j]:\n            count = count + 1\n        next = next + str(count) + s[j]\n        j = j + count\n    s = next\nreturn s\n```",
+    "**Smallest input** - n = 1 is the base case; no RLE is applied.\n`Input: n = 1` → `Expected: \"1\"`\n⚠️ Bug: looping `for (int i = 0; i < n; i++)` applies RLE once → returns `\"11\"`\n\n**Character before count** - appending the digit before its count reverses each pair.\n`Input: n = 4` → `Expected: \"1211\"`\n⚠️ Bug: appending `s[j]` before `to_string(count)` → returns `\"1121\"`\n\n**Re-processing runs** - not skipping past a run after counting it.\n`Input: n = 3` → `Expected: \"21\"`\n⚠️ Bug: using `for (j = 0; j < len; j++)` without `j += count` → returns `\"2111\"`\n\n**Largest input** - n = 30 produces a string of length 5808.\n`Input: n = 30` → `Expected: (5808-character string)`\n⚠️ Bug: using `char` instead of `string` for accumulation causes truncation on multi-digit counts (though runs never exceed 3 here, a `char next` buffer overflows immediately) → returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be as large as 10^5?",
+      "a": "The string length grows as roughly 1.3^n, so for n = 10^5 the result would have about 10^4000 characters - impossible to store. The problem would need a fundamentally different formulation, such as returning the length modulo a prime, but run-length encoding does not compose with modular arithmetic."
+    },
+    {
+      "q": "Return only the length of countAndSay(n) instead of the full string.",
+      "a": "Track how many times each (digit, run-length) pair appears in the current string. Each pair (c, d) produces the digits of c followed by d in the next string, contributing a known length. By maintaining a frequency map of pairs, each step computes the next map and total length in O(number of distinct pairs). Conway's cosmological theorem bounds the distinct pairs at 92, so each step is O(1) and the total is O(n) time, O(1) space."
+    },
+    {
+      "q": "What if you need to answer many queries for different values of n?",
+      "a": "Precompute and store all 30 terms once, since n ≤ 30 and the total storage across all terms is O(L_30) ≈ O(5808). Each query is then O(1) lookup. Precomputation time is O(L_30), space is O(L_30)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string countAndSay(int n) {\n        string s = \"1\";\n        for (int i = 1; i < n; i++) {\n            string next;\n            int len = s.size();\n            int j = 0;\n            while (j < len) {\n                int count = 1;\n                while (j + count < len && s[j + count] == s[j]) {\n                    count++;\n                }\n                next += to_string(count);\n                next += s[j];\n                j += count;\n            }\n            s = next;\n        }\n        return s;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

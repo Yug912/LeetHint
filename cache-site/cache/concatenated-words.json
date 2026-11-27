@@ -1,0 +1,40 @@
+{
+  "slug": "concatenated-words",
+  "title": "Concatenated Words",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Trie + Dynamic Programming",
+  "tc": "O(S · L)",
+  "sc": "O(S)",
+  "spaceBreakdown": "- Trie nodes: up to S nodes (one per character across all words) → O(S)\n- dp vector: up to L = 30 booleans per word → O(1)\n- recursion: none (iterative DP)\n- not counted: input vector, returned vector",
+  "approach": "Build a Trie containing all words. For each word, temporarily unmark it in the Trie (so it cannot match itself as a single piece), then run bottom-up DP: dp[i] = true if the suffix word[i..] can be formed by concatenating Trie words. For each starting position i, walk the Trie along the word's characters; whenever a word boundary is found at position j, set dp[i] = dp[j+1]. Because the full word is unmarked, any successful match requires at least two pieces. Re-mark the word afterward so it remains available for other words.",
+  "hints": [
+    "If you remove a word-from-the-list prefix from a candidate word, what must the remaining suffix satisfy for the candidate to be a valid concatenation? Each word has length at most 30, and the total length across all words is at most 10^5.",
+    "Use a Trie storing all words. For \"catsdogcats\", walk the Trie from position 0: \"cats\" is a word boundary, then check if the remainder \"dogcats\" also splits into list words - dp[i] asks whether word[i..] can be formed entirely from Trie words.",
+    "```\nbuild trie from all words\nfor each word w:\n    unmark w in trie\n    dp[len(w)] = true\n    for i = len(w)-1 downto 0:\n        node = root\n        for j = i to len(w)-1:\n            node = node.child[w[j]]\n            if node is null: break\n            if node.isEnd and dp[j+1]: dp[i] = true; break\n    if dp[0]: add w to result\n    re-mark w in trie\n```",
+    "**Single word** - only one word exists, nothing to concatenate with.\n`Input: [\"a\"]` → `Expected: []`\n⚠️ Bug: not unmarking the current word before checking → \"a\" matches itself as one piece → returns `[\"a\"]`\n\n**Self-match** - a word that is also a prefix of a longer word in the list.\n`Input: [\"cat\",\"cats\"]` → `Expected: []`\n⚠️ Bug: not unmarking the current word → \"cat\" matches itself as a single piece → returns `[\"cat\"]`\n\n**Partial match** - a word's prefix is a valid Trie path but not a complete word.\n`Input: [\"abc\",\"ab\"]` → `Expected: []`\n⚠️ Bug: checking node existence instead of node->isEnd → \"abc\" matches path a→b→c without \"c\" being a word end → returns `[\"abc\",\"ab\"]`\n\n**No valid answer** - no word can be split into two or more other list words.\n`Input: [\"cat\",\"dog\",\"bat\"]` → `Expected: []`\n⚠️ Bug: accepting a single-piece match (not requiring ≥2 pieces) → returns `[\"cat\",\"dog\",\"bat\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of returning just the concatenated words, return the actual word decomposition for each.",
+      "a": "Store backpointers during DP: when dp[i] is set true by a word ending at j, record j+1 as the next split point. After dp[0] is confirmed, follow the chain to reconstruct the pieces. Time stays O(S·L); space increases by O(L) per word for the backpointer array."
+    },
+    {
+      "q": "What if individual word lengths can be up to 10^5 instead of 30?",
+      "a": "The O(L²) per-word DP becomes too slow. Build an Aho-Corasick automaton from all words, run each candidate through it to collect all match positions in O(L + matches), then check if the matches cover the full string with at least two non-overlapping segments via a single sweep. Time becomes O(S + total matches across all words)."
+    },
+    {
+      "q": "Support online operations: insert a word, delete a word, and query whether a given string is a concatenated word.",
+      "a": "Maintain the Trie with reference counts on each node so deletion just decrements counts and clears isEnd when it reaches zero. Each query runs the same O(L²) DP against the live Trie. Insert and delete are O(L) each; query is O(L²) per string."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    struct TrieNode {\n        TrieNode* children[26];\n        bool isEnd;\n        TrieNode() : isEnd(false) {\n            for (int i = 0; i < 26; i++) children[i] = nullptr;\n        }\n    };\n\n    TrieNode* root;\n\n    void insert(const string& word) {\n        TrieNode* node = root;\n        for (char c : word) {\n            int idx = c - 'a';\n            if (!node->children[idx]) {\n                node->children[idx] = new TrieNode();\n            }\n            node = node->children[idx];\n        }\n        node->isEnd = true;\n    }\n\n    void setEnd(const string& word, bool val) {\n        TrieNode* node = root;\n        for (char c : word) {\n            node = node->children[c - 'a'];\n        }\n        node->isEnd = val;\n    }\n\n    bool canForm(const string& word) {\n        int n = word.size();\n        vector<bool> dp(n + 1, false);\n        dp[n] = true;\n        for (int i = n - 1; i >= 0; i--) {\n            TrieNode* node = root;\n            for (int j = i; j < n; j++) {\n                int idx = word[j] - 'a';\n                if (!node->children[idx]) break;\n                node = node->children[idx];\n                if (node->isEnd && dp[j + 1]) {\n                    dp[i] = true;\n                    break;\n                }\n            }\n        }\n        return dp[0];\n    }\n\n    vector<string> findAllConcatenatedWordsInADict(vector<string>& words) {\n        root = new TrieNode();\n        for (const string& w : words) {\n            insert(w);\n        }\n        vector<string> result;\n        for (const string& w : words) {\n            setEnd(w, false);\n            if (canForm(w)) {\n                result.push_back(w);\n            }\n            setEnd(w, true);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
