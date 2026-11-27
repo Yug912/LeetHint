@@ -1,0 +1,40 @@
+{
+  "slug": "network-delay-time",
+  "title": "Network Delay Time",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dijkstra's Algorithm",
+  "tc": "O((n + E) log n)",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- vector<vector<pair<int,int>>> adj: adjacency list, n+1 vectors holding E total pairs → O(n + E)\n- vector<int> dist: distance array of size n+1 → O(n)\n- priority_queue<pair<int,int>> pq: min-heap, up to E entries → O(E)\n- recursion call-stack: none\n- not counted: input times, returned int",
+  "approach": "The key insight is that the signal reaches all nodes when the *last* node receives it, which equals the maximum shortest-path distance from k to any node. We use Dijkstra's algorithm with a min-heap to compute shortest distances from source k to all other nodes. The answer is the maximum of these distances, or -1 if any node is unreachable. Dijkstra is correct here because all edge weights are non-negative (w_i ≥ 0).",
+  "hints": [
+    "If a signal leaves node k and spreads along every outgoing edge simultaneously, what single quantity about each node determines the moment when the last node in the network first receives it?",
+    "Use Dijkstra's algorithm with a min-heap. In Example 1, from node 2 we reach node 1 in time 1 and node 3 in time 1; then from node 3 we reach node 4 in time 2 - the answer is the maximum distance, 2.",
+    "```\nbuild adjacency list from edges\ndist[k] = 0, all others = infinity\npush (0, k) into min-heap\nwhile heap not empty:\n    pop (d, u) with smallest d\n    if d > dist[u]: skip\n    for each neighbor (v, w) of u:\n        if dist[u] + w < dist[v]:\n            dist[v] = dist[u] + w\n            push (dist[v], v)\nreturn max(dist[1..n]), or -1 if any is infinity\n```",
+    "**Disconnected graph** - node k cannot reach all nodes\n`Input: times = [[1,2,1]], n = 2, k = 2` → `Expected: -1`\n⚠️ Bug: returning max(dist) without checking for INT_MAX → returns 2147483647\n\n**Zero-weight edge** - an edge with w = 0\n`Input: times = [[1,2,0]], n = 2, k = 1` → `Expected: 0`\n⚠️ Bug: skipping edges where w == 0 → returns -1\n\n**Source node isolated** - k has no outgoing edges but n > 1\n`Input: times = [[1,3,1]], n = 3, k = 2` → `Expected: -1`\n⚠️ Bug: returning dist[k] = 0 without checking all nodes → returns 0\n\n**Weighted path shorter than hop count** - a 2-hop path costs less than a 1-hop path\n`Input: times = [[1,2,1],[1,3,10],[2,3,2]], n = 3, k = 1` → `Expected: 3`\n⚠️ Bug: using unweighted BFS → returns 10"
+  ],
+  "followUps": [
+    {
+      "q": "What if some edges have negative weights?",
+      "a": "Dijkstra fails because it assumes a node's distance is final when popped. With negative weights, a later path could be shorter. Use Bellman-Ford instead, which relaxes all edges V−1 times in O(V·E) time and also detects negative cycles."
+    },
+    {
+      "q": "What if n can be up to 10^5 and times.length up to 10^5?",
+      "a": "Dijkstra with a binary heap still runs in O((V+E) log V) ≈ O(10^5 log 10^5), which is fast enough. The adjacency list and distance array use O(V+E) space, also fine."
+    },
+    {
+      "q": "What if you need the delay time from every possible source node k?",
+      "a": "Run Dijkstra from each node for O(V·(V+E) log V) total. For small V (≤ 400), Floyd-Warshall's O(V^3) all-pairs shortest path is simpler. For sparse graphs, Johnson's algorithm runs in O(V·E log V)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int networkDelayTime(vector<vector<int>>& times, int n, int k) {\n        vector<vector<pair<int,int>>> adj(n + 1);\n        for (auto& t : times) {\n            adj[t[0]].push_back({t[1], t[2]});\n        }\n        vector<int> dist(n + 1, INT_MAX);\n        dist[k] = 0;\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;\n        pq.push({0, k});\n        while (!pq.empty()) {\n            auto [d, u] = pq.top();\n            pq.pop();\n            if (d > dist[u]) continue;\n            for (auto& [v, w] : adj[u]) {\n                if (dist[u] + w < dist[v]) {\n                    dist[v] = dist[u] + w;\n                    pq.push({dist[v], v});\n                }\n            }\n        }\n        int ans = 0;\n        for (int i = 1; i <= n; i++) {\n            if (dist[i] == INT_MAX) return -1;\n            ans = max(ans, dist[i]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

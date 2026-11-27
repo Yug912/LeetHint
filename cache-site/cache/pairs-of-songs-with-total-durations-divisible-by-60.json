@@ -1,0 +1,40 @@
+{
+  "slug": "pairs-of-songs-with-total-durations-divisible-by-60",
+  "title": "Pairs of Songs With Total Durations Divisible by 60",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Modular Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long count[60]: fixed size 60 → O(1)\n- no recursion, no other containers\n- not counted: input vector",
+  "approach": "The key insight is that (a + b) % 60 == 0 iff (a%60 + b%60) % 60 == 0, so we only need each song's remainder modulo 60. We count how many songs have each remainder 0-59 in a fixed-size array. Then for remainder r, valid partners have remainder (60−r)%60. Remainders 0 and 30 pair with themselves, so their contribution is count[r]×(count[r]−1)/2; for r=1..29 we add count[r]×count[60−r]. Using `long long` avoids overflow since n can reach 6×10⁴ and n×(n−1) exceeds 2³¹−1.",
+  "hints": [
+    "What single property of a song's duration determines whether it can pair with another to form a sum divisible by 60? The constraint time.length ≤ 6×10⁴ rules out checking every pair.",
+    "Use a counting array of size 60. For time = [30,20,150,100,40], the remainders are [30,20,30,40,40]; count[30]=2 pairs with itself giving 1 pair, and count[20]=1 pairs with count[40]=2 giving 2 pairs, total 3.",
+    "```\ncount = array of 60 zeros\nfor each t in time:\n    count[t % 60]++\npairs = count[0]*(count[0]-1)/2 + count[30]*(count[30]-1)/2\nfor r in 1..29:\n    pairs += count[r] * count[60-r]\nreturn pairs\n```",
+    "**Overflow** - 6×10⁴ songs all with duration 60\n`Input: [60,60,...,60] (6×10⁴ times)` → `Expected: 1799970000`\n⚠️ Bug: using `int` for `count[0]*(count[0]-1)` → 60000×59999 = 3599940000 overflows 32-bit int → returns -347513648\n\n**All remainder 30** - every song has remainder 30 when divided by 60\n`Input: [30,30,30,30]` → `Expected: 6`\n⚠️ Bug: treating r=30 like r=1..29 and computing `count[30]*count[30]` → returns 16\n\n**All remainder 0** - every song is exactly divisible by 60\n`Input: [60,60,60]` → `Expected: 3`\n⚠️ Bug: only looping r=1..29 and skipping r=0 → returns 0\n\n**Single element** - only one song, no pairs possible\n`Input: [30]` → `Expected: 0`\n⚠️ Bug: using `count[r]*(count[r]+1)/2` instead of `count[r]*(count[r]-1)/2` → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the divisor is not fixed at 60 but given as a parameter k?",
+      "a": "Same approach works: count remainders modulo k in an array of size k, then pair remainder r with (k−r)%k. Time O(n + k), space O(k)."
+    },
+    {
+      "q": "What if songs arrive in a stream and you must report after each song how many valid pairs it forms with all previous songs?",
+      "a": "Maintain the count array incrementally. For each new song with remainder r, add count[(60−r)%60] to the running answer, then increment count[r]. Time O(1) per song, space O(60) = O(1)."
+    },
+    {
+      "q": "What if you need to count triples (i < j < k) whose total duration is divisible by 60?",
+      "a": "For each pair of remainders (r1, r2), the third must have remainder (60 − r1 − r2) % 60. Iterate over all 60×60 remainder pairs, multiply counts, and divide by symmetry factors. Time O(60² + n) = O(n), space O(60)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numPairsDivisibleBy60(vector<int>& time) {\n        long long count[60] = {0};\n        for (int t : time) {\n            count[t % 60]++;\n        }\n        long long pairs = 0;\n        pairs += count[0] * (count[0] - 1) / 2;\n        pairs += count[30] * (count[30] - 1) / 2;\n        for (int r = 1; r < 30; r++) {\n            pairs += count[r] * count[60 - r];\n        }\n        return (int)pairs;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "accounts-merge",
+  "title": "Accounts Merge",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Union-Find (Disjoint Set Union)",
+  "tc": "O(E·L·log E)",
+  "sc": "O(E·L)",
+  "spaceBreakdown": "- unordered_map<string,string> parent: up to E entries → O(E)\n- unordered_map<string,string> owner: up to E entries → O(E)\n- unordered_map<string,vector<string>> groups: up to E entries total → O(E)\n- find recursion depth: worst case O(E) before path compression (skewed chain)\n- not counted: input accounts, returned result vector",
+  "approach": "Treat each email as a node in a graph. Emails in the same account are connected, and accounts sharing any email are transitively merged. Use Union-Find (Disjoint Set Union) with path compression: initialize each email as its own parent, then union all emails within each account. After all unions, group emails by their root representative, sort each group, and prepend the owner's name. This correctly handles transitive merges because `find` with path compression links chains into a single root.",
+  "hints": [
+    "If two accounts share even one email, what must be true about every other email in both accounts? The constraints allow up to 1000 accounts with up to 9 emails each.",
+    "Use Union-Find (Disjoint Set Union). Treat each email as a node; for account `[\"John\",\"johnsmith@mail.com\",\"john_newyork@mail.com\"]`, union `johnsmith@mail.com` and `john_newyork@mail.com` into one set.",
+    "```\nfor each account:\n    for each email in account:\n        parent[email] = email\n        owner[email] = name\nfor each account:\n    for each email after the first:\n        union(first_email, email)\nfor each email in parent:\n    groups[find(email)].add(email)\nfor each group:\n    sort emails, prepend owner name\nreturn groups\n```",
+    "**Single email account** - account with only one email, no union step needed\n`Input: [[\"A\",\"a@x.com\"]]` → `Expected: [[\"A\",\"a@x.com\"]]`\n⚠️ Bug: only collecting emails during the union loop instead of iterating over all parent entries → returns `[]`\n\n**Duplicate email in same account** - same email listed twice in one account\n`Input: [[\"A\",\"a@x.com\",\"a@x.com\"]]` → `Expected: [[\"A\",\"a@x.com\"]]`\n⚠️ Bug: pushing every email from each account into groups without deduplication → returns `[[\"A\",\"a@x.com\",\"a@x.com\"]]`\n\n**Transitive chain** - accounts connected only through an intermediate account\n`Input: [[\"A\",\"a@x.com\",\"b@x.com\"],[\"A\",\"b@x.com\",\"c@x.com\"]]` → `Expected: [[\"A\",\"a@x.com\",\"b@x.com\",\"c@x.com\"]]`\n⚠️ Bug: grouping by `parent[email]` instead of `find(email)` after all unions → returns `[[\"A\",\"a@x.com\"],[\"A\",\"b@x.com\",\"c@x.com\"]]`\n\n**Same name, different people** - two accounts share a name but no emails\n`Input: [[\"A\",\"a@x.com\"],[\"A\",\"b@x.com\"]]` → `Expected: [[\"A\",\"a@x.com\"],[\"A\",\"b@x.com\"]]`\n⚠️ Bug: merging accounts by name instead of by shared emails → returns `[[\"A\",\"a@x.com\",\"b@x.com\"]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are millions of emails and memory is limited to O(B) where B is a small batch size?",
+      "a": "Process accounts in batches, writing union-find parent pointers to disk. After all batches, do a second pass to resolve roots and group emails, using external sort for each group. TC becomes O(E log E) dominated by external sorting; SC drops to O(B) in memory."
+    },
+    {
+      "q": "What if emails can be added dynamically after the initial merge - how do you support online \"are these two emails the same person?\" queries?",
+      "a": "Keep the Union-Find structure persistent between queries. Each new account triggers union operations; each query calls find on both emails and compares roots. Per-query TC is O(α(E)) amortized; SC stays O(E)."
+    },
+    {
+      "q": "What if two accounts share an email but have different names (data corruption)?",
+      "a": "The union-find structure is unchanged. When building the result, resolve the name by picking the name from the account with the most emails, or the lexicographically smallest name as a tiebreaker. TC and SC remain O(E log E) and O(E)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    unordered_map<string, string> parent;\n    \n    string find(const string& x) {\n        if (parent[x] != x) parent[x] = find(parent[x]);\n        return parent[x];\n    }\n    \npublic:\n    vector<vector<string>> accountsMerge(vector<vector<string>>& accounts) {\n        parent.clear();\n        unordered_map<string, string> owner;\n        \n        for (auto& acc : accounts) {\n            string name = acc[0];\n            for (size_t i = 1; i < acc.size(); i++) {\n                if (parent.find(acc[i]) == parent.end()) {\n                    parent[acc[i]] = acc[i];\n                }\n                owner[acc[i]] = name;\n            }\n        }\n        \n        for (auto& acc : accounts) {\n            string first = acc[1];\n            for (size_t i = 2; i < acc.size(); i++) {\n                string ra = find(first), rb = find(acc[i]);\n                if (ra != rb) parent[ra] = rb;\n            }\n        }\n        \n        unordered_map<string, vector<string>> groups;\n        for (auto& p : parent) {\n            groups[find(p.first)].push_back(p.first);\n        }\n        \n        vector<vector<string>> result;\n        for (auto& g : groups) {\n            sort(g.second.begin(), g.second.end());\n            vector<string> merged;\n            merged.push_back(owner[g.first]);\n            for (auto& e : g.second) merged.push_back(e);\n            result.push_back(merged);\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

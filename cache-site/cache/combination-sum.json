@@ -1,0 +1,40 @@
+{
+  "slug": "combination-sum",
+  "title": "Combination Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking",
+  "tc": "O(n^(T/2))",
+  "sc": "O(T)",
+  "spaceBreakdown": "- vector<int> current: up to T/2 elements (depth when using smallest candidate repeatedly) → O(T)\n- recursion stack: depth up to T/2 → O(T)\n- sort(): O(log n) stack\n- not counted: input candidates, returned result",
+  "approach": "Sort the candidates, then use backtracking with a start index to explore all combinations. At each step, try adding candidates[i] for i ≥ start (allowing reuse of the same candidate by passing i, not i+1). When the remaining target reaches 0, record the current combination. When a candidate exceeds the remaining target, break early (valid because candidates are sorted). The start index ensures each combination is generated in non-decreasing order, eliminating duplicates without a set.",
+  "hints": [
+    "Given that the same number can be reused unlimited times, what determines whether two selections are the same combination versus two different orderings of the same multiset?",
+    "Backtracking with a start index. Sort candidates first, then at each step try candidates[i] for i ≥ start, recurse with target − candidates[i] and the same i (allowing reuse), then undo. With [2,3,6,7] and target 7: pick 2 → pick 2 → pick 3 → sum 7, record [2,2,3].",
+    "```\nfunction backtrack(remain, start):\n    if remain == 0:\n        record current combination\n        return\n    for i from start to n-1:\n        if candidates[i] > remain:\n            break\n        add candidates[i] to current\n        backtrack(remain - candidates[i], i)\n        remove last from current\n```",
+    "**Exact match skipped** - a candidate equals the remaining target.\n`Input: candidates = [2,3], target = 3` → `Expected: [[3]]`\n⚠️ Bug: using `candidates[i] >= remain` as break condition instead of `candidates[i] > remain` → returns []\n\n**No reuse** - single candidate must be used multiple times.\n`Input: candidates = [2], target = 8` → `Expected: [[2,2,2,2]]`\n⚠️ Bug: passing `i+1` instead of `i` in recursive call → returns []\n\n**Duplicate combinations** - multiple orderings of the same multiset.\n`Input: candidates = [2,3,5], target = 8` → `Expected: [[2,2,2,2],[2,3,3],[3,5]]`\n⚠️ Bug: looping i from 0 instead of start in recursion → returns [[2,2,2,2],[2,3,3],[3,2,3],[3,3,2],[3,5],[5,3]]\n\n**Unsorted input with break** - candidates not in sorted order.\n`Input: candidates = [5,2,3], target = 7` → `Expected: [[2,2,3],[2,5]]`\n⚠️ Bug: not sorting candidates before using break on `candidates[i] > remain` → returns [[2,2,3]]"
+  ],
+  "followUps": [
+    {
+      "q": "What if each candidate can only be used once (Combination Sum II)?",
+      "a": "Pass `i+1` instead of `i` in the recursive call so each candidate is used at most once. If candidates contain duplicates, sort and skip consecutive equal values at the same recursion level to avoid duplicate combinations. TC and SC remain the same."
+    },
+    {
+      "q": "What if candidates can contain negative numbers?",
+      "a": "The search space becomes infinite since adding a negative number decreases the sum and allows further additions. You must impose a maximum combination length L, making the recursion depth-bounded. TC becomes O(n^L) with no early break pruning possible."
+    },
+    {
+      "q": "What if target can be up to 10^9?",
+      "a": "Backtracking is infeasible since the recursion depth alone could be 10^9. Switch to dynamic programming that counts combinations modulo a large prime using O(n × target) time - but target is too large even for that. Use matrix exponentiation on the DP recurrence for O(n^3 log T) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> combinationSum(vector<int>& candidates, int target) {\n        vector<vector<int>> result;\n        vector<int> current;\n        sort(candidates.begin(), candidates.end());\n        backtrack(candidates, target, 0, current, result);\n        return result;\n    }\nprivate:\n    void backtrack(vector<int>& candidates, int remain, int start,\n                   vector<int>& current, vector<vector<int>>& result) {\n        if (remain == 0) {\n            result.push_back(current);\n            return;\n        }\n        for (int i = start; i < (int)candidates.size(); i++) {\n            if (candidates[i] > remain) break;\n            current.push_back(candidates[i]);\n            backtrack(candidates, remain - candidates[i], i, current, result);\n            current.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

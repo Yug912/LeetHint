@@ -1,0 +1,40 @@
+{
+  "slug": "multiply-strings",
+  "title": "Multiply Strings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Grade-School Multiplication with Position Array",
+  "tc": "O(n*m)",
+  "sc": "O(n+m)",
+  "spaceBreakdown": "- vector<int> pos: n+m entries → O(n+m)\n- string res: n+m chars (returned, not counted) → O(1) auxiliary\n- recursion depth: none\n- not counted: input strings, returned string",
+  "approach": "Use grade-school multiplication with an accumulator array indexed by digit position. For digits at positions `i` and `j` (from the left), their product lands at positions `i+j` and `i+j+1`; accumulate all products, then propagate carries in one pass. This avoids per-row string addition and runs in O(n·m) with O(n+m) auxiliary space.",
+  "hints": [
+    "When you multiply digit at position `i` of num1 by digit at position `j` of num2, which two positions of the final product does that single-digit product contribute to? The constraints allow lengths up to 200, so the product has at most 400 digits.",
+    "Use an integer array `pos` of size `n+m` indexed by result position. For \"2\"×\"3\": `pos[0+0+1] += 6`, giving `[0,6]` → \"6\". Accumulate every digit-pair product into its two target slots, then normalize carries.",
+    "```\npos = array of size n+m filled with 0\nfor i from n-1 down to 0:\n  for j from m-1 down to 0:\n    mul = digit(num1,i) * digit(num2,j)\n    p1, p2 = i+j, i+j+1\n    sum = mul + pos[p2]\n    pos[p2] = sum % 10\n    pos[p1] += sum / 10\nbuild string from pos, skipping leading zeros\nreturn \"0\" if all zeros\n```",
+    "**Zero times anything** - One input is \"0\", so every digit product is zero.\n`Input: num1 = \"0\", num2 = \"123\"` → `Expected: \"0\"`\n⚠️ Bug: not handling the all-zero result case and returning \"\" → returns \"\"\n\n**Single-digit single-digit** - Both inputs are one character.\n`Input: num1 = \"2\", num2 = \"3\"` → `Expected: \"6\"`\n⚠️ Bug: allocating `pos` of size `n+m-1` instead of `n+m` → index out of bounds on `pos[p2]` when `p2 = i+j+1 = 1`\n\n**Large carry propagation** - \"999\"×\"999\"=998001 has carries cascading across multiple positions.\n`Input: num1 = \"999\", num2 = \"999\"` → `Expected: \"998001\"`\n⚠️ Bug: adding `mul` to `pos[p1]` instead of `pos[p2]` before splitting carry → returns \"998001\" only by luck on some inputs, wrong on others like \"99\"×\"99\"=9801\n\n**Leading zero in middle of result** - Product like \"10\"×\"10\"=100 has internal zeros that must be preserved.\n`Input: num1 = \"10\", num2 = \"10\"` → `Expected: \"100\"`\n⚠️ Bug: stripping ALL zeros instead of only leading zeros → returns \"1\""
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to multiply many large numbers together, not just two?",
+      "a": "Multiply them pairwise using the same position-array method, reducing the list by half each round. With k numbers of length up to L, total time is O(k·L²) in the naive pairing; a divide-and-conquer pairing keeps intermediate sizes balanced."
+    },
+    {
+      "q": "What if num1 and num2 can be negative?",
+      "a": "Strip and record the sign of each input first, run the same multiplication on the absolute values, then prepend \"-\" if exactly one input was negative. Time and space complexity stay O(n·m) and O(n+m)."
+    },
+    {
+      "q": "What if inputs can be up to 10^5 digits each?",
+      "a": "Grade-school O(n·m) becomes 10^10 operations and TLEs. Switch to FFT-based multiplication (NTT with a suitable prime) for O(N log N) where N = n+m, trading simplicity for asymptotic speed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string multiply(string num1, string num2) {\n        int n = num1.size(), m = num2.size();\n        vector<int> pos(n + m, 0);\n        for (int i = n - 1; i >= 0; i--) {\n            for (int j = m - 1; j >= 0; j--) {\n                int mul = (num1[i] - '0') * (num2[j] - '0');\n                int p1 = i + j, p2 = i + j + 1;\n                int sum = mul + pos[p2];\n                pos[p2] = sum % 10;\n                pos[p1] += sum / 10;\n            }\n        }\n        string res;\n        for (int p : pos) {\n            if (!(res.empty() && p == 0)) {\n                res.push_back('0' + p);\n            }\n        }\n        return res.empty() ? \"0\" : res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

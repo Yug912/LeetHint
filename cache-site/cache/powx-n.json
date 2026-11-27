@@ -1,0 +1,40 @@
+{
+  "slug": "powx-n",
+  "title": "Pow(x, n)",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Exponentiation",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long N: single scalar → O(1)\n- double result, x: scalars → O(1)\n- recursion depth: none (iterative)\n- not counted: input parameters, returned double",
+  "approach": "Use binary exponentiation (exponentiation by squaring): write the exponent in binary and multiply in x^(2^k) for each set bit k. This computes x^n in O(log n) multiplications instead of O(n). To handle negative exponents safely, convert n to a `long long` before negating, because n can be INT_MIN and `-INT_MIN` overflows `int`.",
+  "hints": [
+    "The exponent n can be as large as 2^31 − 1, so multiplying x by itself n times is far too slow. What property of exponents lets you compute x^n from values like x^(n/2) without recomputing everything?",
+    "Binary exponentiation: decompose n into powers of two and combine the corresponding squared factors. For x = 2, n = 10 (binary 1010), you only need x^2 and x^8, giving 4 · 256 = 1024.",
+    "```\nresult = 1\nif n < 0:\n    x = 1 / x\n    n = -n\nwhile n > 0:\n    if n is odd:\n        result = result * x\n    x = x * x\n    n = n / 2\nreturn result\n```",
+    "**Minimum exponent** - n = 0 means x^0 = 1 for any nonzero x.\n`Input: x = 5.0, n = 0` → `Expected: 1.00000`\n⚠️ Bug: looping `while (n > 1)` instead of `while (n > 0)` → returns 5.00000\n\n**INT_MIN negation overflow** - n = −2147483648 cannot be negated inside an `int`.\n`Input: x = 2.0, n = -2147483648` → `Expected: 0.00000`\n⚠️ Bug: writing `int N = n; if (N < 0) N = -N;` → undefined behavior / wrong sign on N\n\n**Negative base, odd exponent** - sign of the result depends on parity of n.\n`Input: x = -2.0, n = 3` → `Expected: -8.00000`\n⚠️ Bug: taking `x = abs(x)` before squaring unconditionally → returns 8.00000\n\n**x = 1** - any exponent yields 1; squaring loop still runs but result stays 1.\n`Input: x = 1.0, n = 2147483647` → `Expected: 1.00000`\n⚠️ Bug: early-returning 0.0 when `abs(x) == 1` is fine, but skipping the loop and returning `x` only for `x > 0` while returning 0 for `x == -1` → returns 0.00000\n\n**Negative exponent** - must invert the base, not negate it.\n`Input: x = 2.0, n = -2` → `Expected: 0.25000`\n⚠️ Bug: doing `x = -x` instead of `x = 1.0 / x` when n < 0 → returns 4.00000"
+  ],
+  "followUps": [
+    {
+      "q": "How would you compute x^n mod m efficiently for large n?",
+      "a": "Use the same binary-exponentiation loop, but take `result = (result * x) % m` and `x = (x * x) % m` at each step so all intermediates stay below m^2. Time stays O(log n), space O(1)."
+    },
+    {
+      "q": "How would you compute the n-th Fibonacci number using this idea?",
+      "a": "Raise the 2×2 matrix [[1,1],[1,0]] to the power n with binary exponentiation on matrices; the top-left entry is F(n+1). Time is O(log n) matrix multiplications, space O(1)."
+    },
+    {
+      "q": "If n is given as a decimal string of up to 10^5 digits (too large for any integer type), how do you compute x^n?",
+      "a": "Process the decimal digits of n from most significant to least, maintaining `result = result^10 * x^digit` at each step, where each `^digit` and `^10` uses binary exponentiation. Time is O(|n| · log 10) = O(|n|), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double myPow(double x, int n) {\n        long long N = n;\n        if (N < 0) {\n            x = 1.0 / x;\n            N = -N;\n        }\n        double result = 1.0;\n        while (N) {\n            if (N & 1LL) {\n                result *= x;\n            }\n            x *= x;\n            N >>= 1;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

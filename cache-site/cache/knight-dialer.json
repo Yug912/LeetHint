@@ -1,0 +1,40 @@
+{
+  "slug": "knight-dialer",
+  "title": "Knight Dialer",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Matrix Exponentiation",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- T: 10×10 matrix (fixed size) → O(1)\n- result: 10×10 matrix (fixed size) → O(1)\n- C in matMul: 10×10 matrix (fixed size) → O(1)\n- M copy in matPow: 10×10 matrix (fixed size) → O(1)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "The knight's position is always one of 10 digits, and the transitions between digits are fixed and independent of n. This forms a linear recurrence expressible as matrix multiplication: if v_k is the count vector for each digit after k jumps, then v_{k+1} = T × v_k where T is the 10×10 transition matrix (T[i][j]=1 if the knight can jump from i to j). The answer is the sum of all entries in T^{n-1} (since v_0 is all ones). Binary exponentiation computes T^{n-1} in O(log n) matrix multiplications, each O(10³)=O(1000) operations.",
+  "hints": [
+    "The phone pad has only 10 digits, and from each digit the knight can reach a fixed set of other digits. If you know the counts for all 10 digits after k jumps, what do you need to compute the counts after k+1 jumps?",
+    "Use matrix exponentiation on the 10×10 transition matrix T where T[i][j]=1 if the knight can jump from i to j. For n=2, T has 20 ones total, matching the expected output of 20.",
+    "```\nT = 10×10 transition matrix\nresult = identity matrix\npower = n - 1\nwhile power > 0:\n    if power is odd: result = result × T\n    T = T × T\n    power = power / 2\nanswer = sum of all entries in result\n```",
+    "**n=1** - No jumps needed, just count starting positions.\n`Input: n = 1` → `Expected: 10`\n⚠️ Bug: computing T^n instead of T^(n-1) → returns 20\n\n**Overflow in multiplication** - Matrix entries approach 10^9; their products approach 10^18.\n`Input: n = 3131` → `Expected: 136006598`\n⚠️ Bug: using int for A[i][l] * B[l][j] → overflow wraps around, returns wrong value\n\n**Digit 5 dead end** - Digit 5 has no valid knight moves.\n`Input: n = 2` → `Expected: 20`\n⚠️ Bug: adding a self-loop T[5][5]=1 → returns 21\n\n**Identity initialization** - T^0 must be the identity, not zero.\n`Input: n = 1` → `Expected: 10`\n⚠️ Bug: initializing result to zero matrix instead of identity → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^18?",
+      "a": "Matrix exponentiation already handles this. The number of matrix multiplications is O(log n) ≈ 60, each taking O(10^3) operations. Time remains O(log n), space O(1)."
+    },
+    {
+      "q": "What if some digits are blocked (unavailable)?",
+      "a": "Remove the blocked digits' rows and columns from the transition matrix. The matrix shrinks to k×k where k is the number of available digits. Time becomes O(k^3 log n), space O(k^2)."
+    },
+    {
+      "q": "What if the knight can also move like a king (one step in any direction)?",
+      "a": "Change the transition matrix to include king moves alongside knight moves. The matrix is still 10×10, so the approach and complexity remain the same: O(log n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int knightDialer(int n) {\n        const int MOD = 1000000007;\n        vector<vector<long long>> T = {\n            {0,0,0,0,1,0,1,0,0,0},\n            {0,0,0,0,0,0,1,0,1,0},\n            {0,0,0,0,0,0,0,1,0,1},\n            {0,0,0,0,1,0,0,0,1,0},\n            {1,0,0,1,0,0,0,0,0,1},\n            {0,0,0,0,0,0,0,0,0,0},\n            {1,1,0,0,0,0,0,1,0,0},\n            {0,0,1,0,0,0,1,0,0,0},\n            {0,1,0,1,0,0,0,0,0,0},\n            {0,0,1,0,1,0,0,0,0,0}\n        };\n        \n        vector<vector<long long>> result = matPow(T, n - 1, MOD);\n        \n        long long ans = 0;\n        for (int i = 0; i < 10; i++) {\n            for (int j = 0; j < 10; j++) {\n                ans = (ans + result[i][j]) % MOD;\n            }\n        }\n        return (int)ans;\n    }\n    \nprivate:\n    vector<vector<long long>> matMul(const vector<vector<long long>>& A, \n                                     const vector<vector<long long>>& B, int MOD) {\n        int n = A.size(), m = B[0].size(), k = B.size();\n        vector<vector<long long>> C(n, vector<long long>(m, 0));\n        for (int i = 0; i < n; i++) {\n            for (int l = 0; l < k; l++) {\n                if (A[i][l] == 0) continue;\n                for (int j = 0; j < m; j++) {\n                    C[i][j] = (C[i][j] + A[i][l] * B[l][j]) % MOD;\n                }\n            }\n        }\n        return C;\n    }\n    \n    vector<vector<long long>> matPow(vector<vector<long long>> M, int p, int MOD) {\n        int sz = M.size();\n        vector<vector<long long>> result(sz, vector<long long>(sz, 0));\n        for (int i = 0; i < sz; i++) result[i][i] = 1;\n        \n        while (p > 0) {\n            if (p & 1) result = matMul(result, M, MOD);\n            M = matMul(M, M, MOD);\n            p >>= 1;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

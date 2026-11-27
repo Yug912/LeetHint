@@ -1,0 +1,40 @@
+{
+  "slug": "permutations",
+  "title": "Permutations",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking",
+  "tc": "O(n! · n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- recursion call-stack depth: up to n frames → O(n)\n- result vector: not counted (returned output)\n- input vector `nums`: modified in place, not counted",
+  "approach": "Use backtracking with in-place swaps: for each position `start`, try every index `i ≥ start` as the element placed there by swapping `nums[start]` and `nums[i]`, then recurse on `start+1`, then swap back. When `start == n`, the current arrangement is a complete permutation, so push a copy into the result. Because all integers are distinct, every swap choice yields a unique prefix, so exactly `n!` permutations are emitted with no duplicates.",
+  "hints": [
+    "If you fix which element sits at the first position, what is left to arrange in the remaining positions - and how does that sub-problem relate to the original one?",
+    "Backtracking with in-place swaps. For `nums = [1,2,3]` at `start = 0`, swap index 0 with index 1 to get `[2,1,3]`, recurse on `start = 1`, then swap back to restore `[1,2,3]` before trying the next index.",
+    "```\nfunction backtrack(nums, start, result):\n    if start == length(nums):\n        result.append(copy of nums)\n        return\n    for i from start to length(nums) - 1:\n        swap(nums[start], nums[i])\n        backtrack(nums, start + 1, result)\n        swap(nums[start], nums[i])\n```",
+    "**Single element** - n is at its minimum, so the only permutation is the array itself.\n`Input: [1]` → `Expected: [[1]]`\n⚠️ Bug: starting the loop at `start + 1` instead of `start` → returns `[]`\n\n**Negatives** - values can be negative; swaps and equality still work, but a \"pruning\" comparison breaks.\n`Input: [-1,-2]` → `Expected: [[-1,-2],[-2,-1]]`\n⚠️ Bug: skipping the swap when `nums[start] > nums[i]` to \"avoid duplicates\" → returns `[[-1,-2]]`\n\n**Already sorted** - the input is ascending; the first emitted permutation must equal the input.\n`Input: [1,2,3]` → `Expected: [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]`\n⚠️ Bug: omitting the second `swap(nums[start], nums[i])` after recursion → returns `[[1,2,3],[1,3,2],[3,1,2],[3,2,1],[1,2,3],[1,3,2]]` (duplicates, missing `[2,1,3]` and `[2,3,1]`)\n\n**Largest n** - n = 6 yields 6! = 720 permutations; a solution that allocates a fresh `used` vector per call still fits, but one that copies the whole result on each call risks blowing up memory.\n`Input: [1,2,3,4,5,6]` → `Expected: 720 permutations`\n⚠️ Bug: pushing `result` (instead of `nums`) into `result` at the base case → returns nested empty structures / wrong shape"
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle `Permutations II` where `nums` may contain duplicates?",
+      "a": "Sort `nums` first, then in the swap loop skip any `i` where `nums[i] == nums[start]` for `i > start` (equivalently skip when `i > start` and `nums[i] == nums[i-1]` and `i-1` was not used in a `used[]`-based version). Time stays O(n!·n), space O(n)."
+    },
+    {
+      "q": "Return only the k-th permutation in lexicographic order without generating all of them.",
+      "a": "Use the factorial number system: for each position, divide the remaining count by `(n-1)!` to pick the index of the next element, then remove it. Time O(n²) with a list removal, space O(n)."
+    },
+    {
+      "q": "Generate the next lexicographic permutation of `nums` in place (LeetCode 31).",
+      "a": "Find the largest index `i` with `nums[i] < nums[i+1]`, then the largest `j > i` with `nums[j] > nums[i]`, swap them, and reverse the suffix from `i+1`. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> permute(vector<int>& nums) {\n        vector<vector<int>> result;\n        backtrack(nums, 0, result);\n        return result;\n    }\nprivate:\n    void backtrack(vector<int>& nums, int start, vector<vector<int>>& result) {\n        if (start == (int)nums.size()) {\n            result.push_back(nums);\n            return;\n        }\n        for (int i = start; i < (int)nums.size(); ++i) {\n            swap(nums[start], nums[i]);\n            backtrack(nums, start + 1, result);\n            swap(nums[start], nums[i]);\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

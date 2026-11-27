@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-path-sum",
+  "title": "Minimum Path Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming on Grid",
+  "tc": "O(m*n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No extra containers allocated; grid is modified in place\n- No recursion\n- not counted: input grid",
+  "approach": "Since movement is restricted to down and right, the minimum sum to reach cell (i,j) depends only on the minimum sums to reach (i-1,j) and (i,j-1). We modify the grid in place: the first row and first column become running sums, then each interior cell adds the minimum of its top and left neighbor. The answer is the bottom-right cell value.",
+  "hints": [
+    "Since you can only move down or right, every path to cell (i,j) arrives from exactly one of two neighbors. What property must the sub-path ending at that neighbor have for the overall path to be minimal?",
+    "Use dynamic programming, modifying the grid in place. For Example 1, after filling row 0 as [1,4,5], cell (1,0) becomes 1+1=2, then cell (1,1) = 5 + min(4,2) = 7.",
+    "```\nfill first row with running sums (left to right)\nfill first column with running sums (top to bottom)\nfor i from 1 to m-1:\n    for j from 1 to n-1:\n        grid[i][j] += min(grid[i-1][j], grid[i][j-1])\nreturn grid[m-1][n-1]\n```",
+    "**Single cell** - grid has one element, no moves possible\n`Input: [[5]]` → `Expected: 5`\n⚠️ Bug: initializing a separate dp[0][0] to 0 instead of grid[0][0] → returns 0\n\n**Single row** - only right moves possible\n`Input: [[1,2,3]]` → `Expected: 6`\n⚠️ Bug: skipping the first-row prefix loop and only running the nested min loop → returns 3\n\n**Single column** - only down moves possible\n`Input: [[1],[2],[3]]` → `Expected: 6`\n⚠️ Bug: skipping the first-column prefix loop → returns 3\n\n**All equal values** - every cell has the same number\n`Input: [[3,3],[3,3]]` → `Expected: 9`\n⚠️ Bug: writing `grid[i][j] = min(...)` instead of `grid[i][j] += min(...)` → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can also move up or left (4-directional movement)?",
+      "a": "The grid becomes a weighted shortest-path problem. Use Dijkstra's algorithm with a min-heap, since all edge weights are non-negative. TC: O(mn log(mn)), SC: O(mn)."
+    },
+    {
+      "q": "What if you must return the actual path, not just the sum?",
+      "a": "Store a parent direction (up or left) for each cell alongside the DP values. After filling the table, backtrack from (m-1,n-1) to (0,0) following parent pointers. TC: O(mn), SC: O(mn) for the parent array."
+    },
+    {
+      "q": "What if the grid is streamed row by row and cannot fit entirely in memory?",
+      "a": "Keep only the previous row and current row in memory. Process left to right: dp[j] = grid[i][j] + min(dp[j], dp[j-1]), where dp[j] still holds the value from the row above. TC: O(mn), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minPathSum(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        for (int j = 1; j < n; j++) grid[0][j] += grid[0][j - 1];\n        for (int i = 1; i < m; i++) grid[i][0] += grid[i - 1][0];\n        for (int i = 1; i < m; i++) {\n            for (int j = 1; j < n; j++) {\n                grid[i][j] += min(grid[i - 1][j], grid[i][j - 1]);\n            }\n        }\n        return grid[m - 1][n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

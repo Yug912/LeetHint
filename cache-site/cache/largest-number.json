@@ -1,0 +1,40 @@
+{
+  "slug": "largest-number",
+  "title": "Largest Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Custom Sorting",
+  "tc": "O(n log n * L)",
+  "sc": "O(log n + L)",
+  "spaceBreakdown": "- std::sort recursion stack: up to O(log n) depth\n- string comparator temporaries: up to O(L) space per comparison\n- not counted: input vector, returned string",
+  "approach": "The key insight is that for any two numbers $a$ and $b$, placing $a$ before $b$ yields a larger result if the concatenated string $ab$ is lexicographically greater than $ba$. We sort the array in-place using a custom comparator that implements this string comparison. After sorting, if the largest element is 0, we return \"0\" to handle the all-zeros edge case; otherwise, we concatenate the sorted numbers into a single string. This guarantees the largest possible number because the comparator establishes a total order that maximizes pairwise contributions.",
+  "hints": [
+    "For any two numbers in the array, what determines which one should come first to maximize the final concatenated result? The input numbers can be up to $10^9$.",
+    "Use a custom comparator to sort the integers in place. For `nums = [10, 2]`, compare `10` and `2` by checking if `\"102\" > \"210\"`; since it is false, `2` comes before `10`.",
+    "```\nsort nums with comparator(a, b):\n    return to_string(a) + to_string(b) > to_string(b) + to_string(a)\nresult = concatenate to_string(x) for all x in nums\nreturn result\n```",
+    "**All zeros** - The array contains only zeros, which can cause multiple leading zeros in the result.\n`Input: nums = [0,0]` → `Expected: \"0\"`\n⚠️ Bug: Concatenating all elements without checking for leading zeros → returns `\"00\"`\n\n**Large numbers** - Numbers up to $10^9$ can overflow 64-bit integers when mathematically concatenated for comparison.\n`Input: nums = [999999999, 1000000000]` → `Expected: \"9999999991000000000\"`\n⚠️ Bug: Using `long long` to compute $a \\times 10^{\\text{len}(b)} + b$ for comparison → overflows and returns `\"1000000000999999999\"`\n\n**Prefix ties** - One number is a prefix of another, so integer value comparison fails.\n`Input: nums = [12, 121]` → `Expected: \"12121\"`\n⚠️ Bug: Sorting purely by integer value descending → returns `\"12112\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the numbers can be negative?",
+      "a": "If negative numbers are allowed, the comparator must handle the sign. A negative number should be placed to minimize its impact, typically by comparing absolute values in reverse or placing them at the end. The time and space complexity would remain $O(n \\log n \\cdot L)$ and $O(\\log n + L)$."
+    },
+    {
+      "q": "What if the input is a stream of numbers and you cannot store all of them in memory?",
+      "a": "You would need an external sorting approach. Since the comparator only needs two elements at a time, you can sort chunks in memory, write them to disk, and then perform an external merge sort. The time complexity increases due to disk I/O, but the memory footprint becomes $O(M)$ where $M$ is the chunk size."
+    },
+    {
+      "q": "What if you need to return the smallest number instead?",
+      "a": "You simply reverse the comparator to sort in ascending order based on the concatenated strings. The edge case for all zeros remains the same, returning \"0\". The time and space complexity remain unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string largestNumber(vector<int>& nums) {\n        sort(nums.begin(), nums.end(), [](int a, int b) {\n            string sa = to_string(a);\n            string sb = to_string(b);\n            return sa + sb > sb + sa;\n        });\n        if (nums[0] == 0) return \"0\";\n        string ans;\n        for (int x : nums) ans += to_string(x);\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

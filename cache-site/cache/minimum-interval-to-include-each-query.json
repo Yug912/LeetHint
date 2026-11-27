@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-interval-to-include-each-query",
+  "title": "Minimum Interval to Include Each Query",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sweep Line with Min-Heap",
+  "tc": "O((n + m) log n)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<pair<int,int>> q: m entries → O(m)\n- priority_queue pq: up to n entries → O(n)\n- sort(): O(log n) stack\n- not counted: input intervals, returned ans vector",
+  "approach": "Sort intervals by left endpoint and sort queries by value (keeping original indices). Sweep queries in increasing order: as the query value grows, intervals \"activate\" when their left ≤ query (push (size, right) onto a min-heap) and \"expire\" when their right < query (lazy-pop from heap top). The heap top after cleanup is the smallest active interval size for that query. Correctness follows because processing queries in sorted order means intervals only need to be added once (in left-sorted order) and the heap always holds exactly the intervals whose left ≤ current query and right ≥ current query.",
+  "hints": [
+    "If you processed the queries from smallest to largest, how does the set of intervals whose left end is ≤ the current query change - and once an interval is \"in\", what single condition later makes it stop covering the query?",
+    "Use a min-heap keyed by interval size, storing (size, right). For query 5 in Example 1, after adding [1,4],[2,4],[3,6],[4,4], the expired entries (right < 5) are lazily popped, leaving (4,6) on top → answer 4.",
+    "sort intervals by left\nsort queries by value, keep original index\nidx = 0\nfor each query val in sorted order:\n    while idx < n and intervals[idx].left <= val:\n        push (size, intervals[idx].right) onto min-heap\n        idx++\n    while heap not empty and heap.top().right < val:\n        pop heap\n    ans[original index] = heap.top().size if heap not empty else -1",
+    "**No valid answer** - query lies outside every interval\n`Input: intervals = [[1,2]], queries = [5]` → `Expected: [-1]`\n⚠️ Bug: reading heap.top() without checking empty → undefined behavior / crash\n\n**Boundary endpoint** - query equals an interval's right endpoint\n`Input: intervals = [[1,4]], queries = [4]` → `Expected: [4]`\n⚠️ Bug: using `right < val` as `right <= val` in the expiry check → returns [-1]\n\n**Tie broken by size** - a wide interval starts before a narrow one covering the same query\n`Input: intervals = [[1,5],[2,4]], queries = [3]` → `Expected: [3]`\n⚠️ Bug: returning the interval with smallest left without comparing sizes → returns [5]\n\n**Size-1 interval** - left == right\n`Input: intervals = [[4,4],[1,8]], queries = [4]` → `Expected: [1]`\n⚠️ Bug: computing size as `right - left` instead of `right - left + 1` → returns [0]\n\n**Duplicate intervals** - same interval listed twice\n`Input: intervals = [[1,4],[1,4]], queries = [2]` → `Expected: [4]`\n⚠️ Bug: deduplicating intervals and then mis-indexing the sorted array → returns [-1] or wrong value"
+  ],
+  "followUps": [
+    {
+      "q": "Queries arrive online one at a time and must be answered immediately; you cannot sort them. How do you adapt?",
+      "a": "Pre-sort intervals by left and build a persistent/segment structure over right endpoints keyed by size, or answer each query by binary-searching the active set. Without sorting queries you lose the sweep, so each query costs O(log² n) via a 2D range-min structure; total O(m log² n), space O(n log n)."
+    },
+    {
+      "q": "Intervals can be inserted and deleted dynamically between queries. How does the approach change?",
+      "a": "Replace the sorted-array sweep with an ordered map keyed by left and a balanced BST / Fenwick-over-sizes keyed by right. Each update is O(log² n) and each query is O(log n) after lazy cleanup; total O((n + m + updates) log² n), space O(n)."
+    },
+    {
+      "q": "Query and coordinate values can be up to 10^9 (still ≤ 10^5 of them). What changes?",
+      "a": "Nothing structurally - the sweep only compares values, never indexes an array by them, so 10^9 values work as-is with `long long` for size arithmetic to avoid overflow (10^9 fits in int, but `right - left + 1` is safe). Time and space stay O((n + m) log n) and O(n + m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> minInterval(vector<vector<int>>& intervals, vector<int>& queries) {\n        int n = (int)intervals.size();\n        int m = (int)queries.size();\n        sort(intervals.begin(), intervals.end());\n        vector<pair<int,int>> q(m);\n        for (int i = 0; i < m; i++) q[i] = {queries[i], i};\n        sort(q.begin(), q.end());\n        vector<int> ans(m, -1);\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;\n        int idx = 0;\n        for (int i = 0; i < m; i++) {\n            int val = q[i].first;\n            while (idx < n && intervals[idx][0] <= val) {\n                int sz = intervals[idx][1] - intervals[idx][0] + 1;\n                pq.push({sz, intervals[idx][1]});\n                idx++;\n            }\n            while (!pq.empty() && pq.top().second < val) {\n                pq.pop();\n            }\n            if (!pq.empty()) {\n                ans[q[i].second] = pq.top().first;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

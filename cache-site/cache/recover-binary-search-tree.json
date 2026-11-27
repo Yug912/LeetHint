@@ -1,0 +1,39 @@
+{
+  "slug": "recover-binary-search-tree",
+  "title": "Recover Binary Search Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Morris Inorder Traversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- TreeNode* pointers (first, second, prev, curr, pred): 6 pointers → O(1)\n- int tmp for swapping values → O(1)\n- No recursion, no containers, no arrays\n- Input tree modified in place (not counted)",
+  "approach": "An inorder traversal of a valid BST yields a strictly increasing sequence. When two nodes are swapped, this sequence has either one inversion (adjacent swap) or two inversions (non-adjacent swap); the swapped pair is the first element of the first inversion and the second element of the last inversion. We use Morris inorder traversal to achieve O(1) space by temporarily threading each node's inorder predecessor back to it, then restoring the threads after visiting.",
+  "hints": [
+    "In a valid BST, what does the sequence of values look like when you visit nodes in left-root-right order? The tree has between 2 and 1000 nodes.",
+    "Use Morris inorder traversal - it visits nodes in sorted order using O(1) space by temporarily linking each node's inorder predecessor back to it. In Example 1, the inorder sequence is 3, 2, 1; the inversions 3>2 and 2>1 identify nodes 3 and 1 as the swapped pair.",
+    "```\nprev = first = second = null\ncurr = root\nwhile curr != null:\n    if curr.left == null:\n        check inversion (prev, curr) → record first/second\n        prev = curr\n        curr = curr.right\n    else:\n        pred = rightmost node in curr.left (stop if pred.right == curr)\n        if pred.right == null:\n            pred.right = curr       # create thread\n            curr = curr.left\n        else:\n            pred.right = null       # remove thread\n            check inversion (prev, curr) → record first/second\n            prev = curr\n            curr = curr.right\nswap(first.val, second.val)\n```",
+    "**Two-node tree (minimum size)** - only one inversion is possible.\n`Input: [1,2]` → `Expected: [2,1]`\n⚠️ Bug: setting `second` only inside the `if (first == nullptr)` block → second stays null, no swap, returns [1,2].\n\n**Non-adjacent swap** - two inversions, swapped nodes are far apart in inorder.\n`Input: [4,2,1,5,3]` → `Expected: [4,2,5,1,3]`\n⚠️ Bug: setting `second = curr` only on the first inversion and never updating → swaps 5 and 2, returns [4,5,1,2,3].\n\n**Negative values** - node values below zero.\n`Input: [-3,-1]` → `Expected: [-1,-3]`\n⚠️ Bug: initializing `prev` to a dummy node with val=0 → 0 > -1 triggers a false inversion, returns [0,-1].\n\n**Left-skewed tree** - all nodes chain through left children.\n`Input: [1,2,null,3]` → `Expected: [3,2,null,1]`\n⚠️ Bug: swapping `first` and `second` pointers via `swap(first, second)` instead of swapping their `val` fields → only swaps local variables, tree unchanged, returns [1,2,null,3]."
+  ],
+  "followUps": [
+    {
+      "q": "What if up to k nodes were swapped instead of exactly 2?",
+      "a": "Collect all values during an inorder traversal, sort them, and reassign values in inorder position. This takes O(n log n) time and O(n) space. The inversion-pairing trick only works for k=2 because the pairing logic becomes ambiguous for larger k."
+    },
+    {
+      "q": "What if the tree values can be duplicates?",
+      "a": "Replace the strict `>` comparison with `>=` to detect non-increasing pairs. However, with duplicates, multiple valid BST configurations exist, so the recovered tree may not be unique. The algorithm still runs in O(n) time and O(1) space."
+    },
+    {
+      "q": "What if you must also return the inorder positions of the swapped nodes?",
+      "a": "Maintain an inorder position counter incremented on each visit. When an inversion is detected, record the positions of both `prev` and `curr` alongside the node pointers. This adds two integers of extra space and does not change the O(n) time or O(1) space complexity."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    void recoverTree(TreeNode* root) {\n        TreeNode *first = nullptr, *second = nullptr;\n        TreeNode *prev = nullptr;\n        TreeNode *curr = root;\n        while (curr != nullptr) {\n            if (curr->left == nullptr) {\n                if (prev != nullptr && prev->val > curr->val) {\n                    if (first == nullptr) first = prev;\n                    second = curr;\n                }\n                prev = curr;\n                curr = curr->right;\n            } else {\n                TreeNode *pred = curr->left;\n                while (pred->right != nullptr && pred->right != curr) {\n                    pred = pred->right;\n                }\n                if (pred->right == nullptr) {\n                    pred->right = curr;\n                    curr = curr->left;\n                } else {\n                    pred->right = nullptr;\n                    if (prev != nullptr && prev->val > curr->val) {\n                        if (first == nullptr) first = prev;\n                        second = curr;\n                    }\n                    prev = curr;\n                    curr = curr->right;\n                }\n            }\n        }\n        if (first != nullptr && second != nullptr) {\n            int tmp = first->val;\n            first->val = second->val;\n            second->val = tmp;\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

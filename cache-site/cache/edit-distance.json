@@ -1,0 +1,40 @@
+{
+  "slug": "edit-distance",
+  "title": "Edit Distance",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming (2D, space-optimized)",
+  "tc": "O(n * m)",
+  "sc": "O(min(n, m))",
+  "spaceBreakdown": "- vector<int> prev: min(n,m)+1 entries → O(min(n,m))\n- vector<int> curr: min(n,m)+1 entries → O(min(n,m))\n- recursion depth: none\n- not counted: input strings word1, word2",
+  "approach": "The key insight is that converting a prefix of word1 to a prefix of word2 depends only on the last characters of each prefix and the answers for slightly smaller prefixes. We define dp[i][j] as the minimum operations to convert word1[0..i-1] to word2[0..j-1]. When the last characters match, we carry forward dp[i-1][j-1] for free; otherwise we take 1 plus the minimum of delete (dp[i-1][j]), insert (dp[i][j-1]), or replace (dp[i-1][j-1]). We space-optimize to two rolling rows of size min(n,m)+1 by always iterating over the shorter string as the inner dimension.",
+  "hints": [
+    "When converting the first i characters of word1 to the first j characters of word2, which smaller prefix-to-prefix answers would you need to determine the cost for this pair? Both strings have length at most 500.",
+    "Use a 2D dynamic programming table dp[i][j] = min ops to convert word1[0..i-1] to word2[0..j-1], rolled into two 1D rows. For \"horse\"→\"ros\": dp[1][1] compares 'h' vs 'r' (mismatch), so dp[1][1] = 1 + min(dp[0][1]=1, dp[1][0]=1, dp[0][0]=0) = 1.",
+    "```\nfor j in 0..m: prev[j] = j\nfor i in 1..n:\n    curr[0] = i\n    for j in 1..m:\n        if word1[i-1] == word2[j-1]:\n            curr[j] = prev[j-1]\n        else:\n            curr[j] = 1 + min(prev[j], curr[j-1], prev[j-1])\n    swap(prev, curr)\nreturn prev[m]\n```",
+    "**Empty first string** - word1 is empty, every character of word2 must be inserted.\n`Input: word1 = \"\", word2 = \"abc\"` → `Expected: 3`\n⚠️ Bug: leaving prev[j] = 0 instead of initializing prev[j] = j → returns 0\n\n**Empty second string** - word2 is empty, every character of word1 must be deleted.\n`Input: word1 = \"abc\", word2 = \"\"` → `Expected: 3`\n⚠️ Bug: not setting curr[0] = i inside the loop, leaving it 0 → returns 0\n\n**Identical strings** - no operations needed.\n`Input: word1 = \"abc\", word2 = \"abc\"` → `Expected: 0`\n⚠️ Bug: always computing 1 + min(prev[j], curr[j-1], prev[j-1]) without checking character equality first → returns 3\n\n**Single character mismatch** - one replace operation.\n`Input: word1 = \"a\", word2 = \"b\"` → `Expected: 1`\n⚠️ Bug: computing 1 + min(prev[j], curr[j-1]) and omitting prev[j-1] (the replace option) → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if only insert and delete are allowed (no replace operation)?",
+      "a": "Without replace, each mismatched position requires a delete plus an insert. The answer becomes n + m - 2*LCS, where LCS is the longest common subsequence of the two strings. Time O(n*m), space O(min(n,m))."
+    },
+    {
+      "q": "How would you return the actual sequence of operations instead of just the count?",
+      "a": "Keep the full 2D DP table (O(n*m) space) and backtrack from dp[n][m]: if word1[i-1] == word2[j-1], move diagonally with no operation; otherwise follow whichever neighbor gave the minimum and record insert, delete, or replace accordingly. Time O(n*m), space O(n*m)."
+    },
+    {
+      "q": "If strings can be up to 10^5 characters but you only need to know whether the distance is at most k, how would you adapt?",
+      "a": "Use a banded DP that only computes dp[i][j] for |i - j| ≤ k, since any edit path outside this band already exceeds k operations. Time O(n*k), space O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDistance(string word1, string word2) {\n        int n = word1.size(), m = word2.size();\n        if (n < m) {\n            swap(word1, word2);\n            swap(n, m);\n        }\n        vector<int> prev(m + 1), curr(m + 1);\n        for (int j = 0; j <= m; j++) prev[j] = j;\n        for (int i = 1; i <= n; i++) {\n            curr[0] = i;\n            for (int j = 1; j <= m; j++) {\n                if (word1[i - 1] == word2[j - 1]) {\n                    curr[j] = prev[j - 1];\n                } else {\n                    curr[j] = 1 + min({prev[j], curr[j - 1], prev[j - 1]});\n                }\n            }\n            swap(prev, curr);\n        }\n        return prev[m];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

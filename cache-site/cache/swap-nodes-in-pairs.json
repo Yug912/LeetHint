@@ -1,0 +1,40 @@
+{
+  "slug": "swap-nodes-in-pairs",
+  "title": "Swap Nodes in Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linked List Pointer Rewiring (Dummy Head)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode dummy: 1 stack node → O(1)\n- pointers prev, a, b: 3 scalars → O(1)\n- recursion depth: none (iterative)\n- not counted: input list, returned head",
+  "approach": "Use a dummy node before the head so the new head can be returned uniformly. Walk a `prev` pointer along the list; whenever `prev->next` and `prev->next->next` both exist, rewire the pair `a = prev->next`, `b = a->next` so that `a->next = b->next`, `b->next = a`, `prev->next = b`, then advance `prev = a`. This swaps each adjacent pair in one pass without touching node values, and naturally leaves a trailing odd node untouched.",
+  "hints": [
+    "In [1,2,3,4] → [2,1,4,3], after the first pair is swapped, which node's `next` pointer must reach forward to the second swapped pair, and what does that imply about needing a pointer *before* the current pair?",
+    "Iterative pointer rewiring with a dummy head node. For dummy->1->2->3->4: set 1->next = 3, 2->next = 1, dummy->next = 2, then move the \"prev\" pointer to node 1 and repeat.",
+    "```\ndummy.next = head\nprev = dummy\nwhile prev.next and prev.next.next:\n    a = prev.next\n    b = a.next\n    a.next = b.next\n    b.next = a\n    prev.next = b\n    prev = a\nreturn dummy.next\n```",
+    "**Empty list** - zero nodes, head is null\n`Input: []` → `Expected: []`\n⚠️ Bug: accessing `head->next` before any null check → runtime error\n\n**Single node** - odd count, one node has no partner\n`Input: [1]` → `Expected: [1]`\n⚠️ Bug: loop condition `while (prev->next)` only → dereferences `prev->next->next` on null → crash\n\n**Odd length** - last node must stay in place\n`Input: [1,2,3]` → `Expected: [2,1,3]`\n⚠️ Bug: advancing `prev = b` instead of `prev = a` → next iteration rewires the wrong pair → returns `[2,3,1]`\n\n**Two nodes only** - minimal swap, head changes\n`Input: [1,2]` → `Expected: [2,1]`\n⚠️ Bug: returning `head` instead of `dummy.next` → returns `[1,2]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must swap every k consecutive nodes instead of every two (Reverse Nodes in k-Group)?",
+      "a": "Count k nodes ahead; if fewer than k remain, stop. Reverse that group in place with the same dummy-head pattern, link the previous group's tail to the new group head, and continue. Time O(n), space O(1)."
+    },
+    {
+      "q": "Solve it recursively without a dummy node - what changes?",
+      "a": "Recurse on `head->next->next` to get the swapped tail, then rewire so `head->next->next = head`, `head->next = recursive_result`, and return `head->next`. Time O(n), space O(n) for the call stack."
+    },
+    {
+      "q": "What if the list is too long to hold in memory and arrives as a stream?",
+      "a": "Buffer two nodes at a time; when both arrive, emit them in swapped order, otherwise emit the lone node unchanged. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\npublic:\n    ListNode* swapPairs(ListNode* head) {\n        ListNode dummy(0, head);\n        ListNode* prev = &dummy;\n        while (prev->next && prev->next->next) {\n            ListNode* a = prev->next;\n            ListNode* b = a->next;\n            a->next = b->next;\n            b->next = a;\n            prev->next = b;\n            prev = a;\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

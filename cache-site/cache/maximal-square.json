@@ -1,0 +1,40 @@
+{
+  "slug": "maximal-square",
+  "title": "Maximal Square",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Grid",
+  "tc": "O(m*n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: cols+1 entries → O(n)\n- scalar variables (rows, cols, maxSide, i, j, prev, temp, best): O(1)\n- recursion/call stack: none\n- not counted: input matrix, returned int",
+  "approach": "For each cell as the bottom-right corner, the side length of the largest all-1 square ending there is 1 plus the minimum of the corresponding side lengths ending at its top, left, and top-left neighbors (0 if the cell itself is '0'). Scan row by row, keep one dp row plus a single diagonal variable, and track the maximum side. Correctness follows because a larger square ending at (i,j) can only exist if the three overlapping squares above/left/diagonal all exist, so the recurrence captures the tightest constraint.",
+  "hints": [
+    "For a '1' cell, what information about already-scanned neighboring cells would let you know the largest all-1 square that ends at that cell?\nThe grid has at most 300×300 cells, so an O(m·n) scan is well within the time limit.",
+    "Dynamic programming with a 1-D dp array: when matrix[i][j]=='1', set dp[j+1] = 1 + min(dp[j], dp[j+1], prev), else 0; prev holds the top-left value.\nIn Example 1, the '1' at row 3 col 4 (1-indexed) has top/left/top-left sides 1,1,1, so its side becomes 2.",
+    "dp = array of length cols+1 filled with 0\nmaxSide = 0\nfor each row:\n    prev = 0\n    for each col:\n        temp = dp[col+1]\n        if matrix[row][col] == '1':\n            dp[col+1] = 1 + min(dp[col], dp[col+1], prev)\n            maxSide = max(maxSide, dp[col+1])\n        else:\n            dp[col+1] = 0\n        prev = temp\nreturn maxSide * maxSide",
+    "**Single '0' cell** - smallest allowed input, and the answer is zero.\n`Input: [[\"0\"]]` → `Expected: 0`\n⚠️ Bug: initialising `maxSide = 1` instead of `0` → returns `1`\n\n**All ones 2×2** - every cell is '1', so the maximal square is the whole grid.\n`Input: [[\"1\",\"1\"],[\"1\",\"1\"]]` → `Expected: 4`\n⚠️ Bug: returning `maxSide` instead of `maxSide * maxSide` → returns `2`\n\n**Missing top-left in a 2×2** - the bottom-right '1' has left and up neighbors that are '1', but the diagonal is '0'.\n`Input: [[\"0\",\"1\"],[\"1\",\"1\"]]` → `Expected: 1`\n⚠️ Bug: taking `1 + min(left, up)` and ignoring the top-left diagonal → returns `4`\n\n**Zero inside the grid** - a '0' must zero out that cell's state so later rows cannot extend through it.\n`Input: [[\"1\",\"1\",\"0\"],[\"1\",\"0\",\"1\"],[\"1\",\"1\",\"1\"]]` → `Expected: 1`\n⚠️ Bug: omitting `else dp[col+1] = 0` on '0' cells → returns `4`"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of the area, return the top-left and bottom-right coordinates of one maximal square.",
+      "a": "Track the row and column where maxSide is updated during the same DP scan. If maxSide > 0, the bottom-right is that cell and the top-left is (row - maxSide + 1, col - maxSide + 1). Time stays O(m*n), space O(n)."
+    },
+    {
+      "q": "Count the total number of squares containing only 1's.",
+      "a": "In this DP, dp[i][j] is both the largest side ending at (i,j) and the number of all-1 squares ending there. Sum every dp value during the scan. Time O(m*n), space O(n)."
+    },
+    {
+      "q": "Find the largest rectangle (not necessarily square) of 1's.",
+      "a": "Maintain heights[j] = consecutive 1's above the current cell in column j; for each row, compute the largest rectangle in that histogram with a monotonic stack. Time O(m*n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximalSquare(vector<vector<char>>& matrix) {\n        int rows = static_cast<int>(matrix.size());\n        if (rows == 0) return 0;\n        int cols = static_cast<int>(matrix[0].size());\n        if (cols == 0) return 0;\n\n        vector<int> dp(cols + 1, 0);\n        int maxSide = 0;\n\n        for (int i = 0; i < rows; ++i) {\n            int prev = 0;\n            for (int j = 0; j < cols; ++j) {\n                int temp = dp[j + 1];\n                if (matrix[i][j] == '1') {\n                    int best = dp[j];\n                    if (dp[j + 1] < best) best = dp[j + 1];\n                    if (prev < best) best = prev;\n                    dp[j + 1] = best + 1;\n                    if (dp[j + 1] > maxSide) maxSide = dp[j + 1];\n                } else {\n                    dp[j + 1] = 0;\n                }\n                prev = temp;\n            }\n        }\n\n        return maxSide * maxSide;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

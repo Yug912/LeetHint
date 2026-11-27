@@ -1,0 +1,40 @@
+{
+  "slug": "car-pooling",
+  "title": "Car Pooling",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Difference Array",
+  "tc": "O(n + 1001)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> diff(1001): fixed size 1001, constant → O(1)\n- not counted: input trips, returned bool",
+  "approach": "Since all locations fall in [0, 1000], use a difference array: for each trip, add passengers at the pickup location and subtract at the drop-off location. Then scan left to right, maintaining a running sum of current passengers. If at any point the running sum exceeds capacity, return false. This correctly handles the \"drop-off before pick-up at the same location\" rule because the net change at each location is the same regardless of event order, and with drop-offs first the intermediate state never exceeds the final state at that location.",
+  "hints": [
+    "Since every location is between 0 and 1000, what would you need to know at each kilometer to check the car never overflows?",
+    "Use a difference array of size 1001. For trip [2,1,5], add 2 at index 1 and subtract 2 at index 5, then scan left to right accumulating a running sum.",
+    "```\ncreate diff array of size 1001, all zeros\nfor each trip [p, from, to]:\n    diff[from] += p\n    diff[to]   -= p\ncurr = 0\nfor i from 0 to 1000:\n    curr += diff[i]\n    if curr > capacity: return false\nreturn true\n```",
+    "**Single trip at boundary** - trip uses the maximum location value 1000.\n`Input: trips = [[1,0,1000]], capacity = 1` → `Expected: true`\n⚠️ Bug: allocating diff array of size 1000 instead of 1001 → out-of-bounds access at index 1000.\n\n**Drop-off and pick-up at same location** - one trip ends where another begins.\n`Input: trips = [[2,1,5],[2,5,7]], capacity = 2` → `Expected: true`\n⚠️ Bug: processing pick-up events before drop-off events at the same location in a sorted-events approach → sees 4 passengers at km 5, returns false.\n\n**Exact capacity match** - passenger count equals capacity exactly.\n`Input: trips = [[5,0,3]], capacity = 5` → `Expected: true`\n⚠️ Bug: using `curr >= capacity` instead of `curr > capacity` → returns false."
+  ],
+  "followUps": [
+    {
+      "q": "What if locations could be up to 10^9 instead of 1000?",
+      "a": "Replace the fixed-size difference array with event sorting: create (location, delta) pairs, sort by location with drop-offs before pick-ups at ties, and process in order while tracking the running sum. Time becomes O(n log n), space O(n)."
+    },
+    {
+      "q": "What if instead of a given capacity, you must return the minimum capacity needed to serve all trips?",
+      "a": "Run the same difference array and prefix sum, but track the maximum running sum instead of comparing against a threshold. Return that maximum. Same O(n) time and O(1) space."
+    },
+    {
+      "q": "What if trips arrive one at a time and you must answer after each insertion whether all trips so far are feasible?",
+      "a": "Keep the difference array and re-scan it after each new trip. Each query costs O(1001), so n queries cost O(n · 1001) = O(n) total. With unbounded locations, use a sorted map of location → delta and re-scan for O(n) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool carPooling(vector<vector<int>>& trips, int capacity) {\n        vector<int> diff(1001, 0);\n        for (auto& trip : trips) {\n            diff[trip[1]] += trip[0];\n            diff[trip[2]] -= trip[0];\n        }\n        int curr = 0;\n        for (int i = 0; i <= 1000; i++) {\n            curr += diff[i];\n            if (curr > capacity) return false;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

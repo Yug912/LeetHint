@@ -1,0 +1,40 @@
+{
+  "slug": "burst-balloons",
+  "title": "Burst Balloons",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals",
+  "tc": "O(n³)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<int> arr: n+2 elements → O(n)\n- vector<vector<long long>> dp: (n+2)×(n+2) entries → O(n²)\n- recursion depth: none (iterative)\n- not counted: input nums, returned int",
+  "approach": "Pad the array with sentinel 1s at both ends, then use interval DP. Define dp[i][j] as the maximum coins obtainable by bursting all balloons strictly between indices i and j, where i and j themselves are never burst (they act as boundaries). The key insight: consider which balloon k (i < k < j) is burst *last* in the range - at that moment its neighbors are exactly arr[i] and arr[j], so the recurrence is dp[i][j] = max over k of arr[i]·arr[k]·arr[j] + dp[i][k] + dp[k][j]. We fill by increasing interval length so subproblems are always solved before they're needed.",
+  "hints": [
+    "Among all balloons in a contiguous sub-range, is there one whose neighbors at the moment of bursting are determined by the range boundaries alone, regardless of the order the others were burst? n ≤ 300 permits cubic-time algorithms.",
+    "Interval DP: pad nums with 1 at both ends, then dp[i][j] = max coins from bursting everything strictly between i and j. For [3,1,5,8] → [1,3,1,5,8,1], if index 4 (value 8) is last burst between 0 and 5: coins = 1×8×1 + dp[0][4] + dp[4][5].",
+    "```\npad nums with 1 at both ends → arr of size n+2\nfor len = 2 to n+1:\n    for i = 0 to n+1-len:\n        j = i + len\n        for k = i+1 to j-1:\n            dp[i][j] = max(dp[i][j], arr[i]*arr[k]*arr[j] + dp[i][k] + dp[k][j])\nreturn dp[0][n+1]\n```",
+    "**Single balloon** - only one element; sentinel 1s on both sides are essential.\n`Input: nums = [5]` → `Expected: 5`\n⚠️ Bug: using 0 instead of 1 for out-of-bounds neighbors → returns 0\n\n**Greedy largest first** - bursting the highest-value balloon first is suboptimal.\n`Input: nums = [1,5]` → `Expected: 10`\n⚠️ Bug: greedy bursting 5 first (1×5×1=5, then 1×1×1=1) → returns 6\n\n**All equal values** - outside-in bursting loses high-value interior products.\n`Input: nums = [2,2,2]` → `Expected: 14`\n⚠️ Bug: bursting outside-in (1×2×2 + 1×2×2 + 1×2×1 = 4+4+2) → returns 10\n\n**Zero in the middle** - a zero balloon should be burst to bring valuable neighbors together.\n`Input: nums = [3,0,5]` → `Expected: 20`\n⚠️ Bug: skipping zero-valued balloons (computing on [3,5] only) → returns 18"
+  ],
+  "followUps": [
+    {
+      "q": "How would you reconstruct the actual burst order that achieves the maximum coins?",
+      "a": "Store the argmax k for each (i, j) in a separate choice table during the DP. After computing dp[0][n+1], recursively backtrack: the optimal last burst in (i, j) is choice[i][j], then recurse on (i, k) and (k, j). Time stays O(n³), space increases to O(n²) for the choice table."
+    },
+    {
+      "q": "What if the balloons are arranged in a circle (the last balloon is adjacent to the first)?",
+      "a": "Try each of the n possible positions as the \"cut\" that linearizes the circle, solve the linear interval DP for each, and take the maximum. This gives O(n⁴) time and O(n²) space. A more efficient approach duplicates the array and restricts interval length to at most n, yielding O(n³) time with O(n²) space."
+    },
+    {
+      "q": "What if n ≤ 2000 - can you improve beyond O(n³)?",
+      "a": "The general burst-balloons recurrence has no known sub-cubic algorithm because the optimal split point k does not satisfy the monotonicity property required for Knuth's optimization. For n = 2000, O(n³) ≈ 8×10⁹ is too slow. Practical mitigations include loop reordering for cache locality, constant-factor pruning (skipping k where arr[k] = 0), or parallelizing the inner loop across intervals of the same length. If values are bounded and small, a different decomposition may apply."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxCoins(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> arr(n + 2);\n        arr[0] = 1;\n        arr[n + 1] = 1;\n        for (int i = 0; i < n; i++) arr[i + 1] = nums[i];\n        int m = n + 2;\n        vector<vector<long long>> dp(m, vector<long long>(m, 0));\n        for (int len = 2; len <= m - 1; len++) {\n            for (int i = 0; i + len < m; i++) {\n                int j = i + len;\n                for (int k = i + 1; k < j; k++) {\n                    long long val = (long long)arr[i] * arr[k] * arr[j]\n                                 + dp[i][k] + dp[k][j];\n                    if (val > dp[i][j]) dp[i][j] = val;\n                }\n            }\n        }\n        return (int)dp[0][m - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

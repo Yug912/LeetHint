@@ -1,0 +1,39 @@
+{
+  "slug": "first-bad-version",
+  "title": "First Bad Version",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int lo, hi, mid: 3 scalar variables → O(1)\n- recursion depth: none (iterative)\n- not counted: input n, returned int",
+  "approach": "The versions form a monotonic sequence: all good versions come first, then all bad versions. This monotonic property allows binary search - check the middle version; if bad, the first bad is at or before it (move hi to mid), if good, the first bad is after it (move lo to mid+1). Narrow the range until lo == hi, which is the first bad version. Using `mid = lo + (hi - lo) / 2` avoids integer overflow when n is near 2^31 − 1.",
+  "hints": [
+    "Given that every version after the first bad one is also bad, what ordering property does the sequence of versions 1 through n have? The constraint n ≤ 2^31 − 1 means checking every version one by one is infeasible.",
+    "Binary search on the range [1, n]. Check the middle version: if bad, search the left half (including mid); if good, search the right half (excluding mid). Example: n = 5, bad = 4 → mid = 3 is good so lo = 4; mid = 4 is bad so hi = 4; answer is 4.",
+    "```\nlo = 1, hi = n\nwhile lo < hi:\n    mid = lo + (hi - lo) / 2\n    if isBadVersion(mid):\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Smallest input** - n = 1, only one version exists and it is bad.\n`Input: n = 1, bad = 1` → `Expected: 1`\n⚠️ Bug: using `while lo <= hi` with `return hi` → hi becomes 0, returns 0\n\n**Overflow in midpoint** - n can reach 2^31 − 1, so lo + hi can reach 2^32 − 2, overflowing a signed 32-bit int.\n`Input: n = 2147483647, bad = 2147483647` → `Expected: 2147483647`\n⚠️ Bug: `mid = (lo + hi) / 2` → 1 + 2147483647 = 2147483648 overflows int → wrong mid, infinite loop\n\n**Mid is the answer** - the middle version checked is itself the first bad version.\n`Input: n = 3, bad = 2` → `Expected: 2`\n⚠️ Bug: using `hi = mid - 1` instead of `hi = mid` when isBadVersion(mid) is true → skips version 2, returns 1\n\n**Last version is bad** - the answer is at the very end of the range.\n`Input: n = 5, bad = 5` → `Expected: 5`\n⚠️ Bug: using `while lo <= hi` with `return hi` → after finding version 5 bad, hi drops to 4, returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if isBadVersion is probabilistic - it returns the correct answer with probability p < 1?",
+      "a": "Call isBadVersion multiple times per version and use majority voting to reach confidence 1−δ, then binary search as before. Each midpoint check costs O(log(1/δ)) API calls, so total calls become O(log n · log(1/δ)). Space remains O(1)."
+    },
+    {
+      "q": "What if versions can be bad, then good again (non-monotonic)? Find the first bad version.",
+      "a": "The monotonic property that binary search relies on is gone, so you must scan linearly from version 1 upward until isBadVersion returns true. TC becomes O(n) with up to n API calls; SC remains O(1)."
+    },
+    {
+      "q": "What if n is unknown - you can call isBadVersion(k) for any k but have no upper bound?",
+      "a": "Exponentially probe versions 1, 2, 4, 8, … until you find a bad version, establishing an upper bound. Then binary search between the last known good and first known bad. TC is O(log n) with at most 2·log n API calls; SC remains O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "// The API isBadVersion is defined for you.\nbool isBadVersion(int version);\n\nclass Solution {\npublic:\n    int firstBadVersion(int n) {\n        int lo = 1, hi = n;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (isBadVersion(mid)) {\n                hi = mid;\n            } else {\n                lo = mid + 1;\n            }\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

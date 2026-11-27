@@ -1,0 +1,40 @@
+{
+  "slug": "hand-of-straights",
+  "title": "Hand of Straights",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Ordered Frequency Map",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- map<int,int> cnt: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Use a greedy strategy with an ordered frequency map. Count occurrences of each card value, then process values in ascending order. For each value with remaining count `c > 0`, it must be the smallest card in `c` groups; decrement the counts of the next `groupSize - 1` consecutive values by `c`. If any of those values has count less than `c`, return false. This is correct because the smallest unprocessed value can only be the start of a group (all smaller values are already fully used).",
+  "hints": [
+    "If a card value must be the smallest member of its group, which values in the hand could possibly start a new group?",
+    "Use an ordered map (or sorted array) of value→count. In Example 1, value 1 has count 1, so form one group [1,2,3] by decrementing counts of 2 and 3 by 1.",
+    "```\nif size of hand not divisible by groupSize: return false\ncount frequency of each value in an ordered map\nfor each (value v, count c) in sorted order:\n    if c == 0: continue\n    for i from 1 to groupSize - 1:\n        if count[v + i] < c: return false\n        count[v + i] -= c\nreturn true\n```",
+    "**Size not divisible** - total cards cannot be split evenly into groups\n`Input: hand = [1,2,3], groupSize = 2` → `Expected: false`\n⚠️ Bug: skipping the divisibility check → returns true after forming one group and leaving a dangling card\n\n**All equal values** - no consecutive values exist to complete any group\n`Input: hand = [1,1,1], groupSize = 3` → `Expected: false`\n⚠️ Bug: using a set instead of a count map (losing duplicate info) → returns true because it sees only value 1 and assumes one group of size 3\n\n**Duplicates forming valid groups** - multiple copies of the same consecutive run\n`Input: hand = [1,2,3,1,2,3], groupSize = 3` → `Expected: true`\n⚠️ Bug: decrementing by 1 instead of by c on each neighbor → returns false because it only forms one group and leaves the second copy of 1 unprocessed\n\n**Single card, group size 1** - smallest valid input\n`Input: hand = [5], groupSize = 1` → `Expected: true`\n⚠️ Bug: inner loop using `i < groupSize` instead of `i < groupSize` with `i` starting at 1, or checking `count[v+i]` when groupSize is 1 → returns false due to unnecessary neighbor check"
+  ],
+  "followUps": [
+    {
+      "q": "What if hand.length can be up to 10^7 - how do you keep it efficient?",
+      "a": "Sort the array in place and use a two-pass approach: first count via the sorted order, then greedily consume runs. TC stays O(n log n) but SC drops to O(1) if in-place sorting is allowed, since you can scan the sorted array directly without a separate map."
+    },
+    {
+      "q": "What if card values can be negative?",
+      "a": "The ordered map already handles negative keys correctly - no change is needed. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if you must return the actual groups instead of true/false?",
+      "a": "During the inner loop, push `c` copies of the group `[v, v+1, ..., v+groupSize-1]` into a result vector. TC: O(n log n), SC: O(n) for the output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isNStraightHand(vector<int>& hand, int groupSize) {\n        int n = hand.size();\n        if (n % groupSize != 0) return false;\n        map<int, int> cnt;\n        for (int x : hand) cnt[x]++;\n        for (auto& [v, c] : cnt) {\n            if (c == 0) continue;\n            for (int i = 1; i < groupSize; i++) {\n                if (cnt[v + i] < c) return false;\n                cnt[v + i] -= c;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

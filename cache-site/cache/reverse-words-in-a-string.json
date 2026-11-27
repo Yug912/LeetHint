@@ -1,0 +1,40 @@
+{
+  "slug": "reverse-words-in-a-string",
+  "title": "Reverse Words in a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass Reversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string s: modified in place (input, not counted)\n- int variables n, writeIdx, i, start, j: O(1)\n- recursion depth: none\n- not counted: input, returned string",
+  "approach": "Reverse the entire string in place - this puts the words in reverse order but also reverses each word's characters. Then walk through the string, reversing each word back to normal while compacting all spaces into single separators. A single write pointer tracks where the cleaned output goes, and since it never overtakes the read pointer, the compaction is safe in place. Finally, resize the string to the write pointer to drop any trailing leftover characters.",
+  "hints": [
+    "If you reverse the entire input string character by character, what happens to the order of the words versus the order of characters inside each word? The constraint s.length ≤ 10^4 means a single linear scan is well within budget.",
+    "Use in-place string reversal with a two-pass approach: reverse the whole string, then reverse each individual word while compacting spaces with a write pointer. For \"the sky is blue\", reversing everything gives \"eulb si yks eht\" - words are now in target order but each is backwards.",
+    "```\nreverse entire string\nwrite = 0, read = 0\nwhile read < length:\n    skip spaces (advance read)\n    if read >= length: break\n    start = read\n    advance read to end of word\n    reverse substring [start, read)\n    if write > 0: place space, write++\n    copy word chars [start, read) to write position\nresize string to write\n```",
+    "**Single word** - input has no spaces at all\n`Input: s = \"hello\"` → `Expected: \"hello\"`\n⚠️ Bug: unconditionally writing a space before every word (even the first) → returns `\" hello\"`\n\n**Trailing spaces** - leftover characters after compaction\n`Input: s = \" hello world \"` → `Expected: \"world hello\"`\n⚠️ Bug: forgetting `s.resize(writeIdx)` after compaction → returns `\"world hello   \"` (3 trailing spaces from the original buffer)\n\n**Multiple spaces between words** - consecutive separators must collapse to one\n`Input: s = \"a   b\"` → `Expected: \"b a\"`\n⚠️ Bug: splitting on every single space character without skipping runs → returns `\"b   a\"`\n\n**Single-character words** - word length is 1, reversal is a no-op\n`Input: s = \"a b c\"` → `Expected: \"c b a\"`\n⚠️ Bug: using `start < read - 1` as the reversal guard (skipping length-1 words) → returns `\"a b c\"` (words never reordered because each reversal is skipped)"
+  ],
+  "followUps": [
+    {
+      "q": "If the string type were immutable (as in Java or Python), how would you adapt this solution?",
+      "a": "Scan left to right, collecting each word into a list, then build the result by iterating the list in reverse and joining with single spaces. Time stays O(n); space becomes O(n) for the word list and output string since in-place modification is impossible."
+    },
+    {
+      "q": "What if you also needed to reverse the characters within each word (i.e., fully reverse the string but with normalized spaces)?",
+      "a": "Skip the second pass entirely - after reversing the whole string, just compact spaces with the write pointer and resize. Each word is already reversed from the global reversal, so no per-word reversal is needed. Time remains O(n), space O(1)."
+    },
+    {
+      "q": "What if the input is a stream too large to hold in memory and you must output words in reverse order?",
+      "a": "Read fixed-size chunks from the end of the stream backward, buffering partial words at chunk boundaries. Maintain a small pending-fragment buffer (at most one partial word) and emit complete words as soon as they are assembled. Time is O(n) with O(max_word_length) buffer space, since you never hold the full input."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string reverseWords(string s) {\n        reverse(s.begin(), s.end());\n        int n = s.size();\n        int writeIdx = 0;\n        int i = 0;\n        while (i < n) {\n            while (i < n && s[i] == ' ') i++;\n            if (i >= n) break;\n            int start = i;\n            while (i < n && s[i] != ' ') i++;\n            reverse(s.begin() + start, s.begin() + i);\n            if (writeIdx > 0) s[writeIdx++] = ' ';\n            for (int j = start; j < i; j++) {\n                s[writeIdx++] = s[j];\n            }\n        }\n        s.resize(writeIdx);\n        return s;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

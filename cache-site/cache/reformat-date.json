@@ -1,0 +1,40 @@
+{
+  "slug": "reformat-date",
+  "title": "Reformat Date",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Fixed-Offset Index Parsing",
+  "tc": "O(L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: fixed 10 characters → O(1)\n- no recursion, no containers, no intermediate substrings\n- not counted: input string `date`, returned `result`",
+  "approach": "Since the day suffix is always exactly 2 characters and the month abbreviation is always 3 characters, once we know where the day's leading digits end, the month and year sit at fixed offsets from that position. We scan the leading digits of the day, read the month and year characters directly by index, map the 3-letter month to its number via a switch on the distinguishing characters, and write all ten output characters into a fixed-size string. No substrings or searches are needed.",
+  "hints": [
+    "What part of the input never changes length, whether the day is \"1st\" or \"31st\"? The day suffix is always two characters and the year is always four digits.",
+    "Direct index arithmetic: once the day-digit count is known, month and year sit at fixed offsets. In \"20th Oct 2052\", day digits end at index 2, so month = date[5..7] = \"Oct\" and year = date[9..12] = \"2052\".",
+    "```\ni = 0\nwhile date[i] is a digit: i++\nmonthNum = map(date[i+3], date[i+4], date[i+5]) to 1..12\nyear = date[i+7 .. i+10]\noutput = year + \"-\" + twoDigit(monthNum) + \"-\" + twoDigit(date[0..i-1])\n```",
+    "**Single-digit day** - Day has only one digit before the suffix.\n`Input: \"6th Jun 1933\"` → `Expected: \"1933-06-06\"`\n⚠️ Bug: always copying date[0] and date[1] as the day → returns \"1933-06-6t\"\n\n**Months sharing a prefix** - May and Mar agree on the first two letters.\n`Input: \"26th May 1960\"` → `Expected: \"1960-05-26\"`\n⚠️ Bug: mapping month by only the first two characters → returns \"1960-03-26\"\n\n**J-months** - Jun and Jul share 'J' and 'u'.\n`Input: \"1st Jul 2100\"` → `Expected: \"2100-07-01\"`\n⚠️ Bug: distinguishing J-months by the second character only → returns \"2100-06-01\""
+  ],
+  "followUps": [
+    {
+      "q": "What if month names could be full words like \"January\" or \"September\" instead of abbreviations?",
+      "a": "The fixed-offset trick for the month no longer applies since month length varies. Scan forward to the next space to find the month token's end, then match it against a table of full names - still O(L) time, O(1) space."
+    },
+    {
+      "q": "What if the input order varied, e.g., \"Oct 20th, 2052\" or \"2052 Oct 20\"?",
+      "a": "You must first detect which token is the year (4 digits), which is the month (alphabetic), and which is the day (digits + suffix) by token type rather than position. Tokenize on spaces, classify each, then assemble - O(L) time, O(1) space."
+    },
+    {
+      "q": "What if you had to reformat a continuous stream of billions of dates with minimal memory?",
+      "a": "Process each record independently and emit the 10 output bytes immediately, never buffering more than one input line. Per-record cost stays O(L) time and O(1) space; total memory is bounded by the longest single line."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string reformatDate(string date) {\n        int i = 0;\n        while (date[i] >= '0' && date[i] <= '9') i++;\n        char m1 = date[i + 3];\n        char m2 = date[i + 4];\n        char m3 = date[i + 5];\n        int monthNum;\n        switch (m1) {\n            case 'J': monthNum = (m2 == 'a') ? 1 : ((m3 == 'n') ? 6 : 7); break;\n            case 'F': monthNum = 2; break;\n            case 'M': monthNum = (m3 == 'r') ? 3 : 5; break;\n            case 'A': monthNum = (m2 == 'p') ? 4 : 8; break;\n            case 'S': monthNum = 9; break;\n            case 'O': monthNum = 10; break;\n            case 'N': monthNum = 11; break;\n            case 'D': monthNum = 12; break;\n            default: monthNum = 0; break;\n        }\n        string result(10, '0');\n        result[0] = date[i + 7];\n        result[1] = date[i + 8];\n        result[2] = date[i + 9];\n        result[3] = date[i + 10];\n        result[4] = '-';\n        result[5] = static_cast<char>('0' + monthNum / 10);\n        result[6] = static_cast<char>('0' + monthNum % 10);\n        result[7] = '-';\n        if (i == 1) {\n            result[8] = '0';\n            result[9] = date[0];\n        } else {\n            result[8] = date[0];\n            result[9] = date[1];\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

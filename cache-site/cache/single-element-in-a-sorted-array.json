@@ -1,0 +1,40 @@
+{
+  "slug": "single-element-in-a-sorted-array",
+  "title": "Single Element in a Sorted Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int lo, hi, mid: three scalars → O(1)\n- no containers, no recursion, no heap allocations\n- not counted: input vector (read-only reference)",
+  "approach": "The array is sorted with identical pairs adjacent. Before the single element, each pair starts at an even index (0,1),(2,3),…; after it, every pair shifts by one. Binary search on even indices: force `mid` to even, then compare `nums[mid]` with `nums[mid+1]`. If they match, the single element lies to the right (`lo = mid+2`); otherwise it is at or to the left of `mid` (`hi = mid`). The search converges to the single element in O(log n) time using only a few integer variables.",
+  "hints": [
+    "In a sorted array where identical values sit next to each other, what property of the pair-starting indices changes once you move past the unique element? The array length is always odd (2k+1).",
+    "Binary search on even indices. For `[1,1,2,3,3,4,4,8,8]`, mid=4 (even): nums[4]=3 ≠ nums[5]=4, so the single element is at or left of index 4.",
+    "```\nlo = 0, hi = n - 1\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    if mid is odd: mid = mid - 1\n    if nums[mid] == nums[mid + 1]:\n        lo = mid + 2\n    else:\n        hi = mid\nreturn nums[lo]\n```",
+    "**Smallest input** - n=1, the loop body must never execute.\n`Input: [5]` → `Expected: 5`\n⚠️ Bug: using `lo <= hi` as the loop condition → enters loop, mid=0, accesses nums[1] out of bounds → undefined behavior\n\n**Not adjusting mid to even** - mid can land on the second element of a pair, breaking the invariant.\n`Input: [3,3,7,7,10,11,11]` → `Expected: 10`\n⚠️ Bug: omitting `if (mid % 2 == 1) mid--;` → mid=3, nums[3]=7≠nums[4]=10, hi=3; mid=1, nums[1]=3≠nums[2]=7, hi=1; mid=0, nums[0]=3==nums[1]=3, lo=2; returns nums[2]=7\n\n**Returning stale mid** - the loop exits with lo==hi but `mid` holds an old value from a prior iteration.\n`Input: [1,1,2,3,3,4,4,8,8]` → `Expected: 2`\n⚠️ Bug: returning `nums[mid]` instead of `nums[lo]` → last mid=0, returns nums[0]=1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is not sorted?",
+      "a": "XOR all elements together; every pair cancels to 0, leaving the single value. This runs in O(n) time and O(1) space, losing the O(log n) benefit that sorting provided."
+    },
+    {
+      "q": "What if every element appears exactly twice except two elements that appear once (array still sorted)?",
+      "a": "XOR of all elements gives the XOR of the two singles. Pick any set bit, partition elements by that bit, and XOR each group separately to recover both values. Time O(n), space O(1); the binary-search invariant no longer holds with two singles."
+    },
+    {
+      "q": "What if each element appears exactly three times except one that appears once (sorted)?",
+      "a": "Before the single, triples occupy indices (0,1,2),(3,4,5),…; after it, they shift by one. Binary search using `mid = mid - (mid % 3)` and comparing `nums[mid] == nums[mid+2]` gives O(log n) time, O(1) space, generalising the even-index trick to mod-3."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int singleNonDuplicate(vector<int>& nums) {\n        int lo = 0, hi = (int)nums.size() - 1;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (mid % 2 == 1) mid--;\n            if (nums[mid] == nums[mid + 1]) {\n                lo = mid + 2;\n            } else {\n                hi = mid;\n            }\n        }\n        return nums[lo];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "max-consecutive-ones-iii",
+  "title": "Max Consecutive Ones III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int left, zeros, ans: O(1)\n- int right (loop variable): O(1)\n- not counted: input vector nums",
+  "approach": "The problem reduces to finding the longest subarray with at most k zeros. We use a sliding window with two pointers: expand `right` to grow the window, and whenever the zero count inside the window exceeds k, advance `left` until it returns to ≤ k. The answer is the maximum window size observed. Any window with ≤ k zeros can be fully flipped to 1s, so the longest such window is the answer.",
+  "hints": [
+    "For any contiguous segment of the array you might turn into all 1s, what single property of that segment determines whether k flips are enough?",
+    "Sliding window. Maintain a window [left, right] and track the count of 0s inside it; when the count exceeds k, advance left until it's back to ≤ k. In Example 1, when right reaches index 5 (the third 0), zeros becomes 3 > k = 2, so left advances past the first 0 at index 3.",
+    "```\nleft = 0, zeros = 0, ans = 0\nfor right from 0 to n-1:\n    if nums[right] == 0: zeros++\n    while zeros > k:\n        if nums[left] == 0: zeros--\n        left++\n    ans = max(ans, right - left + 1)\nreturn ans\n```",
+    "**Single zero, no flips** - smallest valid input with no budget to flip anything.\n`Input: nums = [0], k = 0` → `Expected: 0`\n⚠️ Bug: initializing `ans = 1` instead of `ans = 0` → returns 1\n\n**All zeros, full budget** - k equals the array length, so every element can be flipped.\n`Input: nums = [0,0,0], k = 3` → `Expected: 3`\n⚠️ Bug: using `zeros >= k` instead of `zeros > k` in the shrink condition → returns 2\n\n**Off-by-one window size** - the statement's first example, where the max window spans indices 4-9.\n`Input: nums = [1,1,1,0,0,0,1,1,1,1,0], k = 2` → `Expected: 6`\n⚠️ Bug: computing `ans = max(ans, right - left)` instead of `right - left + 1` → returns 5\n\n**All ones, zero budget** - no zeros exist, so the window never shrinks and the answer is the full array.\n`Input: nums = [1,1,1,1], k = 0` → `Expected: 4`\n⚠️ Bug: starting `left = 1` instead of `left = 0` → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must flip exactly k zeros (not at most k)?",
+      "a": "Only update `ans` when `zeros == k` inside the loop. If k = 0, this reduces to finding the longest run of consecutive 1s. The shrink condition stays `while zeros > k`. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the array arrives as an infinite stream and you must report the current best after each element?",
+      "a": "Maintain the same window incrementally: extend `right` with each new element, shrink `left` when zeros exceed k, and track the running max. You only need to buffer the current window. TC: O(1) amortized per element, SC: O(window size)."
+    },
+    {
+      "q": "What if k can change between queries on the same array?",
+      "a": "Precompute a prefix-sum array of zero counts, then for each query binary-search the largest `right` for each `left` where `zeros(right) - zeros(left) ≤ k`. TC: O(n log n) per query, SC: O(n) for the prefix sums."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestOnes(vector<int>& nums, int k) {\n        int left = 0, zeros = 0, ans = 0;\n        for (int right = 0; right < (int)nums.size(); right++) {\n            if (nums[right] == 0) zeros++;\n            while (zeros > k) {\n                if (nums[left] == 0) zeros--;\n                left++;\n            }\n            ans = max(ans, right - left + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

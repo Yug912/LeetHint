@@ -1,0 +1,40 @@
+{
+  "slug": "find-pivot-index",
+  "title": "Find Pivot Index",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int total, leftSum, rightSum, i: each O(1) scalars → O(1)\n- no containers, no recursion, no extra allocation\n- not counted: input vector",
+  "approach": "Compute the total sum of the array once. Then scan left to right, maintaining a running `leftSum`. At each index `i`, the right sum is `total − leftSum − nums[i]` - derivable in O(1) without a second pass. If `leftSum == rightSum`, return `i` immediately (guaranteeing leftmost). If the loop finishes, return −1. This is correct because the right sum is exactly everything not in `leftSum` and not at `nums[i]`.",
+  "hints": [
+    "If you scan left to right tracking the running sum of elements seen so far, what single value computed once for the entire array would let you determine the right-side sum at any index without scanning again? The array has up to 10^4 elements, so recomputing each side's sum from scratch at every index is about 10^8 operations.",
+    "Use the total sum of the array. At index i, the right sum equals total − leftSum − nums[i]. For nums = [1,7,3,6,5,6], total = 28; at i = 3, leftSum = 11, so right sum = 28 − 11 − 6 = 11, which matches.",
+    "```\ntotal = sum of all elements\nleftSum = 0\nfor i from 0 to n-1:\n    rightSum = total - leftSum - nums[i]\n    if leftSum == rightSum:\n        return i\n    leftSum += nums[i]\nreturn -1\n```",
+    "**Single element** - both sides are empty, so both sums are 0.\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: initializing leftSum to nums[0] before the loop → leftSum = 5 at i = 0, rightSum = 5 − 5 − 5 = −5, 5 ≠ −5, returns −1.\n\n**Pivot at left boundary** - left sum is 0 by definition when the index is 0.\n`Input: [2,1,-1]` → `Expected: 0`\n⚠️ Bug: starting the loop at i = 1 instead of i = 0 → never checks index 0, returns −1.\n\n**No valid pivot** - no index balances the two sides.\n`Input: [1,2,3]` → `Expected: -1`\n⚠️ Bug: computing rightSum as total − leftSum without subtracting nums[i] → at i = 2: leftSum = 3, rightSum = 6 − 3 = 3, 3 == 3, returns 2.\n\n**All zeros, multiple valid pivots** - every index is valid; must return the leftmost.\n`Input: [0,0,0]` → `Expected: 0`\n⚠️ Bug: continuing to scan after the first match and returning the last → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to return ALL pivot indices instead of just the leftmost?",
+      "a": "Same single pass - collect every index where leftSum equals rightSum into a vector instead of returning immediately. TC stays O(n); SC becomes O(k) for the output list where k is the number of pivots found."
+    },
+    {
+      "q": "What if the array arrives as a forward-only stream you can read once, in order?",
+      "a": "You cannot solve it in one pass because the right sum requires knowing the total. You need two passes: first to compute the total, then to find the pivot. If re-reading is impossible, buffer all elements. TC: O(n), SC: O(n) for the buffer."
+    },
+    {
+      "q": "What if nums is an m × n matrix and you need the \"pivot row\" where the sum of all elements above equals the sum below?",
+      "a": "Compute the total sum of the entire matrix, then scan rows maintaining a running sum of rows seen. At each row, the below sum is total − runningSum − currentRowSum. TC: O(m × n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int pivotIndex(vector<int>& nums) {\n        int total = 0;\n        for (int x : nums) total += x;\n        int leftSum = 0;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            int rightSum = total - leftSum - nums[i];\n            if (leftSum == rightSum) return i;\n            leftSum += nums[i];\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

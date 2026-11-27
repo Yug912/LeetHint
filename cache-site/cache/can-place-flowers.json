@@ -1,0 +1,40 @@
+{
+  "slug": "can-place-flowers",
+  "title": "Can Place Flowers",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Single Pass",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count, m, i, flowerbed[i] writes: constant → O(1)\n- recursion depth: none\n- not counted: input vector (modified in place)",
+  "approach": "Scan the flowerbed left to right. At each empty plot, check whether both neighbors (if they exist) are also empty; if so, plant a flower there (mark it 1) and increment a counter. Planting greedily at the earliest valid spot is optimal because it only blocks the immediate right neighbor, which a later placement would have blocked anyway. Return true as soon as the counter reaches n, otherwise return count >= n at the end.",
+  "hints": [
+    "If you walk the flowerbed from left to right, what local information about each empty plot tells you whether a flower can go there? The input is guaranteed to have no two adjacent flowers initially.",
+    "Greedy single pass: at each empty plot, plant only if both existing neighbors are empty (or absent). In [1,0,0,0,1] with n=1, index 2 has left=0 and right=0, so plant there and stop.",
+    "```\ncount = 0\nfor i in 0..len-1:\n    if bed[i] == 0:\n        left_ok  = (i==0) or bed[i-1]==0\n        right_ok = (i==len-1) or bed[i+1]==0\n        if left_ok and right_ok:\n            bed[i] = 1\n            count += 1\n            if count >= n: return true\nreturn count >= n\n```",
+    "**Single empty plot** - only one plot, no neighbors at all.\n`Input: flowerbed = [0], n = 1` → `Expected: true`\n⚠️ Bug: accessing bed[i-1] / bed[i+1] without boundary check → undefined behavior / wrong output\n\n**n is zero** - nothing needs to be planted.\n`Input: flowerbed = [1,0,1], n = 0` → `Expected: true`\n⚠️ Bug: returning false whenever no flower was planted → returns false\n\n**Boundary zero-segment** - a run of zeros touching the array end can hold more than an interior run.\n`Input: flowerbed = [0,0,0,0,0], n = 3` → `Expected: true`\n⚠️ Bug: using formula (zeros-1)/2 for a segment touching the boundary → returns false (computes 2)\n\n**First element plantable** - the leftmost plot has no left neighbor.\n`Input: flowerbed = [0,0,1], n = 1` → `Expected: true`\n⚠️ Bug: treating out-of-bounds neighbors as 1 instead of 0 → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "Return the maximum number of flowers that can be planted instead of a boolean.",
+      "a": "Run the same greedy pass but never early-return; the final count is the answer. TC stays O(n), SC O(1)."
+    },
+    {
+      "q": "The flowerbed is circular, so the first and last plots are adjacent. How does the logic change?",
+      "a": "If both ends are 0, planting at index 0 forbids planting at the last index, so handle the wrap-around by checking bed[0] and bed[len-1] together before the linear pass, then run the greedy scan on the middle. TC O(n), SC O(1)."
+    },
+    {
+      "q": "The flowerbed arrives as a streaming sequence too large to store. Can you still decide for a given n?",
+      "a": "Keep only the previous plot value and a running count; emit a planted 1 whenever the previous value is 0 and the current is 0, then advance. TC O(n), SC O(1), but you cannot revisit earlier plots."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canPlaceFlowers(vector<int>& flowerbed, int n) {\n        if (n == 0) return true;\n        int m = flowerbed.size();\n        int count = 0;\n        for (int i = 0; i < m; i++) {\n            if (flowerbed[i] == 0) {\n                bool leftEmpty  = (i == 0)     || (flowerbed[i - 1] == 0);\n                bool rightEmpty = (i == m - 1) || (flowerbed[i + 1] == 0);\n                if (leftEmpty && rightEmpty) {\n                    flowerbed[i] = 1;\n                    count++;\n                    if (count >= n) return true;\n                }\n            }\n        }\n        return count >= n;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

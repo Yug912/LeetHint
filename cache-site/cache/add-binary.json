@@ -1,0 +1,40 @@
+{
+  "slug": "add-binary",
+  "title": "Add Binary",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation with Carry",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string res: this is the returned output, not counted (LeetCode convention)\n- int i, j, carry, sum: O(1) scalars\n- not counted: input strings a, b",
+  "approach": "Simulate grade-school binary addition: walk both strings from right to left, summing corresponding bits plus a carry. Append `sum % 2` to the result and propagate `sum / 2` as the new carry. After both strings are exhausted, if a carry remains, append it. Finally reverse the built string. This avoids any integer overflow since we never convert the strings to numbers, and it runs in linear time.",
+  "hints": [
+    "With strings up to 10^4 bits long, what would happen if you converted each to a single integer before adding?",
+    "Simulate column-by-column addition with a carry, building the answer right-to-left. For `a=\"11\"`, `b=\"1\"`: rightmost column gives 1+1=2 → write `0`, carry `1`; next column 1+carry=2 → write `0`, carry `1`; leftover carry → write `1`; reverse → `\"100\"`.",
+    "```\ni = len(a)-1, j = len(b)-1, carry = 0\nwhile i>=0 or j>=0 or carry>0:\n    sum = carry\n    if i>=0: sum += a[i]; i--\n    if j>=0: sum += b[j]; j--\n    append (sum % 2) to result\n    carry = sum / 2\nreverse result\nreturn result\n```",
+    "**Smallest input** - both strings are single bits\n`a = \"1\", b = \"1\"` → `\"10\"`\n⚠️ Bug: loop condition `while (i >= 0 && j >= 0)` with no carry check → returns `\"0\"`\n\n**Different lengths** - one string far shorter than the other\n`a = \"1\", b = \"111\"` → `\"1000\"`\n⚠️ Bug: stopping the loop as soon as the shorter string ends → returns `\"0\"`\n\n**Final carry** - leftover carry must create a new leading digit\n`a = \"11\", b = \"1\"` → `\"100\"`\n⚠️ Bug: omitting `or carry > 0` from the loop condition → returns `\"00\"`\n\n**All ones, equal length** - every column produces a carry\n`a = \"111\", b = \"111\"` → `\"1110\"`\n⚠️ Bug: computing `carry = sum & 1` instead of `sum / 2` → returns `\"110\"`"
+  ],
+  "followUps": [
+    {
+      "q": "Add k binary strings instead of just two.",
+      "a": "Keep a running result string and fold each new string in using the same column-addition routine. Each merge is O(current result length), giving O(k·n) total time and O(n) space for the accumulator."
+    },
+    {
+      "q": "The input arrives as a stream of bits you cannot store fully; produce the sum bit-by-bit.",
+      "a": "Since addition propagates carry only leftward, you must buffer the shorter tail until the longer stream's matching position arrives; in the worst case you still need O(n) space for the unflushed suffix, with O(n) time."
+    },
+    {
+      "q": "Generalize to base-36 (digits 0-9, A-Z) addition.",
+      "a": "Replace `sum % 2` / `sum / 2` with `sum % 36` / `sum / 36`, and map values 0-35 back to `0-9A-Z`. Time stays O(n), space O(1) auxiliary."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string addBinary(string a, string b) {\n        string res;\n        int i = (int)a.size() - 1;\n        int j = (int)b.size() - 1;\n        int carry = 0;\n        while (i >= 0 || j >= 0 || carry) {\n            int sum = carry;\n            if (i >= 0) sum += a[i--] - '0';\n            if (j >= 0) sum += b[j--] - '0';\n            res.push_back(char('0' + (sum % 2)));\n            carry = sum / 2;\n        }\n        reverse(res.begin(), res.end());\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

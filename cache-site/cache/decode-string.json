@@ -1,0 +1,40 @@
+{
+  "slug": "decode-string",
+  "title": "Decode String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack",
+  "tc": "O(L)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int, int>> st: up to n/2 entries → O(n)\n- string res: up to L characters, but this is the returned output, so not counted.\n- int num: O(1)",
+  "approach": "Use a single output buffer and a stack that stores the start index of the current segment along with its multiplier. When encountering a digit, accumulate it into the multiplier. On `[`, push the current buffer length and multiplier to the stack. On `]`, pop the start index and multiplier, then append the substring from that start index to the end of the buffer (multiplier - 1) times. This avoids creating intermediate strings and copying the entire accumulated string at each `]`, achieving O(L) time where L is the output length.",
+  "hints": [
+    "When a closing bracket is reached, how does the substring to be repeated relate to the characters added since the matching opening bracket?\nThe output length will never exceed 10^5.",
+    "Use a stack to store the start index of the current segment and the repeat count.\nFor `3[a2[c]]`, at the first `]`, the stack has `{0, 3}` and `{1, 2}`; pop `{1, 2}` and append the substring from index 1 once.",
+    "for each char c in s:\n    if c is digit: num = num * 10 + int(c)\n    if c is '[': push (current_length, num) to stack; num = 0\n    if c is ']': pop (start, k) from stack\n                 len = current_length - start\n                 repeat k-1 times: append substring from start to start+len\n    if c is letter: append c to result\nreturn result",
+    "**Nested brackets** - A repeat count applies to a substring that itself contains another encoded segment.\n`Input: \"3[a2[c]]\"` → `Expected: \"accaccacc\"`\n⚠️ Bug: Using `res = res.substr(start) * k` instead of appending to `res` → returns `\"cccccc\"`\n\n**Multi-digit multiplier** - The repeat count can be more than one digit.\n`Input: \"10[a]\"` → `Expected: \"aaaaaaaaaa\"`\n⚠️ Bug: Setting `num = c - '0'` instead of accumulating `num = num * 10 + (c - '0')` → returns `\"\"`\n\n**No brackets** - The string contains only letters.\n`Input: \"ef\"` → `Expected: \"ef\"`\n⚠️ Bug: Only appending to `res` when a bracket is encountered → returns `\"\"`\n\n**Multiple segments** - Multiple encoded segments at the same level.\n`Input: \"2[a]2[b]\"` → `Expected: \"aabb\"`\n⚠️ Bug: Clearing the result buffer at `[` (e.g., `res.clear()`) → returns `\"b\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input string is a stream and cannot fit in memory?",
+      "a": "We would need to buffer the output string up to the maximum repeat length. Since we only append to the end and read from a start index, we could use a circular buffer or a rolling window if the output is also streamed, though random access for repeats makes streaming the output tricky."
+    },
+    {
+      "q": "What if the encoded string contains escaped brackets, like `2[a\\[b\\]c]`?",
+      "a": "We would add a check for an escape character `\\`. When encountered, the next character is treated as a literal letter and appended directly to the result buffer, bypassing the stack logic for brackets."
+    },
+    {
+      "q": "What if the repeat count can be extremely large, causing the output to exceed memory limits?",
+      "a": "We would need to stream the output instead of storing it in a single string. The stack would store iterators or offsets into a streamed output, and we would write characters to the stream as they are generated, repeating segments by re-reading from the stream if backed by a file or large buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string decodeString(string s) {\n        string res;\n        vector<pair<int, int>> st;\n        int num = 0;\n        for (char c : s) {\n            if (isdigit(c)) {\n                num = num * 10 + (c - '0');\n            } else if (c == '[') {\n                st.push_back({(int)res.length(), num});\n                num = 0;\n            } else if (c == ']') {\n                auto [start, k] = st.back();\n                st.pop_back();\n                int len = (int)res.length() - start;\n                for (int i = 1; i < k; ++i) {\n                    for (int j = 0; j < len; ++j) {\n                        char ch = res[start + j];\n                        res.push_back(ch);\n                    }\n                }\n            } else {\n                res.push_back(c);\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

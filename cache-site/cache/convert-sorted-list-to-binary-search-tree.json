@@ -1,0 +1,40 @@
+{
+  "slug": "convert-sorted-list-to-binary-search-tree",
+  "title": "Convert Sorted List to Binary Search Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-order Simulation",
+  "tc": "O(n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- `curr` member pointer: O(1)\n- `p` local pointer in counting loop: O(1)\n- recursion depth: O(log n) (height of the balanced BST being built)\n- not counted: input linked list, returned BST",
+  "approach": "The key insight is that an in-order traversal of a BST visits nodes in ascending order, which matches the sorted linked list. By counting nodes first, we know the exact structure of the balanced BST: for a range [lo, hi], the middle index (lo+hi)/2 is the root. We simulate in-order traversal by recursively building the left subtree, then consuming the next list node as the current root, then building the right subtree. A running pointer advances through the list exactly once, giving O(n) time with O(log n) recursion depth.",
+  "hints": [
+    "The linked list is sorted ascending. What property of a BST lets you map each element in the sorted list to a specific position in the tree, given that you know the total node count?",
+    "In-order simulation: count nodes first, then recursively build left subtree, consume the next list node as root, build right subtree. For [-10,-3,0,5,9] (n=5), root index = (0+4)/2 = 2; after building left subtree from indices [0,1], the list pointer lands on 0, the root value.",
+    "```\nfunction build(lo, hi):\n    if lo > hi: return null\n    mid = (lo + hi) / 2\n    left = build(lo, mid-1)\n    node = TreeNode(curr.val); curr = curr.next\n    node.left = left; node.right = build(mid+1, hi)\n    return node\n\ncount nodes; curr = head; return build(0, count-1)\n```",
+    "**Empty list** - zero nodes, the recursion must hit its base case immediately\n`Input: []` → `Expected: []`\n⚠️ Bug: omitting the `if (lo > hi) return null` guard → dereferences null `curr` → crash\n\n**Single node** - n=1, the base case must use strict greater-than\n`Input: [5]` → `Expected: [5]`\n⚠️ Bug: using `if (lo >= hi) return null` → build(0,0) returns null, producing `[]` instead of `[5]`\n\n**Wrong consumption order** - in-order requires building the left subtree before consuming the root value\n`Input: [1, 2, 3]` → `Expected: [2, 1, 3]`\n⚠️ Bug: advancing `curr` before building the left subtree → root gets 1, left gets 2, producing `[1, 2, 3]` whose in-order is `2, 1, 3` (not ascending)\n\n**Off-by-one count** - the counting loop must visit every node including the last\n`Input: [1, 2, 3]` → `Expected: [2, 1, 3]`\n⚠️ Bug: counting with `while (p->next)` instead of `while (p)` → count = 2, producing `[1, null, 2]` and dropping node 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input is a sorted array instead of a linked list?",
+      "a": "Index `nums[mid]` directly as the root - no running pointer or in-order simulation needed. Recursively build `[lo, mid-1]` for the left subtree and `[mid+1, hi]` for the right. TC: O(n), SC: O(log n)."
+    },
+    {
+      "q": "What if you cannot afford the initial O(n) counting pass (e.g., streaming input)?",
+      "a": "Use slow/fast pointers to find the middle at each recursion level. This avoids the counting pass but raises time to O(n log n) since finding the middle costs O(n) per level. SC remains O(log n)."
+    },
+    {
+      "q": "What if you must convert the list in-place, reusing list nodes as tree nodes?",
+      "a": "Same in-order simulation, but reinterpret each ListNode as a TreeNode by repurposing the `next` pointer as `right` and storing `left` in a spare field or a separate structure. TC: O(n), SC: O(log n), but requires compatible memory layouts."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    ListNode* curr;\n\n    TreeNode* build(int lo, int hi) {\n        if (lo > hi) return nullptr;\n        int mid = lo + (hi - lo + 1) / 2;\n        TreeNode* left = build(lo, mid - 1);\n        TreeNode* node = new TreeNode(curr->val);\n        curr = curr->next;\n        node->left = left;\n        node->right = build(mid + 1, hi);\n        return node;\n    }\n\npublic:\n    TreeNode* sortedListToBST(ListNode* head) {\n        int n = 0;\n        ListNode* p = head;\n        while (p) {\n            n++;\n            p = p->next;\n        }\n        curr = head;\n        return build(0, n - 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

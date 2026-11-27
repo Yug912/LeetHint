@@ -1,0 +1,40 @@
+{
+  "slug": "reverse-linked-list-ii",
+  "title": "Reverse Linked List II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-Place Linked List Reversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode dummy: 1 node on stack → O(1)\n- Pointers prev, curr, next: 3 fixed pointers → O(1)\n- No recursion, no containers\n- not counted: input list, returned list head",
+  "approach": "Use a dummy node before the head to uniformly handle the case where `left = 1` (no natural predecessor). Walk to the node just before position `left`, then iteratively move each subsequent node to the front of the reversal section for `right - left` iterations. This reverses the sublist in place with only pointer reassignments, no extra memory.",
+  "hints": [
+    "When `left` equals 1, which node sits immediately before the first node you need to reverse? The constraints guarantee `1 <= left <= right <= n`, so the section always exists.",
+    "Use a dummy (sentinel) node before the head. For `[1,2,3,4,5]` with `left=2, right=4`: set `prev=node 1`, `curr=node 2`; move node 3 right after `prev` to get `[1,3,2,4,5]`, then move node 4 to get `[1,4,3,2,5]`.",
+    "```\ncreate dummy pointing to head\nprev = dummy\nwalk prev forward (left - 1) steps\ncurr = prev.next\nrepeat (right - left) times:\n    next = curr.next\n    curr.next = next.next\n    next.next = prev.next\n    prev.next = next\nreturn dummy.next\n```",
+    "**Reverse from head** - `left = 1` means no real predecessor node exists before the section.\n`Input: head = [1,2,3,4,5], left = 1, right = 3` → `Expected: [3,2,1,4,5]`\n⚠️ Bug: not using a dummy node, setting `prev = head` when `left = 1` → returns `[1,4,3,2,5]`\n\n**No reversal needed** - `left` equals `right`, so the reversal loop should run zero times.\n`Input: head = [1,2,3], left = 2, right = 2` → `Expected: [1,2,3]`\n⚠️ Bug: using `i <= right - left` as loop condition → returns `[1,3,2]`\n\n**Entire list reversed** - `left = 1, right = n`; the original head is now the tail.\n`Input: head = [1,2,3], left = 1, right = 3` → `Expected: [3,2,1]`\n⚠️ Bug: returning `head` instead of `dummy.next` → returns `[1]`\n\n**Off-by-one in predecessor walk** - walking `left` steps instead of `left - 1` shifts the reversal window.\n`Input: head = [1,2,3], left = 1, right = 2` → `Expected: [2,1,3]`\n⚠️ Bug: walking `prev` forward `left` steps instead of `left - 1` → returns `[1,3,2]`"
+  ],
+  "followUps": [
+    {
+      "q": "Reverse every group of k consecutive nodes. If fewer than k nodes remain, leave them as-is.",
+      "a": "Apply the same in-place reversal in a loop, advancing the predecessor pointer by k each time. Before each group, check that at least k nodes remain. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "Given multiple non-overlapping intervals [l_i, r_i], reverse each section in one pass.",
+      "a": "Sort intervals by start position, then walk the list once, reversing each interval as you reach its start. TC: O(n + m log m) where m is the number of intervals, SC: O(m) for the sort."
+    },
+    {
+      "q": "The list is too large for memory and arrives as a stream. Reverse positions left to right with only O(right - left) extra space.",
+      "a": "Buffer the nodes from position left to right in an array as they stream in, then link them back in reverse order. TC: O(n), SC: O(right - left)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* reverseBetween(ListNode* head, int left, int right) {\n        ListNode dummy(0);\n        dummy.next = head;\n        ListNode* prev = &dummy;\n        for (int i = 1; i < left; i++) {\n            prev = prev->next;\n        }\n        ListNode* curr = prev->next;\n        for (int i = 0; i < right - left; i++) {\n            ListNode* next = curr->next;\n            curr->next = next->next;\n            next->next = prev->next;\n            prev->next = next;\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "cheapest-flights-within-k-stops",
+  "title": "Cheapest Flights Within K Stops",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bellman-Ford with Limited Iterations",
+  "tc": "O(k*(n+E))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dist: n entries → O(n)\n- vector<int> temp: n entries (allocated each round, but only one alive at a time) → O(n)\n- not counted: input flights, return value",
+  "approach": "The key insight is that a route with at most k stops uses at most k+1 flight edges. This maps directly to Bellman-Ford: run k+1 rounds of edge relaxation, where each round extends all shortest paths by exactly one more edge. To prevent using edges relaxed in the same round (which would allow more than k+1 edges in a single round), we read from a snapshot of distances from the previous round. After k+1 rounds, dist[dst] holds the cheapest valid cost.",
+  "hints": [
+    "For a route with at most k stops, what is the maximum number of flight edges it can use? The problem allows at most k stops, where k < n ≤ 100.",
+    "Bellman-Ford algorithm, running exactly k+1 rounds of edge relaxation. In Example 1 with k=1, after round 1 we reach city 1 (cost 100), and after round 2 we reach city 3 via city 1 (cost 700).",
+    "```\ndist[src] = 0, all others = INF\nrepeat k+1 times:\n    temp = copy of dist\n    for each edge (u, v, w):\n        if temp[u] + w < dist[v]:\n            dist[v] = temp[u] + w\nreturn dist[dst] if finite, else -1\n```",
+    "**No valid path** - dst is unreachable from src with any number of stops\n`Input: n=2, flights=[], src=0, dst=1, k=1` → `Expected: -1`\n⚠️ Bug: returning dist[dst] without checking for INF sentinel → returns 1000000000\n\n**k=0, direct flight only** - zero stops means only direct flights are valid\n`Input: n=3, flights=[[0,1,100],[1,2,100],[0,2,500]], src=0, dst=2, k=0` → `Expected: 500`\n⚠️ Bug: looping `i < k` instead of `i <= k` → loop runs 0 times, returns -1\n\n**Same-round relaxation** - using updated distances within one round lets paths exceed the stop limit\n`Input: n=4, flights=[[0,1,100],[1,2,100],[2,3,100],[0,3,600]], src=0, dst=3, k=1` → `Expected: 600`\n⚠️ Bug: relaxing edges using dist updated in the same iteration (no temp copy) → returns 300 (path 0→1→2→3 uses 2 stops, exceeding k=1)\n\n**Linear graph, k equals stops needed** - the cheapest path uses exactly k stops\n`Input: n=4, flights=[[0,1,100],[1,2,100],[2,3,100]], src=0, dst=3, k=2` → `Expected: 300`\n⚠️ Bug: running k iterations instead of k+1 → dist[3] stays INF after only 2 rounds, returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5 and the graph is sparse?",
+      "a": "Use a modified Dijkstra with a priority queue of (cost, node, stops_used), only pushing neighbors when stops_used ≤ k. Track the best cost per (node, stops) pair to prune. TC: O(E·k·log(E·k)), SC: O(V·k)."
+    },
+    {
+      "q": "What if flights arrive as a stream and you cannot store them all in memory?",
+      "a": "Bellman-Ford processes edges one at a time, so stream them in k+1 passes. Keep only the dist and temp arrays of size n. TC: O(k·E), SC: O(n), but requires k+1 sequential passes over the stream."
+    },
+    {
+      "q": "What if you need the cheapest price for all pairs (src, dst) with at most k stops?",
+      "a": "Run Bellman-Ford from each source city, storing results in an n×n matrix. TC: O(n·k·E), SC: O(n²) for the result matrix."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findCheapestPrice(int n, vector<vector<int>>& flights, int src, int dst, int k) {\n        const int INF = 1e9;\n        vector<int> dist(n, INF);\n        dist[src] = 0;\n\n        for (int i = 0; i <= k; i++) {\n            vector<int> temp = dist;\n            for (auto& f : flights) {\n                int u = f[0], v = f[1], w = f[2];\n                if (temp[u] != INF && temp[u] + w < dist[v]) {\n                    dist[v] = temp[u] + w;\n                }\n            }\n        }\n\n        return dist[dst] == INF ? -1 : dist[dst];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

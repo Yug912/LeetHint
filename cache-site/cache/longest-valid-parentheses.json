@@ -1,0 +1,40 @@
+{
+  "slug": "longest-valid-parentheses",
+  "title": "Longest Valid Parentheses",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass Counter",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, maxLen, open, close, i: scalar variables → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input string s",
+  "approach": "Scan left to right counting `open` ('(' count) and `close` (')' count). Whenever they are equal, the segment from the last reset to here is valid, so update the answer with `2*close`. When `close > open`, the prefix is irrecoverably broken, so reset both counters to 0. This single pass misses valid substrings that end with excess unmatched '(' (e.g., `\"(()\"`), so repeat the same logic scanning right to left, this time resetting when `open > close`. The two directions together cover every valid substring because any valid substring either has no excess ')' before it (caught L→R) or no excess '(' after it (caught R→L).",
+  "hints": [
+    "If you scan left to right counting '(' and ')', which kind of imbalance at the end of a string like \"(()\" prevents the scan from ever registering the valid \"()\" inside it?",
+    "Use a two-pass counter: scan left to right tracking open/close counts, then scan right to left. On \")()())\" left to right: at i=4 open=2, close=2 → candidate 4; at i=5 close=3 > open=2 → reset both to 0.",
+    "```\nmaxLen = 0\nfor direction in [left→right, right→left]:\n    open = 0, close = 0\n    for each char c in that direction:\n        if c == '(': open++  else: close++\n        if open == close:\n            maxLen = max(maxLen, 2 * close)\n        else if (direction == L→R and close > open)\n          or (direction == R→L and open > close):\n            open = 0; close = 0\nreturn maxLen\n```",
+    "**Excess open at end** - valid substring ends before unmatched '('.\n`Input: s = \"(()\"` → `Expected: 2`\n⚠️ Bug: only running the left-to-right pass → returns 0\n\n**Imbalance at start** - leading ')' poisons naive counting.\n`Input: s = \")(\"` → `Expected: 0`\n⚠️ Bug: not resetting counters when close > open → returns 2\n\n**Valid substring in the middle** - equality occurs mid-string, not at the end.\n`Input: s = \"(()()\"` → `Expected: 4`\n⚠️ Bug: only checking open == close at the end of each pass → returns 0\n\n**Unbalanced counts at end** - final open and close differ.\n`Input: s = \"()(()\"` → `Expected: 2`\n⚠️ Bug: returning `2 * min(open, close)` at the end instead of tracking maxLen during equality → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string also contains '[' and ']' and brackets must match by type?",
+      "a": "The counter approach breaks because closing brackets must match the most recent unmatched opener of the same type. Use a stack of indices: push opener indices, pop on a matching closer and compute length from the new stack top (or the last invalid position). O(n) time, O(n) space."
+    },
+    {
+      "q": "Return the longest valid substring itself, not just its length.",
+      "a": "During each pass, track the segment start index alongside maxLen. When open == close and 2*close exceeds maxLen, record start and current index as the best segment. Return s.substr(bestStart, maxLen). O(n) time, O(1) space."
+    },
+    {
+      "q": "Characters arrive one at a time as a stream; report the current longest valid length after each character.",
+      "a": "Maintain a stack of unmatched '(' indices and a variable marking the last invalid position. On each new char, update the stack or compute the current valid length from the stack top, then update the running maximum. O(1) amortized per character, O(n) space for the stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        int n = s.size();\n        int maxLen = 0;\n        int open = 0, close = 0;\n        for (int i = 0; i < n; i++) {\n            if (s[i] == '(') open++;\n            else close++;\n            if (open == close) {\n                if (2 * close > maxLen) maxLen = 2 * close;\n            } else if (close > open) {\n                open = 0;\n                close = 0;\n            }\n        }\n        open = 0;\n        close = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s[i] == '(') open++;\n            else close++;\n            if (open == close) {\n                if (2 * open > maxLen) maxLen = 2 * open;\n            } else if (open > close) {\n                open = 0;\n                close = 0;\n            }\n        }\n        return maxLen;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

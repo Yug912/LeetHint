@@ -1,0 +1,40 @@
+{
+  "slug": "unique-paths-ii",
+  "title": "Unique Paths II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Grid Dynamic Programming",
+  "tc": "O(m * n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> dp: n entries → O(n)\n- recursion depth: none\n- not counted: input grid, returned int",
+  "approach": "The number of paths to any cell (i, j) equals the sum of paths to the cell above it and the cell to its left, since the robot can only arrive from those two directions. If a cell is an obstacle, its path count is 0. We process the grid row by row using a 1D array where dp[j] represents paths to column j in the current row: when we move to a new row, dp[j] already holds the \"from above\" value, and we add dp[j-1] for the \"from left\" value. Obstacles reset dp[j] to 0, blocking all paths through that cell.",
+  "hints": [
+    "To reach any cell (i, j), which two neighboring cells must the robot have come from, given it only moves right or down? The robot can only move right or down at any point in time.",
+    "Use a 1D dynamic programming array where dp[j] tracks paths to column j in the current row. Processing row 0 of [[0,0,0],[0,1,0],[0,0,0]]: dp[0]=1, dp[1]=dp[0]=1, dp[2]=dp[1]=1, giving dp=[1,1,1].",
+    "```\ndp[0] = 1\nfor i in 0..m-1:\n    for j in 0..n-1:\n        if grid[i][j] is obstacle:\n            dp[j] = 0\n        else if j > 0:\n            dp[j] = dp[j] + dp[j-1]\nreturn dp[n-1]\n```",
+    "**Start cell blocked** - the top-left cell itself is an obstacle, so no path can begin.\n`Input: [[1]]` → `Expected: 0`\n⚠️ Bug: initializing dp[0]=1 without checking if start is an obstacle → returns 1\n\n**Single open cell** - the grid is 1×1 with no obstacle, so the robot is already at the destination.\n`Input: [[0]]` → `Expected: 1`\n⚠️ Bug: initializing dp[0]=0 instead of 1 → returns 0\n\n**Obstacle in first row** - an obstacle mid-row blocks all cells to its right in that row.\n`Input: [[0,1,0]]` → `Expected: 0`\n⚠️ Bug: ignoring obstacles and always doing dp[j] += dp[j-1] → dp[2] inherits dp[1]'s value → returns 1\n\n**Obstacle in first column** - an obstacle in column 0 of a later row must zero out dp[0] so paths don't leak downward.\n`Input: [[0,0],[1,0]]` → `Expected: 1`\n⚠️ Bug: not setting dp[0]=0 when obstacle encountered in column 0 → dp[1] gets extra count from stale dp[0] → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the robot can also move diagonally (down-right) in addition to right and down?",
+      "a": "The recurrence adds a third term: dp[j] = dp[j] (from above) + dp[j-1] (from left) + dp[j-1]_previous_row (diagonal). With a 1D array you need to save the previous row's dp[j-1] before overwriting it. TC stays O(m*n), SC stays O(n)."
+    },
+    {
+      "q": "What if you can pass through at most k obstacles - how many unique paths exist?",
+      "a": "Add a third dimension to the state: dp[i][j][r] = paths to (i,j) having removed exactly r obstacles. Transition either skips an obstacle (incrementing r) or walks through open space. TC: O(m*n*k), SC: O(n*k) with a rolling 2D array."
+    },
+    {
+      "q": "What if the grid is streamed row-by-row and you cannot store the full matrix?",
+      "a": "The 1D DP already processes one row at a time and only keeps dp of size n, so it works unchanged. You read each row, update dp in place, and discard the row. TC: O(m*n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int uniquePathsWithObstacles(vector<vector<int>>& obstacleGrid) {\n        int m = obstacleGrid.size();\n        int n = obstacleGrid[0].size();\n        \n        if (obstacleGrid[0][0] == 1 || obstacleGrid[m - 1][n - 1] == 1) return 0;\n        \n        vector<long long> dp(n, 0);\n        dp[0] = 1;\n        \n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (obstacleGrid[i][j] == 1) {\n                    dp[j] = 0;\n                } else if (j > 0) {\n                    dp[j] += dp[j - 1];\n                }\n            }\n        }\n        \n        return (int)dp[n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

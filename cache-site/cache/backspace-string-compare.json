@@ -1,0 +1,40 @@
+{
+  "slug": "backspace-string-compare",
+  "title": "Backspace String Compare",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int i, j, skipS, skipT: 4 scalar integers → O(1)\n- No containers, no recursion, no heap allocation\n- Not counted: input strings s and t",
+  "approach": "Process both strings right-to-left with two pointers. Maintain a backspace counter per string: on '#', increment the counter and move left; on a regular character with pending backspaces, decrement the counter and move left; otherwise the character is a \"survivor\" ready to compare. Compare survivors from both strings one at a time - if they ever differ, or one string has a survivor while the other is exhausted, return false.",
+  "hints": [
+    "If you read each string from the last character backward, what can you determine about each character before you decide to compare it? A '#' erases the character typed immediately before it, so 'ab#c' becomes 'ac'.",
+    "Use two pointers, one per string, both starting at the last index and moving left. For s = \"ab#c\", start at index 3 ('c'): it is not '#' and no backspaces are pending, so it is a character to compare.",
+    "```\ni = len(s)-1, j = len(t)-1, skipS = 0, skipT = 0\nwhile i >= 0 or j >= 0:\n    move i left past '#' (incrementing skipS) and past deleted chars (decrementing skipS)\n    move j left past '#' (incrementing skipT) and past deleted chars (decrementing skipT)\n    if both valid: compare s[i] vs t[j], then i--, j--\n    if only one valid: return false\nreturn true\n```",
+    "**One string exhausts first** - one string has more surviving characters than the other\n`s = \"a\", t = \"ba\"` → `Expected: false`\n⚠️ Bug: using `while (i >= 0 && j >= 0)` instead of `||` in the outer loop → exits when i = -1, j = 0, returns true\n\n**Consecutive backspaces** - multiple '#' in a row each erase a separate character\n`s = \"ab##\", t = \"c#d#\"` → `Expected: true`\n⚠️ Bug: setting `skipS = 1` on each '#' instead of `skipS++` → s keeps 'a', returns false\n\n**Leading backspace** - '#' at index 0 with nothing before it to erase\n`s = \"#a\", t = \"a\"` → `Expected: true`\n⚠️ Bug: running `while (skipS > 0) { skipS--; i--; }` without checking `i >= 0` → i goes negative, accesses s[-1]\n\n**Single character mismatch** - minimal input where the two strings differ\n`s = \"a\", t = \"b\"` → `Expected: false`\n⚠️ Bug: using `while (i > 0 || j > 0)` instead of `>= 0` → never processes index 0, returns true"
+  ],
+  "followUps": [
+    {
+      "q": "Can you solve it in O(n) time and O(1) space?",
+      "a": "Yes - the two-pointer right-to-left approach above already achieves this. By scanning backward, you know exactly how many backspaces are pending before you commit to comparing a character, so no result string is ever built."
+    },
+    {
+      "q": "What if '#' deletes the last k characters instead of just one?",
+      "a": "Replace `skipS++` with `skipS += k` (and likewise for skipT) when you encounter '#'. The rest of the logic is identical - each backspace now skips k characters. Time remains O(n + m), space O(1)."
+    },
+    {
+      "q": "What if the strings arrive as a one-pass left-to-right stream with no random access?",
+      "a": "Maintain a write pointer into a per-string buffer; on '#', decrement the pointer (clamped at 0); on a regular character, write it and increment. Compare the two buffers at the end. This uses O(n) space in the worst case (no backspaces), so the right-to-left two-pointer method is strictly better when random access is available."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool backspaceCompare(string s, string t) {\n        int i = s.size() - 1, j = t.size() - 1;\n        int skipS = 0, skipT = 0;\n        while (i >= 0 || j >= 0) {\n            while (i >= 0) {\n                if (s[i] == '#') {\n                    skipS++;\n                    i--;\n                } else if (skipS > 0) {\n                    skipS--;\n                    i--;\n                } else {\n                    break;\n                }\n            }\n            while (j >= 0) {\n                if (t[j] == '#') {\n                    skipT++;\n                    j--;\n                } else if (skipT > 0) {\n                    skipT--;\n                    j--;\n                } else {\n                    break;\n                }\n            }\n            if (i >= 0 && j >= 0) {\n                if (s[i] != t[j]) return false;\n                i--;\n                j--;\n            } else if (i >= 0 || j >= 0) {\n                return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

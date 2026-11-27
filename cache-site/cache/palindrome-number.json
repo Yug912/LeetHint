@@ -2,40 +2,39 @@
   "slug": "palindrome-number",
   "title": "Palindrome Number",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Half Reversal",
-  "tc": "O(log₁₀ x)",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Math / Half-Reversal",
+  "tc": "O(log₁₀ x)",
   "sc": "O(1)",
-  "spaceBreakdown": "- two integer variables (original part and reversed half) → O(1)\n- not counted: input integer, return value",
-  "approach": "A palindrome reads the same forward and backward, so the most significant and least significant digits must match. By reversing only the last half of the integer and comparing it with the remaining front half we avoid overflow and extra space. If the number is negative or ends with a zero (but is not zero itself) it cannot be a palindrome. The algorithm stops when the reversed half is greater than or equal to the remaining part, then checks equality (allowing an odd middle digit).",
+  "spaceBreakdown": "- int reversed: single integer → O(1)\n- int x (parameter, modified in place): not counted\n- no containers, no recursion",
+  "approach": "The key insight is that a palindrome's second half mirrors its first half, so we only need to reverse half the digits and compare. We extract digits from the right end of x using modulo 10, building a reversed value, while shrinking x by dividing by 10 each step. The loop stops once the reversed half reaches or exceeds the remaining half. For even-length numbers we compare the two halves directly; for odd-length numbers we drop the middle digit by comparing x with reversed/10. This avoids overflow because we never reverse more than half the digits.",
   "hints": [
-    "Does a palindrome require the first digit to equal the last digit?  \nIf so, you only need to compare pairs from the ends, not the whole number.  \nConstraint: -2³¹ ≤ x ≤ 2³¹‑1.",
-    "Use the integer type itself as a stack to rebuild the last half of the number.  \nExample: for x = 121, repeatedly pop the last digit and push it onto a reversed value until the reversed part ≥ the remaining part.",
-    "```\nif x < 0 or (x % 10 == 0 and x != 0) return false\nrev = 0\nwhile x > rev:\n    rev = rev * 10 + x % 10\n    x = x / 10\nreturn x == rev or x == rev / 10\n```",
-    "**Negative number** - a leading minus sign can never match a trailing digit.  \n`Input: -121` → `Expected: false`  \n⚠️ Bug: returning true for any x < 0 → returns true on this input.\n\n**Trailing zero** - a palindrome cannot end with 0 unless the whole number is 0.  \n`Input: 10` → `Expected: false`  \n⚠️ Bug: ignoring the “ends with 0” rule → returns true on this input.\n\n**Single digit** - any single digit is a palindrome.  \n`Input: 7` → `Expected: true`  \n⚠️ Bug: requiring at least two digits before entering the loop → returns false on this input.\n\n**Potential overflow** - reversing the whole integer may exceed 32‑bit range.  \n`Input: 2147483647` → `Expected: false`  \n⚠️ Bug: using full reversal with int → overflow leads to undefined behavior / wrong result."
+    "For a number with d digits, how many digit-pairs must match before you can confirm or deny it reads the same forwards and backwards? The constraint allows x up to 2³¹ − 1, so a full 10-digit reversal can overflow a 32-bit int.",
+    "Reverse only the **second half** of the integer using `x % 10` and `x /= 10`, stopping when the reversed half meets or exceeds the remaining half. For x = 121: after two steps reversed = 12 and x = 1, so compare x (1) with reversed / 10 (1) → match.",
+    "```\nif x < 0: return false\nif x != 0 and x % 10 == 0: return false\nreversed = 0\nwhile reversed < x:\n    reversed = reversed * 10 + x % 10\n    x = x / 10\nreturn x == reversed or x == reversed / 10\n```",
+    "**Negative number** - the minus sign has no mirrored counterpart.\n`Input: -121` → `Expected: false`\n⚠️ Bug: reversing digits without checking sign first → 121 reversed is 121 → returns true\n\n**Trailing zero (non-zero)** - the reversed form would have a leading zero.\n`Input: 10` → `Expected: false`\n⚠️ Bug: omitting the `x % 10 == 0` guard → reversed becomes 1, x becomes 0, then `x == reversed / 10` gives `0 == 0` → returns true\n\n**Zero** - the only number ending in 0 that is a palindrome.\n`Input: 0` → `Expected: true`\n⚠️ Bug: checking `x % 10 == 0` without also requiring `x != 0` → returns false\n\n**Full-reversal overflow** - reversing all digits of a large non-palindrome exceeds 2³¹ − 1.\n`Input: 1999999999` → `Expected: false`\n⚠️ Bug: reversing the entire number into an int → 9999999991 > 2147483647, signed overflow → undefined behavior, may return true"
   ],
   "followUps": [
     {
-      "q": "How would you modify the solution to work for a 64‑bit signed integer range?",
-      "a": "Use the same half‑reversal logic but store the reversed half in a 64‑bit variable (long long). The loop condition and comparisons remain unchanged, and the time complexity stays O(log₁₀ x) with O(1) space."
+      "q": "Given a string s, determine if any permutation of its characters can form a palindrome.",
+      "a": "A permutation is a palindrome if and only if at most one character has an odd frequency. Count frequencies in one pass, then count how many are odd. TC: O(n), SC: O(1) for a fixed alphabet."
     },
     {
-      "q": "What if the input were given as a stream of digits (e.g., reading one digit at a time) and you could only use O(1) extra memory?",
-      "a": "You could use a two‑pointer technique with a fast/slow pointer on the stream: advance one pointer twice as fast while building the reversed value of the slow pointer’s visited digits. When the fast pointer reaches the end, compare the reversed half with the remaining digits, still O(log n) time and O(1) space."
+      "q": "Check whether x is a palindrome when written in base b (2 ≤ b ≤ 36).",
+      "a": "The same half-reversal logic applies: extract digits with `x % b` and `x /= b`, building the reversed half, then compare. No string conversion needed. TC: O(log_b x), SC: O(1)."
     },
     {
-      "q": "Suppose you must return the longest palindromic prefix of the integer (as an integer). How does the complexity change?",
-      "a": "You would need to examine each prefix from longest to shortest, which in the worst case checks O(d) prefixes where d is the number of digits, each requiring O(d) work → O(d²) time, still O(1) extra space."
+      "q": "Count the number of palindromic integers in the range [1, n] where n can be up to 10¹⁸.",
+      "a": "A palindrome is fully determined by its first ⌈d/2⌉ digits. Enumerate all possible first halves for each digit length up to len(n), construct the full palindrome, and count those ≤ n. TC: O(√n × log n), SC: O(log n)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    bool isPalindrome(int x) {\n        // Negative numbers are not palindrome\n        if (x < 0) return false;\n        // Numbers ending with 0 are not palindrome unless the number is 0\n        if (x % 10 == 0 && x != 0) return false;\n\n        long long rev = 0;\n        int cur = x;\n        while (cur > rev) {\n            rev = rev * 10 + cur % 10;\n            cur /= 10;\n        }\n        // For even length: cur == rev\n        // For odd length: ignore the middle digit by rev/10\n        return cur == rev || cur == rev / 10;\n    }\n};",
-    "java": "class Solution {\n    public boolean isPalindrome(int x) {\n        // Negative numbers are not palindrome\n        if (x < 0) return false;\n        // Numbers ending with 0 are not palindrome unless the number is 0\n        if (x % 10 == 0 && x != 0) return false;\n\n        long rev = 0;\n        int cur = x;\n        while (cur > rev) {\n            rev = rev * 10 + cur % 10;\n            cur /= 10;\n        }\n        // For even length: cur == rev\n        // For odd length: ignore the middle digit by rev/10\n        return cur == rev || cur == rev / 10;\n    }\n}",
-    "python3": "class Solution:\n    def isPalindrome(self, x: int) -> bool:\n        # Negative numbers are not palindrome\n        if x < 0:\n            return False\n        # Numbers ending with 0 are not palindrome unless the number is 0\n        if x % 10 == 0 and x != 0:\n            return False\n\n        rev = 0\n        cur = x\n        while cur > rev:\n            rev = rev * 10 + cur % 10\n            cur //= 10\n        # For even length: cur == rev\n        # For odd length: ignore the middle digit by rev//10\n        return cur == rev or cur == rev // 10",
-    "javascript": "/**\n * @param {number} x\n * @return {boolean}\n */\nvar isPalindrome = function(x) {\n    // Negative numbers are not palindrome\n    if (x < 0) return false;\n    // Numbers ending with 0 are not palindrome unless the number is 0\n    if (x % 10 === 0 && x !== 0) return false;\n\n    let rev = 0;\n    let cur = x;\n    while (cur > rev) {\n        rev = rev * 10 + (cur % 10);\n        cur = Math.floor(cur / 10);\n    }\n    // For even length: cur == rev\n    // For odd length: ignore the middle digit by rev/10\n    return cur === rev || cur === Math.floor(rev / 10);\n};"
+    "cpp": "class Solution {\npublic:\n    bool isPalindrome(int x) {\n        if (x < 0) return false;\n        if (x != 0 && x % 10 == 0) return false;\n        int reversed = 0;\n        while (reversed < x) {\n            reversed = reversed * 10 + x % 10;\n            x /= 10;\n        }\n        return x == reversed || x == reversed / 10;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

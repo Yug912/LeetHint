@@ -1,0 +1,40 @@
+{
+  "slug": "evaluate-division",
+  "title": "Evaluate Division",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Weighted Union-Find",
+  "tc": "O((n+q)*(L+α(V)))",
+  "sc": "O(V*L)",
+  "spaceBreakdown": "- unordered_map<string, int> varToId: up to V entries, each key up to L chars → O(V*L)\n- vector<int> parent: up to V entries → O(V)\n- vector<double> weight: up to V entries → O(V)\n- recursion depth: up to V in worst case before path compression → O(V)\n- not counted: input, returned vector",
+  "approach": "Treat each variable as a node in a graph where edges represent division ratios. Use a Weighted Union-Find (Disjoint Set Union) data structure to group connected variables, storing the ratio of each node to its parent. For each equation A / B = val, union their sets and set the parent ratio so that A / B = val holds; for each query, check if the variables are in the same set and return the ratio of their weights to the root.",
+  "hints": [
+    "If A/B = 2 and B/C = 3, how many multiplications relate A to C? The variables form a network where knowing one ratio lets you derive others transitively.",
+    "Use a Weighted Union-Find data structure where each node tracks its ratio to its parent. For a / b = 2.0, make `a` a child of `b` and store the weight 2.0, so `a / parent[a] = 2.0`.",
+    "```\nfind(x):\n    if parent[x] != x: p = parent[x]; parent[x] = find(p); weight[x] *= weight[p]\n    return parent[x]\nfor eq A/B = val:\n    rA, wA = find(A); rB, wB = find(B)\n    if rA != rB: parent[rA] = rB; weight[rA] = wB * val / wA\nfor query C/D:\n    if C or D unseen: return -1\n    rC, wC = find(C); rD, wD = find(D)\n    return rC != rD ? -1 : wC / wD\n```",
+    "**Undefined variables** - Query asks for a variable not present in any equation.\n`Input: equations = [[\"a\",\"b\"]], values = [1.0], queries = [[\"x\",\"y\"]]` → `Expected: [-1.00000]`\n⚠️ Bug: Forgetting to check if query variables exist in the map before finding roots → returns `1.00000` (if uninitialized nodes default to root 0) or crashes.\n\n**Disconnected components** - Query asks for the ratio between two variables in separate equation chains.\n`Input: equations = [[\"a\",\"b\"],[\"c\",\"d\"]], values = [2.0,3.0], queries = [[\"a\",\"c\"]]` → `Expected: [-1.00000]`\n⚠️ Bug: Only checking if variables exist, but not checking if `find(C) == find(D)` → returns `2.00000` by blindly dividing weights.\n\n**Path compression** - A long chain of equations requires updating intermediate ratios.\n`Input: equations = [[\"a\",\"b\"],[\"b\",\"c\"],[\"c\",\"d\"]], values = [2.0,3.0,4.0], queries = [[\"a\",\"d\"]]` → `Expected: [24.00000]`\n⚠️ Bug: In `find`, updating `weight[x]` before recursively calling `find` on the parent → returns `2.00000` because it misses the parent's updated weight."
+  ],
+  "followUps": [
+    {
+      "q": "What if equations can be added dynamically between queries?",
+      "a": "We would process each new equation by calling the `union` function exactly as done during initialization. The Weighted Union-Find structure naturally supports dynamic edge additions in O(α(V)*L) time per equation without needing to rebuild the graph."
+    },
+    {
+      "q": "What if there are contradictory equations provided?",
+      "a": "During the `union` step, if `find(u) == find(v)`, we can check if `weight[u] / weight[v]` equals the new `val`. If it doesn't, we can flag a contradiction. The time complexity remains O((n+q)*α(V)*L)."
+    },
+    {
+      "q": "What if the number of variables is extremely large (e.g., 10^6) but equations are sparse?",
+      "a": "The Weighted Union-Find approach scales perfectly, using O(V*L) space for the hash map and arrays. We would avoid Floyd-Warshall (which takes O(V^3) time) and rely entirely on the near-linear time of Union-Find."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int find(int x, vector<int>& parent, vector<double>& weight) {\n        if (parent[x] != x) {\n            int orig_parent = parent[x];\n            parent[x] = find(orig_parent, parent, weight);\n            weight[x] *= weight[orig_parent];\n        }\n        return parent[x];\n    }\n    \npublic:\n    vector<double> calcEquation(vector<vector<string>>& equations, vector<double>& values, vector<vector<string>>& queries) {\n        unordered_map<string, int> varToId;\n        int id = 0;\n        for (const auto& eq : equations) {\n            if (!varToId.count(eq[0])) varToId[eq[0]] = id++;\n            if (!varToId.count(eq[1])) varToId[eq[1]] = id++;\n        }\n        \n        vector<int> parent(id);\n        vector<double> weight(id);\n        for (int i = 0; i < id; ++i) {\n            parent[i] = i;\n            weight[i] = 1.0;\n        }\n        \n        for (int i = 0; i < equations.size(); ++i) {\n            int u = varToId[equations[i][0]];\n            int v = varToId[equations[i][1]];\n            double val = values[i];\n            \n            int rootU = find(u, parent, weight);\n            int rootV = find(v, parent, weight);\n            \n            if (rootU != rootV) {\n                parent[rootU] = rootV;\n                weight[rootU] = weight[v] * val / weight[u];\n            }\n        }\n        \n        vector<double> ans;\n        for (const auto& q : queries) {\n            if (!varToId.count(q[0]) || !varToId.count(q[1])) {\n                ans.push_back(-1.0);\n                continue;\n            }\n            int u = varToId[q[0]];\n            int v = varToId[q[1]];\n            int rootU = find(u, parent, weight);\n            int rootV = find(v, parent, weight);\n            if (rootU != rootV) {\n                ans.push_back(-1.0);\n            } else {\n                ans.push_back(weight[u] / weight[v]);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

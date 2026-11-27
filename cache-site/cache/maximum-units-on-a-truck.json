@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-units-on-a-truck",
+  "title": "Maximum Units on a Truck",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Counting Sort",
+  "tc": "O(n + V)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- int bucket[1001]: fixed-size stack array (1001 ints, independent of n) → O(1)\n- no recursion, no heap, no other containers\n- not counted: input boxTypes, returned int",
+  "approach": "To maximize total units with a fixed box-count limit, always prefer boxes with the highest units-per-box. Since units per box is bounded by 1000 (a fixed constant), we use a counting-sort bucket array of size 1001: aggregate each box type's count into `bucket[unitsPerBox]`, then scan from 1000 down to 1, taking `min(bucket[u], remaining)` boxes at each level. This avoids the O(n log n) comparison sort and achieves O(n) time with O(1) extra space.",
+  "hints": [
+    "If the truck has room for exactly one more box, what single attribute of a box type determines how much it adds to the total? The constraint numberOfUnitsPerBox_i ≤ 1000 is relevant here.",
+    "Use a counting-sort bucket array of size 1001 indexed by units-per-box. In Example 1, this gives bucket[3]=1, bucket[2]=2, bucket[1]=3; scan from 1000 down, taking min(bucket[u], remaining) boxes at each level.",
+    "```\nbucket[0..1000] = 0\nfor each (count, units) in boxTypes:\n    bucket[units] += count\ntotal = 0\nfor u from 1000 down to 1:\n    take = min(bucket[u], truckSize)\n    total += take * u\n    truckSize -= take\nreturn total\n```",
+    "**Single box type** - only one type of box available\n`Input: boxTypes = [[1,5]], truckSize = 1` → `Expected: 5`\n⚠️ Bug: declaring `int bucket[1001];` without `= {0}` (uninitialized) → returns garbage value\n\n**Truck exceeds supply** - truckSize is larger than total boxes available\n`Input: boxTypes = [[1,3]], truckSize = 10` → `Expected: 3`\n⚠️ Bug: using `take = truckSize` instead of `min(bucket[u], truckSize)` → returns 30\n\n**Same units, multiple types** - several types share the same units-per-box value\n`Input: boxTypes = [[1,5],[2,5]], truckSize = 3` → `Expected: 15`\n⚠️ Bug: using `bucket[u] = count` instead of `bucket[u] += count` → returns 10\n\n**Minimum units per box** - all boxes have just 1 unit each\n`Input: boxTypes = [[3,1]], truckSize = 2` → `Expected: 2`\n⚠️ Bug: loop condition `u > 1` instead of `u >= 1` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if boxTypes arrives as a stream too large to store in memory?",
+      "a": "The bucket array of size 1001 is all we need. Process each box type as it arrives by adding its count to `bucket[unitsPerBox]`. After the stream ends, scan from 1000 down to 1 as before. Time stays O(n), space stays O(1)."
+    },
+    {
+      "q": "What if numberOfUnitsPerBox_i can be up to 10^9?",
+      "a": "The fixed-size bucket array is no longer feasible. Sort boxTypes by units per box in descending order, then greedily take boxes from the highest-unit type first. This gives O(n log n) time and O(1) extra space via in-place sort."
+    },
+    {
+      "q": "What if each box type also has a weight and the truck has a weight limit instead of a box-count limit?",
+      "a": "This becomes the fractional knapsack problem. Sort box types by units-per-weight ratio in descending order, then greedily take as much weight as possible from each type. O(n log n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumUnits(vector<vector<int>>& boxTypes, int truckSize) {\n        int bucket[1001] = {0};\n        for (auto& b : boxTypes) {\n            bucket[b[1]] += b[0];\n        }\n        int total = 0;\n        for (int u = 1000; u >= 1 && truckSize > 0; --u) {\n            int take = min(bucket[u], truckSize);\n            total += take * u;\n            truckSize -= take;\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

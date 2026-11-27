@@ -2,40 +2,39 @@
   "slug": "minimum-size-subarray-sum",
   "title": "Minimum Size Subarray Sum",
   "difficulty": "Medium",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
   "pattern": "Sliding Window",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- int left, right, ans, n: constant → O(1)  \n- long long curSum: constant → O(1)  \n- not counted: input vector `nums`",
-  "approach": "We slide a window with two indices, expanding the right side until the running sum reaches or exceeds target, then shrink the left side while the condition still holds. Because all numbers are positive, moving the left border can only decrease the sum, so each index is visited at most twice, giving linear time. The smallest window length observed during this process is the answer; if none is found we return 0.",
+  "spaceBreakdown": "- int n, left, right, minLen: scalar variables → O(1)\n- long long sum: scalar variable → O(1)\n- recursion depth: none\n- not counted: input vector nums, returned int",
+  "approach": "Since all elements are positive, extending a subarray rightward always increases its sum and shrinking from the left always decreases it. This monotonicity lets us maintain a window [left, right]: expand right until the sum reaches target, then shrink left as far as possible while sum ≥ target, recording the minimum length. Each element enters and leaves the window at most once, giving O(n) time.",
   "hints": [
-    "What property of the array elements lets you know that increasing the left border of a sub‑array can only make its sum smaller?  \nSince n ≤ 10^5, you can afford to move each index at most once.",
-    "Use the two‑pointer (sliding window) technique.  \nFor target = 7 and nums = [2,3,1,2,4,3] the window grows to sum = 7 at indices 0‑3, then contracts to length 2 at indices 4‑5.",
-    "initialize left = 0, curSum = 0, ans = INF  \nfor right from 0 to n‑1:  \n curSum += nums[right]  \n while curSum >= target:  \n  ans = min(ans, right‑left+1)  \n  curSum -= nums[left]  \n  left += 1  \nreturn (ans == INF) ? 0 : ans",
-    "**Single element meets target** - the answer is 1.  \n`Input: target = 5, nums = [5]` → `Expected: 1`  \n⚠️ Bug: never updating `ans` (e.g., initializing it to 0) → returns 0.\n\n**No sub‑array reaches target** - answer 0.  \n`Input: target = 10, nums = [1,2,3]` → `Expected: 0`  \n⚠️ Bug: using `>` instead of `>=` in the while condition → never contracts, may return 3.\n\n**Exact equality needed** - window must stop at sum = target.  \n`Input: target = 4, nums = [1,3,2]` → `Expected: 2` (sub‑array [1,3])  \n⚠️ Bug: condition `while (curSum > target)` → skips the equal case, returns 3.\n\n**Minimal window at the end** - the shortest sub‑array appears at the tail.  \n`Input: target = 7, nums = [1,1,1,1,5,2]` → `Expected: 2` (sub‑array [5,2])  \n⚠️ Bug: resetting `left` to 0 after each contraction → returns 5."
+    "Since every nums[i] is positive, how does a subarray's sum change as you extend it rightward or shrink it from the left? The constraint n ≤ 10^5 rules out checking every subarray pair.",
+    "Use a sliding window with two pointers. For target=7, nums=[2,3,1,2,4,3]: expand right to index 3 (sum=8≥7, len=4), then shrink left to index 1 (sum=6<7, stop).",
+    "```\nleft = 0, sum = 0, best = INF\nfor right in 0..n-1:\n    sum += nums[right]\n    while sum >= target:\n        best = min(best, right - left + 1)\n        sum -= nums[left]\n        left += 1\nreturn best if best != INF else 0\n```",
+    "**Single element** - n=1, the only subarray is the element itself\n`Input: target = 5, nums = [5]` → `Expected: 1`\n⚠️ Bug: returning 0 when n == 1 without checking the element → returns 0\n\n**No valid answer** - total sum is less than target\n`Input: target = 11, nums = [1,1,1,1,1,1,1,1]` → `Expected: 0`\n⚠️ Bug: initializing best to 0 instead of INT_MAX → on target=4, nums=[1,4,4], returns 0 instead of 1\n\n**Exact sum match** - subarray sum equals target exactly\n`Input: target = 6, nums = [1,2,3]` → `Expected: 3`\n⚠️ Bug: using `sum > target` instead of `sum >= target` in the while condition → returns 0 instead of 3\n\n**All elements equal** - every window of the same size has the same sum\n`Input: target = 6, nums = [2,2,2,2,2]` → `Expected: 3`\n⚠️ Bug: shrinking left before recording the window length → returns 2 instead of 3"
   ],
   "followUps": [
     {
-      "q": "How would you solve the problem in O(n log n) time?",
-      "a": "Build a prefix‑sum array and for each index binary‑search the smallest later index whose prefix sum is at least `prefix[i] + target`. This yields O(n log n) time and O(n) extra space."
+      "q": "What if nums can contain negative numbers?",
+      "a": "The two-pointer approach fails because shrinking from the left can increase the sum. Compute prefix sums and for each ending index, binary search the earliest starting index where prefix[end] - prefix[start] >= target. O(n log n) time, O(n) space."
     },
     {
-      "q": "What changes if the array may contain negative numbers?",
-      "a": "The monotonicity of the sum disappears, so the two‑pointer window no longer works. One can keep a deque of candidate prefix‑sum indices maintaining increasing prefix sums and achieve O(n) time."
+      "q": "What if you need the count of all subarrays with sum >= target instead of the minimum length?",
+      "a": "Extend the same two-pointer window. For each right, the number of valid left positions equals the current left value (positions 0 through left-1 all give sum >= target). Sum these counts across all right indices. O(n) time, O(1) space."
     },
     {
-      "q": "How would you handle the case where the input stream is too large to store in memory?",
-      "a": "Process the numbers on the fly with the same sliding‑window idea, keeping only the current sum, left index, and answer; this uses O(1) extra memory and still runs in O(n) time."
+      "q": "What if nums is a circular array?",
+      "a": "Duplicate the array to length 2n and run the same sliding window, capping the window length at n to avoid wrapping past one full cycle. O(n) time, O(n) space for the doubled array."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int minSubArrayLen(int target, vector<int>& nums) {\n        int n = nums.size();\n        int left = 0;\n        long long curSum = 0;\n        int ans = n + 1;               // sentinel larger than any possible length\n        for (int right = 0; right < n; ++right) {\n            curSum += nums[right];\n            while (curSum >= target) {\n                ans = min(ans, right - left + 1);\n                curSum -= nums[left];\n                ++left;\n            }\n        }\n        return (ans == n + 1) ? 0 : ans;\n    }\n};",
-    "java": "class Solution {\n    public int minSubArrayLen(int target, int[] nums) {\n        int n = nums.length;\n        int left = 0;\n        long curSum = 0;\n        int ans = n + 1; // sentinel larger than any possible length\n\n        for (int right = 0; right < n; ++right) {\n            curSum += nums[right];\n            while (curSum >= target) {\n                ans = Math.min(ans, right - left + 1);\n                curSum -= nums[left];\n                ++left;\n            }\n        }\n        return (ans == n + 1) ? 0 : ans;\n    }\n}",
-    "python3": "class Solution:\n    def minSubArrayLen(self, target: int, nums: list[int]) -> int:\n        n = len(nums)\n        left = 0\n        cur_sum = 0\n        ans = n + 1  # sentinel larger than any possible length\n        for right in range(n):\n            cur_sum += nums[right]\n            while cur_sum >= target:\n                ans = min(ans, right - left + 1)\n                cur_sum -= nums[left]\n                left += 1\n        return 0 if ans == n + 1 else ans",
-    "javascript": "/**\n * @param {number} target\n * @param {number[]} nums\n * @return {number}\n */\nvar minSubArrayLen = function(target, nums) {\n    const n = nums.length;\n    let left = 0;\n    let curSum = 0;\n    let ans = n + 1; // sentinel larger than any possible length\n\n    for (let right = 0; right < n; ++right) {\n        curSum += nums[right];\n        while (curSum >= target) {\n            ans = Math.min(ans, right - left + 1);\n            curSum -= nums[left];\n            ++left;\n        }\n    }\n    return (ans === n + 1) ? 0 : ans;\n};"
+    "cpp": "class Solution {\npublic:\n    int minSubArrayLen(int target, vector<int>& nums) {\n        int n = nums.size();\n        int left = 0;\n        long long sum = 0;\n        int minLen = INT_MAX;\n        \n        for (int right = 0; right < n; right++) {\n            sum += nums[right];\n            while (sum >= target) {\n                minLen = min(minLen, right - left + 1);\n                sum -= nums[left];\n                left++;\n            }\n        }\n        \n        return minLen == INT_MAX ? 0 : minLen;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

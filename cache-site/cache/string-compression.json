@@ -1,0 +1,40 @@
+{
+  "slug": "string-compression",
+  "title": "String Compression",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, write, i, count, start, end): 6 integers → O(1)\n- char variables (c, temp): 2 chars → O(1)\n- recursion depth: none\n- not counted: input array (modified in place)",
+  "approach": "Use two pointers: a read pointer scans groups of consecutive identical characters, and a write pointer places the compressed output in-place. For each group, write the character, then if the count exceeds 1, extract each digit of the count and write them in order. Since the compressed form of any group is never longer than the group itself, the write pointer never overtakes the read pointer. This gives a single-pass O(n) algorithm with O(1) extra space.",
+  "hints": [
+    "As you scan the array left to right, what tells you that a run of identical characters has just ended? The array length can reach 2000, so a run's count may need multiple digits.",
+    "Use two pointers: a read pointer scans groups of identical characters, a write pointer places compressed output. For `[\"a\",\"a\",\"b\",\"b\",\"c\",\"c\",\"c\"]`, read `'a'` twice → write `'a','2'` at positions 0-1, then read `'b'` twice → write `'b','2'` at positions 2-3.",
+    "```\nread = 0, write = 0\nwhile read < n:\n    char = chars[read]\n    count = 0\n    while read < n and chars[read] == char:\n        read += 1; count += 1\n    chars[write] = char; write += 1\n    if count > 1:\n        extract digits of count into chars[write..], then reverse them\nreturn write\n```",
+    "**Single character** - only one element, no compression needed\n`Input: [\"a\"]` → `Expected: 1`\n⚠️ Bug: writing count digits unconditionally (even when count == 1) → returns 2, chars = ['a','1']\n\n**All identical, count = 12** - entire array is one group with multi-digit count\n`Input: [\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\"]` → `Expected: 3`\n⚠️ Bug: extracting digits with `count % 10` then `count /= 10` but not reversing → returns 3, chars = ['a','2','1']\n\n**Count of exactly 10** - boundary between one and two digits\n`Input: [\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\"]` → `Expected: 3`\n⚠️ Bug: writing `chars[write++] = '0' + (count % 10)` without looping over all digits → returns 2, chars = ['a','0']\n\n**Mixed single and multi-char groups** - some groups compress, some don't\n`Input: [\"a\",\"b\",\"b\",\"c\",\"c\",\"c\"]` → `Expected: 5`\n⚠️ Bug: skipping the character write when count == 1 → returns 4, chars = ['b','2','c','3']"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input arrives as a character stream and you cannot buffer the entire array?",
+      "a": "Maintain the current character and its running count. When the character changes or the stream ends, emit the character followed by its count digits if > 1. This uses O(1) space and O(n) time but requires a streaming output sink rather than in-place modification."
+    },
+    {
+      "q": "How would you write a decompress function that reverses this compression?",
+      "a": "Scan left to right: read one character, then read all consecutive digit characters to form the count (default 1 if the next character is not a digit). Append the character count times to the output. This runs in O(n) time where n is the decompressed length, using O(1) extra space beyond the output."
+    },
+    {
+      "q": "What if the array length could be up to 10^9 - does the in-place guarantee still hold?",
+      "a": "Yes. A group of length k ≥ 2 produces at most 1 + ⌊log₁₀ k⌋ + 1 output characters, which is always ≤ k. So the write pointer never overtakes the read pointer, and the single-pass in-place approach still works in O(n) time and O(1) space. The only change is that digit extraction handles up to 10 digits instead of 4."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int compress(vector<char>& chars) {\n        int n = chars.size();\n        int write = 0;\n        int i = 0;\n        while (i < n) {\n            char c = chars[i];\n            int count = 0;\n            while (i < n && chars[i] == c) {\n                i++;\n                count++;\n            }\n            chars[write++] = c;\n            if (count > 1) {\n                int start = write;\n                while (count > 0) {\n                    chars[write++] = '0' + (count % 10);\n                    count /= 10;\n                }\n                int end = write - 1;\n                while (start < end) {\n                    char temp = chars[start];\n                    chars[start] = chars[end];\n                    chars[end] = temp;\n                    start++;\n                    end--;\n                }\n            }\n        }\n        return write;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

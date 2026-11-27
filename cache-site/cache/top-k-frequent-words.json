@@ -1,0 +1,40 @@
+{
+  "slug": "top-k-frequent-words",
+  "title": "Top K Frequent Words",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Trie + Bucket Sort",
+  "tc": "O(n * L)",
+  "sc": "O(n * L)",
+  "spaceBreakdown": "- `vector<TrieNode> nodes`: up to n * L + 1 nodes → O(n * L)\n- `vector<vector<string>> buckets`: up to n buckets, storing up to n strings of total length n * L → O(n * L)\n- `string current_word`: up to L characters → O(L)\n- recursion depth: up to L → O(L)\n- not counted: input, returned vector",
+  "approach": "The optimal approach uses a Trie to store words and count their frequencies in O(n·L) time. By traversing the Trie in alphabetical order (from 'a' to 'z'), we naturally encounter all unique words in lexicographical order. We populate frequency buckets (where the index is the frequency) during this traversal, ensuring each bucket is also sorted lexicographically. Finally, we collect the top k words by iterating from the highest frequency bucket downwards.",
+  "hints": [
+    "What property of the words allows you to determine their relative order without comparing them directly?\nThe constraints state that `words[i]` consists of lowercase English letters and has a maximum length of 10.",
+    "Use a Trie to store words and their frequencies, then traverse it in alphabetical order to populate frequency buckets.\nFor `[\"i\",\"love\",\"leetcode\",\"i\",\"love\",\"coding\"]`, inserting \"i\" twice sets its node's frequency to 2.",
+    "```\ninsert all words into a trie, incrementing frequency at the end node\ntraverse the trie in alphabetical order (a to z)\n  if a node has frequency > 0, append its word to bucket[frequency]\ncollect words from highest frequency bucket down to 1\n  stop when k words are collected\n```",
+    "**Smallest input** - Only one word in the array.\n`Input: words = [\"a\"], k = 1` → `Expected: [\"a\"]`\n⚠️ Bug: Looping `i` from `words.size() - 1` down to `0` for buckets → returns `[]` because frequency 1 is at index 1, not 0.\n\n**Ties in frequency** - Multiple words share the same highest frequency.\n`Input: words = [\"b\",\"a\",\"b\",\"a\"], k = 2` → `Expected: [\"a\",\"b\"]`\n⚠️ Bug: Traversing trie children from 'z' to 'a' instead of 'a' to 'z' → returns `[\"b\",\"a\"]`\n\n**All elements equal** - The same word repeated multiple times.\n`Input: words = [\"a\",\"a\",\"a\"], k = 1` → `Expected: [\"a\"]`\n⚠️ Bug: Allocating buckets with size `k` instead of `words.size() + 1` → returns `[]` because frequency 3 exceeds the bucket size."
+  ],
+  "followUps": [
+    {
+      "q": "What if the words can be very long (e.g., up to 10^5 characters)?",
+      "a": "The Trie and bucket sort approach still works, taking O(N) time and space where N is the total number of characters across all words. The Trie naturally handles long strings without performance degradation compared to repeated string comparisons."
+    },
+    {
+      "q": "What if the alphabet is larger, such as all Unicode characters?",
+      "a": "We would replace the fixed array of 26 children in the Trie with a hash map for child pointers. The time complexity becomes O(N) expected time, and space remains O(N), adapting to sparse character distributions."
+    },
+    {
+      "q": "What if we only need the single most frequent word (k = 1)?",
+      "a": "We still traverse the Trie in alphabetical order but only track the maximum frequency seen so far and the corresponding word. This reduces the space complexity to O(N) for the Trie without needing the bucket array, taking O(N) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct TrieNode {\n        int children[26];\n        int freq;\n        TrieNode() {\n            for (int i = 0; i < 26; i++) children[i] = -1;\n            freq = 0;\n        }\n    };\n    \n    void dfs(int node_idx, string& current_word, vector<vector<string>>& buckets, const vector<TrieNode>& nodes) {\n        if (nodes[node_idx].freq > 0) {\n            buckets[nodes[node_idx].freq].push_back(current_word);\n        }\n        for (int i = 0; i < 26; i++) {\n            if (nodes[node_idx].children[i] != -1) {\n                current_word.push_back('a' + i);\n                dfs(nodes[node_idx].children[i], current_word, buckets, nodes);\n                current_word.pop_back();\n            }\n        }\n    }\n\npublic:\n    vector<string> topKFrequent(vector<string>& words, int k) {\n        vector<TrieNode> nodes;\n        nodes.emplace_back(); // root at index 0\n        \n        for (const string& word : words) {\n            int curr = 0;\n            for (char c : word) {\n                int idx = c - 'a';\n                if (nodes[curr].children[idx] == -1) {\n                    nodes[curr].children[idx] = nodes.size();\n                    nodes.emplace_back();\n                }\n                curr = nodes[curr].children[idx];\n            }\n            nodes[curr].freq++;\n        }\n        \n        vector<vector<string>> buckets(words.size() + 1);\n        string current_word = \"\";\n        dfs(0, current_word, buckets, nodes);\n        \n        vector<string> ans;\n        for (int i = words.size(); i >= 1 && ans.size() < k; i--) {\n            for (const string& word : buckets[i]) {\n                ans.push_back(word);\n                if (ans.size() == k) break;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

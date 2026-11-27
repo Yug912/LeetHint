@@ -1,0 +1,40 @@
+{
+  "slug": "remove-invalid-parentheses",
+  "title": "Remove Invalid Parentheses",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking with Pruning",
+  "tc": "O(2^p * n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string cur: up to n characters → O(n)\n- recursion call-stack depth: up to n → O(n)\n- unordered_set<string> result: holds output-sized data (not counted as auxiliary per LeetCode convention)\n- not counted: input string, returned vector",
+  "approach": "First, compute in one pass exactly how many `(` and `)` must be removed: scan left to right tracking unmatched `(`; every `)` with no unmatched `(` to pair increments `right_remove`, and leftover unmatched `(` at the end is `left_remove`. Then use DFS/backtracking over the string: at each parenthesis, branch on \"remove\" (if budget remains) or \"keep\" (if it doesn't break validity - `open` must stay ≥ 0). At the end, accept the string only if both removal budgets are zero and `open` is zero. A `unordered_set` deduplicates results since different removal choices can yield the same string.",
+  "hints": [
+    "With at most 20 parentheses in the string, what information about the string can you compute in a single left-to-right pass that would tell you exactly how many of each bracket type must go?",
+    "Use DFS/backtracking: precompute `left_remove` and `right_remove` by scanning once (track unmatched `(`; a `)` with none to pair is excess). For `\"()())()\"` this gives `left_remove=0, right_remove=1`, so the DFS only branches on removing one `)`.",
+    "```\ncompute left_remove, right_remove via single scan\ndfs(i, lr, rr, open, cur):\n    if i == n:\n        if lr == 0 and rr == 0 and open == 0:\n            add cur to results\n        return\n    if s[i] == '(':\n        if lr > 0: dfs(i+1, lr-1, rr, open, cur)   # remove\n        dfs(i+1, lr, rr, open+1, cur + '(')          # keep\n    elif s[i] == ')':\n        if rr > 0: dfs(i+1, lr, rr-1, open, cur)   # remove\n        if open > 0: dfs(i+1, lr, rr, open-1, cur + ')')  # keep\n    else:\n        dfs(i+1, lr, rr, open, cur + s[i])\n```",
+    "**All invalid brackets** - every parenthesis must be removed\n`Input: \")(\"` → `Expected: [\"\"]`\n⚠️ Bug: returning an empty vector when all characters are removed instead of a vector containing `\"\"` → returns `[]`\n\n**Duplicate valid strings** - removing different brackets yields the same result\n`Input: \"()())()\"` → `Expected: [\"(())()\",\"()()()\"]`\n⚠️ Bug: collecting results in a `vector` without deduplication → returns `[\"(())()\",\"()()()\",\"()()()\"]` (removing index 3 or 4 both produce `\"()()()\"`)\n\n**Unmatched open at end** - extra `(` must be removed, not just `)`\n`Input: \"((a\"` → `Expected: [\"a\"]`\n⚠️ Bug: only computing `right_remove` and ignoring leftover unmatched `(` count → returns `[\"((a\",\"(a\",\"a\"]` (includes strings with unmatched `(`)\n\n**No parentheses** - string is all letters\n`Input: \"abc\"` → `Expected: [\"abc\"]`\n⚠️ Bug: only recursing on parenthesis characters and skipping letters entirely → returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "If the string length can be up to 10^5, how would you return just one valid string with minimum removals?",
+      "a": "Compute `left_remove` and `right_remove` in O(n). Then do a single greedy pass: keep `(` in a stack of indices, remove excess `)` immediately (skip them), then remove the last `left_remove` unmatched `(` indices. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if there are three bracket types - `()`, `[]`, `{}` - and all must be balanced?",
+      "a": "Extend the balance tracking to three separate counters (one per type). The precomputation pass and DFS structure stay the same, but the \"keep\" branch for a closing bracket checks the matching type's counter. TC: O(2^p * n) with p = total brackets; SC: O(n)."
+    },
+    {
+      "q": "What if you only need the count of distinct valid strings, not the strings themselves?",
+      "a": "Use the same DFS but store results in a hash of the string path (rolling hash) instead of building full strings, deduplicating via a hash set of integers. TC: O(2^p * n) for hashing, SC: O(2^p) for the hash set in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> removeInvalidParentheses(string s) {\n        int leftRemove = 0, rightRemove = 0;\n        for (char c : s) {\n            if (c == '(') {\n                leftRemove++;\n            } else if (c == ')') {\n                if (leftRemove > 0) leftRemove--;\n                else rightRemove++;\n            }\n        }\n        unordered_set<string> result;\n        string cur;\n        dfs(s, 0, leftRemove, rightRemove, 0, cur, result);\n        return vector<string>(result.begin(), result.end());\n    }\n\nprivate:\n    void dfs(const string& s, int i, int lr, int rr, int open,\n             string& cur, unordered_set<string>& result) {\n        if (i == (int)s.size()) {\n            if (lr == 0 && rr == 0 && open == 0)\n                result.insert(cur);\n            return;\n        }\n        char c = s[i];\n        if (c == '(') {\n            if (lr > 0)\n                dfs(s, i + 1, lr - 1, rr, open, cur, result);\n            cur.push_back(c);\n            dfs(s, i + 1, lr, rr, open + 1, cur, result);\n            cur.pop_back();\n        } else if (c == ')') {\n            if (rr > 0)\n                dfs(s, i + 1, lr, rr - 1, open, cur, result);\n            if (open > 0) {\n                cur.push_back(c);\n                dfs(s, i + 1, lr, rr, open - 1, cur, result);\n                cur.pop_back();\n            }\n        } else {\n            cur.push_back(c);\n            dfs(s, i + 1, lr, rr, open, cur, result);\n            cur.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

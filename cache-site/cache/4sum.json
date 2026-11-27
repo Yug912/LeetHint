@@ -1,0 +1,40 @@
+{
+  "slug": "4sum",
+  "title": "4Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n^3)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(nums): in-place, introsort stack O(log n) → O(log n)\n- vector<vector<int>> result: not counted (returned output)\n- no other containers allocated",
+  "approach": "Sort the array, then fix the first two elements with nested loops and use two converging pointers for the remaining two. When the four-element sum equals the target, record the quadruplet and skip over duplicate values at every level (i, j, left, right) to guarantee uniqueness. Using `long long` for the sum prevents overflow since four values of 10⁹ exceed INT_MAX.",
+  "hints": [
+    "With n ≤ 200, checking every quadruplet is about 1.6 billion checks - too slow. If you fix two of the four positions, what property of the remaining pair would let you find all valid completions in a single scan?",
+    "Sort the array, then use two nested loops for the first two elements and two converging pointers for the last two. For nums = [1,0,-1,0,-2,2] sorted to [-2,-1,0,0,1,2], fix i=0 (−2) and j=1 (−1), then move left/right pointers inward to find pairs summing to 3.",
+    "```\nsort nums\nfor i in 0..n-4:\n    skip if nums[i] == nums[i-1]\n    for j in i+1..n-3:\n        skip if j > i+1 and nums[j] == nums[j-1]\n        left = j+1, right = n-1\n        while left < right:\n            sum = nums[i] + nums[j] + nums[left] + nums[right]\n            if sum == target: record, skip dups, left++, right--\n            elif sum < target: left++\n            else: right--\n```",
+    "**Overflow** - four values of 10⁹ sum to 4×10⁹, exceeding INT_MAX (2,147,483,647)\n`Input: nums = [1000000000,1000000000,1000000000,1000000000], target = -294967296` → `Expected: []`\n⚠️ Bug: computing `int sum = nums[i]+nums[j]+nums[left]+nums[right]` → overflow wraps 4×10⁹ to −294967296, returns `[[1000000000,1000000000,1000000000,1000000000]]`\n\n**All duplicates** - five equal elements, only one unique quadruplet\n`Input: nums = [2,2,2,2,2], target = 8` → `Expected: [[2,2,2,2]]`\n⚠️ Bug: omitting `if (i > 0 && nums[i] == nums[i-1]) continue` → i=0 and i=1 both produce [2,2,2,2], returns `[[2,2,2,2],[2,2,2,2]]`\n\n**Minimum valid input** - exactly four elements, one quadruplet\n`Input: nums = [1,2,3,4], target = 10` → `Expected: [[1,2,3,4]]`\n⚠️ Bug: outer loop condition `i < n - 4` instead of `i < n - 3` → loop never executes, returns `[]`\n\n**Boundary indices** - target achieved only by first and last elements\n`Input: nums = [0,1,2,3], target = 6` → `Expected: [[0,1,2,3]]`\n⚠️ Bug: initializing `right = n - 2` instead of `right = n - 1` → never considers index 3, returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve kSum for general k?",
+      "a": "Generalize recursively: fix k−2 elements via nested loops or recursion, then use two pointers for the last two. Time O(n^(k−1)), space O(k) for recursion depth."
+    },
+    {
+      "q": "What if nums is a streaming input too large to sort in memory?",
+      "a": "Store all pair sums in a hash map keyed by sum, then for each new pair look up the complementary sum. Time O(n²) average, space O(n²) for the map. Deduplication requires storing sorted quadruplets in a set."
+    },
+    {
+      "q": "What if you need to count quadruplets instead of listing them?",
+      "a": "Sort and use the same two-pointer structure, but when sum equals target, count duplicate runs on both sides: if the left run has length L and right run has length R, add L×R to the count. Time O(n³), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> fourSum(vector<int>& nums, int target) {\n        vector<vector<int>> result;\n        int n = nums.size();\n        sort(nums.begin(), nums.end());\n        for (int i = 0; i < n - 3; i++) {\n            if (i > 0 && nums[i] == nums[i - 1]) continue;\n            for (int j = i + 1; j < n - 2; j++) {\n                if (j > i + 1 && nums[j] == nums[j - 1]) continue;\n                int left = j + 1, right = n - 1;\n                while (left < right) {\n                    long long sum = (long long)nums[i] + nums[j] + nums[left] + nums[right];\n                    if (sum == target) {\n                        result.push_back({nums[i], nums[j], nums[left], nums[right]});\n                        while (left < right && nums[left] == nums[left + 1]) left++;\n                        while (left < right && nums[right] == nums[right - 1]) right--;\n                        left++;\n                        right--;\n                    } else if (sum < target) {\n                        left++;\n                    } else {\n                        right--;\n                    }\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

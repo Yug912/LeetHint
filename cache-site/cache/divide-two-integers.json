@@ -1,0 +1,40 @@
+{
+  "slug": "divide-two-integers",
+  "title": "Divide Two Integers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bit Manipulation (MSB-to-LSB quotient construction)",
+  "tc": "O(log q)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `a`, `d`, `q`: three `long long` scalars → O(1)\n- `negative` (bool), `i` (int): O(1)\n- no containers, no recursion, no heap allocation",
+  "approach": "The quotient can be constructed one bit at a time from the most significant bit to the least. For each bit position i (from 31 down to 0), if the remaining dividend right-shifted by i is at least the divisor, then bit i of the quotient is 1: subtract (divisor << i) from the remaining dividend and set that bit. Working with absolute values in `long long` (to handle INT_MIN) and applying the sign at the end guarantees correct truncation toward zero. Finally, clamp to the 32-bit signed range to handle the INT_MIN / −1 overflow case.",
+  "hints": [
+    "The quotient is at most 2^31 − 1, so it has at most 31 bits. What does each bit of the quotient, read from most significant to least, tell you about how the divisor fits into the dividend?",
+    "Bit-by-bit quotient construction: for each bit position i from 31 down to 0, test if (dividend >> i) ≥ divisor; if so, set bit i and subtract (divisor << i). Example: 10/3 → bit 1: (10>>1)=5≥3, subtract 6→4; bit 0: 4≥3, subtract 3→1. Quotient = 3.",
+    "```\na = abs(dividend), d = abs(divisor), q = 0\nfor i = 31 down to 0:\n    if (a >> i) >= d:\n        a = a - (d << i)\n        q = q | (1 << i)\nq = negative ? -q : q\nclamp q to [INT_MIN, INT_MAX]\nreturn q\n```",
+    "**INT_MIN / −1 overflow** - the quotient 2^31 exceeds INT_MAX and must be clamped.\n`Input: dividend = -2147483648, divisor = -1` → `Expected: 2147483647`\n⚠️ Bug: storing the quotient in `int` instead of `long long` → 1 << 31 is UB, returns -2147483648\n\n**INT_MIN / 1** - abs(INT_MIN) overflows `int`; the absolute value must be computed in `long long`.\n`Input: dividend = -2147483648, divisor = 1` → `Expected: -2147483648`\n⚠️ Bug: `long long a = abs(dividend)` (abs on `int` before promotion) → abs(INT_MIN) is UB, returns 0\n\n**Negative result truncation** - result must truncate toward zero, not floor.\n`Input: dividend = 7, divisor = -3` → `Expected: -2`\n⚠️ Bug: sign check `(dividend < 0) && (divisor < 0)` instead of XOR → returns 2\n\n**Exact division** - dividend equals divisor, quotient is 1.\n`Input: dividend = 3, divisor = 3` → `Expected: 1`\n⚠️ Bug: using `>` instead of `>=` in the bit comparison → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if both inputs are 64-bit signed integers instead of 32-bit?",
+      "a": "The same MSB-to-LSB scan works, but the loop runs 63 iterations and `d << i` can reach 2^126, so use `__int128` for the shifted divisor and remainder. TC becomes O(63) = O(1), SC stays O(1)."
+    },
+    {
+      "q": "What if the divisor is guaranteed to be a power of two?",
+      "a": "Division by 2^k is a right shift by k. Find k with a bit scan, then shift the dividend right by k. For negative dividends, adjust to truncate toward zero rather than arithmetic-shift toward negative infinity. TC O(1), SC O(1)."
+    },
+    {
+      "q": "What if you must also return the remainder?",
+      "a": "After the loop, `a` already holds the absolute remainder; apply the dividend's sign to it. The quotient construction is unchanged. TC O(log q), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int divide(int dividend, int divisor) {\n        bool negative = (dividend < 0) ^ (divisor < 0);\n        long long a = dividend < 0 ? -(long long)dividend : (long long)dividend;\n        long long d = divisor  < 0 ? -(long long)divisor  : (long long)divisor;\n        long long q = 0;\n        for (int i = 31; i >= 0; --i) {\n            if ((a >> i) >= d) {\n                a -= (d << i);\n                q |= (1LL << i);\n            }\n        }\n        if (negative) q = -q;\n        if (q > INT_MAX) q = INT_MAX;\n        if (q < INT_MIN) q = INT_MIN;\n        return (int)q;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

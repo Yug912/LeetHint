@@ -1,0 +1,40 @@
+{
+  "slug": "n-queens",
+  "title": "N-Queens",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking",
+  "tc": "O(n!)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> queens: n entries → O(n)\n- vector<bool> cols: n entries → O(n)\n- vector<bool> diag1: 2n-1 entries → O(n)\n- vector<bool> diag2: 2n-1 entries → O(n)\n- recursion stack: depth up to n → O(n)\n- board (built only at leaf, moved to result): not counted as auxiliary\n- not counted: input n, returned vector<vector<string>>",
+  "approach": "Place queens row by row using backtracking. Track attacked columns and both diagonals with boolean arrays: main diagonal indexed by `row-col+n-1`, anti-diagonal by `row+col`. When all n rows are filled, build the board string from stored column positions. This guarantees no two queens share a row, column, or diagonal, and the pruning keeps the search tractable for n ≤ 9.",
+  "hints": [
+    "Since each row must contain exactly one queen, what three quantities uniquely determine whether a cell is safe? The constraint n ≤ 9 keeps the total search space small enough to explore systematically.",
+    "Backtracking with three boolean arrays tracking columns, main diagonals (index `row-col+n-1`), and anti-diagonals (index `row+col`). For n=4, placing at (0,1) marks column 1, diagonal 2, and anti-diagonal 1.",
+    "```\nbacktrack(row):\n  if row == n: build board from queen positions; return\n  for col in 0..n-1:\n    d1 = row - col + n - 1\n    d2 = row + col\n    if cols[col], diag1[d1], diag2[d2] all false:\n      mark all three true; queens[row] = col\n      backtrack(row + 1)\n      mark all three false\n```",
+    "**Smallest input** - n=1 has exactly one valid placement.\n`Input: n = 1` → `Expected: [[\"Q\"]]`\n⚠️ Bug: checking `row > n` instead of `row == n` as base case → returns `[]`\n\n**No valid solution** - n=2 and n=3 have zero solutions.\n`Input: n = 2` → `Expected: []`\n⚠️ Bug: checking only column conflicts, ignoring diagonals → returns `[[\"Q.\",\".Q\"],[\".Q\",\"Q.\"]]`\n\n**Forgetting to unmark** - conflict arrays stay marked after backtracking.\n`Input: n = 4` → `Expected: [[\".Q..\",\"...Q\",\"Q...\",\"..Q.\"],[\"..Q.\",\"Q...\",\"...Q\",\".Q..\"]]`\n⚠️ Bug: omitting the unmark step after recursion → returns `[]` because all positions appear blocked after the first branch\n\n**Wrong diagonal formula** - using `abs(row-col)` instead of `row-col+n-1` conflates diagonals of opposite sign.\n`Input: n = 4` → `Expected: [[\".Q..\",\"...Q\",\"Q...\",\"..Q.\"],[\"..Q.\",\"Q...\",\"...Q\",\".Q..\"]]`\n⚠️ Bug: using `abs(row - col)` as diagonal index → returns `[]` because positions like (1,3) and (2,0) falsely share diagonal index 2"
+  ],
+  "followUps": [
+    {
+      "q": "Count the number of distinct N-Queens solutions without storing them.",
+      "a": "Use the same backtracking structure but increment a counter at the base case instead of building a board string. TC remains O(n!), SC drops to O(n) with no output storage."
+    },
+    {
+      "q": "Some cells on the board are blocked and cannot hold a queen. Find all valid placements.",
+      "a": "Add a blocked-cell check before placing each queen in the existing loop. The backtracking structure, conflict arrays, and diagonal formulas stay identical. TC is O(n!) in the worst case but prunes earlier with more blocked cells."
+    },
+    {
+      "q": "Return any single valid solution instead of all of them.",
+      "a": "Change the backtrack function to return true when a solution is found and short-circuit the loop. The conflict tracking and placement logic remain the same. TC is O(n!) worst case but typically much faster since it stops at the first solution."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<string>> solveNQueens(int n) {\n        vector<vector<string>> result;\n        vector<int> queens(n);\n        vector<bool> cols(n, false);\n        vector<bool> diag1(2 * n - 1, false);\n        vector<bool> diag2(2 * n - 1, false);\n        backtrack(0, n, queens, cols, diag1, diag2, result);\n        return result;\n    }\n\nprivate:\n    void backtrack(int row, int n, vector<int>& queens,\n                   vector<bool>& cols, vector<bool>& diag1, vector<bool>& diag2,\n                   vector<vector<string>>& result) {\n        if (row == n) {\n            vector<string> board(n, string(n, '.'));\n            for (int i = 0; i < n; i++) {\n                board[i][queens[i]] = 'Q';\n            }\n            result.push_back(move(board));\n            return;\n        }\n        for (int col = 0; col < n; col++) {\n            int d1 = row - col + n - 1;\n            int d2 = row + col;\n            if (!cols[col] && !diag1[d1] && !diag2[d2]) {\n                cols[col] = diag1[d1] = diag2[d2] = true;\n                queens[row] = col;\n                backtrack(row + 1, n, queens, cols, diag1, diag2, result);\n                cols[col] = diag1[d1] = diag2[d2] = false;\n            }\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

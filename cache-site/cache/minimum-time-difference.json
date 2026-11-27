@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-time-difference",
+  "title": "Minimum Time Difference",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bucket Sort",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bool seen[1440]: fixed 1440 booleans, constant size → O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Convert each time point to minutes (0-1439). Use a fixed-size boolean array of 1440 slots to mark which minutes appear; if a slot is already marked, return 0 immediately (duplicate found). Then scan the array left to right, tracking the gap between consecutive marked slots. Finally, check the wrap-around gap (1440 − last + first) since the clock is circular. The minimum of all gaps is the answer.",
+  "hints": [
+    "A 24-hour day has exactly 1440 distinct minute values. With up to 2×10^4 time points in the input, what does the relationship between the input size and the number of possible values tell you?",
+    "Use a boolean array of size 1440 (bucket sort). Mark each time point's minute value; if a slot is already marked, return 0. For [\"23:59\",\"00:00\"], mark 1439 and 0, then scan for the smallest gap including the wrap-around 1440−1439+0=1.",
+    "```\nconvert each time to minutes 0-1439\nmark in boolean array of size 1440\n  if already marked: return 0\nscan array left to right\n  track first, prev, and min gap between consecutive marks\ncheck wrap-around: 1440 - last + first\nreturn minimum gap\n```",
+    "**Duplicates** - two identical time points in the list\n`Input: [\"00:00\",\"23:59\",\"00:00\"]` → `Expected: 0`\n⚠️ Bug: not checking if a slot is already marked before setting it → returns 1\n\n**Wrap-around** - the minimum gap crosses midnight\n`Input: [\"23:59\",\"00:00\"]` → `Expected: 1`\n⚠️ Bug: skipping the wrap-around gap 1440−last+first → returns 1439\n\n**All equal** - every time point is identical\n`Input: [\"12:00\",\"12:00\"]` → `Expected: 0`\n⚠️ Bug: not checking for duplicates, only one slot marked, wrap-around yields 1440−720+720=1440 → returns 1440\n\n**Adjacent minutes** - two times one minute apart\n`Input: [\"00:00\",\"00:01\"]` → `Expected: 1`\n⚠️ Bug: initializing minDiff to 0 instead of 1440 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if time points could span multiple days with format \"DD HH:MM\"?",
+      "a": "The domain becomes D×1440 for D days. If D is small, the same bucket approach works with a larger array. For large D, sort the converted minutes and scan adjacent pairs plus the wrap-around, giving O(n log n) time and O(n) space."
+    },
+    {
+      "q": "What if the format included seconds (\"HH:MM:SS\")?",
+      "a": "The domain becomes 86400 values per day. The boolean array grows to 86400 elements, still O(1) space. The algorithm is identical-mark, scan, and check wrap-around."
+    },
+    {
+      "q": "What if time points arrive one at a time in a stream and you must report the minimum difference after each insertion?",
+      "a": "Maintain a sorted set (balanced BST). On each insertion, check the gap to the predecessor and successor, and update the global minimum. This gives O(n log n) time and O(n) space, but answers online."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMinDifference(vector<string>& timePoints) {\n        if (timePoints.size() > 1440) return 0;\n        bool seen[1440] = {};\n        for (const string& tp : timePoints) {\n            int minutes = (tp[0] - '0') * 600 + (tp[1] - '0') * 60 \n                        + (tp[3] - '0') * 10 + (tp[4] - '0');\n            if (seen[minutes]) return 0;\n            seen[minutes] = true;\n        }\n        int minDiff = 1440;\n        int first = -1, prev = -1;\n        for (int i = 0; i < 1440; i++) {\n            if (seen[i]) {\n                if (first == -1) {\n                    first = i;\n                } else {\n                    minDiff = min(minDiff, i - prev);\n                }\n                prev = i;\n            }\n        }\n        minDiff = min(minDiff, 1440 - prev + first);\n        return minDiff;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

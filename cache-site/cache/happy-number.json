@@ -1,0 +1,40 @@
+{
+  "slug": "happy-number",
+  "title": "Happy Number",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Floyd's Cycle Detection (Two Pointers)",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int slow, fast: two scalars → O(1)\n- digitSquareSum local vars: O(1)\n- recursion depth: none\n- not counted: input n",
+  "approach": "The digit-square-sum process is a deterministic function f(n), so the sequence n, f(n), f(f(n)), … either reaches 1 (fixed point) or enters a cycle that excludes 1. Detecting a cycle in a functional sequence is exactly what Floyd's two-pointer algorithm does: a \"slow\" pointer advances one step, a \"fast\" pointer advances two; if there is a cycle they meet, and we then check whether they met at 1. Since any 32-bit input drops below 810 after one step (max 10 digits × 81), the number of iterations is bounded by a small constant, and no extra storage is needed.",
+  "hints": [
+    "The process is deterministic: each number maps to exactly one next number. What two mutually exclusive fates can such a sequence have, and how would you tell which one you are in?",
+    "Use Floyd's two-pointer cycle detection: a slow pointer applies the digit-square-sum once per step, a fast pointer applies it twice. From n = 19, slow → 82 while fast → 100 (82 then 68+4=... actually 8²+2²=68, 6²+8²=100).",
+    "```\nslow = n, fast = n\ndo:\n    slow = f(slow)\n    fast = f(f(fast))\nwhile slow != fast\nreturn slow == 1\n```",
+    "**Smallest input** - n is already the fixed point.\n`Input: n = 1` → `Expected: true`\n⚠️ Bug: using `while (slow != fast)` with `slow = fast = n` → loop body skipped, returns `n == 1`; on n = 19 returns false.\n\n**Unhappy cycle** - enters the cycle 4→16→37→58→89→145→42→20→4 that never hits 1.\n`Input: n = 2` → `Expected: false`\n⚠️ Bug: advancing fast only once (`fast = f(fast)`) → slow and fast stay equal after the first do-while step, returns `f(n) == 1`; on n = 19 returns false (82 == 1 is false).\n\n**Longer happy chain** - needs several steps before reaching 1.\n`Input: n = 7` → `Expected: true` (7→49→97→130→10→1)\n⚠️ Bug: returning `slow == 1` checked before the do-while runs once → on n = 7 returns false because first computed slow is 49.\n\n**Largest 32-bit input** - 2147483647; first sum of squares is 4+1+16+49+16+64+9+36+16+49 = 260, well within int.\n`Input: n = 2147483647` → `Expected: false`\n⚠️ Bug: accumulating the square sum in a `char`/`int8_t` → 260 overflows, producing a wrong next value and a wrong verdict."
+  ],
+  "followUps": [
+    {
+      "q": "Count how many numbers in [1, N] are happy, with N up to 10^9.",
+      "a": "Precompute happiness for every value in [1, 810] (the maximum first-step result) using memoized DFS with a visited set; then for each i in [1, N] compute f(i) once and look up the cached verdict. Time O(N log N), space O(1) since the cache is fixed-size 810."
+    },
+    {
+      "q": "Replace \"sum of squares\" with \"sum of k-th powers of digits\". Does the approach still work?",
+      "a": "Yes. The reachable range is bounded by 10·9^k, so the sequence still either hits 1 or cycles within that finite set; Floyd's two-pointer detection is unchanged. Time O(log n · log(10·9^k)) per step, space O(1)."
+    },
+    {
+      "q": "You receive the sequence as an infinite stream and cannot store n's bound. Detect happiness in O(1) memory.",
+      "a": "Floyd's algorithm already needs only the two previous values, so it works on a stream: emit true the moment fast reaches 1, and false when slow == fast with slow != 1. Time O(cycle length) expected, space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int digitSquareSum(int n) {\n        int sum = 0;\n        while (n) {\n            int d = n % 10;\n            sum += d * d;\n            n /= 10;\n        }\n        return sum;\n    }\n    bool isHappy(int n) {\n        int slow = n;\n        int fast = n;\n        do {\n            slow = digitSquareSum(slow);\n            fast = digitSquareSum(digitSquareSum(fast));\n        } while (slow != fast);\n        return slow == 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

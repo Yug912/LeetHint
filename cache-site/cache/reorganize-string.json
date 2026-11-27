@@ -1,0 +1,40 @@
+{
+  "slug": "reorganize-string",
+  "title": "Reorganize String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Max-Heap",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- freq[26]: fixed 26 ints → O(1)\n- priority_queue<pair<int,char>> pq: at most 26 entries → O(1)\n- result string: returned output, not counted → O(1)\n- recursion depth: none",
+  "approach": "Count the frequency of each character. Use a max-heap keyed by frequency to always pick the two most frequent remaining characters, append them to the result, decrement their counts, and push them back if still positive. This guarantees adjacent characters differ because each pair placed consists of two distinct characters, and the most frequent character is always consumed first so it never accumulates. If a single entry remains in the heap with count > 1, no valid arrangement exists (that character would need to be adjacent to itself), so return \"\".",
+  "hints": [
+    "If you place characters one at a time, which character is most dangerous to postpone?",
+    "Use a max-heap keyed by frequency. For s = \"aab\", the heap holds (2,'a') and (1,'b'); pop both, append \"ab\", push back (1,'a'), then append 'a' → \"aba\".",
+    "```\ncount each character's frequency\nbuild max-heap of (frequency, character)\nwhile heap has ≥ 2 entries:\n    pop top two, append both to result\n    decrement their counts, push back if > 0\nif one entry remains with count > 1: return \"\"\nelse append it and return result\n```",
+    "**Single character** - string has only one character\n`Input: s = \"a\"` → `Expected: \"a\"`\n⚠️ Bug: returning \"\" whenever the heap has fewer than 2 entries → returns \"\" instead of \"a\"\n\n**Impossible frequency** - one letter appears more than ⌈n/2⌉ times\n`Input: s = \"aaab\"` → `Expected: \"\"`\n⚠️ Bug: appending the leftover character without checking if its count exceeds 1 → returns \"aba\" (3 chars, not a valid rearrangement of the 4-char input)\n\n**All identical** - every character is the same\n`Input: s = \"aaa\"` → `Expected: \"\"`\n⚠️ Bug: skipping the leftover check when the heap never had 2 entries → returns \"a\" instead of \"\"\n\n**Even split** - two characters with equal frequency\n`Input: s = \"aabb\"` → `Expected: \"abab\"` (or \"baba\")\n⚠️ Bug: placing all occurrences of one character before starting the next → returns \"aabb\" (adjacent duplicates)"
+  ],
+  "followUps": [
+    {
+      "q": "What if no two characters within distance k (instead of just adjacent) can be the same?",
+      "a": "Pop k entries from the heap each round instead of 2, append them in order, decrement and push back. If fewer than k entries remain and the top has count > 1, return \"\". Time stays O(n) since the heap has at most 26 entries, space O(1)."
+    },
+    {
+      "q": "What if the string length is up to 10^7 and you want to avoid heap overhead?",
+      "a": "Use even-odd index placement: sort characters by frequency, fill even indices (0, 2, 4, ...) with the most frequent character first, then fill remaining even indices, then odd indices. This is O(n) time and O(1) space with no heap operations."
+    },
+    {
+      "q": "What if you must return the lexicographically smallest valid rearrangement?",
+      "a": "At each position, try the smallest available character that differs from the previous one and doesn't make the problem infeasible (no remaining count exceeds half of remaining slots). This greedy check runs in O(k) per position where k is the alphabet size, giving O(nk) time and O(k) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string reorganizeString(string s) {\n        int freq[26] = {0};\n        for (char c : s) freq[c - 'a']++;\n        \n        priority_queue<pair<int,char>> pq;\n        for (int i = 0; i < 26; i++) {\n            if (freq[i] > 0) pq.push({freq[i], (char)('a' + i)});\n        }\n        \n        string result;\n        while (pq.size() >= 2) {\n            auto [cnt1, ch1] = pq.top(); pq.pop();\n            auto [cnt2, ch2] = pq.top(); pq.pop();\n            result += ch1;\n            result += ch2;\n            if (--cnt1 > 0) pq.push({cnt1, ch1});\n            if (--cnt2 > 0) pq.push({cnt2, ch2});\n        }\n        \n        if (!pq.empty()) {\n            auto [cnt, ch] = pq.top();\n            if (cnt > 1) return \"\";\n            result += ch;\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

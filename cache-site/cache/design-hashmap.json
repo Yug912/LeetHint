@@ -1,0 +1,39 @@
+{
+  "slug": "design-hashmap",
+  "title": "Design HashMap",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Direct Addressing",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> data: fixed 1,000,001 entries → O(10^6) = O(1) (constant, independent of n)\n- recursion depth: none\n- not counted: input parameters, returned int",
+  "approach": "Since keys are bounded integers in [0, 10^6], we can use a direct-address array of size 10^6+1. Each index corresponds to a key, and the stored value is either the mapped value or -1 (sentinel for \"not present\"). All three operations-put, get, remove-become a single array access in O(1) time. This avoids collision handling entirely because the key space is small enough to allocate one slot per possible key (~4 MB).",
+  "hints": [
+    "Keys are integers from 0 to 10^6. What does this bounded, dense, non-sparse range let you do with a key that a string key or an unbounded integer key cannot?",
+    "Use a direct-address array of size 10^6+1 initialized to -1. For put(1,1), set arr[1]=1; for get(1), return arr[1]; for remove(1), set arr[1]=-1.",
+    "```\ncreate array of size 10^6 + 1, fill with -1\nput(key, value):\n    array[key] = value\nget(key):\n    return array[key]\nremove(key):\n    array[key] = -1\n```",
+    "**Value zero** - value 0 must be distinguishable from \"not present\"\n`put(5, 0); get(5)` → `Expected: 0`\n⚠️ Bug: initializing array to 0 instead of -1 → returns 0 for get(7) which should be -1\n\n**Maximum key** - key = 10^6 is the upper boundary\n`put(1000000, 42); get(1000000)` → `Expected: 42`\n⚠️ Bug: allocating array of size 10^6 instead of 10^6+1 → out-of-bounds write at index 1000000\n\n**Remove absent key** - removing a key that was never inserted\n`remove(7); get(7)` → `Expected: -1`\n⚠️ Bug: using a raw `int data[1000001]` without filling it → returns indeterminate garbage for get(7)\n\n**Overwrite existing key** - putting a key that already has a value\n`put(3, 5); put(3, 9); get(3)` → `Expected: 9`\n⚠️ Bug: checking if key exists before writing and skipping if found → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if keys could be up to 10^9 instead of 10^6?",
+      "a": "A direct-address array of size 10^9 would need ~4 GB, which is infeasible. Use a hash table with chaining: an array of B buckets (e.g., B = 10007, a prime), each bucket a linked list of (key, value) pairs. Hash the key with `key % B` to find the bucket, then scan the list. TC becomes O(1) average, O(n) worst case per operation; SC becomes O(n) where n is the number of stored entries."
+    },
+    {
+      "q": "What if memory is limited to O(n) where n is the number of entries actually stored?",
+      "a": "Use open addressing with linear probing on a table sized to roughly 2× the number of entries (next prime above 2n). Each slot stores (key, value, occupied). On put, probe forward until an empty or matching slot is found. Keep load factor below 0.7 and resize when exceeded. TC: O(1) amortized per operation; SC: O(n)."
+    },
+    {
+      "q": "What if you also need to support \"return all keys in range [lo, hi]\" efficiently?",
+      "a": "A direct-address array makes range queries O(hi - lo), which is expensive for sparse ranges. Maintain a balanced BST (e.g., a red-black tree) of (key, value) pairs keyed by key. All single-key operations become O(log n), and range queries become O(log n + k) where k is the number of keys in range, via an in-order traversal bounded by lo and hi. SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class MyHashMap {\n    vector<int> data;\npublic:\n    MyHashMap() {\n        data.resize(1000001, -1);\n    }\n    \n    void put(int key, int value) {\n        data[key] = value;\n    }\n    \n    int get(int key) {\n        return data[key];\n    }\n    \n    void remove(int key) {\n        data[key] = -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

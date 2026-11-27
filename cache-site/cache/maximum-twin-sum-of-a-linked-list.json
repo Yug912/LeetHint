@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-twin-sum-of-a-linked-list",
+  "title": "Maximum Twin Sum of a Linked List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers with In-Place List Reversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers/arrays allocated\n- No recursion\n- Only a fixed set of ListNode* pointers\n- Input list is modified in place (reversal) - counts as O(1)",
+  "approach": "Find the midpoint with a slow/fast pointer, reverse the second half of the list in place, then walk two pointers in lockstep - one from the head and one from the head of the reversed half. Each step yields one twin sum (node i with node n-1-i), and we track the maximum. Reversing the second half makes the (n-1-i)-th node reachable in forward order alongside the i-th node, so one linear pass covers every pair.",
+  "hints": [
+    "Node i pairs with node n-1-i. If you wrote all values in a row, what symmetry do the twin pairs share around the center of the list? The list has even length n ≤ 10^5.",
+    "Reverse the second half of the list in place, then run two pointers - one from the head, one from the reversed half's head - summing pairs. For [5,4,2,1], reverse [2,1] to [1,2], then pair (5,1)=6 and (4,2)=6, giving 6.",
+    "```\nslow = head, fast = head.next\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\nreverse the sublist starting at slow.next\np1 = head, p2 = head of reversed half\nans = 0\nwhile p2:\n    ans = max(ans, p1.val + p2.val)\n    p1 = p1.next\n    p2 = p2.next\nreturn ans\n```",
+    "**Smallest input** - n=2, only one twin pair.\n`Input: head = [1,100000]` → `Expected: 100001`\n⚠️ Bug: starting fast = head instead of head->next makes slow land on the last node, so the second half to reverse is empty → returns 0\n\n**Max sum in the inner pair** - the largest twin sum is not from the outermost nodes.\n`Input: head = [1,100,100,1]` → `Expected: 200`\n⚠️ Bug: only summing the first and last nodes (one pair) instead of iterating all n/2 pairs → returns 2\n\n**All equal values** - every twin sum is identical.\n`Input: head = [7,7,7,7]` → `Expected: 14`\n⚠️ Bug: initializing ans to the first node's value (7) instead of 0, then comparing pair sums against it, still returns 14, but initializing ans to a node value and skipping the first pair → returns 7\n\n**Boundary: max at the outer pair** - the largest twin sum is from the outermost nodes.\n`Input: head = [10,1,1,10]` → `Expected: 20`\n⚠️ Bug: stopping the reversal one node early so the last node is never reached → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the list length could be odd, and the exact middle node has no twin?",
+      "a": "Use slow/fast to find the middle, skip the single center node, then reverse the second half and proceed exactly as before. TC stays O(n), SC stays O(1)."
+    },
+    {
+      "q": "What if you must return every twin sum in order, not just the maximum?",
+      "a": "Keep the same reversal approach, but push each pair sum into a vector as the two pointers advance. TC O(n), SC O(n) for the output vector."
+    },
+    {
+      "q": "What if the list is read-only or streamed, so you cannot reverse it in place?",
+      "a": "Push the first half's values onto a stack, then pop while traversing the second half, summing each popped value with the current node. TC O(n), SC O(n) for the stack."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\npublic:\n    int pairSum(ListNode* head) {\n        ListNode* slow = head;\n        ListNode* fast = head->next;\n        while (fast && fast->next) {\n            slow = slow->next;\n            fast = fast->next->next;\n        }\n        ListNode* prev = nullptr;\n        ListNode* curr = slow->next;\n        while (curr) {\n            ListNode* nxt = curr->next;\n            curr->next = prev;\n            prev = curr;\n            curr = nxt;\n        }\n        ListNode* first = head;\n        ListNode* second = prev;\n        int maxSum = 0;\n        while (second) {\n            int s = first->val + second->val;\n            if (s > maxSum) maxSum = s;\n            first = first->next;\n            second = second->next;\n        }\n        return maxSum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

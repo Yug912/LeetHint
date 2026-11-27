@@ -1,0 +1,40 @@
+{
+  "slug": "delete-node-in-a-bst",
+  "title": "Delete Node in a BST",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Iterative BST Deletion with Parent Tracking",
+  "tc": "O(h)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- TreeNode* locals (parent, cur, succ, succParent, child): 6 pointers, constant → O(1)\n- recursion depth: none (iterative)\n- not counted: input tree, returned root",
+  "approach": "Iteratively search for the node with value `key` while tracking its parent. If not found, return the tree unchanged. If the node has two children, find the inorder successor (leftmost node of the right subtree) along with its parent, copy the successor's value into the target node, then unlink the successor (which has at most a right child). If the node has at most one child, splice it out by linking its parent's appropriate side to that child (or null). When the deleted node is the root, return the new child. This avoids recursion entirely, giving O(h) time and O(1) auxiliary space.",
+  "hints": [
+    "When the node to delete has both a left and a right subtree, which single existing node's value could replace it without breaking the BST ordering for any other node?",
+    "Iterative BST deletion with parent tracking. In Example 1, deleting node 3 (children 2 and 4): walk to the smallest node in its right subtree (4), copy 4 into node 3's slot, then unlink node 4 from its parent.",
+    "```\nfind node with val == key, tracking parent\nif not found: return root\nif node has two children:\n    succ = node.right; succParent = node\n    while succ.left: succParent = succ; succ = succ.left\n    node.val = succ.val\n    replace succ in succParent with succ.right\nelse:\n    child = node.left if exists else node.right\n    if parent is null: return child\n    link parent's correct side to child\nreturn root\n```",
+    "**Empty tree** - root is null\n`Input: root = [], key = 0` → `Expected: []`\n⚠️ Bug: dereferencing root before the null check → null pointer dereference\n\n**Delete root with no children** - root is the only node and matches key\n`Input: root = [5], key = 5` → `Expected: []`\n⚠️ Bug: returning root unchanged when parent is null → returns [5]\n\n**Delete root with one child** - root matches key and has only one subtree\n`Input: root = [5,3], key = 5` → `Expected: [3]`\n⚠️ Bug: only updating parent->left/right without checking parent==null → null pointer dereference\n\n**Successor is the direct right child** - successor has no left subtree\n`Input: root = [5,3,6,2,4,null,7], key = 3` → `Expected: [5,4,6,2,null,null,7]`\n⚠️ Bug: always setting succParent->left = succ->right when succParent->right == succ → unlinks the wrong pointer, leaving node 4 dangling and node 3's right set to null\n\n**Skewed tree** - all nodes form a single right chain\n`Input: root = [1,null,2,null,3,null,4], key = 2` → `Expected: [1,null,3,null,4]`\n⚠️ Bug: not tracking parent during search → cannot relink the chain after finding the node"
+  ],
+  "followUps": [
+    {
+      "q": "What if the BST allows duplicate values?",
+      "a": "The search must pick a consistent duplicate to remove (e.g., always go left on equality). The successor-finding and splicing logic stays identical. Time remains O(h), space O(1)."
+    },
+    {
+      "q": "What if you must delete a batch of k keys at once?",
+      "a": "Sort the k keys and delete them in ascending order so each search starts near the previous deletion point; total O(k log k + k·h). For large k, an in-order traversal that skips deleted keys and rebuilds the tree in O(n) is faster."
+    },
+    {
+      "q": "What if the tree must stay height-balanced after every deletion (AVL)?",
+      "a": "After splicing out the successor, walk up from the deletion point rebalancing via rotations and updating heights. Time becomes O(log n) for a balanced AVL, space O(1) if parent pointers are stored in each node or maintained iteratively."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    TreeNode* deleteNode(TreeNode* root, int key) {\n        TreeNode* parent = nullptr;\n        TreeNode* cur = root;\n        while (cur && cur->val != key) {\n            parent = cur;\n            if (key < cur->val) cur = cur->left;\n            else cur = cur->right;\n        }\n        if (!cur) return root; // key not found\n\n        // Node has two children: replace with inorder successor.\n        if (cur->left && cur->right) {\n            TreeNode* succParent = cur;\n            TreeNode* succ = cur->right;\n            while (succ->left) {\n                succParent = succ;\n                succ = succ->left;\n            }\n            cur->val = succ->val;\n            // Unlink succ (it has at most a right child).\n            TreeNode* succChild = succ->right;\n            if (succParent->left == succ) succParent->left = succChild;\n            else succParent->right = succChild;\n            delete succ;\n            return root;\n        }\n\n        // Node has at most one child: splice it out.\n        TreeNode* child = cur->left ? cur->left : cur->right;\n        if (!parent) {\n            delete cur;\n            return child; // deleted the root\n        }\n        if (parent->left == cur) parent->left = child;\n        else parent->right = child;\n        delete cur;\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "verifying-an-alien-dictionary",
+  "title": "Verifying an Alien Dictionary",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with Lookup Table",
+  "tc": "O(N · L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int rank[26]: fixed 26 entries → O(1)\n- no recursion, no dynamic containers\n- not counted: input words and order string",
+  "approach": "Build a rank array mapping each alien character to its position in the given order. Then scan every adjacent pair of words: compare character by character using the rank array. If the first word's character has a higher rank, the pair is out of order-return false. If it has a lower rank, the pair is sorted-move on. If all compared characters are equal but the first word is longer, it is a prefix-extension case and thus greater-return false. If every pair passes, return true. Only adjacent pairs need checking because sortedness is transitive.",
+  "hints": [
+    "If an entire sequence is sorted, what must hold between every two neighbors in it? The list has at most 100 words.",
+    "Build a rank array mapping each character to its index in the alien order. In Example 2, comparing \"word\" and \"world\" position by position, 'd' has rank 4 while 'l' has rank 3, so \"word\" > \"world\".",
+    "```\nbuild rank[char] = index in order\nfor each adjacent pair (a, b):\n    for j in 0 .. min(len(a), len(b)) - 1:\n        if rank[a[j]] < rank[b[j]]: break to next pair\n        if rank[a[j]] > rank[b[j]]: return false\n    if all matched and len(a) > len(b): return false\nreturn true\n```",
+    "**Prefix extension** - first word contains the second as a prefix but is longer.\n`Input: words = [\"apple\",\"app\"], order = \"abcdefghijklmnopqrstuvwxyz\"` → `Expected: false`\n⚠️ Bug: omitting the length check after all compared characters match → returns `true`\n\n**Equal neighbors** - two identical words sit next to each other.\n`Input: words = [\"a\",\"a\"], order = \"abcdefghijklmnopqrstuvwxyz\"` → `Expected: true`\n⚠️ Bug: using `rank[a[j]] >= rank[b[j]]` to trigger failure (treating equal as unsorted) → returns `false`\n\n**Valid shorter-first prefix** - the shorter word comes first, which is correct.\n`Input: words = [\"app\",\"apple\"], order = \"abcdefghijklmnopqrstuvwxyz\"` → `Expected: true`\n⚠️ Bug: returning false whenever `len(a) != len(b)` after a full prefix match (instead of only when `len(a) > len(b)`) → returns `false`\n\n**Single word** - only one word in the list, trivially sorted.\n`Input: words = [\"hello\"], order = \"hlabcdefgijkmnopqrstuvwxyz\"` → `Expected: true`\n⚠️ Bug: initializing a result flag to false and only setting it true inside the pair loop (which never runs) → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "What if each word can be up to 10^9 characters long and cannot be fully loaded into memory?",
+      "a": "Stream characters from both words simultaneously, comparing rank values with early termination on the first difference. Only a constant-size buffer is needed. Time stays O(total characters compared), space drops to O(1) beyond the rank array."
+    },
+    {
+      "q": "What if you are given 10^5 word lists to verify, all against the same alien order?",
+      "a": "Build the rank array once in O(26) and reuse it for every list. Each list still costs O(N·L) to verify, so total time is O(sum of all N·L) with O(1) shared auxiliary space."
+    },
+    {
+      "q": "What if words may contain characters not present in the order string?",
+      "a": "Assign unknown characters a sentinel rank (e.g., -1 or 26) and define a consistent tie-break rule. The comparison logic is unchanged; only the rank initialization changes. Time and space complexity remain the same."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isAlienSorted(vector<string>& words, string order) {\n        int rank[26];\n        for (int i = 0; i < 26; i++) {\n            rank[order[i] - 'a'] = i;\n        }\n        for (int i = 0; i + 1 < (int)words.size(); i++) {\n            const string& a = words[i];\n            const string& b = words[i + 1];\n            int len = (int)min(a.size(), b.size());\n            int j = 0;\n            while (j < len) {\n                int ra = rank[a[j] - 'a'];\n                int rb = rank[b[j] - 'a'];\n                if (ra < rb) break;\n                if (ra > rb) return false;\n                j++;\n            }\n            if (j == len && (int)a.size() > (int)b.size()) return false;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

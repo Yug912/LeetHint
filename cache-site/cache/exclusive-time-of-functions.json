@@ -1,0 +1,40 @@
+{
+  "slug": "exclusive-time-of-functions",
+  "title": "Exclusive Time of Functions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack Simulation",
+  "tc": "O(L * log V)",
+  "sc": "O(L)",
+  "spaceBreakdown": "- vector<int> result(n, 0): n entries → O(n), not counted (returned output)\n- stack<int> st: up to L/2 entries (all starts before all ends) → O(L)\n- int prev_time: O(1)\n- string temporaries per iteration: O(1) (log strings are bounded length)\n- not counted: input logs, returned vector",
+  "approach": "Use a stack to track the active call chain. When a function starts, the previously running function (top of stack) pauses - credit it with `timestamp - prev_time`. When a function ends, credit it with `timestamp - prev_time + 1` (since \"end\" occupies the full timestamp), pop it, and set `prev_time = timestamp + 1` so the resumed parent begins at the next timestamp. This correctly handles recursion and nesting because each start/end pair is matched in LIFO order.",
+  "hints": [
+    "In Example 1, when function 1 ends at timestamp 5, which function resumes, and what property of the call history determines that choice?",
+    "Use a stack of function IDs. Processing `\"1:start:2\"` in Example 1: function 0 is on top, so add (2−0)=2 to function 0's time, then push function 1.",
+    "```\nfor each log (id, action, time):\n    if action == \"start\":\n        if stack not empty:\n            result[stack.top()] += time - prev_time\n        push id\n        prev_time = time\n    else:\n        result[stack.top()] += time - prev_time + 1\n        pop\n        prev_time = time + 1\n```",
+    "**Smallest input** - n=1, function starts and ends at timestamp 0\n`Input: n = 1, logs = [\"0:start:0\",\"0:end:0\"]` → `Expected: [1]`\n⚠️ Bug: using `time - prev_time` instead of `time - prev_time + 1` for end events → returns [0]\n\n**End resumes parent** - child ends, parent resumes at the next timestamp\n`Input: n = 2, logs = [\"0:start:0\",\"1:start:1\",\"1:end:1\",\"0:end:2\"]` → `Expected: [2,1]`\n⚠️ Bug: setting `prev_time = time` instead of `time + 1` after end → returns [3,1]\n\n**Recursive calls** - function calls itself multiple times with gaps\n`Input: n = 1, logs = [\"0:start:0\",\"0:start:2\",\"0:end:5\",\"0:start:6\",\"0:end:6\",\"0:end:7\"]` → `Expected: [8]`\n⚠️ Bug: using `time - prev_time` instead of `time - prev_time + 1` for end events → returns [5]\n\n**Consecutive end events** - two nested functions end back-to-back\n`Input: n = 3, logs = [\"0:start:0\",\"1:start:1\",\"2:start:2\",\"2:end:2\",\"1:end:3\",\"0:end:4\"]` → `Expected: [2,2,1]`\n⚠️ Bug: setting `prev_time = time` instead of `time + 1` after end → returns [3,3,1]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the logs arrive out of order - how would you handle that?",
+      "a": "Sort the logs by timestamp first. At the same timestamp, process starts before ends (a start occupies the beginning, an end occupies the end of that unit). Then run the same stack algorithm. TC: O(L log L), SC: O(L) for the sorted copy."
+    },
+    {
+      "q": "What if you must report exclusive time per individual call rather than aggregated by function ID?",
+      "a": "Each stack entry stores its own accumulated time alongside the function ID. On start, add the elapsed gap to the top entry's accumulator; on end, finalize that entry's total and emit it. TC: O(L), SC: O(L) for the output list."
+    },
+    {
+      "q": "What if n can be up to 10^9 but only a small fraction of functions appear in the logs?",
+      "a": "Replace the `vector<int> result(n)` with an `unordered_map<int,int>`, keyed by function ID. The stack and logic stay identical. TC: O(L), SC: O(L) since at most L/2 distinct IDs appear."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> exclusiveTime(int n, vector<string>& logs) {\n        vector<int> result(n, 0);\n        stack<int> st;\n        int prev_time = 0;\n        \n        for (const string& log : logs) {\n            int pos1 = log.find(':');\n            int pos2 = log.find(':', pos1 + 1);\n            int id = stoi(log.substr(0, pos1));\n            string action = log.substr(pos1 + 1, pos2 - pos1 - 1);\n            int time = stoi(log.substr(pos2 + 1));\n            \n            if (action == \"start\") {\n                if (!st.empty()) {\n                    result[st.top()] += time - prev_time;\n                }\n                st.push(id);\n                prev_time = time;\n            } else {\n                result[st.top()] += time - prev_time + 1;\n                st.pop();\n                prev_time = time + 1;\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

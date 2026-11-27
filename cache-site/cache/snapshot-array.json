@@ -1,0 +1,39 @@
+{
+  "slug": "snapshot-array",
+  "title": "Snapshot Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Versioned History",
+  "tc": "O(m log m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<vector<pair<int,int>>> data: outer vector has n elements, inner vectors hold at most S pairs total (S = number of set calls) → O(n + S)\n- int snap_count: O(1)\n- no recursion, no auxiliary containers",
+  "approach": "For each index, maintain a sorted list of (snap_id, value) pairs recording only the moments a value changes. On `set`, append a new pair or update the last pair if the snap_id hasn't changed. On `get`, binary search for the last pair whose snap_id ≤ target - that pair's value is the answer (0 if none exists). This avoids copying the entire array per snapshot, reducing space from O(length × snaps) to O(length + total sets).",
+  "hints": [
+    "If you call set on the same index three times between two snapshots, how many of those values do you need to retrieve the state at the later snapshot?",
+    "For each index, store a sorted list of (snap_id, value) pairs. On get, binary search for the last pair with snap_id ≤ target. Example: index 0 has [(0,5),(1,6)]; get(0,0) finds (0,5) → returns 5.",
+    "```\nset(index, val):\n    if last entry at index has snap_id == current_snap:\n        update its value to val\n    else:\n        append (current_snap, val)\n\nsnap():\n    return current_snap++\n\nget(index, snap_id):\n    binary search for last entry with snap_id ≤ target\n    if found: return its value\n    else: return 0\n```",
+    "**Never set** - get on an index that was never set, list is empty\n`Input: [\"SnapshotArray\",\"snap\",\"get\"], [[1],[],[0,0]]` → `Expected: [null,0,0]`\n⚠️ Bug: accessing vec.back() without checking empty → crash/UB\n\n**Set before first snap** - value set before snap() should be visible at snap_id 0\n`Input: [\"SnapshotArray\",\"set\",\"snap\",\"get\"], [[1],[0,7],[],[0,0]]` → `Expected: [null,null,0,7]`\n⚠️ Bug: storing snap_count+1 instead of snap_count in set → returns 0 instead of 7\n\n**Get older snapshot after newer set** - set after a snap should not affect earlier snapshots\n`Input: [\"SnapshotArray\",\"snap\",\"set\",\"get\"], [[1],[],[0,9],[0,0]]` → `Expected: [null,0,null,0]`\n⚠️ Bug: returning first entry with snap_id >= target instead of last entry with snap_id <= target → returns 9 instead of 0\n\n**Boundary index** - set and get on the last valid index\n`Input: [\"SnapshotArray\",\"set\",\"snap\",\"get\"], [[3],[2,4],[],[2,0]]` → `Expected: [null,null,0,4]`\n⚠️ Bug: allocating data with length-1 instead of length → out of bounds on index 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array length can be up to 10^9 but only 10^5 set calls are made?",
+      "a": "Replace the vector of vectors with a hash map from index to list of (snap_id, value) pairs. Only indices that have been set are stored. Space drops from O(length) to O(S) where S = number of set calls. Get on an unset index returns 0 in O(1)."
+    },
+    {
+      "q": "What if we need to support get_range(left, right, snap_id) returning the sum of values in [left, right] at a snapshot?",
+      "a": "Use a persistent segment tree where each set creates O(log n) new nodes along the path. Query is O(log n). Total space is O(S log n) where S = number of set calls. This generalizes the per-index binary search to range queries."
+    },
+    {
+      "q": "What if we need to support diff(snap_id1, snap_id2) returning all indices that changed between two snapshots?",
+      "a": "Maintain a global sorted list of (snap_id, index) pairs for all set operations. Binary search for entries in [snap_id1+1, snap_id2] to find indices that changed. Deduplicate and verify each by comparing get(index, snap_id1) vs get(index, snap_id2). Time is O(K log S) where K = number of changed indices."
+    }
+  ],
+  "code": {
+    "cpp": "class SnapshotArray {\n    vector<vector<pair<int, int>>> data;\n    int snap_count;\npublic:\n    SnapshotArray(int length) {\n        data.resize(length);\n        snap_count = 0;\n    }\n    \n    void set(int index, int val) {\n        if (!data[index].empty() && data[index].back().first == snap_count) {\n            data[index].back().second = val;\n        } else {\n            data[index].push_back({snap_count, val});\n        }\n    }\n    \n    int snap() {\n        return snap_count++;\n    }\n    \n    int get(int index, int snap_id) {\n        auto& vec = data[index];\n        auto it = upper_bound(vec.begin(), vec.end(), snap_id,\n            [](int s, const pair<int,int>& p) { return s < p.first; });\n        if (it == vec.begin()) return 0;\n        --it;\n        return it->second;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

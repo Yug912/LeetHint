@@ -1,0 +1,40 @@
+{
+  "slug": "battleships-in-a-board",
+  "title": "Battleships in a Board",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Single-Pass Matrix Scan",
+  "tc": "O(m * n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count, m, n, i, j: scalars → O(1)\n- no containers, no recursion, no extra allocation\n- not counted: input board (modified: never)",
+  "approach": "Since battleships never touch each other (orthogonally), the top-left-most cell of each ship is uniquely identifiable: it is an 'X' whose upper neighbor and left neighbor are both not 'X'. Every other cell of a ship has either an 'X' directly above it (vertical ship) or directly to its left (horizontal ship). So we make one pass over the matrix and count exactly those 'X' cells that have no 'X' above and no 'X' to the left. This is correct because the no-adjacency guarantee ensures each ship contributes exactly one such \"head\" cell.",
+  "hints": [
+    "For any 'X' on the board, what tells you whether it is the very first cell of its ship versus a later cell of the same ship? The statement guarantees no two battleships are orthogonally adjacent.",
+    "Single pass over the matrix; increment the count only for an 'X' whose cell above and cell to the left are both not 'X'. In Example 1, cells (0,0) and (0,3) qualify, while (1,3) and (2,3) are skipped because of the 'X' above them, giving 2.",
+    "```\ncount = 0\nfor i in 0..m-1:\n  for j in 0..n-1:\n    if board[i][j] == 'X':\n      above = (i > 0 and board[i-1][j] == 'X')\n      left  = (j > 0 and board[i][j-1] == 'X')\n      if not above and not left:\n        count = count + 1\nreturn count\n```",
+    "**Single-cell ship** - 1×1 board containing one ship.\n`Input: [[\"X\"]]` → `Expected: 1`\n⚠️ Bug: accessing `board[i-1][j]` / `board[i][j-1]` without bounds checks → out-of-bounds read, wrong count\n\n**All empty** - board with no ships at all.\n`Input: [[\".\"]]` → `Expected: 0`\n⚠️ Bug: initializing `count = 1` instead of `0` → returns 1\n\n**Single horizontal ship** - 1×n row fully occupied by one ship.\n`Input: [[\"X\",\"X\",\"X\"]]` → `Expected: 1`\n⚠️ Bug: counting every 'X' without checking the left neighbor → returns 3\n\n**Single vertical ship** - m×1 column fully occupied by one ship.\n`Input: [[\"X\"],[\"X\"],[\"X\"]]` → `Expected: 1`\n⚠️ Bug: checking only the left neighbor and ignoring the cell above → returns 3\n\n**Ship in last row and last column** - head cell at the bottom-right corner.\n`Input: [[\".\",\".\",\".\"],[\".\",\".\",\".\"],[\".\",\".\",\"X\"]]` → `Expected: 1`\n⚠️ Bug: looping `i < m-1` or `j < n-1` (off-by-one) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if battleships could be placed in arbitrary connected shapes (not just 1×k or k×1)?",
+      "a": "The \"head cell\" trick no longer works because a shape can branch. Use DFS/BFS flood fill from each unvisited 'X', marking visited cells, and increment the count once per component. Time stays O(m·n), space becomes O(m·n) for the visited matrix (or O(1) if you are allowed to overwrite 'X' with '.' in place)."
+    },
+    {
+      "q": "What if the board arrives row by row as a stream and you cannot store the whole matrix?",
+      "a": "Keep only the current row and the previous row in memory. For each 'X' in the current row, check the cell above (previous row, same column) and the cell to the left (current row, previous column); count it only if both are not 'X'. Time O(m·n), space drops to O(n)."
+    },
+    {
+      "q": "What if ships may touch diagonally but still not orthogonally?",
+      "a": "The same algorithm still works unchanged, because we only inspect the upper and left orthogonal neighbors, which are guaranteed not to be 'X' for a ship's head cell. Diagonal contact never affects those two checks, so the count remains correct with O(m·n) time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countBattleships(vector<vector<char>>& board) {\n        int m = board.size();\n        int n = board[0].size();\n        int count = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (board[i][j] == 'X') {\n                    bool above = (i > 0 && board[i - 1][j] == 'X');\n                    bool left  = (j > 0 && board[i][j - 1] == 'X');\n                    if (!above && !left) {\n                        count++;\n                    }\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

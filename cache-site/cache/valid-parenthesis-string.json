@@ -1,0 +1,40 @@
+{
+  "slug": "valid-parenthesis-string",
+  "title": "Valid Parenthesis String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Range Tracking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int lo, hi: two scalars → O(1)\n- char c (loop variable): O(1)\n- no containers, no recursion",
+  "approach": "Track the range [lo, hi] of possible unmatched open-parenthesis counts as we scan left to right. '(' shifts both bounds up, ')' shifts both down, and '*' widens the range (lo−1, hi+1) since it can be ')', empty, or '('. Clamp lo to 0 (open count can never be negative in a valid prefix) and bail out if hi drops below 0 (too many ')'). At the end, the string is valid iff lo == 0, meaning we can achieve a fully balanced interpretation.",
+  "hints": [
+    "As you scan left to right, what can you say about the set of all possible unmatched-'(' counts after each character?",
+    "Greedy two-counter approach: maintain the range [lo, hi] of reachable open counts. For \"(*)\": after '(' → [1,1]; after '*' → [0,2]; after ')' → [0,1].",
+    "```\nlo = 0, hi = 0\nfor each char c in s:\n    if c == '(':  lo++, hi++\n    if c == ')':  lo--, hi--\n    if c == '*':  lo--, hi++\n    lo = max(lo, 0)\n    if hi < 0: return false\nreturn lo == 0\n```",
+    "**Single open** - one '(' with nothing to close it\n`Input: \"(\"` → `Expected: false`\n⚠️ Bug: returning `hi >= 0` at the end instead of `lo == 0` → returns `true`\n\n**Star before open** - a '*' cannot close a '(' that appears after it\n`Input: \"*(\"` → `Expected: false`\n⚠️ Bug: only checking `hi >= 0` at the end, never checking `lo` → returns `true`\n\n**Close before anything** - a leading ')' is unrecoverable even with a following '*'\n`Input: \")*\"` → `Expected: false`\n⚠️ Bug: skipping the `hi < 0` early-exit inside the loop → returns `true`\n\n**All stars** - every '*' can be empty, so the string is valid\n`Input: \"***\"` → `Expected: true`\n⚠️ Bug: omitting `lo = max(lo, 0)` after decrementing → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve this using two stacks instead?",
+      "a": "Push '(' indices onto one stack and '*' indices onto another. On ')', pop from the '(' stack if non-empty, otherwise pop from the '*' stack, otherwise return false. After scanning, match each remaining '(' with a '*' whose index is larger; if any '(' lacks such a '*', return false. TC O(n), SC O(n)."
+    },
+    {
+      "q": "What if s.length were up to 10^7?",
+      "a": "The greedy two-counter approach is already O(n) time and O(1) space, so it handles 10^7 comfortably. The two-stack alternative would also run in O(n) time but would need O(n) extra memory, which is less ideal at that scale."
+    },
+    {
+      "q": "What if '*' could only be '(' or ')' but not an empty string?",
+      "a": "The clamping trick `lo = max(lo, 0)` no longer applies because it implicitly uses the empty-string interpretation. For example, \"*\" alone would be invalid, but the greedy would still return true. You would need the two-stack or DP approach instead. TC O(n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkValidString(string s) {\n        int lo = 0, hi = 0;\n        for (char c : s) {\n            if (c == '(') {\n                lo++;\n                hi++;\n            } else if (c == ')') {\n                lo--;\n                hi--;\n            } else {\n                lo--;\n                hi++;\n            }\n            if (lo < 0) lo = 0;\n            if (hi < 0) return false;\n        }\n        return lo == 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

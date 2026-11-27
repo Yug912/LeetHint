@@ -1,0 +1,40 @@
+{
+  "slug": "wildcard-matching",
+  "title": "Wildcard Matching",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers with Backtracking",
+  "tc": "O(nm)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables i, j, starIdx, match, n, m: 6 scalars → O(1)\n- no containers, no recursion, no heap allocation\n- not counted: input strings s, p",
+  "approach": "Use two pointers (`i` for `s`, `j` for `p`) scanning left to right. When a `*` is encountered, record its position and the current `i`; the star initially matches zero characters. On any later mismatch, backtrack: reset `j` to just after the star and advance `i` by one (the star now consumes one more character). After consuming all of `s`, skip any trailing `*` in `p` and check that the pattern is exhausted. This greedy backtracking is correct because each `*` only needs to be expanded lazily - if a match exists, trying the shortest expansion first and growing on failure will find it.",
+  "hints": [
+    "When the pattern contains a `*`, it can swallow any number of characters. If you are scanning left to right and hit a mismatch *after* a `*`, what two positions would you need to remember so you can retry with the `*` consuming one more character?",
+    "Two pointers with backtracking. Pointer `i` tracks `s`, `j` tracks `p`. On seeing `*`, save `starIdx = j` and `match = i`, then advance `j`. On mismatch with a saved star, set `j = starIdx + 1` and `i = ++match`. Example: `s = \"aa\"`, `p = \"*\"` - star saved at j=0, match=0; the loop backtracks twice until `i` reaches 2, then the trailing-star check passes.",
+    "```\ni = 0, j = 0, starIdx = -1, match = 0\nwhile i < len(s):\n    if j < len(p) and (p[j] == s[i] or p[j] == '?'):\n        i++, j++\n    else if j < len(p) and p[j] == '*':\n        starIdx = j, match = i, j++\n    else if starIdx != -1:\n        j = starIdx + 1, match++, i = match\n    else:\n        return false\nwhile j < len(p) and p[j] == '*': j++\nreturn j == len(p)\n```",
+    "**Empty string with star** - pattern is a single `*`, string is empty.\n`Input: s = \"\", p = \"*\"` → `Expected: true`\n⚠️ Bug: skipping the trailing-star loop after the main while → returns `false`\n\n**Star must match zero characters** - the `*` sits between two literal segments that are already adjacent in `s`.\n`Input: s = \"abc\", p = \"a*bc\"` → `Expected: true`\n⚠️ Bug: forcing every `*` to consume at least one character (incrementing `i` when recording the star) → returns `false`\n\n**Star at end, string longer** - `*` is the last pattern char but `s` has remaining characters.\n`Input: s = \"abc\", p = \"a*\"` → `Expected: true`\n⚠️ Bug: returning `j == m` immediately when the main loop ends without skipping trailing `*` → returns `false`\n\n**No valid match after star** - star expands but the tail of `p` never aligns.\n`Input: s = \"ab\", p = \"*c\"` → `Expected: false`\n⚠️ Bug: returning `true` whenever any `*` was seen, without exhausting the pattern → returns `true`\n\n**Multiple consecutive stars** - pattern has `***`, which is equivalent to a single `*`.\n`Input: s = \"ab\", p = \"***\"` → `Expected: true`\n⚠️ Bug: treating each `*` as requiring a separate non-empty segment → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "What if `*` must match at least one character (like `+` in regex)?",
+      "a": "When recording a star, set `match = i + 1` instead of `match = i` so the first backtrack already forces the star to consume one character. The rest of the algorithm stays the same. TC remains O(nm), SC O(1)."
+    },
+    {
+      "q": "What if the pattern can also contain character classes like `[a-z]`?",
+      "a": "Replace the single-character comparison `p[j] == s[i] || p[j] == '?'` with a helper that checks whether `s[i]` falls in the class described at `p[j]`. You would need to parse the class boundaries first. TC becomes O(nm) with an added class-parsing cost, SC O(1) if classes are matched inline."
+    },
+    {
+      "q": "What if `s` is a stream too large to fit in memory?",
+      "a": "Process `s` character by character without storing it. The two-pointer algorithm only looks at the current character of `s`, so it works in a single pass. You still need the full pattern `p` in memory. TC O(nm) worst case, SC O(m) for the pattern."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isMatch(string s, string p) {\n        int n = s.size(), m = p.size();\n        int i = 0, j = 0;\n        int starIdx = -1, match = 0;\n        while (i < n) {\n            if (j < m && (p[j] == s[i] || p[j] == '?')) {\n                i++;\n                j++;\n            } else if (j < m && p[j] == '*') {\n                starIdx = j;\n                match = i;\n                j++;\n            } else if (starIdx != -1) {\n                j = starIdx + 1;\n                match++;\n                i = match;\n            } else {\n                return false;\n            }\n        }\n        while (j < m && p[j] == '*') {\n            j++;\n        }\n        return j == m;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

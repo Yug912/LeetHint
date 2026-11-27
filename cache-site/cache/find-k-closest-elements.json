@@ -1,0 +1,40 @@
+{
+  "slug": "find-k-closest-elements",
+  "title": "Find K Closest Elements",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Window Boundary",
+  "tc": "O(log(n - k) + k)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- returned vector<int> of size k: not counted (output)\n- lo, hi, mid, n: O(1) scalars\n- no recursion, no auxiliary containers",
+  "approach": "Since the array is sorted and ties favor smaller values, the k closest elements always form a contiguous subarray of length k. Binary search for the optimal left boundary: for a candidate left index `mid`, compare `arr[mid]` against `arr[mid+k]` - if `x - arr[mid] > arr[mid+k] - x`, the right element is closer (or equally close but larger), so shift the window right; otherwise keep it. This narrows to the best starting index in O(log(n−k)), then we slice k elements.",
+  "hints": [
+    "Given the array is sorted and ties prefer smaller values, what can you say about the positions of the k chosen elements relative to each other in the array? The array length is at most 10^4.",
+    "Binary search on the left index of a contiguous size-k window. For arr=[1,2,3,4,5], k=4, x=3: compare arr[0]=1 and arr[4]=5 - both distance 2 from 3, so keep the left boundary; window starts at index 0.",
+    "```\nlo = 0, hi = n - k\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    if x - arr[mid] > arr[mid+k] - x:\n        lo = mid + 1\n    else:\n        hi = mid\nreturn arr[lo .. lo+k)\n```",
+    "**Ties** - equal distance on both sides, smaller value must win\n`Input: arr = [1,2,3,4,5], k = 4, x = 3` → `Expected: [1,2,3,4]`\n⚠️ Bug: using `>=` instead of `>` in the comparison → shifts right on tie, returns `[2,3,4,5]`\n\n**Single element** - n = 1, the window has no room to move\n`Input: arr = [7], k = 1, x = 3` → `Expected: [7]`\n⚠️ Bug: initializing `hi = n` instead of `n - k` → accesses `arr[0 + 1]` out of bounds\n\n**Duplicates** - repeated values create multi-way ties that test preference for the leftmost block\n`Input: arr = [1,1,1,2,2,3], k = 3, x = 2` → `Expected: [1,2,2]`\n⚠️ Bug: using `>=` instead of `>` → returns `[2,2,3]`\n\n**x far above all elements** - every distance is negative on the array side, sign of the comparison matters\n`Input: arr = [1,2,3,4,5], k = 3, x = 100` → `Expected: [3,4,5]`\n⚠️ Bug: comparing `arr[mid] - x > arr[mid+k] - x` (wrong sign) → returns `[1,2,3]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if arr is an unbounded stream and you must maintain the k closest to x at all times?",
+      "a": "Keep a max-heap of size k keyed by (|v−x|, −v); when size exceeds k, evict the worst element. Each insertion costs O(log k), total O(n log k) time and O(k) space. Flush and sort the heap contents when queried."
+    },
+    {
+      "q": "What if you receive many (x, k) queries on the same fixed sorted array?",
+      "a": "Each query runs the same binary search independently in O(log n + k). No preprocessing helps asymptotically because the comparison depends on x, so total cost is O(q(log n + k)) for q queries."
+    },
+    {
+      "q": "What if the array is not sorted?",
+      "a": "Binary search no longer applies. Use a max-heap of size k keyed by (|arr[i]−x|, −arr[i]) in O(n log k) time, then sort the k survivors. Alternatively, quickselect the k-th closest in O(n) average and sort those k elements."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findClosestElements(vector<int>& arr, int k, int x) {\n        int n = arr.size();\n        int lo = 0, hi = n - k;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (x - arr[mid] > arr[mid + k] - x) {\n                lo = mid + 1;\n            } else {\n                hi = mid;\n            }\n        }\n        return vector<int>(arr.begin() + lo, arr.begin() + lo + k);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
