@@ -1,0 +1,40 @@
+{
+  "slug": "closest-divisors",
+  "title": "Closest Divisors",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Divisor Search from Square Root",
+  "tc": "O(√num)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> best: 2 elements → O(1)\n- loop variables (t, s, i, j, bestDiff): O(1)\n- not counted: returned vector",
+  "approach": "For each of num+1 and num+2, find the divisor pair (a, b) with a·b = T that minimizes |a − b|. The closest pair always has a as the largest divisor of T that is ≤ √T, so we iterate downward from ⌊√T⌋ until we find a divisor, then compute its complement. We compare the best pair from each target and return the one with the smaller difference.",
+  "hints": [
+    "For a number T, among all pairs (a, b) with a·b = T, which pair has the smallest |a − b|? The constraint num ≤ 10^9 means T ≤ 10^9 + 2.",
+    "Iterate downward from ⌊√T⌋ to find the largest divisor of T that is ≤ √T; its complement gives the closest pair. For T = 9, ⌊√9⌋ = 3 and 3 | 9, yielding (3, 3).",
+    "```\nbest = (1, num+1), bestDiff = num\nfor T in {num+1, num+2}:\n    s = floor(sqrt(T))\n    for i from s down to 1:\n        if T % i == 0:\n            j = T / i\n            if j - i < bestDiff:\n                best = (i, j), bestDiff = j - i\n            break\nreturn best\n```",
+    "**Perfect square target** - num+1 is a perfect square, so the optimal pair has difference 0.\n`Input: 8` → `Expected: [3,3]`\n⚠️ Bug: starting the search at ⌊√T⌋ − 1 instead of ⌊√T⌋ → misses i = 3 for T = 9, finds (1, 9), returns [1, 9]\n\n**num+2 yields the closer pair** - the answer comes from num+2, not num+1.\n`Input: 123` → `Expected: [5,25]`\n⚠️ Bug: only searching divisors of num+1 → returns [4, 31]\n\n**Smallest input** - num = 1, the minimum allowed value.\n`Input: 1` → `Expected: [1,2]`\n⚠️ Bug: initializing bestDiff to 0 → no pair has diff < 0, returns placeholder [1, 1]\n\n**Iterating upward** - searching from 1 upward gives the worst pair instead of the best.\n`Input: 4` → `Expected: [2,3]`\n⚠️ Bug: iterating i from 1 upward to √T and breaking on first divisor → for T = 6, finds (1, 6) first; overall returns [1, 5]"
+  ],
+  "followUps": [
+    {
+      "q": "What if num can be up to 10^18?",
+      "a": "The O(√num) loop becomes infeasible at 10^9 iterations. Factor each target using Pollard's rho algorithm (O(num^{1/4}) expected), then generate the divisor closest to √T from the prime factorization. TC: O(num^{1/4}) per target."
+    },
+    {
+      "q": "What if you need the closest divisors for all integers in a range [L, R]?",
+      "a": "Precompute the largest divisor ≤ √m for each m in [L, R] using a sieve-like approach: for each d from 1 to √R, update the answer for all multiples of d in the range. TC: O(R log R), SC: O(R − L)."
+    },
+    {
+      "q": "What if instead of num+1 and num+2, you are given a list of k targets?",
+      "a": "Run the same √T search for each target independently and keep the global best pair. TC: O(k · √(max target)), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> closestDivisors(int num) {\n        vector<int> best = {1, num + 1};\n        int bestDiff = num;\n        for (int t : {num + 1, num + 2}) {\n            int s = (int)sqrt((double)t);\n            while ((long long)(s + 1) * (s + 1) <= t) s++;\n            for (int i = s; i >= 1; i--) {\n                if (t % i == 0) {\n                    int j = t / i;\n                    if (j - i < bestDiff) {\n                        bestDiff = j - i;\n                        best = {i, j};\n                    }\n                    break;\n                }\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

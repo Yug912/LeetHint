@@ -1,0 +1,40 @@
+{
+  "slug": "count-number-of-homogenous-substrings",
+  "title": "Count Number of Homogenous Substrings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Run-Length Grouping",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long ans, MOD: scalars → O(1)\n- int i, j, n: scalars → O(1)\n- no containers, no recursion\n- not counted: input string s",
+  "approach": "Split the string into maximal runs of identical characters. A run of length k contains exactly k·(k+1)/2 homogenous substrings (any contiguous sub-run). Sum these contributions modulo 10^9+7 in a single left-to-right pass. This is correct because a homogenous substring can never span a boundary where two different letters meet, so the runs partition all homogenous substrings disjointly.",
+  "hints": [
+    "Where in the string can a homogenous substring start and end - does it ever cross a position where two different letters sit next to each other? The string length can reach 10^5, so enumerating every substring explicitly is too slow.",
+    "Use run-length grouping: scan once, group consecutive equal characters, and for each run of length k add k·(k+1)/2 to the answer. In \"abbcccaa\", the run \"ccc\" of length 3 contributes 3·4/2 = 6.",
+    "ans = 0, i = 0\nwhile i < n:\n    j = i\n    while j < n and s[j] == s[i]: j++\n    k = j - i\n    ans = (ans + k*(k+1)/2) mod MOD\n    i = j\nreturn ans",
+    "**Smallest input** - a single character is one run of length 1.\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: initialising ans to 1 \"to count the whole string\" instead of 0 → returns 2.\n\n**All equal characters** - the entire string is one run; k·(k+1)/2 must be computed in 64-bit.\n`Input: s = \"zzzzz\"` → `Expected: 15`\n⚠️ Bug: computing k*(k+1)/2 with `int` and k up to 10^5 → 10^5·100001 ≈ 10^10 overflows to a wrong value before the mod.\n\n**Overflow on the running total** - with n = 10^5 of one letter, k·(k+1)/2 = 5,000,050,000 > 2^31−1 ≈ 2.1·10^9.\n`Input: s = \"aaaa...a\" (10^5 letters)` → `Expected: 499994500` (mod 10^9+7)\n⚠️ Bug: accumulating ans as `int` without taking mod each step → overflow wraps to a negative/garbage value.\n\n**Alternating characters** - every run has length 1, so the answer equals n.\n`Input: s = \"xy\"` → `Expected: 2`\n⚠️ Bug: skipping the final run by advancing i past n inside the inner loop without an outer re-check → returns 1.\n\n**Boundary index** - the last run must be flushed when j reaches n.\n`Input: s = \"ab\"` → `Expected: 2`\n⚠️ Bug: using `j < n-1` instead of `j < n` in the inner loop → the last character's run is never counted, returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "Characters arrive in an unbounded stream and you cannot store the whole string. How do you report the running count of homogenous substrings seen so far?",
+      "a": "Keep the current run character, the current run length, and the running answer. On each new character, either extend the run (length+1, add length to ans) or start a new run (length=1, add 1). Time O(1) per character, space O(1)."
+    },
+    {
+      "q": "Instead of all homogenous substrings, count only those whose length is exactly L. How does the per-run contribution change?",
+      "a": "For a run of length k, the number of length-L homogenous substrings is max(0, k−L+1). Replace k·(k+1)/2 with that term and keep the same single-pass structure. Time O(n), space O(1)."
+    },
+    {
+      "q": "Answer many queries: for each [l, r], how many homogenous substrings lie fully inside s[l..r]?",
+      "a": "Precompute prefix sums of per-position contributions (position i contributes its current run length up to i), plus prefix sums of full-run triangular contributions, then subtract; runs that straddle l or r need their partial contribution recomputed from the run-length array. Time O(n + q), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countHomogenous(string s) {\n        const long long MOD = 1000000007LL;\n        long long ans = 0;\n        int n = (int)s.size();\n        int i = 0;\n        while (i < n) {\n            int j = i;\n            while (j < n && s[j] == s[i]) {\n                j++;\n            }\n            long long k = (long long)(j - i);\n            ans = (ans + k * (k + 1LL) / 2LL) % MOD;\n            i = j;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

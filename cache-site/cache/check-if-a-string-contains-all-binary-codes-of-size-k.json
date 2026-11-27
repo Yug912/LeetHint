@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-a-string-contains-all-binary-codes-of-size-k",
+  "title": "Check If a String Contains All Binary Codes of Size K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Rolling Hash",
+  "tc": "O(n)",
+  "sc": "O(2^k)",
+  "spaceBreakdown": "- vector<bool> seen: 2^k bits → O(2^k)\n- scalar locals (n, need, count, mask, hash, loop index): O(1)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "Treat each k-length substring as a k-bit integer and use a rolling hash: shift left by 1, OR in the new bit, and mask to k bits to drop the outgoing character - all in O(1) per step. Track which integer values have appeared in a boolean array of size 2^k. If the count of distinct values reaches exactly 2^k, every binary code of length k is present. An early exit returns false when the number of substrings (n − k + 1) is less than 2^k, avoiding unnecessary allocation.",
+  "hints": [
+    "With k ≤ 20, how many distinct binary strings of length k exist, and how does that count compare to the number of length-k substrings in s? The constraints give k ≤ 20 and s.length ≤ 5 × 10^5.",
+    "Use a rolling hash: interpret each k-length substring as a k-bit integer, update it in O(1) by shifting left, OR-ing in the new bit, and masking to k bits. Track which values appear in a boolean array of size 2^k. For s = \"00110110\", k = 2, the substrings map to integers 0, 1, 3, 2 - all values 0-3 appear, so return true.",
+    "```\nneed = 2^k\nif (length of s) - k + 1 < need: return false\nseen = boolean array of size need, all false\ncount = 0\nhash = integer value of s[0..k-1]\nmark seen[hash], increment count\nfor i from k to n-1:\n    hash = ((hash << 1) | bit(s[i])) & (need - 1)\n    if not seen[hash]: mark it, increment count\nreturn count == need\n```",
+    "**String shorter than k** - s has fewer characters than k, so no length-k substring exists.\n`Input: s = \"0\", k = 2` → `Expected: false`\n⚠️ Bug: not checking `n < k` before the initial loop → accesses `s[1]` out of bounds → crash\n\n**Off-by-one in early exit** - the string has exactly enough substrings but an off-by-one rejects it.\n`Input: s = \"00110\", k = 2` → `Expected: true`\n⚠️ Bug: using `n - k < need` instead of `n - k + 1 < need` → returns `false`\n\n**Unmarked initial window** - the first k-length substring is computed but never recorded.\n`Input: s = \"00110110\", k = 2` → `Expected: true`\n⚠️ Bug: skipping the `seen[hash] = true; count++` after the initial loop → count = 3 → returns `false`\n\n**Missing bitmask** - the hash grows beyond k bits, so the same substring at different positions yields different hashes.\n`Input: s = \"01101001\", k = 2` → `Expected: true`\n⚠️ Bug: omitting `& mask` after each hash update → hash values become 1, 3, 6, 13, 26, 52, 105 → count = 7 → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 30?",
+      "a": "2^30 ≈ 10^9 is too large for a boolean array. Replace it with an unordered_set<int> to store seen hash values. The rolling hash still works with a 30-bit mask. TC: O(n) expected, SC: O(min(n, 2^k))."
+    },
+    {
+      "q": "What if s arrives as a character stream too large to store in memory?",
+      "a": "Maintain a rolling hash updated per character and a hash set of seen values. Once k characters have arrived, start recording hash values. At stream end, check if the set size equals 2^k. TC: O(n), SC: O(min(n, 2^k)) for the set."
+    },
+    {
+      "q": "What if the string uses digits 0-9 instead of binary?",
+      "a": "Use a base-10 rolling hash: hash = (hash * 10 + digit) % (10^k). Track seen values in a hash set since 10^k can be very large. TC: O(n), SC: O(min(n, 10^k))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool hasAllCodes(string s, int k) {\n        int n = s.size();\n        int need = 1 << k;\n        if (n - k + 1 < need) return false;\n        vector<bool> seen(need, false);\n        int count = 0;\n        int mask = need - 1;\n        int hash = 0;\n        for (int i = 0; i < k; i++) {\n            hash = ((hash << 1) | (s[i] - '0')) & mask;\n        }\n        if (!seen[hash]) {\n            seen[hash] = true;\n            count++;\n        }\n        for (int i = k; i < n; i++) {\n            hash = ((hash << 1) | (s[i] - '0')) & mask;\n            if (!seen[hash]) {\n                seen[hash] = true;\n                count++;\n            }\n        }\n        return count == need;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

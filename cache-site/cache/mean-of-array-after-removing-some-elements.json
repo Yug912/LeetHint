@@ -1,0 +1,40 @@
+{
+  "slug": "mean-of-array-after-removing-some-elements",
+  "title": "Mean of Array After Removing Some Elements",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Quickselect / Partial Sort",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `nth_element` modifies the array in place: O(1) auxiliary space\n- `long long sum`: O(1)\n- not counted: input array",
+  "approach": "To find the mean of the remaining elements after removing the smallest and largest 5%, we can use `std::nth_element` to partition the array around the 5% and 95% boundaries in linear time. This avoids a full sort and leaves the middle 90% of the elements in a contiguous range. We then sum this range and divide by its count.",
+  "hints": [
+    "If you only need to discard the smallest 5% and largest 5% of the elements, do you need to know the exact sorted order of the remaining 90%?",
+    "Use `std::nth_element` to partition the array so the smallest 5% are moved to the front, and the largest 5% to the back. For Example 1, `nth_element` moves the single smallest element to index 0 and the single largest to index 19, leaving the 18 twos in between.",
+    "remove = n / 20\nnth_element to place the element at index `remove`\nnth_element again to place the element at index `n - remove - 1`\nsum elements from index `remove` to `n - remove - 1`\nreturn sum / (n - 2 * remove)",
+    "**Smallest input** - The minimum valid array length is 20, so exactly 1 element is removed from each end.\n`Input: arr = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100]` → `Expected: 0.00000`\n⚠️ Bug: Calculating `remove = n * 0.05` with integer truncation returns 0, so no elements are removed and the mean becomes 5.00000 instead of 0.00000.\n\n**Boundary indices** - The 5% and 95% boundaries must be correctly calculated for 0-indexed arrays.\n`Input: arr = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]` → `Expected: 9.50000`\n⚠️ Bug: Summing from index `remove` to `n - remove` inclusive (`i <= n - remove`) includes the element at index 19, summing 19 elements for 190 and returning 10.00000 instead of 9.50000.\n\n**Duplicates** - The array can contain many duplicate values at the boundaries.\n`Input: arr = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2]` → `Expected: 1.00000`\n⚠️ Bug: Using `nth_element` to partition at `remove` and `n - remove - 1`, but then summing from `remove - 1` to `n - remove - 1` includes one of the smallest elements, returning 1.05263 instead of 1.00000."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is too large to fit in memory and arrives as a stream?",
+      "a": "We would need to maintain two heaps (a max-heap for the smallest 5% and a min-heap for the largest 5%) and a running sum of the remaining elements. Time complexity becomes O(n log k) and space complexity O(k), where k is 5% of n."
+    },
+    {
+      "q": "What if we need to remove a dynamic percentage p instead of a fixed 5%?",
+      "a": "The same `nth_element` approach works by changing the `remove` count to `n * p`. The time complexity remains O(n) on average, and space complexity remains O(1)."
+    },
+    {
+      "q": "What if the array length is not a multiple of 20, so 5% is not an integer?",
+      "a": "We can use `floor(n * 0.05)` or `ceil(n * 0.05)` to determine the number of elements to remove. The `nth_element` approach still works in O(n) time and O(1) space, but the exact count must be consistently applied to both ends."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double trimMean(vector<int>& arr) {\n        int n = arr.size();\n        int remove = n / 20;\n        nth_element(arr.begin(), arr.begin() + remove, arr.end());\n        nth_element(arr.begin() + remove, arr.begin() + n - remove - 1, arr.end());\n        long long sum = 0;\n        for (int i = remove; i < n - remove; ++i) {\n            sum += arr[i];\n        }\n        return (double)sum / (n - 2 * remove);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

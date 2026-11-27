@@ -1,0 +1,40 @@
+{
+  "slug": "decode-the-slanted-ciphertext",
+  "title": "Decode the Slanted Ciphertext",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Matrix Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: this is the returned output (not counted as auxiliary)\n- no other containers, no recursion",
+  "approach": "The encoded text is the matrix read row-by-row, so `cols = encodedText.length() / rows` and cell `(i, j)` maps to `encodedText[i * cols + j]`. The original text was written along diagonals starting at each cell in row 0: for starting column `j`, walk `(0, j) → (1, j+1) → (2, j+2) → …` while in bounds. Concatenating all these diagonals gives the original text with possible trailing spaces, which we strip.",
+  "hints": [
+    "The encoded text is just the matrix flattened row by row. Given its length and the number of rows, what must the number of columns be?",
+    "Index the matrix virtually: cell `(i, j)` is `encodedText[i*cols + j]`. For example 1 (`rows=3, cols=4`), the first diagonal `(0,0),(1,1),(2,2)` yields `c, i, p`.",
+    "```\ncols = len(encodedText) / rows\nresult = \"\"\nfor j in 0 .. cols-1:\n    i = 0\n    while i < rows and j+i < cols:\n        result += encodedText[i * cols + j + i]\n        i += 1\nstrip trailing spaces from result\nreturn result\n```",
+    "**Empty input** - `encodedText` can have length 0.\n`Input: encodedText = \"\", rows = 5` → `Expected: \"\"`\n⚠️ Bug: computing `cols = n / rows` then looping without an `n == 0` guard still works, but accessing `encodedText[0]` in a buggy variant returns garbage.\n\n**Single row** - the matrix is one row, so originalText equals encodedText.\n`Input: encodedText = \"coding\", rows = 1` → `Expected: \"coding\"`\n⚠️ Bug: skipping the diagonal walk when `rows == 1` and returning `encodedText` directly without stripping trailing spaces returns `\"coding \"` if a trailing space exists.\n\n**Trailing spaces in the matrix** - the last diagonals may consist entirely of spaces.\n`Input: encodedText = \"ch   ie   pr\", rows = 3` → `Expected: \"cipher\"`\n⚠️ Bug: not stripping trailing spaces returns `\"cipher   \"` (three trailing spaces).\n\n**Boundary index** - the inner loop condition `j + i < cols` must use strict `<`.\n`Input: encodedText = \"ab\", rows = 1` → `Expected: \"ab\"`\n⚠️ Bug: using `j + i <= cols` reads `encodedText[2]`, which is out of bounds and returns garbage or crashes."
+  ],
+  "followUps": [
+    {
+      "q": "Implement the encoding function: given `originalText` and `rows`, produce `encodedText`.",
+      "a": "Compute `cols` so the last column is non-empty, fill a `rows × cols` matrix diagonally with `originalText` (padding with spaces), then concatenate rows. Time O(n), space O(n) for the matrix."
+    },
+    {
+      "q": "If `rows` is unknown, can you recover it from `encodedText` alone?",
+      "a": "`rows` must divide `n = len(encodedText)`. Try each divisor `d` of `n`, decode, and check that the result has no trailing spaces and the last column is non-empty. Time O(n · d(n)), space O(1)."
+    },
+    {
+      "q": "If `encodedText` arrives as a stream too large for memory, how do you decode?",
+      "a": "For each starting column `j`, compute the needed indices `i*cols + j + i` and fetch only those positions from the stream, emitting one diagonal at a time. Time O(n), space O(rows) for buffering one diagonal."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string decodeCiphertext(string encodedText, int rows) {\n        int n = encodedText.size();\n        if (n == 0) return \"\";\n        int cols = n / rows;\n        string result;\n        result.reserve(n);\n        for (int j = 0; j < cols; j++) {\n            for (int i = 0; i < rows && j + i < cols; i++) {\n                result.push_back(encodedText[i * cols + j + i]);\n            }\n        }\n        while (!result.empty() && result.back() == ' ') {\n            result.pop_back();\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

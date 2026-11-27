@@ -1,0 +1,39 @@
+{
+  "slug": "find-elements-in-a-contaminated-binary-tree",
+  "title": "Find Elements in a Contaminated Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS Recovery + Hash Set Lookup",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> seen: up to n entries (n ≤ 10^4) → O(n)\n- recursion call-stack depth: worst case O(h), h ≤ 20 → O(h), dominated by the hash set\n- not counted: input tree (modified in place)",
+  "approach": "The recovery is deterministic: root is always 0, and each node's value is computed from its parent via `2*x+1` (left) or `2*x+2` (right). We do one DFS pass during construction, restoring each node's value and inserting it into a hash set. Each `find(target)` call is then an O(1) hash set lookup. With at most 10^4 nodes and 10^4 find calls, this is well within limits.",
+  "hints": [
+    "Given that root.val is always 0, what determines every other node's original value? The tree has at most 10^4 nodes and find() is called up to 10^4 times.",
+    "Use a hash set. During a DFS from root, assign each node its recovered value (root=0, left child = 2·x+1, right child = 2·x+2) and insert it into the set. Example: root=0 → right child=2 → right child=6, so `seen = {0, 2, 6}` and `find(6)` returns true.",
+    "```\nfunction recover(node, val):\n    if node is null: return\n    node.val = val\n    add val to seen\n    recover(node.left, 2*val + 1)\n    recover(node.right, 2*val + 2)\n\nconstructor(root):\n    recover(root, 0)\n\nfunction find(target):\n    return target in seen\n```",
+    "**Single node** - tree has only the root\n`Input: [\"FindElements\",\"find\"], [[[-1]],[0]]` → `Expected: [null,true]`\n⚠️ Bug: skipping root insertion (only inserting children) → returns false\n\n**All right children** - chain of right children only\n`Input: [\"FindElements\",\"find\"], [[[-1,null,-1,null,-1]],[6]]` → `Expected: [null,true]`\n⚠️ Bug: omitting `recover(node->right, 2*val+2)` call → returns false\n\n**Root value query** - target is 0\n`Input: [\"FindElements\",\"find\"], [[[-1,-1,-1]],[0]]` → `Expected: [null,true]`\n⚠️ Bug: initializing recovery with val=1 instead of 0 → returns false\n\n**Deep left chain** - height 5, all left children\n`Input: [\"FindElements\",\"find\"], [[[-1,-1,null,-1,null,-1,null,-1,null,-1]],[15]]` → `Expected: [null,true]`\n⚠️ Bug: using `2*val` instead of `2*val+1` for left child → all values become 0, returns false"
+  ],
+  "followUps": [
+    {
+      "q": "Can you implement find() in O(1) auxiliary space without storing all values?",
+      "a": "Trace target back to root: parent = (target-1)/2, and target is odd → it was a left child, even → right child. Record the path, then walk from root following the reversed path to check existence. TC: O(h) per find, SC: O(1)."
+    },
+    {
+      "q": "If find() is called 10^6 times with targets in [0, 10^6], can you answer all faster?",
+      "a": "Precompute a boolean array of size 10^6+1 during construction, marking which values exist. Each find is a direct array index lookup. TC: O(n + 10^6) construction, O(1) per find. SC: O(10^6)."
+    },
+    {
+      "q": "What if nodes can be dynamically added to the tree between find() calls?",
+      "a": "Maintain the hash set incrementally. When a new node is added with parent value x, insert 2x+1 or 2x+2 into the set. TC: O(1) per insertion and per find. SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class FindElements {\n    unordered_set<int> seen;\n    \n    void recover(TreeNode* node, int val) {\n        if (!node) return;\n        node->val = val;\n        seen.insert(val);\n        recover(node->left, 2 * val + 1);\n        recover(node->right, 2 * val + 2);\n    }\npublic:\n    FindElements(TreeNode* root) {\n        recover(root, 0);\n    }\n    \n    bool find(int target) {\n        return seen.count(target) > 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

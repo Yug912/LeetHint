@@ -1,0 +1,40 @@
+{
+  "slug": "distance-between-bus-stops",
+  "title": "Distance Between Bus Stops",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Circular Array Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (clockwise, total, loop index): constant → O(1)\n- no containers, no recursion, no heap/stack allocated\n- not counted: input vector, return value",
+  "approach": "The bus route is a circle, so between any two stops there are exactly two paths (clockwise and counterclockwise) whose lengths always sum to the total circumference. We normalize so `start ≤ destination` by swapping if needed, then compute the clockwise distance as the sum of `distance[start]` through `distance[destination-1]`. The answer is `min(clockwise, total − clockwise)`.",
+  "hints": [
+    "The bus route forms a circle, so between any two stops there are exactly two paths. What must be true about the sum of the lengths of these two paths?",
+    "The two path lengths always sum to the total circumference. Compute one direction's distance by summing `distance[start]` through `distance[destination-1]` (after ensuring `start ≤ destination` by swapping), then the other is `total − clockwise`. For `distance = [1,2,3,4]`, `start = 0`, `destination = 2`: clockwise = 1+2 = 3, total = 10, answer = min(3, 7) = 3.",
+    "```\nif start > destination:\n    swap(start, destination)\nclockwise = sum of distance[i] for i in [start, destination)\ntotal = sum of all distance values\nreturn min(clockwise, total - clockwise)\n```",
+    "**Start after destination** - start index exceeds destination index\n`Input: distance = [1,2,3,4], start = 3, destination = 0` → `Expected: 4`\n⚠️ Bug: not swapping start and destination → loop `for i = 3 to 0` never runs, clockwise = 0, returns 0\n\n**Same stop** - start equals destination\n`Input: distance = [1,2,3,4], start = 2, destination = 2` → `Expected: 0`\n⚠️ Bug: using `i <= destination` instead of `i < destination` → clockwise = distance[2] = 3, returns 3\n\n**Two stops** - minimum non-trivial route with two stops\n`Input: distance = [5,5], start = 0, destination = 1` → `Expected: 5`\n⚠️ Bug: using `i <= destination` → clockwise = distance[0] + distance[1] = 10, returns min(10, 0) = 0\n\n**Wrap-around shorter** - the counterclockwise path is shorter than clockwise\n`Input: distance = [1,2,3,4], start = 0, destination = 3` → `Expected: 4`\n⚠️ Bug: returning only clockwise without comparing to total − clockwise → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed to answer many queries (different start/destination pairs) on the same distance array?",
+      "a": "Precompute a prefix sum array where `prefix[i] = sum(distance[0..i-1])`. Then clockwise = `prefix[destination] - prefix[start]` (after normalizing), and total = `prefix[n]`. Each query is O(1) after O(n) preprocessing. SC becomes O(n) for the prefix array."
+    },
+    {
+      "q": "What if the bus could also skip stops with a known walking-distance matrix between all pairs of stops?",
+      "a": "This becomes a shortest-path problem on a graph where each stop is a node with two bus edges (to clockwise and counterclockwise neighbors) plus walking edges. Run Dijkstra's algorithm from the start stop. TC: O(n² log n) with a dense walking matrix, SC: O(n²)."
+    },
+    {
+      "q": "What if the distance array arrives as a stream and only one pass is allowed?",
+      "a": "Compute the total sum in the single pass while buffering elements in the range [start, destination) (after normalizing). This requires O(destination − start) auxiliary space in the worst case. TC remains O(n), but SC degrades to O(n) when the range spans most of the array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int distanceBetweenBusStops(vector<int>& distance, int start, int destination) {\n        if (start > destination) swap(start, destination);\n        int clockwise = 0;\n        for (int i = start; i < destination; i++) {\n            clockwise += distance[i];\n        }\n        int total = 0;\n        for (int d : distance) total += d;\n        return min(clockwise, total - clockwise);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

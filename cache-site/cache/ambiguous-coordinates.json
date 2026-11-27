@@ -1,0 +1,40 @@
+{
+  "slug": "ambiguous-coordinates",
+  "title": "Ambiguous Coordinates",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Nested Enumeration with Lazy Generation",
+  "tc": "O(n^4)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string res (temporary output string built per pair): up to O(n) characters → O(n)\n- s.substr() temporaries (created and destroyed within each iteration): O(n) each, not simultaneous → O(n)\n- result vector: not counted (returned output)\n- no recursion, no auxiliary containers",
+  "approach": "The digit string inside the parentheses must be split at every possible position into an x-part and y-part. For each part, valid forms are: the whole string with no decimal (valid only if no leading zero, or it's a single \"0\"), or a decimal inserted after position i (1 ≤ i < length), where the integer part has no illegal leading zero and the fractional part doesn't end in '0'. Instead of pre-computing all forms for each part into a vector, we generate each valid x-form and y-form lazily inside nested loops and build the output string immediately, keeping auxiliary space at O(n).",
+  "hints": [
+    "Given the digit string inside the parentheses, what two independent decisions must you make to recover a single original coordinate pair?\nThe string has at most 10 digit characters (s.length ≤ 12, minus parentheses).",
+    "Nested enumeration: try every split point for the comma, then every decimal-point position in each half, building each result string on the fly. For s = \"(123)\", splitting after '1' gives x = \"1\" (one valid form) and y = \"23\" (forms \"23\" and \"2.3\").",
+    "```\nfor each split point dividing digits into x-part (length a) and y-part (length b):\n    for xi in 0..a-1:           # xi=0 means no decimal; xi>0 means decimal after xi digits\n        if x-form valid (no illegal leading zero, no trailing-zero fraction):\n            for yi in 0..b-1:\n                if y-form valid:\n                    emit \"(x-form, y-form)\"\n```",
+    "**All zeros** - every digit is '0', so most forms are invalid\n`Input: s = \"(000)\"` → `Expected: []`\n⚠️ Bug: not checking that the fractional part's last digit is non-zero → returns `[\"(0, 0.0)\", \"(0.0, 0)\"]`\n\n**Single-digit parts** - both x and y are one digit; only the no-decimal form exists\n`Input: s = \"(00)\"` → `Expected: [\"(0, 0)\"]`\n⚠️ Bug: requiring at least 2 digits before producing any form → returns `[]`\n\n**Leading zero with valid decimal** - \"0\" as integer part is valid only as a single digit before the decimal\n`Input: s = \"(0123)\"` → `Expected: [\"(0, 1.23)\",\"(0, 12.3)\",\"(0, 123)\",\"(0.1, 2.3)\",\"(0.1, 23)\",\"(0.12, 3)\"]`\n⚠️ Bug: rejecting any integer part starting with '0' without the single-digit exception → returns `[\"(0, 1.23)\",\"(0, 12.3)\",\"(0, 123)\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the original coordinates could be negative, so the string might contain a '-' sign?",
+      "a": "Each part could start with '-'. The sign is preserved and the remaining digits follow the same validity rules. Add a check for an optional leading '-' when splitting. Time stays O(n³), space stays O(n)."
+    },
+    {
+      "q": "What if s.length can be up to 10^5 - can you still list all valid coordinates?",
+      "a": "The output could contain O(n³) strings, far too many to enumerate. Instead, count the number of valid coordinates using combinatorial formulas based on digit patterns (zeros vs non-zeros). Time becomes O(n), space O(1)."
+    },
+    {
+      "q": "What if coordinates could use scientific notation like \"1.5e3\"?",
+      "a": "Each part gains an optional 'e' followed by an integer exponent. Add another nested loop for the exponent position, with its own validity rules (no leading zeros, at least one digit). Time becomes O(n⁴), space stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> ambiguousCoordinates(string s) {\n        vector<string> result;\n        int n = s.size();\n        int len = n - 2; // digits are s[1..n-2]\n\n        for (int split = 1; split < len; split++) {\n            int xstart = 1, xlen = split;\n            int ystart = split + 1, ylen = len - split;\n\n            for (int xi = 0; xi < xlen; xi++) {\n                // xi == 0: no decimal; xi >= 1: decimal after xi digits\n                bool xvalid;\n                if (xi == 0) {\n                    xvalid = (s[xstart] != '0' || xlen == 1);\n                } else {\n                    // integer part valid if no leading zero (or single \"0\")\n                    // fractional part valid if last digit is not '0'\n                    xvalid = ((s[xstart] != '0' || xi == 1) &&\n                              s[xstart + xlen - 1] != '0');\n                }\n                if (!xvalid) continue;\n\n                for (int yi = 0; yi < ylen; yi++) {\n                    bool yvalid;\n                    if (yi == 0) {\n                        yvalid = (s[ystart] != '0' || ylen == 1);\n                    } else {\n                        yvalid = ((s[ystart] != '0' || yi == 1) &&\n                                  s[ystart + ylen - 1] != '0');\n                    }\n                    if (!yvalid) continue;\n\n                    string res = \"(\";\n                    if (xi == 0) {\n                        res += s.substr(xstart, xlen);\n                    } else {\n                        res += s.substr(xstart, xi);\n                        res += '.';\n                        res += s.substr(xstart + xi, xlen - xi);\n                    }\n                    res += \", \";\n                    if (yi == 0) {\n                        res += s.substr(ystart, ylen);\n                    } else {\n                        res += s.substr(ystart, yi);\n                        res += '.';\n                        res += s.substr(ystart + yi, ylen - yi);\n                    }\n                    res += ')';\n                    result.push_back(move(res));\n                }\n            }\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

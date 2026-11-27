@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-consecutive-cards-to-pick-up",
+  "title": "Minimum Consecutive Cards to Pick Up",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Table (Last Occurrence Tracking)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> lastSeen: up to n entries (all distinct values) → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "For each card value, track the index of its most recent occurrence in a hash map. When a card value appears again, the number of consecutive cards needed to capture that pair is `current_index - last_seen_index + 1`. The answer is the minimum such value across all repeated cards. This is correct because any valid pickup must contain at least one pair of identical cards, and the shortest pickup containing a specific pair is exactly the span from the earlier occurrence to the later one - so we only need the closest pair of each value, which is found by comparing each card with its immediately preceding occurrence.",
+  "hints": [
+    "For a pair of matching cards at positions i and j (i < j), how many consecutive cards must you pick up to include both? Among all pairs with the same value, which one gives the smallest pickup?",
+    "Use a hash map storing the last seen index of each card value. In Example 1, when we reach index 3 (value 3), the map says 3 was last at index 0, so the pickup is 3 − 0 + 1 = 4.",
+    "```\nlastSeen = empty map\nans = infinity\nfor i from 0 to n-1:\n    if cards[i] in lastSeen:\n        ans = min(ans, i - lastSeen[cards[i]] + 1)\n    lastSeen[cards[i]] = i\nreturn ans if ans != infinity else -1\n```",
+    "**Single card** - n = 1, no pair can exist.\n`Input: cards = [5]` → `Expected: -1`\n⚠️ Bug: initializing ans to 0 instead of INT_MAX → returns 0\n\n**Adjacent duplicates** - the closest possible pair.\n`Input: cards = [7,7]` → `Expected: 2`\n⚠️ Bug: computing `i - lastSeen[cards[i]]` without the `+ 1` → returns 1\n\n**Closest pair after an earlier match** - last seen index must be updated each iteration.\n`Input: cards = [1,2,3,1,1]` → `Expected: 2`\n⚠️ Bug: skipping the `lastSeen[cards[i]] = i` update after finding a match → returns 4\n\n**No duplicates** - no valid answer exists.\n`Input: cards = [1,0,5,3]` → `Expected: -1`\n⚠️ Bug: returning `ans` directly without checking for INT_MAX → returns 2147483647"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need K matching cards of the same value (not just 2) in the picked-up consecutive cards?",
+      "a": "Store a list of positions for each value. For each value with at least K occurrences, slide a window of size K over its sorted position list and compute `positions[i+K-1] - positions[i] + 1`. Track the global minimum. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if cards[i] can be up to 10^9 instead of 10^6?",
+      "a": "The hash map approach is unaffected - it keys on card values regardless of their range. A fixed-array approach (size 10^6+1) would no longer work, but unordered_map handles arbitrary integers. Time O(n) average, space O(n)."
+    },
+    {
+      "q": "What if cards arrive in a stream and you must report the current minimum after each new card?",
+      "a": "Maintain the same lastSeen map and a running minimum. Each new card either updates the running minimum (if previously seen) or just records its position. Query after each card is O(1). Total time O(n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumCardPickup(vector<int>& cards) {\n        unordered_map<int, int> lastSeen;\n        int ans = INT_MAX;\n        for (int i = 0; i < (int)cards.size(); i++) {\n            int val = cards[i];\n            if (lastSeen.count(val)) {\n                int span = i - lastSeen[val] + 1;\n                if (span < ans) {\n                    ans = span;\n                }\n            }\n            lastSeen[val] = i;\n        }\n        return (ans == INT_MAX) ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

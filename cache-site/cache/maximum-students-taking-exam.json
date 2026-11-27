@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-students-taking-exam",
+  "title": "Maximum Students Taking Exam",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bipartite Maximum Matching (König's Theorem)",
+  "tc": "O(mn√(mn))",
+  "sc": "O(mn)",
+  "spaceBreakdown": "- vector<pair<int,int>> good: up to mn entries → O(mn)\n- unordered_map<int,int> rightMap: up to mn/2 entries → O(mn)\n- vector<vector<int>> adj: up to mn/2 lists, total O(mn) edges → O(mn)\n- pairU, pairV, dist: up to mn/2 entries each → O(mn)\n- BFS queue: up to mn/2 entries → O(mn)\n- recursion depth (dfs): up to mn/2 in worst-case augmenting path → O(mn)\n- not counted: input seats",
+  "approach": "All six cheating directions (left, right, and the four diagonals to adjacent rows) always connect seats whose column indices differ by exactly 1, so coloring seats by column parity makes the conflict graph bipartite. The maximum number of non-cheating students equals the maximum independent set of this graph, which by König's theorem equals (total good seats) − (maximum bipartite matching). We compute the matching with Hopcroft-Karp.",
+  "hints": [
+    "Among the six directions in which two students can cheat (left, right, and four diagonals to adjacent rows), what single property of the column index distinguishes every cheater from their target?",
+    "Build a bipartite graph: good seats in even columns on the left, odd columns on the right, edges between conflicting seats. The answer is (total good seats) − (maximum matching) by König's theorem. In Example 1: 6 good seats, matching 2, answer 4.",
+    "```\ncollect good seats, split by column parity into L (even) and R (odd)\nfor each even-column seat, add edges to its 6 conflicting neighbors if they are good and odd-column\nmatching = Hopcroft-Karp(L, R, edges)\nreturn total_good_seats - matching\n```",
+    "**Diagonal-only conflict** - two good seats whose only conflict is a diagonal, no same-row neighbor.\n`Input: [[\".\" , \"#\"],[\"#\" , \".\"]]` → `Expected: 1`\n⚠️ Bug: coloring by (r+c)%2 instead of c%2 places both seats in the same partition, dropping the only edge → returns 2.\n\n**Single row, all good** - m=1, n=4, only left/right conflicts exist.\n`Input: [[\".\" , \".\" , \".\" , \".\"]]` → `Expected: 2`\n⚠️ Bug: omitting same-row left/right conflicts from the edge list → returns 4.\n\n**Single column, all good** - m=3, n=1, no conflicts because directly in front/behind is allowed.\n`Input: [[\".\"],[\".\"],[\".\"]]` → `Expected: 3`\n⚠️ Bug: treating same-column adjacent rows as conflicts → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "If m and n can each be up to 10^5 (but the grid is sparse, with at most 10^5 good seats), how would you adapt the solution?",
+      "a": "The bipartite matching approach still applies, but you cannot materialize the full grid. Store only good-seat coordinates in a hash set, generate the 6 neighbor edges on-the-fly during BFS/DFS, and run Hopcroft-Karp on the sparse graph. Time becomes O(E√V) where E ≤ 6·10^5 and V ≤ 10^5."
+    },
+    {
+      "q": "If each good seat has a weight (some seats are more valuable to fill), how do you maximize total weight of non-cheating students?",
+      "a": "This becomes maximum weight independent set on a bipartite graph, solvable via minimum weight vertex cover using min-cost max-flow (or the Hungarian algorithm). Build the same bipartite graph with vertex weights, find min-weight vertex cover, and return total weight minus cover weight. Time becomes O(V^2 · E) or O(V · E · log V) depending on the flow algorithm."
+    },
+    {
+      "q": "If students can also see directly in front and behind (same column, adjacent row), does the approach still work?",
+      "a": "No - adding same-column conflicts creates odd cycles (e.g., a 2×1 column of two seats plus a diagonal), making the conflict graph non-bipartite. Maximum independent set on a general graph is NP-hard, so you would fall back to the bitmask DP over rows (O(m · 4^n)) which is feasible only for n ≤ 8."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int L, R;\n    vector<vector<int>> adj;\n    vector<int> pairU, pairV, dist;\n\n    bool bfs() {\n        queue<int> q;\n        bool found = false;\n        for (int u = 0; u < L; u++) {\n            if (pairU[u] == -1) {\n                dist[u] = 0;\n                q.push(u);\n            } else {\n                dist[u] = -1;\n            }\n        }\n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            for (int v : adj[u]) {\n                int pu = pairV[v];\n                if (pu == -1) {\n                    found = true;\n                } else if (dist[pu] == -1) {\n                    dist[pu] = dist[u] + 1;\n                    q.push(pu);\n                }\n            }\n        }\n        return found;\n    }\n\n    bool dfs(int u) {\n        for (int v : adj[u]) {\n            int pu = pairV[v];\n            if (pu == -1 || (dist[pu] == dist[u] + 1 && dfs(pu))) {\n                pairU[u] = v;\n                pairV[v] = u;\n                return true;\n            }\n        }\n        dist[u] = -1;\n        return false;\n    }\n\npublic:\n    int maxStudents(vector<vector<char>>& seats) {\n        int m = (int)seats.size();\n        int n = (int)seats[0].size();\n\n        vector<pair<int,int>> good;\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                if (seats[i][j] == '.')\n                    good.push_back({i, j});\n\n        int total = (int)good.size();\n\n        auto id = [&](int i, int j) { return i * n + j; };\n\n        unordered_map<int,int> rightMap;\n        for (auto& p : good) {\n            if (p.second % 2 == 1) {\n                rightMap[id(p.first, p.second)] = (int)rightMap.size();\n            }\n        }\n        R = (int)rightMap.size();\n\n        adj.clear();\n        for (auto& p : good) {\n            if (p.second % 2 == 0) {\n                int u = (int)adj.size();\n                adj.push_back({});\n                int r = p.first, c = p.second;\n                int dirs[6][2] = {{0,-1},{0,1},{-1,-1},{-1,1},{1,-1},{1,1}};\n                for (auto& d : dirs) {\n                    int nr = r + d[0], nc = c + d[1];\n                    if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;\n                    if (seats[nr][nc] != '.') continue;\n                    int rid = id(nr, nc);\n                    auto it = rightMap.find(rid);\n                    if (it != rightMap.end()) {\n                        adj[u].push_back(it->second);\n                    }\n                }\n            }\n        }\n        L = (int)adj.size();\n\n        pairU.assign(L, -1);\n        pairV.assign(R, -1);\n        dist.assign(L, 0);\n\n        int matching = 0;\n        while (bfs()) {\n            for (int u = 0; u < L; u++) {\n                if (pairU[u] == -1 && dfs(u)) matching++;\n            }\n        }\n\n        return total - matching;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

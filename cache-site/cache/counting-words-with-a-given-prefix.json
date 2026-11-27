@@ -1,0 +1,40 @@
+{
+  "slug": "counting-words-with-a-given-prefix",
+  "title": "Counting Words With a Given Prefix",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with String Comparison",
+  "tc": "O(n * m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count, int m: scalars → O(1)\n- range-for reference `const string& w`: no copy → O(1)\n- recursion depth: none\n- not counted: input vector<string>, returned int",
+  "approach": "For each word, check whether its first `pref.size()` characters equal `pref`. Use `std::string::compare(0, m, pref)`, which returns 0 exactly when the length-`m` prefix matches, and guard against words shorter than `pref` with a size check. Increment a counter for each match. This is correct because the definition of \"prefix\" is precisely a leading contiguous substring, so an equality test on the leading `m` characters is both necessary and sufficient.",
+  "hints": [
+    "For each word, what is the smallest piece of it you actually need to look at to decide whether `pref` is its prefix?",
+    "Use `std::string::compare(0, pref.size(), pref)` - it returns 0 exactly when the first `pref.size()` characters of the word equal `pref`. For `\"attention\"` with `pref = \"at\"`, `compare(0, 2, \"at\")` checks `\"at\" == \"at\"` → match.",
+    "```\ncount = 0\nm = length of pref\nfor each word w in words:\n    if length(w) >= m and w[0 .. m-1] == pref:\n        count = count + 1\nreturn count\n```",
+    "**Prefix longer than word** - `pref` has more characters than the word itself.\n`Input: words = [\"at\"], pref = \"ate\"` → `Expected: 0`\n⚠️ Bug: calling `w.compare(0, m, pref)` without first checking `w.size() >= m` → returns 0 (match) on implementations that clamp the substring, giving 1.\n\n**Substring appears but not as prefix** - `pref` occurs inside the word but not at the start.\n`Input: words = [\"concat\"], pref = \"cat\"` → `Expected: 0`\n⚠️ Bug: using `w.find(pref) != string::npos` instead of checking position 0 → returns 1.\n\n**Prefix equals whole word** - word and `pref` are identical.\n`Input: words = [\"at\"], pref = \"at\"` → `Expected: 1`\n⚠️ Bug: using `w.size() > m` instead of `>=` in the length guard → returns 0.\n\n**All words identical to pref** - every word matches exactly.\n`Input: words = [\"at\",\"at\",\"at\"], pref = \"at\"` → `Expected: 3`\n⚠️ Bug: writing `count = 1` instead of `count += 1` inside the loop → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if `words.length` is up to 10^6 and each string up to 10^5, with a single `pref`?",
+      "a": "The linear scan still works but becomes O(total characters) in the worst case. Add an early-exit: stop comparing at the first mismatched character instead of always building a full substring. TC O(total chars), SC O(1)."
+    },
+    {
+      "q": "What if there are up to 10^5 queries, each with a different `pref`, over a fixed `words` array?",
+      "a": "Build a trie of all words once; each query walks down the trie following `pref` and reads the subtree's word count. TC O(sum of |words[i]|) preprocessing + O(|pref|) per query, SC O(sum of |words[i]|)."
+    },
+    {
+      "q": "What if words arrive in a stream and you must answer prefix-count queries online?",
+      "a": "Maintain a hash map from every prefix of every inserted word to its occurrence count; on insert, add all prefixes of the new word. Each query is O(1) lookup. TC O(|w|^2) per insert, O(1) per query, SC O(total distinct prefixes)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int prefixCount(vector<string>& words, string pref) {\n        int count = 0;\n        int m = static_cast<int>(pref.size());\n        for (const string& w : words) {\n            if (static_cast<int>(w.size()) >= m && w.compare(0, m, pref) == 0) {\n                ++count;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "xor-operation-in-an-array",
+  "title": "XOR Operation in an Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Closed-form Math",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int s, e, high, low: O(1) primitive variables\n- xorUpTo call stack: O(1) depth, no recursion\n- not counted: input parameters, returned integer",
+  "approach": "Since all numbers in the array share the same parity as `start`, we can separate the problem into computing the higher bits and the lowest bit. We shift all numbers right by 1, which transforms the problem into finding the XOR of the consecutive integer range `[start / 2, start / 2 + n - 1]`. The XOR of consecutive integers from `0` to `m` follows a periodic pattern based on `m % 4`, allowing an O(1) closed-form calculation. Finally, we shift the result back left by 1 and conditionally append the lowest bit, which is `1` only if both `n` and `start` are odd.",
+  "hints": [
+    "What can we observe about the last bit of every element in the array `nums`?\nFact: `nums[i] = start + 2 * i`, so all elements share the same parity.",
+    "Use the closed-form XOR of consecutive integers. Since `nums[i] / 2 = start / 2 + i`, we can compute the XOR of the higher bits by finding the XOR of integers from `start / 2` to `start / 2 + n - 1`.\nExample: For `n = 5, start = 0`, `nums[i] / 2` ranges from `0` to `4`, whose XOR is `4`, so the higher bits give `4 << 1 = 8`.",
+    "```\nfunction xorUpTo(m):\n    if m < 0: return 0\n    return [m, 1, m+1, 0][m % 4]\n\ns = start / 2\ne = s + n - 1\nhigh_bits = (xorUpTo(e) ^ xorUpTo(s - 1)) << 1\nlow_bit = (n % 2) & (start % 2)\nreturn high_bits | low_bit\n```",
+    "**Smallest input** - `n = 1` means the array has a single element.\n`Input: n = 1, start = 2` → `Expected: 2`\n⚠️ Bug: returning `xorUpTo(e) ^ xorUpTo(s - 1)` without shifting left by 1 → returns `1` instead of `2`.\n\n**Odd count with odd start** - The lowest bit of the result is 1 only if both `n` and `start` are odd.\n`Input: n = 3, start = 1` → `Expected: 7`\n⚠️ Bug: ignoring the lowest bit and just returning `high_bits` → returns `6` instead of `7`.\n\n**Even count with odd start** - The lowest bit of the result is 0 because XOR of an even number of 1s is 0.\n`Input: n = 2, start = 1` → `Expected: 2`\n⚠️ Bug: setting `low_bit = start % 2` unconditionally → returns `3` instead of `2`.\n\n**Start is 0** - `s - 1` becomes `-1`, which must be handled by the XOR helper.\n`Input: n = 5, start = 0` → `Expected: 8`\n⚠️ Bug: using array indexing `return (int[]){m, 1, m+1, 0}[m % 4];` without checking `m < 0` → out-of-bounds access on `s - 1 = -1`."
+  ],
+  "followUps": [
+    {
+      "q": "What if `n` can be up to 10^18?",
+      "a": "The O(1) closed-form approach already handles arbitrarily large `n` in constant time, as long as we use 64-bit integers (`long long`) to avoid overflow when computing `s + n - 1` and shifting. The time complexity remains O(1) and space O(1)."
+    },
+    {
+      "q": "What if the array elements are defined as `nums[i] = start + k * i` for an arbitrary integer `k`?",
+      "a": "If `k` is a power of 2, we can still shift right by `log2(k)` and apply the same closed-form XOR logic. If `k` is not a power of 2, the elements do not share a simple bit-pattern alignment, so we would likely have to simulate the process in O(n) time."
+    },
+    {
+      "q": "What if we need to support multiple queries of XOR over subarrays of `nums`?",
+      "a": "We can use the O(1) closed-form function as a range XOR query: the XOR from index `L` to `R` is `xorOperation(R - L + 1, start + 2 * L)`. Each query takes O(1) time, and overall space remains O(1) without needing a prefix XOR array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int xorUpTo(int m) {\n        if (m < 0) return 0;\n        switch (m % 4) {\n            case 0: return m;\n            case 1: return 1;\n            case 2: return m + 1;\n            default: return 0;\n        }\n    }\n    \n    int xorOperation(int n, int start) {\n        int s = start / 2;\n        int e = s + n - 1;\n        int high = (xorUpTo(e) ^ xorUpTo(s - 1)) << 1;\n        int low = (n & 1) & (start & 1);\n        return high | low;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

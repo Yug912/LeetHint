@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-string-is-a-prefix-of-array",
+  "title": "Check If String Is a Prefix of Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int i, n, wl, j: scalar variables → O(1)\n- no containers, no recursion, no extra allocations\n- not counted: input string s, input vector words",
+  "approach": "The key insight is that `s` must **exactly equal** the concatenation of the first `k` words - not merely be a prefix of it. We maintain a pointer `i` into `s`. For each word, we verify it matches `s` starting at position `i`; if it doesn't, or if the word would extend past the end of `s`, we return false. After each successful word match, if `i` reaches the end of `s`, we return true. If we exhaust all words without `i` reaching the end, we return false.",
+  "hints": [
+    "If `s` must **exactly equal** the concatenation of the first `k` words (not just start with it), what must be true about the characters of `s` as you lay each word end-to-end against it in order?",
+    "Use a position pointer into `s`. For each word, verify it matches `s` starting at that pointer; advance the pointer by the word's length; if the pointer reaches the end of `s`, return true. Example: `s = \"iloveleetcode\"`, pointer at 0 - \"i\" matches `s[0]`, pointer → 1; \"love\" matches `s[1..4]`, pointer → 5; \"leetcode\" matches `s[5..12]`, pointer → 13 = |s|, return true.",
+    "```\ni = 0\nfor each word w in words:\n    if i + len(w) > len(s): return false\n    if s[i : i+len(w)] != w: return false\n    i += len(w)\n    if i == len(s): return true\nreturn false\n```",
+    "**Matched before all words used** - `s` is fully consumed mid-array, remaining words would cause a mismatch or overflow.\n`Input: s = \"iloveleetcode\", words = [\"i\",\"love\",\"leetcode\",\"apples\"]` → `Expected: true`\n⚠️ Bug: checking `i == len(s)` only after the full loop → the 4th word \"apples\" triggers `i+wl > n` and returns false.\n\n**Word extends past end of s** - a word is longer than the remaining unmatched portion of `s`.\n`Input: s = \"ab\", words = [\"a\",\"bcd\"]` → `Expected: false`\n⚠️ Bug: not checking `i + wl > n` before accessing `s[i+j]` → out-of-bounds read on `s[3]`.\n\n**s is prefix of a single word but not equal** - `s` is shorter than the first word and matches its beginning.\n`Input: s = \"abc\", words = [\"abcd\"]` → `Expected: false`\n⚠️ Bug: checking if `s` is a prefix of the concatenation (e.g. `concatenation.find(s) == 0`) instead of exact equality → returns true.\n\n**All words consumed, s not fully matched** - total word length is less than `|s|`.\n`Input: s = \"abcd\", words = [\"ab\"]` → `Expected: false`\n⚠️ Bug: returning true after the loop without checking `i == len(s)` → returns true."
+  ],
+  "followUps": [
+    {
+      "q": "Instead of returning true/false, return the smallest k such that s equals the concatenation of the first k words, or -1 if none exists.",
+      "a": "Same linear scan - when `i` reaches `|s|`, return the 1-indexed count of words processed so far instead of true. If the loop finishes or a mismatch occurs, return -1. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "Given multiple query strings s₁, s₂, …, s_q and the same words array, answer each query efficiently.",
+      "a": "Precompute all prefix concatenations of words (at most 100 strings) and store them in a hash set. Each query becomes an O(|sᵢ|) hash lookup. TC: O(W + Σ|sᵢ|) where W = total word length. SC: O(W) for the hash set."
+    },
+    {
+      "q": "Check whether s appears as a substring (not just a prefix) of the concatenation of all words in order.",
+      "a": "Run KMP string matching: build the failure function for s, then feed characters of the concatenated words one by one through the KMP automaton. TC: O(|s| + W) where W = total word length. SC: O(|s|) for the failure function."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isPrefixString(string s, vector<string>& words) {\n        int i = 0;\n        int n = (int)s.length();\n        for (const string& w : words) {\n            int wl = (int)w.length();\n            if (i + wl > n) return false;\n            for (int j = 0; j < wl; j++) {\n                if (s[i + j] != w[j]) return false;\n            }\n            i += wl;\n            if (i == n) return true;\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

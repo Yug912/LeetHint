@@ -1,0 +1,40 @@
+{
+  "slug": "matrix-cells-in-distance-order",
+  "title": "Matrix Cells in Distance Order",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bucket Sort",
+  "tc": "O(rows * cols)",
+  "sc": "O(rows * cols)",
+  "spaceBreakdown": "- buckets: vector of vectors holding all rows*cols cells total → O(rows * cols)\n- result: returned output, not counted\n- maxDist, loop counters: O(1)",
+  "approach": "Generate every cell, group cells into buckets indexed by their Manhattan distance from the center, then concatenate buckets in increasing distance order. Since the maximum distance is at most (rows-1)+(cols-1) ≤ 198, there are few buckets and each cell is placed in O(1), giving linear total time. This avoids the O(n log n) cost of a comparison sort and is correct because every cell in bucket d has distance exactly d.",
+  "hints": [
+    "The distance here is Manhattan: |r1-r2| + |c1-c2|. In a rows×cols grid, what is the largest distance value any cell can have from a fixed center, and how does that compare to the total number of cells?",
+    "Use bucket sort keyed by distance. For Example 2 (rows=2, cols=2, rCenter=0, cCenter=1), max distance is 1+1=2, so make 3 buckets; cell (1,0) has distance |1-0|+|0-1|=2 and lands in bucket 2.",
+    "```\nmaxDist = (rows-1) + (cols-1)\nbuckets = array of lists, size maxDist + 1\nfor r in 0..rows-1:\n    for c in 0..cols-1:\n        d = |r - rCenter| + |c - cCenter|\n        append (r, c) to buckets[d]\nresult = concatenate buckets[0], buckets[1], ..., buckets[maxDist]\n```",
+    "**Single cell** - only one cell exists, distance 0\n`Input: rows = 1, cols = 1, rCenter = 0, cCenter = 0` → `Expected: [[0,0]]`\n⚠️ Bug: allocating buckets with size `maxDist` instead of `maxDist + 1` → out-of-bounds write at `buckets[0]`\n\n**Center at corner** - farthest cell reaches the theoretical max distance\n`Input: rows = 3, cols = 3, rCenter = 0, cCenter = 0` → `Expected: [[0,0],[0,1],[1,0],[0,2],[1,1],[2,0],[1,2],[2,1],[2,2]]`\n⚠️ Bug: looping `d` from 0 to `maxDist-1` → drops cell (2,2) which has distance 4\n\n**Single row** - all cells share r=0, distances reduce to |c - cCenter|\n`Input: rows = 1, cols = 5, rCenter = 0, cCenter = 2` → `Expected: [[0,2],[0,1],[0,3],[0,0],[0,4]]`\n⚠️ Bug: starting the row loop at `r = 1` → returns empty vector\n\n**Ties at equal distance** - multiple cells share the same distance value\n`Input: rows = 2, cols = 2, rCenter = 0, cCenter = 1` → `Expected: [[0,1],[0,0],[1,1],[1,0]]`\n⚠️ Bug: using a single counter index instead of per-distance buckets → cells of distance 1 get interleaved with distance 0 or 2"
+  ],
+  "followUps": [
+    {
+      "q": "If the grid were 10^9 × 10^9 and you only needed the k closest cells, how would you adapt?",
+      "a": "Expand outward ring by ring from the center using BFS over the four neighbors, stopping once you have collected k cells. Time O(k), space O(k), since you never materialize the whole grid."
+    },
+    {
+      "q": "What if the distance metric were Euclidean instead of Manhattan?",
+      "a": "Distances are no longer small integers, so bucket sort by integer distance breaks; fall back to generating all cells and sorting with a comparator on (r-rCenter)² + (c-cCenter)². Time becomes O(n log n), space O(n)."
+    },
+    {
+      "q": "What if many queries arrive with different centers on the same fixed matrix?",
+      "a": "The distance depends on the center, so nothing useful precomputes across queries; answer each query independently with bucket sort. Time O(rows*cols) per query, space O(rows*cols) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> allCellsDistOrder(int rows, int cols, int rCenter, int cCenter) {\n        int maxDist = (rows - 1) + (cols - 1);\n        vector<vector<vector<int>>> buckets(maxDist + 1);\n        for (int r = 0; r < rows; r++) {\n            for (int c = 0; c < cols; c++) {\n                int d = abs(r - rCenter) + abs(c - cCenter);\n                buckets[d].push_back({r, c});\n            }\n        }\n        vector<vector<int>> result;\n        result.reserve(rows * cols);\n        for (int d = 0; d <= maxDist; d++) {\n            for (auto& cell : buckets[d]) {\n                result.push_back(cell);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

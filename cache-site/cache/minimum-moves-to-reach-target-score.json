@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-moves-to-reach-target-score",
+  "title": "Minimum Moves to Reach Target Score",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Reverse Simulation",
+  "tc": "O(min(maxDoubles, log target))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long moves: single scalar → O(1)\n- long long t: single scalar → O(1)\n- recursion depth: none\n- not counted: input parameters target, maxDoubles",
+  "approach": "Work backwards from target to 1. If the current value is even and we still have doubles available, halve it (undoing a ×2 move); otherwise decrement by 1 (undoing a +1 move). This greedy is optimal because halving a large number saves far more increments than halving a small one, so we want to use doubles as late as possible going forward - equivalently, halve as early as possible going backward. Once doubles run out (or we reach 1), the remaining distance is covered purely by +1 moves, added in O(1).",
+  "hints": [
+    "If the very last move that reached target was a doubling, what must be true about target's value? The constraint maxDoubles ≤ 100 is tiny compared to target ≤ 10^9.",
+    "Greedy reverse simulation: start at target, work back to 1. If even and doubles remain, halve (undo ×2); else decrement by 1. Example with target=10, maxDoubles=4: 10 is even → halve to 5, consuming one double (move 1).",
+    "```\nmoves = 0\nwhile maxDoubles > 0 and target > 1:\n    if target is even:\n        target = target / 2\n        maxDoubles = maxDoubles - 1\n    else:\n        target = target - 1\n    moves = moves + 1\nmoves = moves + (target - 1)\nreturn moves\n```",
+    "**Target already 1** - no moves needed at all.\n`Input: target=1, maxDoubles=5` → `Expected: 0`\n⚠️ Bug: initialising moves to 1 instead of 0 → returns 1\n\n**No doubles available** - every step is +1.\n`Input: target=4, maxDoubles=0` → `Expected: 3`\n⚠️ Bug: halving when target is even without checking maxDoubles > 0 → returns 2\n\n**Large target, zero doubles** - must compute in O(1), not simulate.\n`Input: target=1000000000, maxDoubles=0` → `Expected: 999999999`\n⚠️ Bug: simulating each decrement in a while loop without early exit when maxDoubles=0 → TLE\n\n**Odd target with doubles remaining** - must decrement before halving.\n`Input: target=19, maxDoubles=2` → `Expected: 7`\n⚠️ Bug: using integer division on odd target (19/2=9) instead of decrementing first → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if a third operation ×3 is added, usable at most maxTriples times?",
+      "a": "Apply the same reverse greedy. When the current value is divisible by 3 and triples remain, divide by 3; else if divisible by 2 and doubles remain, divide by 2; else decrement. Prefer the larger factor because it shrinks the value faster. TC: O(maxDoubles + maxTriples), SC: O(1)."
+    },
+    {
+      "q": "What if maxDoubles can be up to 10^9 (same scale as target)?",
+      "a": "No change needed. The loop halves at most log₂(target) ≈ 30 times regardless of maxDoubles, with at most one decrement between halvings. The final `target - 1` addition handles all remaining increments in O(1). TC: O(log target), SC: O(1)."
+    },
+    {
+      "q": "What if target is a huge integer given as a digit string (up to 10^4 digits)?",
+      "a": "Use big-integer arithmetic. Parity check is O(1) (last digit), halving is O(d) where d is the digit count, and decrement is O(d). The number of halvings is O(d) in the worst case, giving TC: O(d²), SC: O(d) for the big-integer storage."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minMoves(int target, int maxDoubles) {\n        long long moves = 0;\n        long long t = target;\n        while (maxDoubles > 0 && t > 1) {\n            if (t % 2 == 0) {\n                t /= 2;\n                maxDoubles--;\n            } else {\n                t--;\n            }\n            moves++;\n        }\n        moves += t - 1;\n        return (int)moves;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

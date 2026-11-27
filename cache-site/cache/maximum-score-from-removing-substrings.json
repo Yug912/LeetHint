@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-score-from-removing-substrings",
+  "title": "Maximum Score From Removing Substrings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with In-Place Stack",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, score, w, w2, hi1, hi2, lo1, lo2, hiVal, loVal): constant → O(1)\n- input string s: modified in place, not counted → O(0)\n- no recursion, no additional containers → O(1)",
+  "approach": "Process the higher-scoring pair first using an in-place stack (a write index into the input string itself). When the current character and the character at the stack top form the target pair, pop (decrement the write index) and add the score; otherwise push. After the first pass, run a second pass on the reduced string for the other pair. This greedy order is optimal because overlapping patterns like \"aba\" or \"bab\" force a choice between the two pair types, and taking the higher-value pair first never loses points.",
+  "hints": [
+    "In a substring like \"aba\" or \"bab\", how many of the two possible pairs can you actually remove? The string length can be up to 10^5.",
+    "Use an in-place stack - a write index into the string itself. For \"cdbcbbaaabab\" with y=5 > x=4, scan left to right for \"ba\" first: at index 6 the 'a' matches the 'b' at the stack top, so pop it and add 5.",
+    "```\nif x >= y: first pair = \"ab\", second = \"ba\"\nelse:      first pair = \"ba\", second = \"ab\"\n\nfor each pass with pair (p1, p2) and value v:\n    w = 0\n    for i in 0..len:\n        if w > 0 and s[w-1] == p1 and s[i] == p2:\n            w -= 1;  score += v\n        else:\n            s[w] = s[i];  w += 1\n    len = w\n```",
+    "**Single character** - no pair can be formed.\n`Input: s = \"a\", x = 4, y = 5` → `Expected: 0`\n⚠️ Bug: accessing `s[w-1]` without checking `w > 0` → out-of-bounds read, returns undefined value\n\n**Interleaved pattern where greedy order matters** - choosing the wrong pair first loses points.\n`Input: s = \"abab\", x = 5, y = 4` → `Expected: 10`\n⚠️ Bug: processing lower-value pair \"ba\" first → removes \"ba\" at index 1-2 leaving \"ab\", then removes \"ab\" → returns 9\n\n**Stack top vs read index** - using the wrong index for the stack top.\n`Input: s = \"aabb\", x = 5, y = 4` → `Expected: 10`\n⚠️ Bug: comparing `s[i-1]` with `s[i]` instead of `s[w-1]` with `s[i]` → returns 5\n\n**Skipping the second pass** - only removing the higher-value pair.\n`Input: s = \"abba\", x = 5, y = 4` → `Expected: 9`\n⚠️ Bug: running only one pass for the higher-value pair → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if a third removable substring \"aa\" with its own score is added?",
+      "a": "Greedy by score is no longer guaranteed optimal because three patterns can interact in complex ways. You would try all 3! = 6 orderings of the patterns and take the best result, still O(n) per ordering with the same in-place stack, so O(6n) = O(n) total."
+    },
+    {
+      "q": "What if the string arrives as a stream and you can only buffer B characters?",
+      "a": "Process in chunks of size B using a deque as the stack, carrying over the unpaired tail of each chunk into the next. Time stays O(n), space drops to O(B)."
+    },
+    {
+      "q": "What if x and y can be negative (removing a pair loses points)?",
+      "a": "Skip pairs with negative scores entirely - never remove them. Only process pairs with positive scores, still in decreasing order, same O(n) time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumGain(string s, int x, int y) {\n        int n = s.size();\n        int score = 0;\n\n        char hi1, hi2, lo1, lo2;\n        int hiVal, loVal;\n        if (x >= y) {\n            hi1 = 'a'; hi2 = 'b'; hiVal = x;\n            lo1 = 'b'; lo2 = 'a'; loVal = y;\n        } else {\n            hi1 = 'b'; hi2 = 'a'; hiVal = y;\n            lo1 = 'a'; lo2 = 'b'; loVal = x;\n        }\n\n        // First pass: remove the higher-value pair\n        int w = 0;\n        for (int i = 0; i < n; i++) {\n            if (w > 0 && s[w - 1] == hi1 && s[i] == hi2) {\n                w--;\n                score += hiVal;\n            } else {\n                s[w++] = s[i];\n            }\n        }\n\n        // Second pass: remove the lower-value pair on s[0..w)\n        int w2 = 0;\n        for (int i = 0; i < w; i++) {\n            if (w2 > 0 && s[w2 - 1] == lo1 && s[i] == lo2) {\n                w2--;\n                score += loVal;\n            } else {\n                s[w2++] = s[i];\n            }\n        }\n\n        return score;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

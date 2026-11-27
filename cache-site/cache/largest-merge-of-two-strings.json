@@ -1,0 +1,40 @@
+{
+  "slug": "largest-merge-of-two-strings",
+  "title": "Largest Merge Of Two Strings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Suffix Comparison",
+  "tc": "O((n + m)²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: the returned output, not counted (LeetCode convention)\n- int i, j: O(1)\n- no recursion, no auxiliary containers",
+  "approach": "At each step, greedily take the first character from whichever remaining suffix is lexicographically larger. When the first characters differ, this is obvious. When they are equal, comparing the full remaining suffixes (word1[i:] vs word2[j:]) correctly resolves the tie because a larger suffix means taking from that string now exposes more valuable characters sooner. This greedy choice is optimal because any deviation would place a smaller character earlier in the merge.",
+  "hints": [
+    "When the first available characters of both strings are equal, what information beyond that single character determines which string you should take from next?",
+    "Greedy suffix comparison - at each step, compare the remaining suffixes word1[i:] and word2[j:] and take from the lexicographically larger one. Example: word1 = \"aba\", word2 = \"abc\" → \"aba\" < \"abc\", so take 'a' from word2 first.",
+    "```\ni = 0, j = 0\nwhile i < len(word1) or j < len(word2):\n    if word1[i:] > word2[j:]:\n        append word1[i], i = i + 1\n    else:\n        append word2[j], j = j + 1\nreturn merge\n```",
+    "**Tie with divergent suffixes** - both strings start identically but diverge later\n`Input: word1 = \"aba\", word2 = \"abc\"` → `Expected: \"abcaba\"`\n⚠️ Bug: comparing only the first character and always picking word1 on ties → returns \"abaabc\"\n\n**One string is a prefix of the other** - shorter suffix ends mid-comparison\n`Input: word1 = \"aba\", word2 = \"ab\"` → `Expected: \"ababa\"`\n⚠️ Bug: always picking word1 when first characters are equal → returns \"abaab\"\n\n**Single character each** - smallest valid input\n`Input: word1 = \"a\", word2 = \"b\"` → `Expected: \"ba\"`\n⚠️ Bug: omitting the exhaustion guard (`j >= m`) before accessing word2[j] → out-of-bounds access when word2 is empty\n\n**Long common prefix** - strings share many initial characters before diverging\n`Input: word1 = \"aaab\", word2 = \"aaac\"` → `Expected: \"aaacaaab\"`\n⚠️ Bug: comparing only the first character and always picking word1 on ties → returns \"aaabaaac\""
+  ],
+  "followUps": [
+    {
+      "q": "If word1 and word2 can each be up to 10^5 characters, how would you avoid TLE?",
+      "a": "The O((n+m)²) suffix comparison is too slow. Precompute a suffix array or use binary lifting with rolling hashes to compare any two suffixes in O(log n) time, reducing the total to O((n+m) log(n+m))."
+    },
+    {
+      "q": "What if you need the lexicographically smallest merge instead?",
+      "a": "Use the same greedy structure but take from the lexicographically smaller suffix at each step. The correctness argument is symmetric - any deviation places a larger character earlier. Complexity remains O((n+m)²) with direct comparison."
+    },
+    {
+      "q": "What if there are k strings instead of 2?",
+      "a": "At each step, compare all k remaining suffixes and pick the largest. Naively this is O(k · L²) where L is the total length. With a suffix array over the concatenation of all strings, each comparison is O(1) via rank lookup, and a priority queue selects the best in O(log k), giving O(L log k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string largestMerge(string word1, string word2) {\n        int n = word1.size(), m = word2.size();\n        int i = 0, j = 0;\n        string result;\n        result.reserve(n + m);\n        while (i < n || j < m) {\n            if (i < n && (j >= m || word1.compare(i, string::npos, word2, j) > 0)) {\n                result.push_back(word1[i++]);\n            } else {\n                result.push_back(word2[j++]);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

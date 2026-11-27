@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-tilt",
+  "title": "Binary Tree Tilt",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order DFS on Tree",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- long long total: single variable → O(1)\n- recursion call-stack depth: up to h (tree height), worst-case O(n) for skewed tree, O(log n) balanced\n- not counted: input tree, returned int",
+  "approach": "Use post-order DFS: for each node, recursively compute the sum of its left and right subtrees. The node's tilt is the absolute difference of those two sums, which we accumulate into a running total. The function returns the subtree sum (node's value + left sum + right sum) so the parent can use it. A `long long` accumulator prevents overflow since up to 10⁴ nodes × 1000 values can produce total tilts exceeding INT_MAX.",
+  "hints": [
+    "What does a parent node need to know about each of its children to compute its own tilt - just the child's value, or something about the entire subtree beneath that child?",
+    "Post-order tree traversal (left → right → root). In Example 1, node 1 receives subtree sum 2 from its left child and 3 from its right child, so its tilt is |2 − 3| = 1.",
+    "```\nfunction dfs(node, total):\n    if node is null: return 0\n    left = dfs(node.left, total)\n    right = dfs(node.right, total)\n    total += abs(left - right)\n    return node.val + left + right\n```",
+    "**Small tree, forgotten node value** - subtree sum must include the node's own value, not just children\n`Input: [1,2,3]` → `Expected: 1`\n⚠️ Bug: returning `left + right` instead of `node.val + left + right` → returns 0\n\n**Negative values** - abs() is essential when subtree sums are negative\n`Input: [-1,-3,-2]` → `Expected: 1`\n⚠️ Bug: `total += left - right` without abs() → returns -1\n\n**Skewed tree** - each node's tilt depends on the full subtree sum, not just the direct child's value\n`Input: [1,2,null,3]` → `Expected: 8`\n⚠️ Bug: using direct child values instead of subtree sums → node 1 tilt computed as |2−0|=2 instead of |5−0|=5, returns 5\n\n**Overflow** - 10⁴ nodes × 1000 in a right-skewed tree gives total tilt = 1000 × (9999+…+1) ≈ 5×10¹⁰, exceeding INT_MAX (≈2.1×10⁹)\n`Input: [1000, null, 1000, null, … (10⁴ nodes)]` → `Expected: 49995000000`\n⚠️ Bug: accumulating in `int total` → wraps to -1544607552"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of summing all tilts, find the node with the maximum tilt. How does the approach change?",
+      "a": "Same post-order DFS, but replace `total += abs(left - right)` with `maxTilt = max(maxTilt, abs(left - right))`. TC remains O(n), SC remains O(h)."
+    },
+    {
+      "q": "The tree could be extremely deep (up to 10⁴ skewed). How do you avoid stack overflow from recursion?",
+      "a": "Use an iterative post-order traversal with an explicit stack. Push each node twice (or use a visited flag) to process children before the node itself. TC: O(n), SC: O(n) for the explicit stack."
+    },
+    {
+      "q": "Node values can be updated dynamically between tilt queries. How do you support efficient updates?",
+      "a": "Flatten the tree via Euler tour so each node's subtree maps to a contiguous range, then maintain subtree sums with a Fenwick tree (BIT). An update to one node changes O(h) ancestor subtree sums, each an O(log n) BIT update. TC: O(h log n) per update, O(n) preprocessing."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findTilt(TreeNode* root) {\n        long long total = 0;\n        dfs(root, total);\n        return static_cast<int>(total);\n    }\nprivate:\n    int dfs(TreeNode* node, long long& total) {\n        if (!node) return 0;\n        int leftSum = dfs(node->left, total);\n        int rightSum = dfs(node->right, total);\n        total += abs(leftSum - rightSum);\n        return node->val + leftSum + rightSum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

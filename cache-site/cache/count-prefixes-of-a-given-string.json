@@ -1,0 +1,40 @@
+{
+  "slug": "count-prefixes-of-a-given-string",
+  "title": "Count Prefixes of a Given String",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Direct String Prefix Matching",
+  "tc": "O(n * m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- count (int): constant\n- loop reference `w`: no allocation\n- not counted: input vector<string>& and returned int",
+  "approach": "For each word `w` in `words`, check whether `w` equals the first `|w|` characters of `s`. This is done in O(|w|) per word using `s.compare(0, w.size(), w) == 0`, with a length guard so a word longer than `s` is never counted. The constraints (≤1000 words, length ≤10) make this trivially fast.",
+  "hints": [
+    "For a word to be a prefix of s, which part of s must equal it character-by-character? The statement guarantees every word and s has length at most 10.",
+    "Use `std::string::compare(pos, len, str)`: it returns 0 exactly when the substring `s[pos, pos+len)` equals `str`. For s = \"abc\" and w = \"ab\", `s.compare(0, 2, \"ab\") == 0`, so count it.",
+    "```\ncount = 0\nfor each w in words:\n    if length(w) <= length(s) and s.compare(0, length(w), w) == 0:\n        count = count + 1\nreturn count\n```",
+    "**Word longer than s** - the candidate word has more characters than s.\n`Input: words = [\"abcd\"], s = \"abc\"` → `Expected: 0`\n⚠️ Bug: skipping the `w.size() <= s.size()` guard and calling `s.compare(0, w.size(), w)` still returns nonzero here, but a hand-rolled loop reading `s[i]` for i up to `w.size()` reads out of bounds → undefined behavior.\n\n**Substring not at start** - the word appears inside s but not at the beginning.\n`Input: words = [\"bc\"], s = \"abc\"` → `Expected: 0`\n⚠️ Bug: using `s.find(w) != string::npos` instead of `== 0` → returns 1.\n\n**Duplicates** - the same prefix word appears multiple times.\n`Input: words = [\"a\",\"a\"], s = \"aa\"` → `Expected: 2`\n⚠️ Bug: deduplicating `words` into a set before counting → returns 1.\n\n**Full-match single character** - word and s are the same single character.\n`Input: words = [\"a\"], s = \"a\"` → `Expected: 1`\n⚠️ Bug: using `w.size() < s.size()` (strict) instead of `<=` in the length guard → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "If words.length and s.length were up to 10^5, how would you speed this up?",
+      "a": "Build a trie of all words, storing a count at each word-ending node. Walk s down the trie from the root one character at a time, summing the counts at every node you reach. Time O(sum|words| + |s|), space O(sum|words|)."
+    },
+    {
+      "q": "If s arrives as a stream one character at a time, how do you maintain the answer online?",
+      "a": "Pre-build the trie once. Keep a pointer to the current trie node; for each incoming char, follow the matching child (or stop if none) and add that node's word-count to the running total. Time O(|s|) after O(sum|words|) preprocessing, space O(sum|words|)."
+    },
+    {
+      "q": "If each word could contain one wildcard '?' matching any single character, how would you adjust?",
+      "a": "During the trie walk over s, at a '?' branch follow all children simultaneously; at a literal char follow only that child. Maintain a set of active nodes per character of s. Time O(|s| * alphabet) in the worst case, space O(sum|words|)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPrefixes(vector<string>& words, string s) {\n        int count = 0;\n        for (const string& w : words) {\n            if (w.size() <= s.size() && s.compare(0, w.size(), w) == 0) {\n                ++count;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

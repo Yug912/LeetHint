@@ -1,0 +1,40 @@
+{
+  "slug": "html-entity-parser",
+  "title": "HTML Entity Parser",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Single-Pass String Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: up to n chars - not counted (returned output)\n- int n, int i: O(1)\n- no recursion, no other containers",
+  "approach": "All six HTML entities start with '&' and end with ';'. We scan the input left to right, building the output string. When we encounter '&', we check whether the upcoming substring matches any of the six known entities (using `string::compare` with bounds checks). If it matches, we append the replacement character and skip past the entire entity; otherwise we append '&' as a regular character and advance by one. Each character is visited exactly once, giving linear time.",
+  "hints": [
+    "What two characters bookend every one of the six entities? The string may contain any of the 256 ASCII characters, so '&' can appear outside entities.",
+    "Single-pass string scan with direct substring comparison. In Example 1, at index 0 we see '&', compare text[0..4] to \"&amp;\", it matches, so we output '&' and advance 5 positions.",
+    "```\ni = 0\nwhile i < n:\n    if text[i] == '&':\n        if text[i..i+5] matches \"&quot;\": output '\"'; i += 6\n        else if text[i..i+5] matches \"&apos;\": output '\\''; i += 6\n        else if text[i..i+4] matches \"&amp;\": output '&'; i += 5\n        else if text[i..i+3] matches \"&gt;\": output '>'; i += 4\n        else if text[i..i+3] matches \"&lt;\": output '<'; i += 4\n        else if text[i..i+6] matches \"&frasl;\": output '/'; i += 7\n        else: output '&'; i += 1\n    else:\n        output text[i]; i += 1\n```",
+    "**No semicolon** - entity without closing ';' should not be replaced\n`Input: \"&amp\"` → `Expected: \"&amp\"`\n⚠️ Bug: matching only \"&amp\" (4 chars) without requiring ';' → returns \"&\"\n\n**Bare ampersand at end** - single '&' with no following characters\n`Input: \"x&\"` → `Expected: \"x&\"`\n⚠️ Bug: reading text[i+1..i+4] without checking i+len <= n → undefined behavior or crash\n\n**Non-entity ampersand word** - '&' followed by text that starts like an entity but diverges\n`Input: \"&ambassador;\"` → `Expected: \"&ambassador;\"`\n⚠️ Bug: matching only the first 3 characters \"&am\" for &amp; → returns \"&mbassador;\"\n\n**Consecutive entities** - entities back-to-back with no separator\n`Input: \"&lt;&gt;\"` → `Expected: \"<>\"`\n⚠️ Bug: incrementing i by 1 instead of by the entity length after a match → returns \"<lt;>gt;\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the set of entities is provided at runtime as a list of (entity, replacement) pairs?",
+      "a": "Store them in an unordered_map<string, char>. When you see '&', scan forward to the next ';' (or up to max entity length), extract the candidate, and look it up. TC stays O(n) since each character is still visited once; SC becomes O(k) for the map where k is the number of entities."
+    },
+    {
+      "q": "What if entities can be nested, e.g., \"&amp;quot;\" should become '\"' after two passes?",
+      "a": "Run the same single-pass parser repeatedly until no replacement occurs in a pass. Each pass shrinks the string, so at most O(n/5) passes are needed. TC becomes O(n²/5) in the worst case; SC stays O(n) for the working string."
+    },
+    {
+      "q": "What if the input is a stream and you cannot store the entire string in memory?",
+      "a": "Maintain a small ring buffer of size 7 (the longest entity). When you see '&', buffer characters until you hit ';' or exceed 7 characters, then decide whether to flush the replacement or the buffered text. TC is O(n); SC drops to O(1) auxiliary (the 7-byte buffer)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string entityParser(string text) {\n        string result;\n        result.reserve(text.size());\n        int n = text.size();\n        int i = 0;\n        while (i < n) {\n            if (text[i] == '&') {\n                if (i + 6 <= n && text.compare(i, 6, \"&quot;\") == 0) {\n                    result += '\"';\n                    i += 6;\n                } else if (i + 6 <= n && text.compare(i, 6, \"&apos;\") == 0) {\n                    result += '\\'';\n                    i += 6;\n                } else if (i + 5 <= n && text.compare(i, 5, \"&amp;\") == 0) {\n                    result += '&';\n                    i += 5;\n                } else if (i + 4 <= n && text.compare(i, 4, \"&gt;\") == 0) {\n                    result += '>';\n                    i += 4;\n                } else if (i + 4 <= n && text.compare(i, 4, \"&lt;\") == 0) {\n                    result += '<';\n                    i += 4;\n                } else if (i + 7 <= n && text.compare(i, 7, \"&frasl;\") == 0) {\n                    result += '/';\n                    i += 7;\n                } else {\n                    result += '&';\n                    i++;\n                }\n            } else {\n                result += text[i];\n                i++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "all-divisions-with-the-highest-score-of-a-binary-array",
+  "title": "All Divisions With the Highest Score of a Binary Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Count Sweep",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `result` vector: not counted (returned output)\n- `totalOnes`, `zerosLeft`, `onesLeft`, `best`, loop index: O(1) scalars\n- recursion depth: none\n- not counted: input `nums`",
+  "approach": "Sweep the division index `i` from 0 to n. Maintain running counts `zerosLeft` and `onesLeft` of elements in `nums[0..i-1]`; the ones on the right equal `totalOnes - onesLeft`, so the score at `i` is `zerosLeft + (totalOnes - onesLeft)`. After computing `totalOnes` once, a single pass tracks the maximum score and collects every index achieving it. This is correct because each score is computed exactly from the two running counts, which update by inspecting only `nums[i]` when moving from `i` to `i+1`.",
+  "hints": [
+    "As the division index moves from `i` to `i+1`, exactly one element leaves the right side and joins the left side. Given `n ≤ 10^5`, which single quantity about the whole array would let you derive the right-side count from the left-side count at every `i`?",
+    "Maintain running counts of zeros and ones on the left; the ones on the right are `total_ones - ones_left`. For `nums = [0,0,1,0]` with `total_ones = 1`, at `i = 2` we have `zeros_left = 2`, `ones_left = 0`, so the score is `2 + (1 - 0) = 3`.",
+    "```\ntotal = sum of nums\nzerosLeft = 0, onesLeft = 0\nbest = -1, ans = []\nfor i in 0..n:\n    score = zerosLeft + (total - onesLeft)\n    if score > best: best = score; ans = [i]\n    else if score == best: ans.append(i)\n    if i < n:\n        if nums[i] == 0: zerosLeft += 1\n        else: onesLeft += 1\nreturn ans\n```",
+    "**Single element** - n = 1, the smallest allowed input\n`Input: [0]` → `Expected: [1]`\n⚠️ Bug: looping `for (int i = 0; i < n; i++)` instead of `i <= n` → returns `[0]`\n\n**All ones** - every element is 1, so `zerosLeft` stays 0 throughout\n`Input: [1,1]` → `Expected: [0]`\n⚠️ Bug: using `onesLeft` as the right-side count instead of `totalOnes - onesLeft` → returns `[2]`\n\n**Boundary index n** - division at the very end makes `nums_right` empty\n`Input: [0,0,0]` → `Expected: [3]`\n⚠️ Bug: looping `for (int i = 0; i < n; i++)` instead of `i <= n` → returns `[2]`\n\n**Ties** - two distinct indices share the maximum score\n`Input: [0,0,1,0]` → `Expected: [2,4]`\n⚠️ Bug: overwriting `ans = {i}` on strict `>` with no `==` branch → returns `[2]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array can be point-updated between queries, and each query asks for all max-score indices?",
+      "a": "Keep a Fenwick tree over `nums` to get prefix sums of ones in O(log n); zeros in a prefix follow as `i - ones`. Maintain a multiset of all n+1 scores, updating the two affected scores per point change in O(log n). Listing all max indices is O(n) in the worst case; total space O(n)."
+    },
+    {
+      "q": "What if `nums` arrives as a one-pass stream too large to store, and you must report the max-score indices afterward?",
+      "a": "You still need `totalOnes` first, so either store the stream (O(n) space) or relax the output. For just the max score value and the count of achieving indices, use the recurrence `score(i+1) = score(i) + (nums[i] == 0 ? 1 : -1)` with `score(0) = totalOnes`, giving O(1) space in one pass after counting ones."
+    },
+    {
+      "q": "What if elements are in `{0, 1, ..., k}` instead of binary, with the same score definition (0s on left + 1s on right)?",
+      "a": "Only 0s and 1s affect the score, so the algorithm is unchanged: still track `zerosLeft` and `onesLeft` in one O(n) pass with O(1) extra space; values 2..k are ignored when updating counts."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maxScoreIndices(vector<int>& nums) {\n        int n = nums.size();\n        int totalOnes = 0;\n        for (int x : nums) totalOnes += x;\n        \n        int zerosLeft = 0, onesLeft = 0;\n        int best = -1;\n        vector<int> result;\n        for (int i = 0; i <= n; i++) {\n            int score = zerosLeft + (totalOnes - onesLeft);\n            if (score > best) {\n                best = score;\n                result.clear();\n                result.push_back(i);\n            } else if (score == best) {\n                result.push_back(i);\n            }\n            if (i < n) {\n                if (nums[i] == 0) zerosLeft++;\n                else onesLeft++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

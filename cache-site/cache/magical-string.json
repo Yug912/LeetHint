@@ -1,0 +1,40 @@
+{
+  "slug": "magical-string",
+  "title": "Magical String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers (self-describing sequence generation)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string s: grows to exactly n characters → O(n)\n- recursion depth: none\n- not counted: input int n, returned int",
+  "approach": "The magical string is self-generating: position `i` (starting from index 2) tells you the length of the next group, and groups alternate between '1' and '2'. Seed with \"122\", then use a read pointer `i` walking forward through the already-built prefix and a write pointer (the end of the string) that appends `s[i]` copies of the character opposite to the current last character. Count '1's as they are appended, stopping exactly when the string reaches length `n`.",
+  "hints": [
+    "The string describes its own group lengths. If you already have a prefix of s, which positions in that prefix tell you how long each subsequent group must be?",
+    "Use two pointers on a single growing string: pointer `i` reads the next group length from the prefix, the end of the string is where you append. From seed \"122\", s[2]='2' means append two '1's (opposite of the last char '2'), giving \"12211\".",
+    "```\ns = \"122\"; ones = 1; i = 2\nwhile length(s) < n:\n    c = opposite of last char of s\n    count = s[i] as digit\n    for j in 0..count-1:\n        if length(s) == n: break\n        append c to s\n        if c == '1': ones += 1\n    i += 1\nreturn ones\n```",
+    "**Smallest input** - only the first character matters.\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: initializing `ones = 0` instead of `1` (ignoring the seed '1') → returns `0`.\n\n**Seed boundary** - n falls inside the seed \"122\".\n`Input: n = 3` → `Expected: 1`\n⚠️ Bug: starting generation immediately without the `n <= 3` guard, appending past the seed → returns `2`.\n\n**Overshoot** - n cuts off mid-group.\n`Input: n = 4` → `Expected: 2` (first 4 chars are \"1221\")\n⚠️ Bug: inner append loop has no `size < n` check, so it appends all `count` copies → counts the extra '1', returns `3`.\n\n**Given example** - full trace through several groups.\n`Input: n = 6` → `Expected: 3` (\"122112\")\n⚠️ Bug: not alternating the appended character (always appending '1') → returns `4`."
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^9, how would you avoid storing the whole string?",
+      "a": "The read pointer `i` always lags behind the write pointer, so you must remember what you wrote to read it later; however, you only need the prefix up to the current read position. You can store the string in a compact form (e.g., run-length encoding of groups) since each group is just a digit 1 or 2 with a length, reducing memory to O(√n) entries because the number of groups needed to produce n characters is roughly proportional to the read pointer position which grows slower than n. Time stays O(n); space drops to O(√n)."
+    },
+    {
+      "q": "What if the magical string used digits '1' through '9' instead of only '1' and '2', cycling through them per group?",
+      "a": "The same two-pointer generation works unchanged in structure: the read pointer still gives the next group's length, and the character to append cycles through '1'..'9' instead of alternating between two values. Count only the '1' characters as before. Time remains O(n), space O(n)."
+    },
+    {
+      "q": "If you must answer many queries (different n values) online, how would you preprocess?",
+      "a": "Precompute the magical string once up to the maximum n across all queries (≤ 10^5), storing a prefix count of '1's. Each query then answers in O(1) by indexing the prefix array. Preprocessing is O(N) time and O(N) space where N is the largest query; total query time is O(Q)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int magicalString(int n) {\n        if (n <= 0) return 0;\n        if (n <= 3) return 1;\n        string s = \"122\";\n        int i = 2;\n        int ones = 1;\n        while ((int)s.size() < n) {\n            char c = (s.back() == '1') ? '2' : '1';\n            int count = s[i] - '0';\n            for (int j = 0; j < count && (int)s.size() < n; j++) {\n                s.push_back(c);\n                if (c == '1') ones++;\n            }\n            i++;\n        }\n        return ones;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

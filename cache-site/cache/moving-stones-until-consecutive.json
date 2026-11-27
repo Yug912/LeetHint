@@ -1,0 +1,40 @@
+{
+  "slug": "moving-stones-until-consecutive",
+  "title": "Moving Stones Until Consecutive",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Case Analysis on Sorted Triple",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- local ints x, y, z, minMoves, maxMoves: constant → O(1)\n- returned vector<int>: 2 elements, not counted (output)\n- no recursion, no containers",
+  "approach": "Sort the three positions so x < y < z. The minimum moves is 0 if already consecutive (z−x==2), 1 if either gap is ≤ 2 (you can slide the far stone into the single empty slot or next to an adjacent pair), otherwise 2 (move one stone next to another, then the third next to both). The maximum moves equals the total number of empty slots between the extremes, z−x−2, because each move can reduce the span by exactly 1 by placing an endpoint just one step inward.",
+  "hints": [
+    "With three stones sorted as x < y < z, what property of the two gaps (y−x) and (z−y) determines whether the game ends in 0, 1, or 2 moves?",
+    "Sort the three positions, then classify by the gaps. For (1,2,5): gaps are 1 and 3, so one stone is already adjacent to another - you can finish in 1 move; the total empty slots between extremes is 5−1−2 = 2, giving max 2.",
+    "```\nsort a, b, c into x < y < z\nif z - x == 2:\n    minMoves = 0\nelse if y - x <= 2 or z - y <= 2:\n    minMoves = 1\nelse:\n    minMoves = 2\nmaxMoves = z - x - 2\nreturn [minMoves, maxMoves]\n```",
+    "**Already consecutive** - stones form three adjacent positions, no move possible.\n`Input: a = 4, b = 3, c = 2` → `Expected: [0,0]`\n⚠️ Bug: checking only `y - x == 1 and z - y == 1` instead of `z - x == 2` → returns `[1,0]` when stones are at 2,3,4 (gap check passes but misses the 0-move case if written as `y-x<=2 or z-y<=2` without the consecutive guard first).\n\n**Gap of exactly 2** - one empty slot sits between two stones, so the third stone fills it in one move.\n`Input: a = 1, b = 3, c = 5` → `Expected: [1,2]`\n⚠️ Bug: using `y - x < 2 or z - y < 2` (strict) instead of `<= 2` → returns `[2,2]`, missing the 1-move fill of the gap-2 slot.\n\n**Two adjacent, third far away** - one gap is 1, the other is large.\n`Input: a = 1, b = 2, c = 100` → `Expected: [1,97]`\n⚠️ Bug: computing maxMoves as `z - y - 1 + y - x - 1` but forgetting to handle the case where one gap is 0 (adjacent stones) and using `max(0, gap)` incorrectly → returns `[1,96]`.\n\n**All far apart** - both gaps ≥ 3, so two moves are always needed.\n`Input: a = 1, b = 50, c = 100` → `Expected: [2,97]`\n⚠️ Bug: setting minMoves = 1 whenever `z - x > 2` without checking gap sizes → returns `[1,97]`."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to n stones on a line - what is the minimum moves to make them all consecutive?",
+      "a": "Sort the positions. The minimum is n minus the size of the largest window of positions that already fit within a span of n−1 (i.e., the most stones already packed into n consecutive slots). Use a two-pointer scan over the sorted array. TC: O(n log n), SC: O(1)."
+    },
+    {
+      "q": "What if a stone can be moved to any unoccupied integer position, not just between the current endpoints?",
+      "a": "The minimum does not change - you still need 0, 1, or 2 moves for three stones. The maximum increases because you can move an endpoint arbitrarily far outside before bringing it back, making it unbounded unless a position limit is imposed."
+    },
+    {
+      "q": "What if positions can be up to 10^9 - does anything change?",
+      "a": "No change to the algorithm; all operations are O(1) arithmetic on three values. Use `long long` for the maxMoves computation only if z−x could exceed 2^31−1, but since inputs are distinct integers up to 10^9, z−x−2 fits in int. TC: O(1), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> numMovesStones(int a, int b, int c) {\n        int x = min({a, b, c});\n        int z = max({a, b, c});\n        int y = a + b + c - x - z;\n\n        int minMoves;\n        if (z - x == 2) {\n            minMoves = 0;\n        } else if (y - x <= 2 || z - y <= 2) {\n            minMoves = 1;\n        } else {\n            minMoves = 2;\n        }\n\n        int maxMoves = z - x - 2;\n\n        return {minMoves, maxMoves};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

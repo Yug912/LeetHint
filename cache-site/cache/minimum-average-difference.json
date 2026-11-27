@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-average-difference",
+  "title": "Minimum Average Difference",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total, prefix, minDiff: scalars → O(1)\n- int n, result, i, rightCount: scalars → O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Compute the total sum of the array once. Then iterate left to right, maintaining a running prefix sum. At each index i, the left average is prefixSum/(i+1) and the right average is (total−prefixSum)/(n−i−1), with the right average defined as 0 when n−i−1=0. Track the index with the smallest absolute difference, using strict `<` so ties favor the smaller index. All sums use `long long` because 10^5 × 10^5 = 10^10 exceeds `int`.",
+  "hints": [
+    "As you move from index i to index i+1, how many elements actually change membership between the two groups whose averages you need? With n up to 10^5, rescanning the full array at each index is too slow.",
+    "Maintain a running prefix sum. For nums = [2,5,3,9,5,3] with total 27, at index 3 the prefix sum is 19: left average = 19/4 = 4, right sum = 27−19 = 8, right average = 8/2 = 4, difference = 0.",
+    "```\ntotal = sum(nums)\nprefix = 0\nfor i in 0..n-1:\n    prefix += nums[i]\n    leftAvg = prefix / (i+1)\n    rightAvg = 0 if i == n-1 else (total - prefix) / (n-i-1)\n    diff = |leftAvg - rightAvg|\n    if diff < minDiff: update minDiff and best\nreturn best\n```",
+    "**Single element** - right side has zero elements, average of zero elements is 0\n`Input: nums = [0]` → `Expected: 0`\n⚠️ Bug: dividing rightSum by rightCount without checking rightCount==0 → division by zero, crash\n\n**Overflow** - 10^5 elements × 10^5 each = 10^10, exceeds 2^31−1\n`Input: nums = [100000] × 10^5` → `Expected: 0`\n⚠️ Bug: storing total and prefix as int → overflow wraps to wrong value, wrong averages, wrong answer\n\n**Ties** - multiple indices share the minimum difference of 0\n`Input: nums = [0, 0, 0]` → `Expected: 0`\n⚠️ Bug: using <= instead of < when updating minimum → returns 2 instead of 0\n\n**Integer division** - averages must use floor division, not floating point\n`Input: nums = [0, 0, 1]` → `Expected: 0`\n⚠️ Bug: using floating-point division for averages → diff at index 0 is 0.5, at index 2 is 0.33, returns 2 instead of 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums arrives as a data stream you can only read once?",
+      "a": "You need the total sum before computing any right-side average, so one pass is impossible. If the stream can be replayed, make two passes: first for the total, second for the minimum. If not, buffer all elements in O(n) space, then process. Time stays O(n)."
+    },
+    {
+      "q": "What if elements can be updated between queries (point updates)?",
+      "a": "Replace the prefix sum with a Fenwick tree (BIT) supporting point updates and prefix queries in O(log n). Each query scans all n indices for O(n log n). To answer faster, maintain a segment tree storing per-index differences, giving O(log n) per update and O(1) per query."
+    },
+    {
+      "q": "What if you must return all indices achieving the minimum difference?",
+      "a": "During the single pass, keep a list of indices at the current minimum. When a strictly smaller difference appears, clear the list and add the new index; when equal, append. Time remains O(n); space becomes O(n) for the output list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumAverageDifference(vector<int>& nums) {\n        int n = nums.size();\n        long long total = 0;\n        for (int x : nums) total += x;\n        \n        long long prefix = 0;\n        long long minDiff = 1e18;\n        int result = 0;\n        \n        for (int i = 0; i < n; i++) {\n            prefix += nums[i];\n            long long leftAvg = prefix / (i + 1);\n            long long rightSum = total - prefix;\n            int rightCount = n - i - 1;\n            long long rightAvg = (rightCount == 0) ? 0 : rightSum / rightCount;\n            long long diff = leftAvg - rightAvg;\n            if (diff < 0) diff = -diff;\n            if (diff < minDiff) {\n                minDiff = diff;\n                result = i;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "mini-parser",
+  "title": "Mini Parser",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack-Based Parsing",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- stack<NestedInteger> st: up to d entries where d = nesting depth, worst case d = n/2 → O(n)\n- string num: at most 8 chars (sign + 7 digits for |value| ≤ 10^6) → O(1)\n- recursion: none (iterative)\n- not counted: input string s, returned NestedInteger",
+  "approach": "The input is a serialized nested list where '[' opens a new list, ']' closes it, and commas separate elements. We use a stack of NestedInteger objects: on '[' push a new empty list; on ',' or ']' flush any accumulated number string into the current top list; on ']' pop the completed list and attach it to the new top (or return it if the stack is now empty). If the string doesn't start with '[', it's a bare integer-parse and return directly. This is correct because brackets are properly nested (LIFO), so the stack always tracks the chain of enclosing lists.",
+  "hints": [
+    "When a ']' appears in the string, which '[' does it close, and what does that tell you about the order in which completed sublists must be attached to their parents?",
+    "Use a stack of NestedInteger objects. On '[', push a new empty list; on ']' or ',', flush any pending number into the top list; on ']', pop and attach to the new top. For \"[123,[456]]\", after reading \"123,\" the top list holds 123, then '[' pushes a new list for 456.",
+    "```\nif s[0] != '[':\n    return NestedInteger(parse(s))\nstack = empty\nnum = \"\"\nfor c in s:\n    if c == '[':\n        stack.push(new NestedInteger list)\n    else if c == ',' or c == ']':\n        if num not empty:\n            stack.top().add(NestedInteger(parse(num)))\n            num = \"\"\n        if c == ']':\n            top = stack.pop()\n            if stack empty: return top\n            else: stack.top().add(top)\n    else:\n        num += c\n```",
+    "**Single integer (no brackets)** - input is a bare number with no list wrapper.\n`Input: \"324\"` → `Expected: 324`\n⚠️ Bug: always entering the stack loop and returning stack.top() at the end → returns an empty list `[]` instead of `324`.\n\n**Negative number** - the '-' sign must be included when accumulating the number.\n`Input: \"[-123]\"` → `Expected: [-123]`\n⚠️ Bug: only appending `isdigit(c)` characters to num, skipping '-' → parses 123, returns `[123]`.\n\n**Empty list** - \"[]\" has no number between the brackets.\n`Input: \"[]\"` → `Expected: []`\n⚠️ Bug: calling parse(num) without checking if num is empty → throws an exception on empty string.\n\n**Deeply nested chain** - maximum nesting depth with a single leaf.\n`Input: \"[[[[[1]]]]]\"` → `Expected: [[[[[1]]]]]`\n⚠️ Bug: using a fixed-size array of size 100 instead of a dynamic container → crashes or returns garbage when depth exceeds 100."
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle a streaming input where you cannot hold the whole string in memory?",
+      "a": "The algorithm is already single-pass and character-driven, so feed characters one at a time into the same loop. The only state is the stack (bounded by depth) and the current number buffer (bounded by max digit count). TC stays O(n), SC becomes O(depth) with no input buffer."
+    },
+    {
+      "q": "What if the serialized format could contain whitespace between tokens?",
+      "a": "Add a branch at the top of the loop that skips whitespace characters (space, tab, newline) before dispatching to the '[', ',', ']', or digit cases. TC remains O(n), SC unchanged."
+    },
+    {
+      "q": "What if values could be floating-point numbers instead of integers?",
+      "a": "Replace stoi with stod and change NestedInteger to hold doubles. The number buffer already accumulates every non-bracket, non-comma character, so '.', 'e', and '-' are all captured automatically. TC O(n), SC O(depth)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    NestedInteger deserialize(string s) {\n        if (s[0] != '[') {\n            return NestedInteger(stoi(s));\n        }\n        stack<NestedInteger> st;\n        string num;\n        for (char c : s) {\n            if (c == '[') {\n                st.push(NestedInteger());\n            } else if (c == ',' || c == ']') {\n                if (!num.empty()) {\n                    st.top().add(NestedInteger(stoi(num)));\n                    num.clear();\n                }\n                if (c == ']') {\n                    NestedInteger top = st.top();\n                    st.pop();\n                    if (st.empty()) {\n                        return top;\n                    }\n                    st.top().add(top);\n                }\n            } else {\n                num.push_back(c);\n            }\n        }\n        return NestedInteger();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

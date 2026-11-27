@@ -1,0 +1,40 @@
+{
+  "slug": "latest-time-by-replacing-hidden-digits",
+  "title": "Latest Time by Replacing Hidden Digits",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string `time` (parameter, modified in place): not counted\n- no other containers, no recursion",
+  "approach": "Use a greedy, position-by-position replacement. For minutes, each '?' is independent: the tens digit maxes at 5, the ones at 9. For the hour, the two digits constrain each other, so handle the four cases (both '?', only first '?', only second '?', neither) by picking the largest digit that keeps the hour ≤ 23.",
+  "hints": [
+    "The hour's two digits constrain each other (a leading 2 limits the next digit to 0-3). What determines the largest digit each '?' can become, given its partner digit and the field it belongs to?",
+    "Greedy replacement: for each '?', choose the largest digit that keeps the field valid, using the partner digit when the hour's two digits interact. In \"2?:?0\", the hour starts with 2 so the '?' can be at most 3 → 23, and the minute tens '?' can be at most 5 → 50.",
+    "if h1=='?' and h2=='?': h1=2, h2=3\nelif h1=='?': h1 = (h2<=3) ? 2 : 1\nelif h2=='?': h2 = (h1==2) ? 3 : 9\nif m1=='?': m1=5\nif m2=='?': m2=9\nreturn time",
+    "**Hour first digit with high partner** - second hour digit is 4-9, so first cannot be 2.\n`Input: \"?4:?0\"` → `Expected: \"14:50\"`\n⚠️ Bug: always setting h1='2' when it is '?' → returns \"24:50\" (invalid hour).\n\n**Hour first digit with low partner** - second hour digit is 0-3, so first can be 2.\n`Input: \"?3:?0\"` → `Expected: \"23:50\"`\n⚠️ Bug: always setting h1='1' when it is '?' → returns \"13:50\" (not latest).\n\n**Hour second digit with leading 0 or 1** - first hour digit is 0 or 1, so second can be 9.\n`Input: \"0?:?0\"` → `Expected: \"09:50\"`\n⚠️ Bug: capping h2 at 3 unconditionally → returns \"03:50\" (not latest).\n\n**All hidden** - every digit is '?'.\n`Input: \"??:??\"` → `Expected: \"23:59\"`\n⚠️ Bug: setting both hour digits to 9 → returns \"99:59\" (invalid hour)."
+  ],
+  "followUps": [
+    {
+      "q": "What if the time format were extended to include seconds (hh:mm:ss) with hidden digits?",
+      "a": "Apply the same greedy logic to the seconds field independently: tens digit max 5, ones digit max 9. The hour logic is unchanged. Time and space remain O(1)."
+    },
+    {
+      "q": "What if '?' could also appear in the colon position, so the format itself is ambiguous?",
+      "a": "You would need to try both placements of the colon (only two valid positions for hh:mm) and pick the configuration yielding the latest valid time. Time becomes O(1) (constant number of configurations), space O(1)."
+    },
+    {
+      "q": "What if instead of the latest time you had to count all valid times obtainable by replacing the '?' digits?",
+      "a": "Enumerate each '?' independently but respect the hour's two-digit coupling: count valid (h1,h2) pairs and valid minute pairs, then multiply. Time O(1), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string maximumTime(string time) {\n        // Hour digits at positions 0 and 1\n        if (time[0] == '?' && time[1] == '?') {\n            time[0] = '2';\n            time[1] = '3';\n        } else if (time[0] == '?') {\n            // h2 known: if <= 3 we can use 2, otherwise 1\n            time[0] = (time[1] <= '3') ? '2' : '1';\n        } else if (time[1] == '?') {\n            // h1 known: if 2 then max 3, otherwise 9\n            time[1] = (time[0] == '2') ? '3' : '9';\n        }\n        // Minute digits at positions 3 and 4\n        if (time[3] == '?') time[3] = '5';\n        if (time[4] == '?') time[4] = '9';\n        return time;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

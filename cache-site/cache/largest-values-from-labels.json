@@ -1,0 +1,40 @@
+{
+  "slug": "largest-values-from-labels",
+  "title": "Largest Values From Labels",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> items: n entries → O(n)\n- unordered_map<int,int> cnt: up to n distinct labels → O(n)\n- sort(): introsort stack O(log n)\n- not counted: input vectors, returned int",
+  "approach": "Sort items by value descending and greedily take each item if its label hasn't yet reached `useLimit`, stopping once we've taken `numWanted` items. This is optimal because taking a higher-value item is always at least as good as taking a lower-value one with the same or different label - the only thing that can block us is the per-label cap, which we track with a hash map of label→count. The greedy choice never hurts future choices since consuming a label slot only matters relative to `useLimit`, and we'd rather consume it on a high-value item.",
+  "hints": [
+    "With a per-label cap on how many items you can take, which items should you look at first if you want the largest total? The constraint `numWanted, useLimit <= n <= 2*10^4` leaves room for a full sort.",
+    "Sort the items by value descending and walk through them, keeping a hash map of how many times each label has been used. In Example 1, after sorting you see (5,1),(4,1),(3,2),(2,2),(1,3); you take 5, skip 4 (label 1 full), take 3, skip 2, take 1 → sum 9.",
+    "sort items by value descending\ncnt = empty map, sum = 0, picked = 0\nfor each (value, label) in items:\n    if picked == numWanted: break\n    if cnt[label] < useLimit:\n        cnt[label] += 1\n        sum += value\n        picked += 1\nreturn sum",
+    "**Single item** - n is at its minimum of 1.\n`values=[5], labels=[1], numWanted=1, useLimit=1` → `Expected: 5`\n⚠️ Bug: checking `cnt[label] <= useLimit` with useLimit=1 lets cnt go 0→1→2, but here it just picks correctly; the real bug is initializing `picked` to 1 → returns 0 (loop body skipped).\n\n**All same label** - useLimit forces fewer picks than numWanted.\n`values=[5,4,3], labels=[1,1,1], numWanted=3, useLimit=1` → `Expected: 5`\n⚠️ Bug: not tracking per-label counts at all → returns 12.\n\n**Off-by-one in limit check** - using `<=` instead of `<`.\n`values=[5,4,3,2,1], labels=[1,1,2,2,3], numWanted=3, useLimit=1` → `Expected: 9`\n⚠️ Bug: condition `cnt[l] <= useLimit` allows one extra per label → picks 5,4,3 → returns 12.\n\n**Ties in values, different labels** - equal values but the label cap binds.\n`values=[5,5,4], labels=[1,1,2], numWanted=2, useLimit=1` → `Expected: 9`\n⚠️ Bug: picking both 5s without checking label counts → returns 10."
+  ],
+  "followUps": [
+    {
+      "q": "What if some values are negative - would the greedy still be correct?",
+      "a": "Yes, but add an early break once the next sorted value is negative, since adding it can only reduce the sum. TC stays O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if the cap were per-value instead of per-label?",
+      "a": "Same greedy, but key the count map by value rather than label. TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if items arrive as a stream of unknown length and you must keep the answer ready at all times?",
+      "a": "Maintain a min-heap of size numWanted keyed by value plus per-label counts; on each arrival, if the label is under limit and the heap isn't full or the new value beats the heap min, push and possibly evict (decrementing the evicted label's count). TC O(n log numWanted), SC O(numWanted + distinct labels)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestValsFromLabels(vector<int>& values, vector<int>& labels, int numWanted, int useLimit) {\n        int n = (int)values.size();\n        vector<pair<int,int>> items;\n        items.reserve(n);\n        for (int i = 0; i < n; i++) {\n            items.push_back({values[i], labels[i]});\n        }\n        sort(items.begin(), items.end(), [](const pair<int,int>& a, const pair<int,int>& b) {\n            return a.first > b.first;\n        });\n        unordered_map<int,int> cnt;\n        long long sum = 0;\n        int picked = 0;\n        for (int i = 0; i < n && picked < numWanted; i++) {\n            int v = items[i].first;\n            int l = items[i].second;\n            if (cnt[l] < useLimit) {\n                cnt[l]++;\n                sum += v;\n                picked++;\n            }\n        }\n        return (int)sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

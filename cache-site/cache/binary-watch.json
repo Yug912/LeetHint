@@ -1,0 +1,40 @@
+{
+  "slug": "binary-watch",
+  "title": "Binary Watch",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Brute-force Enumeration with Bit Counting",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<string> result: returned output, not counted (LeetCode convention)\n- string time: O(1) temporary, max length 5 (\"11:59\")\n- recursion depth: none\n- no other containers",
+  "approach": "Each valid time corresponds to a unique subset of the 10 LEDs (4 for hours, 6 for minutes). The number of lit LEDs equals the popcount of the hour value plus the popcount of the minute value. Since hours range 0-11 and minutes 0-59, there are only 720 valid (hour, minute) pairs; enumerate all of them, keep those whose combined popcount equals `turnedOn`, and format each as \"h:mm\" (hour without leading zero, minute zero-padded to two digits). This is correct because every valid watch configuration maps bijectively to a (hour, minute) pair with the right total set-bit count.",
+  "hints": [
+    "The watch has 10 LEDs split into 4 for hours and 6 for minutes. For any valid time, what single quantity computed from the hour and minute numbers tells you exactly how many LEDs are lit?",
+    "Enumerate every (hour, minute) pair in [0,11]×[0,59] and compare `popcount(hour) + popcount(minute)` against `turnedOn`. For `turnedOn=1`, hour=1 (popcount 1) with minute=0 (popcount 0) sums to 1, so \"1:00\" is included.",
+    "```\nfor h in 0..11:\n    for m in 0..59:\n        if popcount(h) + popcount(m) == turnedOn:\n            result.add(format(h, m))\nreturn result\n```",
+    "**Zero LEDs on** - the smallest valid configuration.\n`Input: turnedOn = 0` → `Expected: [\"0:00\"]`\n⚠️ Bug: using `>` instead of `==` in the popcount comparison → returns `[]`\n\n**Impossible count** - max popcount(hour)=3 (e.g. 11=1011) and max popcount(minute)=5 (59=111011), so 8 is the ceiling.\n`Input: turnedOn = 9` → `Expected: []`\n⚠️ Bug: iterating hour over 0..15 and minute over 0..63 instead of capping at 11 and 59 → returns invalid times like `[\"15:59\"]`\n\n**Minute zero-padding** - minutes must always be two digits.\n`Input: turnedOn = 1` → `Expected: [\"0:01\",\"0:02\",...,\"0:32\",...]`\n⚠️ Bug: formatting minute with plain `%d` / `to_string(m)` → returns `\"0:2\"` instead of `\"0:02\"`\n\n**Hour must NOT be zero-padded** - \"01:00\" is invalid.\n`Input: turnedOn = 1` → `Expected: [\"1:00\",\"2:00\",\"4:00\",\"8:00\",...]`\n⚠️ Bug: formatting hour with `%02d` → returns `\"01:00\"` instead of `\"1:00\"`"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to n hour LEDs and m minute LEDs with arbitrary value ranges. How does the approach scale?",
+      "a": "Still enumerate every (hour, minute) pair within the valid ranges and check the combined popcount. Time complexity becomes O(H × M) where H and M are the hour and minute range sizes; for full n-bit/m-bit ranges this is O(2^n × 2^m)."
+    },
+    {
+      "q": "If `turnedOn` can be huge and you only need the COUNT of valid times (not the list), can you do better than enumerating all pairs?",
+      "a": "Precompute a frequency array indexed by popcount for hours (size ≤ 4) and for minutes (size ≤ 6), then for each popcount value p in hours, add `hourFreq[p] * minuteFreq[turnedOn - p]`. Time O(12 + 60) = O(1), space O(1)."
+    },
+    {
+      "q": "If memory is tightly limited and you cannot buffer all results, only emit them one at a time, how do you adapt?",
+      "a": "The nested loop already visits times in hour-then-minute ascending order, so yield each matching (h, m) immediately as a formatted string without pushing into a vector. Time stays O(720), auxiliary space drops to O(1) truly (no output buffer)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> readBinaryWatch(int turnedOn) {\n        vector<string> result;\n        for (int h = 0; h < 12; h++) {\n            for (int m = 0; m < 60; m++) {\n                if (__builtin_popcount(h) + __builtin_popcount(m) == turnedOn) {\n                    string time = to_string(h) + \":\" + (m < 10 ? \"0\" : \"\") + to_string(m);\n                    result.push_back(time);\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "largest-triangle-area",
+  "title": "Largest Triangle Area",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Brute-Force Enumeration",
+  "tc": "O(n³)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers allocated; only scalar variables (best, area, loop counters, cross)\n- No recursion\n- Not counted: input vector, returned double",
+  "approach": "With at most 50 points, we can enumerate all C(50,3) = 19,600 triples directly. For each triple, compute the triangle area using the shoelace (cross-product) formula: area = 0.5 * |x1(y2−y3) + x2(y3−y1) + x3(y1−y2)|. Track the maximum. This is correct because every possible triangle is checked, and the formula gives the exact signed area whose absolute value is the geometric area.",
+  "hints": [
+    "With at most 50 points in the set, how many distinct groups of three points can you choose? The constraint states 3 ≤ points.length ≤ 50.",
+    "Brute-force enumeration of all triples combined with the shoelace formula. For points [0,0],[0,1],[1,0]: area = 0.5 × |0·(1−0) + 0·(0−0) + 1·(0−1)| = 0.5.",
+    "```\nbest = 0\nfor i in 0..n-1:\n  for j in i+1..n-1:\n    for k in j+1..n-1:\n      cross = xi*(yj-yk) + xj*(yk-yi) + xk*(yi-yj)\n      area = 0.5 * |cross|\n      best = max(best, area)\nreturn best\n```",
+    "**Smallest input** - exactly three points, one triangle\n`Input: [[1,0],[0,0],[0,1]]` → `Expected: 0.50000`\n⚠️ Bug: computing `cross / 2` with integer division → returns `0.00000`\n\n**Negative signed area** - vertex ordering makes the cross product negative\n`Input: [[0,0],[0,2],[2,0]]` → `Expected: 2.00000`\n⚠️ Bug: omitting `abs()` → returns `-2.00000`\n\n**Negative coordinates** - all coordinates in the negative range\n`Input: [[-2,-2],[-2,0],[0,-2]]` → `Expected: 2.00000`\n⚠️ Bug: initializing `best` to `0` and using signed area → returns `0.00000`\n\n**Vertical collinear** - three points share the same x-coordinate\n`Input: [[0,0],[0,1],[0,2]]` → `Expected: 0.00000`\n⚠️ Bug: using a slope-based formula that divides by `(x2−x1)` → division by zero"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The vertices of the largest triangle always lie on the convex hull. Compute the hull in O(n log n), then enumerate triples of hull vertices. If the hull has h points, this costs O(h³) worst-case but is far smaller in practice. For further speedup, rotating calipers can find the maximum-area inscribed triangle in O(h²)."
+    },
+    {
+      "q": "What if points arrive in a stream and you can store only O(1) of them?",
+      "a": "Maintain a small fixed buffer of extreme points (leftmost, rightmost, topmost, bottommost, and a few angular extremes). Update the buffer on each arrival and enumerate triples from it. This gives a lower-bound approximation, trading exactness for constant memory."
+    },
+    {
+      "q": "What if the points are in 3D and you need the largest triangle by area?",
+      "a": "Use the 3D cross product: area = 0.5 × |(p2−p1) × (p3−p1)|. The largest triangle's vertices still lie on the convex hull, so compute the 3D hull in O(n log n) and enumerate triples of hull vertices."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double largestTriangleArea(vector<vector<int>>& points) {\n        int n = points.size();\n        double best = 0.0;\n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                for (int k = j + 1; k < n; k++) {\n                    int cross = points[i][0] * (points[j][1] - points[k][1]) +\n                                points[j][0] * (points[k][1] - points[i][1]) +\n                                points[k][0] * (points[i][1] - points[j][1]);\n                    double area = 0.5 * abs(cross);\n                    if (area > best) best = area;\n                }\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

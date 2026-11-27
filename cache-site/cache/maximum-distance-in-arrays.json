@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-distance-in-arrays",
+  "title": "Maximum Distance in Arrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Running Min/Max",
+  "tc": "O(m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int globalMin, globalMax, ans: scalar variables → O(1)\n- loop variable i: scalar → O(1)\n- no containers, no recursion, no heap\n- not counted: input arrays",
+  "approach": "Since each array is sorted, its smallest element is the first and its largest is the last. To maximize |a − b| across two different arrays, we only need to consider these endpoints. We iterate left to right, maintaining the running minimum and maximum of endpoints from all previously processed arrays. For each new array, we compute the distance between its endpoints and the running extremes (guaranteeing different arrays), update the answer, then fold the current array's endpoints into the running min/max.",
+  "hints": [
+    "Each array is sorted in ascending order - which elements of each array could possibly contribute to the maximum absolute difference?",
+    "Track the running minimum and maximum of array endpoints seen so far. For each new array, compute the distance between its first/last element and those running extremes, then fold its endpoints in. Example: after processing [1,2,3], running min=1, max=3; for [4,5], compute |5−1|=4 and |3−4|=1, so answer=4.",
+    "```\nminVal = first array's first element\nmaxVal = first array's last element\nans = 0\nfor each remaining array a:\n    curMin = a[0]\n    curMax = a[last]\n    ans = max(ans, |curMax - minVal|, |maxVal - curMin|)\n    minVal = min(minVal, curMin)\n    maxVal = max(maxVal, curMax)\nreturn ans\n```",
+    "**Single-element arrays** - both arrays contain exactly one element\n`Input: [[1],[1]]` → `Expected: 0`\n⚠️ Bug: initializing `ans` to `INT_MIN` instead of 0 → returns `INT_MIN`\n\n**Same-array contamination** - the second array holds both the global min and max\n`Input: [[5,6],[1,100]]` → `Expected: 95`\n⚠️ Bug: updating `globalMin`/`globalMax` before computing the distance → returns 99 (pairs 1 and 100 from the same array)\n\n**All equal values** - every element across all arrays is identical\n`Input: [[5],[5],[5]]` → `Expected: 0`\n⚠️ Bug: initializing `ans` to `INT_MIN` → returns `INT_MIN`\n\n**Negative extremes** - the maximum distance pairs a positive max with a negative min\n`Input: [[1,2],[-5,-3]]` → `Expected: 7`\n⚠️ Bug: computing only `curMax - globalMin` without also checking `globalMax - curMin` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the arrays are not pre-sorted?",
+      "a": "Scan each array once to find its min and max in O(n_i) time, then apply the same running min/max approach. Total TC becomes O(N) where N is the total number of integers across all arrays; SC remains O(1)."
+    },
+    {
+      "q": "What if you must return the indices of the two arrays and the chosen elements, not just the distance?",
+      "a": "Store the array index alongside the running min and max. When a new distance beats the current answer, record which array provided the extreme and which endpoint of the current array was used. TC O(m), SC O(1)."
+    },
+    {
+      "q": "What if arrays arrive one at a time in a stream and you must report the answer after each arrival?",
+      "a": "Maintain the running min, max, and current answer as persistent state. Each new array triggers the same distance computation, answer update, and extreme update in O(1). TC O(1) per query, SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxDistance(vector<vector<int>>& arrays) {\n        int globalMin = arrays[0].front();\n        int globalMax = arrays[0].back();\n        int ans = 0;\n        for (int i = 1; i < (int)arrays.size(); i++) {\n            int curMin = arrays[i].front();\n            int curMax = arrays[i].back();\n            ans = max(ans, abs(curMax - globalMin));\n            ans = max(ans, abs(globalMax - curMin));\n            globalMin = min(globalMin, curMin);\n            globalMax = max(globalMax, curMax);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

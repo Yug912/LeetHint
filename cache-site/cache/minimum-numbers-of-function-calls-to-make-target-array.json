@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-numbers-of-function-calls-to-make-target-array",
+  "title": "Minimum Numbers of Function Calls to Make Target Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bit Manipulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers allocated; only scalar accumulators (increments, maxBits)\n- No recursion\n- Not counted: input vector `nums`",
+  "approach": "Working backwards from `nums` to all zeros: when every element is even, halving all elements undoes one doubling (1 op); each odd element must be decremented by 1 first (1 op per odd element). This maps directly to binary: each set bit across all `nums[i]` is one increment operation, and the maximum bit-length minus 1 is the number of shared doubling operations. The answer is `total_set_bits + max(0, max_bit_length - 1)`.",
+  "hints": [
+    "Working backwards from `nums` to all zeros: when can you halve every element in one step, and when must you subtract 1 from some elements first? The modify function either increments one element or doubles all elements at once.",
+    "Bit manipulation: total set bits across all `nums[i]` counts increment operations; the maximum bit-length minus 1 counts doubling operations. For `nums = [1,5]`: set bits = 1+2 = 3, max bit-length = 3, so 3 + (3−1) = 5.",
+    "```\nincrements = 0\nmaxBits = 0\nfor each x in nums:\n    increments += popcount(x)\n    maxBits = max(maxBits, bit_length(x))\nreturn increments + max(0, maxBits - 1)\n```",
+    "**All zeros** - target already reached, no operations needed\n`Input: nums = [0]` → `Expected: 0`\n⚠️ Bug: returning `increments + maxBits - 1` without guarding `maxBits == 0` → returns -1\n\n**Single one** - one increment, zero doublings\n`Input: nums = [1]` → `Expected: 1`\n⚠️ Bug: using `maxBits` instead of `maxBits - 1` for doubling count → returns 2\n\n**All equal nonzero** - doublings are shared across all elements, not per-element\n`Input: nums = [2,2]` → `Expected: 3`\n⚠️ Bug: summing `(bit_length - 1)` per element instead of taking the max → returns 4\n\n**Large single value** - bit-length of the largest value sets the doubling count\n`Input: nums = [8]` → `Expected: 4`\n⚠️ Bug: counting doublings as `bit_length` instead of `bit_length - 1` → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if the doubling operation doubles only a single chosen element instead of all elements?",
+      "a": "Each element becomes independent: for each nonzero `nums[i]` the cost is `popcount(nums[i]) + bit_length(nums[i]) - 1`. Sum across all elements. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you can multiply a single element by any power of 2 in one operation?",
+      "a": "Each nonzero element needs `popcount(nums[i])` increments plus exactly 1 multiplication. The answer is `total_set_bits + count_of_nonzero_elements`. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if `nums` arrives as a stream and you must report the answer after each new element?",
+      "a": "Maintain a running sum of popcounts and a running max of bit-lengths. After each element, output `running_sum + max(0, running_max - 1)`. TC: O(1) per element, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums) {\n        int increments = 0;\n        int maxBits = 0;\n        for (int x : nums) {\n            increments += __builtin_popcount((unsigned)x);\n            if (x > 0) {\n                int bits = 32 - __builtin_clz((unsigned)x);\n                if (bits > maxBits) maxBits = bits;\n            }\n        }\n        return increments + (maxBits > 0 ? maxBits - 1 : 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

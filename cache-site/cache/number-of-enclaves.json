@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-enclaves",
+  "title": "Number of Enclaves",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Flood Fill (BFS from Boundary)",
+  "tc": "O(m * n)",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- queue<pair<int,int>> q: up to O(m*n) cells enqueued in worst case (all land) → O(m*n)\n- dx[4], dy[4] arrays: constant size → O(1)\n- grid modified in place: not counted (input)",
+  "approach": "Flood-fill (BFS) from every land cell on the grid boundary, marking all reachable land cells as sea (0). Any land cell reachable from a boundary land cell can \"escape\" off the grid. After the flood fill, the remaining 1s are exactly the enclosed land cells - count them. This works because connectivity via 4-directional adjacency defines which cells can walk to the boundary, and starting from all boundary cells simultaneously captures every escaping region in one pass.",
+  "hints": [
+    "Which land cells can eventually reach the boundary through a chain of adjacent land cells? The grid has at most 500 × 500 cells.",
+    "Use BFS flood fill starting from all boundary land cells simultaneously. In Example 1, boundary cell (1,0) is land - BFS marks it and its connected land as \"escapable,\" leaving 3 unmarked land cells.",
+    "```\nfor each cell on the grid boundary:\n    if it is land:\n        enqueue it, mark as sea\nwhile queue not empty:\n    pop (r, c)\n    for each of 4 neighbors (nr, nc):\n        if in bounds and land:\n            mark as sea, enqueue\ncount remaining land cells in grid\n```",
+    "**Single cell land** - the only cell is both interior and boundary\n`Input: [[1]]` → `Expected: 0`\n⚠️ Bug: checking `i > 0 && i < m-1 && j > 0 && j < n-1` for boundary instead of `i == 0 || i == m-1 || j == 0 || j == n-1` → no boundary cells found, returns 1\n\n**Non-corner boundary land** - land on a boundary edge but not at a corner\n`Input: [[0,0,0,0],[1,0,1,0],[0,1,1,0],[0,0,0,0]]` → `Expected: 3`\n⚠️ Bug: only seeding BFS from the four corners → misses cell (1,0), returns 4\n\n**All land** - every cell is 1, all reachable from boundary\n`Input: [[1,1],[1,1]]` → `Expected: 0`\n⚠️ Bug: not marking cells as sea when enqueuing → re-enqueues the same cells, infinite loop\n\n**Single column** - n = 1, every cell touches left and right boundary\n`Input: [[0],[1],[0]]` → `Expected: 0`\n⚠️ Bug: only checking row boundaries `i == 0 || i == m-1`, forgetting `j == 0 || j == n-1` → cell (1,0) not recognized as boundary, returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if diagonal moves (8-directional) are also allowed?",
+      "a": "Change the direction array from 4 entries to 8. The BFS logic stays identical - every land cell connected to a boundary cell via 8-directional adjacency gets marked. Time and space complexity remain O(m * n)."
+    },
+    {
+      "q": "What if the grid is too large to fit in memory and arrives row by row as a stream?",
+      "a": "Maintain a union-find structure over a sliding window of two consecutive rows, merging land cells vertically and horizontally. When a row scrolls out, finalize its components. Space drops to O(n) per row, but the streaming logic is significantly more complex."
+    },
+    {
+      "q": "What if you must also return the number of distinct enclosed regions (not just total cells)?",
+      "a": "After the boundary flood fill, run a second BFS/DFS pass over remaining land cells, incrementing a counter each time you start a new component search. Time stays O(m * n); space stays O(m * n) for the queue."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numEnclaves(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        \n        queue<pair<int,int>> q;\n        \n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if ((i == 0 || i == m - 1 || j == 0 || j == n - 1) && grid[i][j] == 1) {\n                    q.push({i, j});\n                    grid[i][j] = 0;\n                }\n            }\n        }\n        \n        int dx[] = {0, 0, 1, -1};\n        int dy[] = {1, -1, 0, 0};\n        \n        while (!q.empty()) {\n            int x = q.front().first;\n            int y = q.front().second;\n            q.pop();\n            for (int d = 0; d < 4; d++) {\n                int nx = x + dx[d];\n                int ny = y + dy[d];\n                if (nx >= 0 && nx < m && ny >= 0 && ny < n && grid[nx][ny] == 1) {\n                    grid[nx][ny] = 0;\n                    q.push({nx, ny});\n                }\n            }\n        }\n        \n        int count = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 1) count++;\n            }\n        }\n        \n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

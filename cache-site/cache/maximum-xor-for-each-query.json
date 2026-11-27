@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-xor-for-each-query",
+  "title": "Maximum XOR for Each Query",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix XOR",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> answer: n entries → O(n), but this is the returned output (not counted)\n- int variables (n, mask, xorAll, i): O(1)\n- recursion depth: none\n- not counted: input nums, returned vector",
+  "approach": "The maximum XOR achievable with k < 2^maximumBit is 2^maximumBit − 1 (all bits set). To reach prefix_xor XOR k = 2^maximumBit − 1, we set k = prefix_xor XOR (2^maximumBit − 1). Since XOR is self-inverse, removing the last element is just XORing it back out. We compute the total XOR once, then for each query emit k and XOR out the last remaining element.",
+  "hints": [
+    "What is the largest value that (P XOR k) can reach when k < 2^maximumBit, and which k achieves it for a given P? The constraint 0 ≤ nums[i] < 2^maximumBit bounds every value involved.",
+    "Running XOR with reverse traversal. Compute the total XOR of all elements once. For each query, k = totalXOR XOR ((1 << maximumBit) − 1), then XOR out the last element. Example: nums=[0,1,1,3], maxBit=2 → mask=3, totalXOR=3, first k=3^3=0, then XOR out 3 → runningXOR=0, next k=0^3=3.",
+    "```\nmask = (1 << maximumBit) - 1\nxorAll = 0\nfor each x in nums:\n    xorAll = xorAll XOR x\nfor i from 0 to n-1:\n    answer[i] = xorAll XOR mask\n    xorAll = xorAll XOR nums[n-1-i]\nreturn answer\n```",
+    "**Single element** - n=1, only one query\n`Input: nums = [5], maximumBit = 3` → `Expected: [2]`\n⚠️ Bug: loop condition `i < n - 1` instead of `i < n` → skips the only iteration, returns [] instead of [2].\n\n**All zeros** - XOR never changes from 0\n`Input: nums = [0,0,0], maximumBit = 2` → `Expected: [3,3,3]`\n⚠️ Bug: initializing `xorAll = 1` instead of `0` → answer[0]=1^3=2, returns [2,2,2] instead of [3,3,3].\n\n**Removing wrong element** - index direction matters when elements differ\n`Input: nums = [1,2,3], maximumBit = 2` → `Expected: [3,0,2]`\n⚠️ Bug: XORing out `nums[i]` instead of `nums[n-1-i]` → removes elements front-to-back, returns [3,2,0] instead of [3,0,2].\n\n**Smallest maximumBit** - maximumBit=1, mask=1\n`Input: nums = [0,1], maximumBit = 1` → `Expected: [0,1]`\n⚠️ Bug: mask = `(1 << maximumBit)` without `-1` → mask=2, answer[0]=1^2=3 (k≥2 violates k<2^1), returns [3,2] instead of [0,1]."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums is not sorted and you must answer XOR-max queries for arbitrary subarrays [l, r]?",
+      "a": "Precompute a prefix XOR array where prefix[i] = nums[0]^...^nums[i-1]. The XOR of [l,r] is prefix[r+1]^prefix[l], so k = (prefix[r+1]^prefix[l]) ^ mask. Preprocessing is O(n), each query is O(1), space O(n)."
+    },
+    {
+      "q": "What if maximumBit can be up to 30 and nums[i] up to 2^30 − 1?",
+      "a": "The same approach works unchanged. mask = (1<<30)−1 = 1073741823 fits in a 32-bit int, and all XOR operations stay within int range. TC remains O(n), SC O(1)."
+    },
+    {
+      "q": "What if the array is a stream - elements arrive one at a time and queries are interleaved with additions?",
+      "a": "Maintain a running XOR variable. On each addition, XOR the new element in. On each query, return runningXOR ^ mask. Both operations are O(1), space O(1). Removals are not supported without storing elements, so this works only for append-only streams."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getMaximumXor(vector<int>& nums, int maximumBit) {\n        int n = nums.size();\n        int mask = (1 << maximumBit) - 1;\n        int xorAll = 0;\n        for (int x : nums) xorAll ^= x;\n        vector<int> answer(n);\n        for (int i = 0; i < n; i++) {\n            answer[i] = xorAll ^ mask;\n            xorAll ^= nums[n - 1 - i];\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

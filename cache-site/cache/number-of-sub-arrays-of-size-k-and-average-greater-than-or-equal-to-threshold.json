@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-sub-arrays-of-size-k-and-average-greater-than-or-equal-to-threshold",
+  "title": "Number of Sub-arrays of Size K and Average Greater than or Equal to Threshold",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long target: single scalar → O(1)\n- long long sum: single scalar → O(1)\n- int count, n, loop index i: scalars → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input vector arr, returned int",
+  "approach": "Use a sliding window of size k over the array, maintaining a running sum. Instead of computing the average (which requires division and could lose precision), compare the sum directly against the precomputed value k × threshold: average ≥ threshold iff sum ≥ k × threshold. Slide the window one element at a time, adding the new element and removing the oldest, checking the condition at each position. This is O(n) time and O(1) space.",
+  "hints": [
+    "Every sub-array you count has exactly k elements. Given that k is the same for all of them, what could you compare instead of recomputing each average? arr.length can be up to 10^5.",
+    "Use a sliding window of size k maintaining a running sum. Compare the sum against k × threshold (precomputed once) to avoid division. For arr = [2,2,2,2,5,5,5,8], k = 3, threshold = 4: target = 12; window [2,5,5] has sum 12 ≥ 12, so it counts.",
+    "```\ntarget = k * threshold\nsum = sum of first k elements\ncount = 0\nif sum >= target: count = 1\nfor i from k to n-1:\n    sum = sum + arr[i] - arr[i - k]\n    if sum >= target:\n        count = count + 1\nreturn count\n```",
+    "**Boundary comparison** - average exactly equals threshold, testing ≥ vs >.\n`Input: arr = [4,4,4], k = 3, threshold = 4` → `Expected: 1`\n⚠️ Bug: using `sum > target` instead of `sum >= target` → returns 0\n\n**Single element** - n = 1, k = 1, only one window and the sliding loop never runs.\n`Input: arr = [5], k = 1, threshold = 5` → `Expected: 1`\n⚠️ Bug: only counting inside the sliding loop without checking the initial window → returns 0\n\n**k equals n** - one window covers the entire array; the sliding loop body never executes.\n`Input: arr = [1,2,3], k = 3, threshold = 2` → `Expected: 1`\n⚠️ Bug: only counting inside `for i from k to n-1` without an initial-window check → returns 0\n\n**All equal, all qualify** - every window has the same sum; tests correct window count.\n`Input: arr = [5,5,5,5,5], k = 2, threshold = 5` → `Expected: 4`\n⚠️ Bug: looping `for i from k to n` (inclusive of n) instead of `n-1` → returns 5 or accesses out of bounds"
+  ],
+  "followUps": [
+    {
+      "q": "What if k is not fixed - count sub-arrays of any size with average ≥ threshold?",
+      "a": "Transform the condition: (prefix[j+1] − prefix[i]) / (j−i+1) ≥ threshold becomes prefix[j+1] − threshold·(j+1) ≥ prefix[i] − threshold·i. For each ending index, count how many prior starting indices satisfy this using a Fenwick tree or sorted multiset with binary search. TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if the array arrives as a streaming input too large to store in memory?",
+      "a": "Keep a circular queue of the last k elements and a running sum. On each new element, add it to the sum, evict the oldest (subtract it), then compare sum ≥ k × threshold. You never hold more than k elements. TC O(n), SC O(k)."
+    },
+    {
+      "q": "What if threshold can be negative?",
+      "a": "No algorithmic change is needed - the comparison sum ≥ k × threshold holds for negative threshold values as well. Use long long for target and sum to avoid any edge-case overflow when k and threshold are both large. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numOfSubarrays(vector<int>& arr, int k, int threshold) {\n        long long target = (long long)k * threshold;\n        long long sum = 0;\n        int count = 0;\n        int n = (int)arr.size();\n        for (int i = 0; i < n; i++) {\n            sum += arr[i];\n            if (i >= k) sum -= arr[i - k];\n            if (i >= k - 1 && sum >= target) count++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

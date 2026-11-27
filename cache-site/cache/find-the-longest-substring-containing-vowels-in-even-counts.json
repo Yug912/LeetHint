@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-longest-substring-containing-vowels-in-even-counts",
+  "title": "Find the Longest Substring Containing Vowels in Even Counts",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix XOR with Bitmask Parity",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int firstSeen[32]: fixed 32 entries → O(1)\n- int vowelBit[26]: fixed 26 entries → O(1)\n- scalar locals (mask, best, n, i, b): O(1)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "Track the parity (odd/even) of each vowel's count using a 5-bit bitmask, one bit per vowel. Compute a running prefix XOR: when we encounter a vowel, flip its bit. A substring s[l..r] has all-even vowel counts iff the prefix mask at position r equals the prefix mask at position l−1 (the XOR cancels out). Store the first index where each of the 32 possible masks appears; for each later occurrence of the same mask, the distance gives a valid substring length. Initialize the mask-0 entry to −1 so substrings starting at index 0 are handled.",
+  "hints": [
+    "For a substring to be valid, do you need the exact count of each vowel in it, or is something coarser about those counts sufficient? The string can be up to 5 × 10^5 characters.",
+    "Use a 5-bit bitmask tracking each vowel's parity (odd/even), computed as a running prefix XOR, and store the first index where each of the 32 masks appears. In \"eleetminicoworoep\", after processing \"ele\" the mask returns to 0 (two e's cancel), matching the initial state at index −1, giving a candidate length of 3.",
+    "```\nfirstSeen[0] = -1, all others = UNSEEN\nmask = 0, best = 0\nfor i from 0 to n-1:\n    if s[i] is a vowel: mask ^= (1 << vowelBit[s[i]])\n    if firstSeen[mask] == UNSEEN:\n        firstSeen[mask] = i\n    else:\n        best = max(best, i - firstSeen[mask])\nreturn best\n```",
+    "**Single vowel** - one character that is a vowel, so no non-empty substring has all-even counts.\n`Input: s = \"a\"` → `Expected: 0`\n⚠️ Bug: returning max(best, 1) to avoid a zero answer → returns 1\n\n**All consonants** - no vowels appear, so the entire string is valid.\n`Input: s = \"bcbcbc\"` → `Expected: 6`\n⚠️ Bug: initializing firstSeen[0] to 0 instead of −1 → returns 5\n\n**Repeated same vowel** - four copies of one vowel; the whole string is valid.\n`Input: s = \"aaaa\"` → `Expected: 4`\n⚠️ Bug: using `mask |= bit` instead of `mask ^= bit` → returns 3\n\n**Overwriting first occurrence** - recording the latest index for each mask instead of the earliest.\n`Input: s = \"bcbcbc\"` → `Expected: 6`\n⚠️ Bug: setting `firstSeen[mask] = i` unconditionally on every iteration → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if exactly k of the five vowels must have odd counts (the rest even)?",
+      "a": "For each prefix mask, check all masks that differ in exactly k bits - there are C(5, k) of them. Look up each in the firstSeen table and take the max distance. TC becomes O(n · C(5, k)), SC stays O(32) = O(1)."
+    },
+    {
+      "q": "What if the alphabet is all 26 lowercase letters and every letter must appear an even number of times?",
+      "a": "Use a 26-bit mask instead of 5-bit. A fixed 2^26-entry array is too large, so replace it with a hash map storing the first index per mask. TC stays O(n), SC becomes O(min(n, 2^26))."
+    },
+    {
+      "q": "What if the string arrives as a stream and you can only keep O(1) state?",
+      "a": "The 32-entry firstSeen table is already O(1) space. Process each character as it arrives: update the running mask, check the table, and update the answer. No changes to the algorithm are needed; TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findTheLongestSubstring(string s) {\n        int firstSeen[32];\n        for (int i = 0; i < 32; i++) firstSeen[i] = -2;\n        firstSeen[0] = -1;\n        int vowelBit[26];\n        for (int i = 0; i < 26; i++) vowelBit[i] = -1;\n        vowelBit[0]  = 0; // a\n        vowelBit[4]  = 1; // e\n        vowelBit[8]  = 2; // i\n        vowelBit[14] = 3; // o\n        vowelBit[20] = 4; // u\n        int mask = 0, best = 0;\n        int n = (int)s.size();\n        for (int i = 0; i < n; i++) {\n            int b = vowelBit[s[i] - 'a'];\n            if (b >= 0) mask ^= (1 << b);\n            if (firstSeen[mask] == -2) {\n                firstSeen[mask] = i;\n            } else {\n                int len = i - firstSeen[mask];\n                if (len > best) best = len;\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

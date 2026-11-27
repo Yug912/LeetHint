@@ -1,0 +1,40 @@
+{
+  "slug": "complex-number-multiplication",
+  "title": "Complex Number Multiplication",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-place String Parsing",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (a, b, c, d, real, imag, i, sign, v): O(1)\n- returned string (to_string concatenation): not counted (LeetCode convention)\n- no containers, no recursion, no substr allocations",
+  "approach": "Each input string has a fixed layout: an optional sign, digits, a '+', another optional sign, digits, then 'i'. Parse both strings character by character into (real, imag) integer pairs without allocating substrings. Apply the complex multiplication formula: (a+bi)(c+di) = (ac−bd) + (ad+bc)i. Format the result as \"real+imagi\" using to_string, which naturally handles negative values so the '+' separator is always correct.",
+  "hints": [
+    "Both inputs always contain exactly one '+' and end with 'i'. What does that fixed character layout tell you about where each integer begins and ends?\nreal and imaginary are integers in [-100, 100].",
+    "Parse each string character by character: read an optional sign, then digits until '+', then another optional sign and digits until 'i'. For \"1+-1i\": read 1, skip '+', read -1, stop at 'i'.",
+    "```\nparse(s):\n  i = 0\n  real = read_signed_int(s, i)   # stops at '+'\n  i += 1                          # skip '+'\n  imag = read_signed_int(s, i)   # stops at 'i'\n  return real, imag\n\n(a, b) = parse(num1)\n(c, d) = parse(num2)\nreturn str(a*c - b*d) + \"+\" + str(a*d + b*c) + \"i\"\n```",
+    "**Three-digit real part** - real can be up to 100, so a single-character read is wrong.\n`Input: num1=\"100+100i\", num2=\"100+100i\"` → `Expected: \"0+20000i\"`\n⚠️ Bug: reading real as `s[0]-'0'` (single char) → reads 1 instead of 100 → returns `\"0+2i\"`\n\n**Negative imaginary in output** - the format always uses '+' even when imaginary is negative.\n`Input: num1=\"1+-1i\", num2=\"1+-1i\"` → `Expected: \"0+-2i\"`\n⚠️ Bug: choosing separator based on imaginary sign (using '-' when negative) → returns `\"0-2i\"`\n\n**Zero real part** - real can be 0 and must still appear.\n`Input: num1=\"1+1i\", num2=\"1+1i\"` → `Expected: \"0+2i\"`\n⚠️ Bug: omitting the real part when it is 0 → returns `\"2i\"`\n\n**Zero imaginary part** - imaginary can be 0 and must still appear.\n`Input: num1=\"1+0i\", num2=\"1+0i\"` → `Expected: \"1+0i\"`\n⚠️ Bug: omitting the imaginary part when it is 0 → returns `\"1\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if real and imaginary parts could be floating-point numbers (e.g., \"1.5+-2.3i\")?",
+      "a": "Extend the parser to track a decimal point and accumulate a double instead of an int. The multiplication formula (ac−bd, ad+bc) is unchanged. Format with fixed precision. TC: O(n+m), SC: O(1)."
+    },
+    {
+      "q": "What if whitespace were allowed and the imaginary part could be omitted (e.g., \"3\" means 3+0i)?",
+      "a": "Add a whitespace-skipping step and detect whether '+' and 'i' are present. If no 'i', imaginary defaults to 0; if no '+', the entire string is the real part. TC: O(n+m), SC: O(1)."
+    },
+    {
+      "q": "What if the input arrives as a character stream and you cannot buffer the full string?",
+      "a": "Maintain a small state machine with two states (parsing real, parsing imaginary) and accumulate each integer as digits arrive. You only need two integers and one state variable. TC: O(n+m), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    void parse(const string& s, int& outReal, int& outImag) {\n        int i = 0, sign = 1, v = 0;\n        if (s[i] == '-') { sign = -1; i++; }\n        while (i < (int)s.size() && s[i] >= '0' && s[i] <= '9') {\n            v = v * 10 + (s[i] - '0');\n            i++;\n        }\n        outReal = sign * v;\n        i++; // skip '+'\n        sign = 1; v = 0;\n        if (i < (int)s.size() && s[i] == '-') { sign = -1; i++; }\n        while (i < (int)s.size() && s[i] >= '0' && s[i] <= '9') {\n            v = v * 10 + (s[i] - '0');\n            i++;\n        }\n        outImag = sign * v;\n    }\npublic:\n    string complexNumberMultiply(string num1, string num2) {\n        int a, b, c, d;\n        parse(num1, a, b);\n        parse(num2, c, d);\n        int real = a * c - b * d;\n        int imag = a * d + b * c;\n        return to_string(real) + \"+\" + to_string(imag) + \"i\";\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
