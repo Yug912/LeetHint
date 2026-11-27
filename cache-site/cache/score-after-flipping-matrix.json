@@ -1,0 +1,40 @@
+{
+  "slug": "score-after-flipping-matrix",
+  "title": "Score After Flipping Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Bit Manipulation",
+  "tc": "O(m*n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int score, m, n, ones, best, bit: O(1) scalars\n- no containers, no recursion\n- not counted: input grid (modified logically, not physically)",
+  "approach": "The leftmost bit of each row is worth more than all other bits combined, so first ensure every row starts with 1 by toggling any row whose first cell is 0. Once column 0 is fixed (and must not be touched again), each remaining column can be optimized independently: count the 1s in that column (accounting for which rows were toggled), and if fewer than half are 1s, toggle the column. The score is then the sum over columns of (best count of 1s) × 2^(n−1−j). This greedy is optimal because column decisions are independent after the first column is locked.",
+  "hints": [
+    "The leftmost bit of each row is worth more than all other bits in that row combined. Which column should you secure first, and once it's fixed, what freedom remains for the others?",
+    "Greedy column-wise: toggle every row whose first bit is 0 so all rows start with 1, then for each later column count the 1s (after row toggles) and toggle if fewer than half are 1. In Example 1, after fixing column 0, column 2 has only one 1 among three rows, so toggle it.",
+    "```\nscore = m * 2^(n-1)            # first column forced to all 1s\nfor j = 1 to n-1:\n    ones = count of 1s in column j, flipping bits of rows whose first cell was 0\n    best = max(ones, m - ones)\n    score += best * 2^(n-1-j)\nreturn score\n```",
+    "**Smallest input** - single cell matrix.\n`Input: [[0]]` → `Expected: 1`\n⚠️ Bug: initializing `score = 0` and only looping `j = 1..n-1` (which never runs) → returns `0`.\n\n**All zeros** - every cell is 0, so every row must be toggled first.\n`Input: [[0,0],[0,0]]` → `Expected: 6`\n⚠️ Bug: skipping the first-column row-toggle step and just counting raw 1s per column → returns `0`.\n\n**Single column** - only the first bit matters, no later columns to optimize.\n`Input: [[0],[1],[0]]` → `Expected: 3`\n⚠️ Bug: looping `j = 0..n-1` and treating column 0 like the others (toggling it when fewer than half are 1) → returns `0` after toggling column 0 back to all zeros.\n\n**Already maximal** - all rows already start with 1 and every column is majority-1.\n`Input: [[1,1],[1,1]]` → `Expected: 6`\n⚠️ Bug: unconditionally toggling columns with `ones < m` instead of `ones*2 < m` → toggles column 1 when `ones == 1, m == 2` (1 < 2 is true) → returns `4`."
+  ],
+  "followUps": [
+    {
+      "q": "What if each toggle (row or column) costs 1 and you have a budget B; maximize score within B toggles?",
+      "a": "The first column still dominates, so spend up to m toggles forcing rows to start with 1. With m,n ≤ 20 you can enumerate all 2^m row-toggle subsets, greedily pick the best affordable columns, and take the max - O(2^m · n) time, O(1) extra space."
+    },
+    {
+      "q": "What if m,n can be up to 10^5 and rows arrive in a stream?",
+      "a": "Record per row whether it was toggled (to make its first bit 1), then keep a running count of 1s per column adjusted by that flag. One pass over rows with O(n) accumulators gives O(m·n) time and O(n) space."
+    },
+    {
+      "q": "What if you want the minimum possible score instead of the maximum?",
+      "a": "Invert the greedy: force the first column to all 0s (toggle rows starting with 1), then for each later column toggle when more than half are 1s to minimize the 1-count. Same O(m·n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int matrixScore(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int score = m * (1 << (n - 1));\n        for (int j = 1; j < n; j++) {\n            int ones = 0;\n            for (int i = 0; i < m; i++) {\n                int bit = grid[i][0] == 0 ? 1 - grid[i][j] : grid[i][j];\n                ones += bit;\n            }\n            int best = ones > m - ones ? ones : m - ones;\n            score += best * (1 << (n - 1 - j));\n        }\n        return score;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

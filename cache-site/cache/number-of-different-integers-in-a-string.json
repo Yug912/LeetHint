@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-different-integers-in-a-string",
+  "title": "Number of Different Integers in a String",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "String Parsing with Hash Set",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<string> seen: up to n/2 entries, total characters across all entries ≤ n → O(n)\n- recursion depth: none\n- not counted: input string",
+  "approach": "Parse the string to extract maximal digit runs. For each run, strip leading zeros while keeping at least one digit (so \"000\" becomes \"0\"). Insert each normalized string into an unordered_set and return its size. Since integers can be up to 1000 digits long, we compare them as strings rather than converting to numeric types.",
+  "hints": [
+    "When comparing digit sequences like \"01\" and \"001\", what property of their leading characters makes them represent the same integer?",
+    "Use an unordered_set<string>. For each digit run, strip leading zeros (keeping at least one digit) and insert the result. For \"01\" in \"a1b01c001\", strip the leading zero to get \"1\".",
+    "```\nseen = empty set\ni = 0\nwhile i < n:\n    if word[i] is a digit:\n        j = i\n        while j < n and word[j] is a digit:\n            j++\n        start = i\n        while start < j-1 and word[start] == '0':\n            start++\n        seen.insert(word[start..j-1])\n        i = j\n    else:\n        i++\nreturn size of seen\n```",
+    "**Leading zeros with non-zero digit** - \"01\" and \"1\" represent the same integer.\n`Input: \"a1b01\"` → `Expected: 1`\n⚠️ Bug: stripping all leading zeros without keeping one (using `start < j` instead of `start < j - 1`) → \"01\" becomes \"\" instead of \"1\", returns 2\n\n**Very long integer** - A digit run can be up to 1000 digits, far exceeding any integer type.\n`Input: \"a1234567890123456789012345678901234567890b\"` → `Expected: 1`\n⚠️ Bug: using `stoll` to convert the digit string → overflow, returns undefined value\n\n**No digits** - The string contains only letters.\n`Input: \"abc\"` → `Expected: 0`\n⚠️ Bug: returning `max(1, (int)seen.size())` → returns 1\n\n**Duplicate integers** - The same integer appears multiple times.\n`Input: \"a123b123c123\"` → `Expected: 1`\n⚠️ Bug: using a vector instead of a set → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string could contain negative integers (a '-' immediately before digits)?",
+      "a": "Detect a '-' preceding a digit run and prepend it to the normalized string before inserting into the set. The rest of the logic stays the same. TC remains O(n), SC remains O(n)."
+    },
+    {
+      "q": "What if word.length could be up to 10^7 and input arrives as a stream?",
+      "a": "Process characters one at a time, accumulating the current digit run in a small buffer. Normalize and insert each completed run into the set, then clear the buffer. TC is O(n), SC is O(n) for the set in the worst case (all distinct runs)."
+    },
+    {
+      "q": "What if you must return the distinct integers sorted by their numerical value?",
+      "a": "Store normalized strings in a vector, sort with a comparator that first compares by length (shorter = smaller, unless both are \"0\"-padded) then lexicographically. TC becomes O(n log n) for sorting, SC remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numDifferentIntegers(string word) {\n        unordered_set<string> seen;\n        int n = word.size();\n        int i = 0;\n        while (i < n) {\n            if (word[i] >= '0' && word[i] <= '9') {\n                int j = i;\n                while (j < n && word[j] >= '0' && word[j] <= '9') {\n                    j++;\n                }\n                int start = i;\n                while (start < j - 1 && word[start] == '0') {\n                    start++;\n                }\n                seen.insert(word.substr(start, j - start));\n                i = j;\n            } else {\n                i++;\n            }\n        }\n        return seen.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

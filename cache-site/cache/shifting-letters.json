@@ -1,0 +1,40 @@
+{
+  "slug": "shifting-letters",
+  "title": "Shifting Letters",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Suffix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total: single variable → O(1)\n- int i: loop variable → O(1)\n- not counted: input string s (modified in place), returned string",
+  "approach": "The key insight is that character at position `j` is affected by every `shifts[i]` where `i >= j`, because `shifts[i]` shifts the first `i+1` characters. So the total shift for position `j` equals the suffix sum of `shifts` from `j` to `n-1`. We compute this in a single right-to-left pass, maintaining a running total. Since shifts can sum to 10^14 (10^5 × 10^9), we use `long long` and take `% 26` when applying each shift.",
+  "hints": [
+    "For a character at position `j`, which of the `n` shift operations affect it? The string and shifts array can each have up to 10^5 elements.",
+    "Suffix sum. Accumulate shifts from right to left so each position gets its total shift in one pass. For `s = \"abc\"`, `shifts = [3,5,9]`: position 2 gets 9, position 1 gets 5+9=14, position 0 gets 3+5+9=17.",
+    "```\ntotal = 0\nfor i from n-1 down to 0:\n    total += shifts[i]\n    s[i] = 'a' + (s[i] - 'a' + total mod 26) mod 26\nreturn s\n```",
+    "**Overflow** - sum of shifts exceeds 2^31-1 (3 × 10^9 > 2,147,483,647).\n`Input: s = \"aaa\", shifts = [1000000000, 1000000000, 1000000000]` → `Expected: \"kym\"`\n⚠️ Bug: using `int` for running total → at i=0, total = 3×10^9 overflows to -1294967296, total % 26 = -12, s[0] = 'a' + (-12) = 'U', returns \"Uym\" instead of \"kym\".\n\n**Wrap-around** - 'z' shifted by 1 wraps to 'a'.\n`Input: s = \"z\", shifts = [1]` → `Expected: \"a\"`\n⚠️ Bug: not using `% 26` on the shift amount → s[0] = 'z' + 1 = '{' (ASCII 123), returns \"{\" instead of \"a\".\n\n**Zero shifts** - all shifts are 0.\n`Input: s = \"abc\", shifts = [0, 0, 0]` → `Expected: \"abc\"`\n⚠️ Bug: initializing total to 1 instead of 0 → every character shifted by 1, returns \"bcd\" instead of \"abc\".\n\n**Single character** - n = 1.\n`Input: s = \"a\", shifts = [1]` → `Expected: \"b\"`\n⚠️ Bug: loop condition `i > 0` instead of `i >= 0` → skips index 0, returns \"a\" instead of \"b\"."
+  ],
+  "followUps": [
+    {
+      "q": "What if shifts[i] could be negative, meaning shift backwards in the alphabet?",
+      "a": "The suffix sum approach still works. Use `((total % 26) + 26) % 26` to handle C++'s negative modulo, ensuring the shift amount is always in [0, 25]. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if each operation specifies a range [l, r] to shift instead of a prefix [0, i]?",
+      "a": "Use a difference array. For each shift (l, r, x), add x to diff[l] and subtract x from diff[r+1]. Then compute prefix sums of diff to get each position's total shift. TC: O(n + q), SC: O(n)."
+    },
+    {
+      "q": "What if shifts arrive as a stream and you must output the current string after each shift?",
+      "a": "Maintain a Fenwick tree (BIT) over the shift counts. Each shift (i, x) adds x to range [0, i] via two point updates. To output the string, query each position's total shift in O(log n). TC: O(n log n) per output, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string shiftingLetters(string s, vector<int>& shifts) {\n        long long total = 0;\n        for (int i = (int)s.size() - 1; i >= 0; i--) {\n            total += shifts[i];\n            s[i] = 'a' + (s[i] - 'a' + total % 26) % 26;\n        }\n        return s;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

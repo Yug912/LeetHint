@@ -1,0 +1,27 @@
+{
+  "slug": "super-washing-machines",
+  "title": "Super Washing Machines",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum / Greedy",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- only scalar variables (sum, target, prefix, ans, loop counters): O(1)\n- no containers, no recursion, no heap: none\n- not counted: input vector",
+  "approach": "First check if total dresses is divisible by n; if not, return -1. Let target = total/n. Track the running prefix sum of (machines[i] - target), which equals the net number of dresses that must cross the boundary between i and i+1. The answer is the max over all i of max(|prefix[i]|, machines[i] - target when positive): the prefix term counts dresses forced through a boundary (each takes a move), and the \"give\" term counts how many dresses a single machine must output (a machine can only emit one dress per move).",
+  "hints": [
+    "If you draw a boundary between any two adjacent machines, what quantity determines the minimum number of dresses that must cross that boundary in total? Each move, a machine can pass at most one dress to a single neighbor.",
+    "Compute the running cumulative difference from the target (prefix sum of machines[i] - target). The answer is the maximum of the largest absolute cumulative difference and the largest individual surplus. For [1,0,5]: target=2, cumulative diffs are [-1,-3,0], max|cumulative|=3, max surplus=3, answer=3.",
+    "```\ntotal = sum(machines)\nif total mod n != 0: return -1\ntarget = total / n\nans = 0, prefix = 0\nfor each machine m:\n    diff = m - target\n    prefix += diff\n    ans = max(ans, max(abs(prefix), diff))\nreturn ans\n```",
+    "**Single machine** - n=1, already balanced\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: initializing ans to 1 instead of 0 → returns 1\n\n**Impossible distribution** - total not divisible by n\n`Input: [0,2,0]` → `Expected: -1`\n⚠️ Bug: skipping the divisibility check, using integer division → target=0, returns 2 instead of -1\n\n**Large surplus, small prefix** - one machine has huge surplus, prefix sums are smaller\n`Input: [0,0,10,0,0]` → `Expected: 8`\n⚠️ Bug: returning only max(|prefix|) without max(diff) → max(|prefix|)=4, returns 4 instead of 8\n\n**Large prefix, small surplus** - prefix sums dominate over individual surpluses\n`Input: [5,0,5,0,0,0,0,0,0,0]` → `Expected: 7`\n⚠️ Bug: returning only max(diff) without max(|prefix|) → max(diff)=4, returns 4 instead of 7"
+  ],
+  "followUps": [],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMinMoves(vector<int>& machines) {\n        int n = machines.size();\n        long long sum = 0;\n        for (int i = 0; i < n; i++) sum += machines[i];\n        if (sum % n != 0) return -1;\n        long long target = sum / n;\n        long long prefix = 0;\n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            prefix += (long long)machines[i] - target;\n            long long give = (long long)machines[i] - target;\n            if (give < 0) give = 0;\n            long long absPrefix = prefix < 0 ? -prefix : prefix;\n            long long cur = absPrefix > give ? absPrefix : give;\n            if (cur > ans) ans = cur;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

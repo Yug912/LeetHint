@@ -1,0 +1,40 @@
+{
+  "slug": "short-encoding-of-words",
+  "title": "Short Encoding of Words",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Trie on Reversed Strings",
+  "tc": "O(n * L)",
+  "sc": "O(n * L)",
+  "spaceBreakdown": "- set<string> uniqueWords: up to n entries, each ≤ 7 chars → O(n * L)\n- Trie nodes: at most n * L nodes, each with 26 pointers + 1 bool → O(n * L)\n- vector<pair<string, TrieNode*>> nodes: up to n entries → O(n)\n- not counted: input vector, returned int",
+  "approach": "A word w can share another word's '#' delimiter for free exactly when w is a suffix of that other word. So we only need to count (length + 1) for words that are not suffixes of any other word. To detect suffix relationships efficiently, reverse every word and insert into a trie: word A is a suffix of word B iff reversed-A is a prefix of reversed-B. After inserting all reversed words, a word contributes to the answer only if its terminal trie node is a leaf (no children), meaning no other word extends past it. Deduplicate first so identical words are counted once.",
+  "hints": [
+    "When can one word be encoded \"for free\" inside another word's segment - what positional relationship between the two words allows that? Each word's segment always ends right before a '#'.",
+    "Build a trie of reversed words. A word contributes length+1 only if its terminal node is a leaf. Example: \"time\" and \"me\" reversed are \"emit\" and \"em\"; \"em\" is a prefix of \"emit\", so \"me\" shares \"time\"'s '#' and contributes 0.",
+    "```\ndeduplicate words\nfor each unique word:\n    insert its reverse into trie, record the final node\nans = 0\nfor each unique word:\n    if its final node has no children:\n        ans += word.length + 1\nreturn ans\n```",
+    "**Duplicates** - identical words share one trie node and one '#'.\n`Input: words = [\"me\",\"me\"]` → `Expected: 3`\n⚠️ Bug: iterating over the original array instead of deduplicating → returns 6\n\n**Single word** - smallest valid input.\n`Input: words = [\"t\"]` → `Expected: 2`\n⚠️ Bug: returning word.length without adding 1 for the '#' → returns 1\n\n**Not reversing** - the trie must store reversed words to detect suffix relationships.\n`Input: words = [\"time\",\"me\"]` → `Expected: 5`\n⚠️ Bug: building the trie on original (non-reversed) words → \"me\" is not a prefix of \"time\" → returns 8\n\n**Word is suffix of two others** - the word must still be absorbed by either.\n`Input: words = [\"a\",\"ba\",\"ca\"]` → `Expected: 6`\n⚠️ Bug: checking only if a word is a suffix of the single longest word and stopping → returns 8"
+  ],
+  "followUps": [
+    {
+      "q": "What if each word can be up to 10^5 characters long (but still only lowercase letters)?",
+      "a": "The trie approach still works; time and space become O(total characters across all words). With very long words you might prefer sorting reversed words and comparing adjacent entries to save the per-node pointer overhead, giving O(total chars · log n) time and O(total chars) space for the sorted copy."
+    },
+    {
+      "q": "What if words can overlap in arbitrary positions, not just as suffixes?",
+      "a": "This becomes the shortest common superstring problem, which is NP-hard. The suffix-only constraint is what makes this tractable; without it you would need approximation algorithms (e.g., greedy merge or a 4/3-approximation via cycle cover)."
+    },
+    {
+      "q": "What if words arrive in a stream and you must maintain the answer online?",
+      "a": "Keep the trie of reversed words and a count of current leaves. When a new word arrives, insert its reverse; this may turn an existing leaf into an internal node (subtract its length+1) and may add a new leaf (add length+1). Each update is O(L) time and the total space remains O(total chars stored so far)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumLengthEncoding(vector<string>& words) {\n        set<string> uniqueWords(words.begin(), words.end());\n\n        struct TrieNode {\n            TrieNode* children[26] = {};\n            bool hasChildren = false;\n        };\n\n        TrieNode* root = new TrieNode();\n        vector<pair<string, TrieNode*>> nodes;\n\n        for (const string& w : uniqueWords) {\n            TrieNode* cur = root;\n            for (int i = (int)w.size() - 1; i >= 0; i--) {\n                int c = w[i] - 'a';\n                if (!cur->children[c]) {\n                    cur->children[c] = new TrieNode();\n                }\n                cur->hasChildren = true;\n                cur = cur->children[c];\n            }\n            nodes.push_back({w, cur});\n        }\n\n        int ans = 0;\n        for (auto& p : nodes) {\n            if (!p.second->hasChildren) {\n                ans += (int)p.first.size() + 1;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

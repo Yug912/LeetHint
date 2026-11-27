@@ -1,0 +1,40 @@
+{
+  "slug": "scramble-string",
+  "title": "Scramble String",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals",
+  "tc": "O(n⁴)",
+  "sc": "O(n³)",
+  "spaceBreakdown": "- dp[30][30][31] boolean table: O(n³)\n- t1, t2 string copies: O(n) each\n- sort(): O(log n) stack (introsort)\n- no recursion",
+  "approach": "The key insight is that a scramble recursively splits a string into two parts and optionally swaps them. This naturally defines overlapping subproblems: \"is s1[i..i+len-1] a scramble of s2[j..j+len-1]?\" We use a 3D boolean DP table dp[i][j][len], where the base case is len=1 (character equality), and for longer lengths we try every split point k, checking both the no-swap and swap configurations. A quick sorted-string prune eliminates impossible pairs early.",
+  "hints": [
+    "When s2 is a scramble of s1, the top-level split of s1 produces two pieces - what must be true about how those pieces correspond to a split of s2? The problem allows strings up to length 30.",
+    "Use interval DP with a 3D table dp[i][j][len] = whether s1[i..i+len-1] is a scramble of s2[j..j+len-1]. For s1=\"great\", s2=\"rgeat\": dp[0][0][2] is true because \"gr\" scrambles to \"rg\" via a swap at k=1.",
+    "```\nbase: dp[i][j][1] = (s1[i] == s2[j])\nfor len = 2 to n:\n  for i = 0 to n-len:\n    for j = 0 to n-len:\n      for k = 1 to len-1:\n        if (dp[i][j][k] and dp[i+k][j+k][len-k])      # no swap\n        or (dp[i][j+len-k][k] and dp[i+k][j][len-k]):  # swap\n          dp[i][j][len] = true\nreturn dp[0][0][n]\n```",
+    "**Single character** - n=1, the minimum input size\n`Input: s1 = \"a\", s2 = \"a\"` → `Expected: true`\n⚠️ Bug: not initializing dp[i][j][1] and only filling from len=2 → returns false\n\n**Root swap** - the entire string is scrambled by a single swap at the top level\n`Input: s1 = \"ab\", s2 = \"ba\"` → `Expected: true`\n⚠️ Bug: omitting the swap branch (dp[i][j+len-k][k] && dp[i+k][j][len-k]) → returns false\n\n**All equal** - every character is the same, so every split is valid\n`Input: s1 = \"aaa\", s2 = \"aaa\"` → `Expected: true`\n⚠️ Bug: using k < len-1 instead of k < len, making the k-loop empty for len=2 → returns false\n\n**Same characters, not a scramble** - character multisets match but no valid scramble exists\n`Input: s1 = \"abcde\", s2 = \"caebd\"` → `Expected: false`\n⚠️ Bug: returning true whenever sorted(s1) == sorted(s2) without running the DP → returns true\n\n**Boundary split** - the split occurs at the last valid index (k = len-1)\n`Input: s1 = \"abcd\", s2 = \"dabc\"` → `Expected: true`\n⚠️ Bug: using k < len-1 instead of k < len, skipping k = len-1 → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 200, how would you optimize?",
+      "a": "Add a character-count prune using prefix sum arrays: before computing dp[i][j][len], verify that s1[i..i+len-1] and s2[j..j+len-1] have identical character counts in O(26) = O(1) time. This eliminates most (i, j, len) triples early, drastically reducing practical runtime though worst-case remains O(n⁴)."
+    },
+    {
+      "q": "Can you reduce the O(n³) space?",
+      "a": "Store only true states in a hash set keyed by (i, j, len) instead of a full 3D array. When all characters are distinct, most states are false, so the set stays small. Worst-case (all characters identical) the set still holds O(n³) entries."
+    },
+    {
+      "q": "What if you must also return one valid sequence of splits and swaps?",
+      "a": "Alongside each true dp[i][j][len], store the split point k and whether a swap was used. After filling the table, backtrack from dp[0][0][n]: read the stored k and swap flag, recurse into the two subproblems, and collect the operations. Time stays O(n⁴), space becomes O(n³) for the back-pointers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isScramble(string s1, string s2) {\n        int n = s1.length();\n        \n        // Quick prune: character multisets must match\n        string t1 = s1, t2 = s2;\n        sort(t1.begin(), t1.end());\n        sort(t2.begin(), t2.end());\n        if (t1 != t2) return false;\n        \n        // dp[i][j][len]: s1[i..i+len-1] is a scramble of s2[j..j+len-1]\n        vector<vector<vector<bool>>> dp(n, vector<vector<bool>>(n, vector<bool>(n + 1, false)));\n        \n        // Base case: length 1\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                dp[i][j][1] = (s1[i] == s2[j]);\n        \n        // Fill for increasing lengths\n        for (int len = 2; len <= n; len++) {\n            for (int i = 0; i + len <= n; i++) {\n                for (int j = 0; j + len <= n; j++) {\n                    for (int k = 1; k < len; k++) {\n                        // No swap: s1[i..i+k-1] <-> s2[j..j+k-1], s1[i+k..] <-> s2[j+k..]\n                        if (dp[i][j][k] && dp[i + k][j + k][len - k]) {\n                            dp[i][j][len] = true;\n                            break;\n                        }\n                        // Swap: s1[i..i+k-1] <-> s2[j+len-k..j+len-1], s1[i+k..] <-> s2[j..j+len-k-1]\n                        if (dp[i][j + len - k][k] && dp[i + k][j][len - k]) {\n                            dp[i][j][len] = true;\n                            break;\n                        }\n                    }\n                }\n            }\n        }\n        \n        return dp[0][0][n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "evaluate-the-bracket-pairs-of-a-string",
+  "title": "Evaluate the Bracket Pairs of a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map + Linear Scan",
+  "tc": "O(n + m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- unordered_map<string,string> mp: up to m entries (each key/value ≤ 10 chars) → O(m)\n- string key (temporary buffer): at most 10 chars → O(1)\n- string result: O(n) but not counted (returned output)\n- loop variables i, n: O(1)",
+  "approach": "Build a hash map from the knowledge array (key→value) for O(1) lookups. Then scan `s` left-to-right: copy regular characters directly into the result; when you hit `'('`, collect characters until `')'`, look up the key in the map, and append the value (or `'?'` if missing). Non-nested brackets guarantee a single linear pass suffices, and the map ensures each lookup is constant time.",
+  "hints": [
+    "The key \"a\" appears in three bracket pairs in Example 3. With up to 10^5 knowledge entries, what is the cost of scanning the knowledge list separately for each occurrence?",
+    "Use a hash map (unordered_map<string,string>) to store key→value from knowledge. For s = \"(name)is(age)yearsold\", build {name→bob, age→two}, then on '(' collect \"name\" until ')' and append \"bob\".",
+    "```\nmap = {key: value for each entry in knowledge}\nresult = \"\"\ni = 0\nwhile i < len(s):\n    if s[i] == '(':\n        i += 1\n        key = chars until next ')'\n        result += map.get(key, '?')\n    else:\n        result += s[i]\n        i += 1\nreturn result\n```",
+    "**Missing key** - the key inside brackets has no entry in knowledge\n`Input: s = \"(name)\", knowledge = [[\"a\",\"b\"]]` → `Expected: \"?\"`\n⚠️ Bug: using `map[key]` (operator[]) which inserts an empty string for missing keys → returns `\"\"`\n\n**Repeated key** - the same key appears in multiple bracket pairs\n`Input: s = \"(a)(a)\", knowledge = [[\"a\",\"b\"]]` → `Expected: \"bb\"`\n⚠️ Bug: erasing the key from the map after the first lookup → returns `\"b?\"`\n\n**Empty knowledge** - no key-value pairs are provided\n`Input: s = \"(a)b(c)\", knowledge = []` → `Expected: \"?b?\"`\n⚠️ Bug: assuming the map is non-empty and using `map[key]` → returns `\"b\"` (empty strings substituted for both brackets)"
+  ],
+  "followUps": [
+    {
+      "q": "What if nested brackets were allowed, e.g. \"(a(b))\"?",
+      "a": "Use a stack of string builders: push a new builder on '(', pop and evaluate on ')', feeding the result into the parent builder. TC becomes O(n × d) where d is max nesting depth; SC becomes O(n × d) for the stack."
+    },
+    {
+      "q": "What if knowledge has 10^9 entries and cannot fit in memory?",
+      "a": "Store knowledge in an external key-value store and look up each bracket key on demand. TC becomes O(n × L) where L is per-lookup latency; in-memory SC drops to O(1) (plus the output buffer)."
+    },
+    {
+      "q": "What if values can themselves contain bracket pairs, e.g. knowledge = [[\"a\",\"(b)\"],[\"b\",\"x\"]]?",
+      "a": "After each substitution, re-scan the substituted text for new brackets and repeat until no brackets remain. Detect cycles by tracking keys already expanded in the current chain. TC becomes O(n × r) where r is the number of expansion rounds; SC stays O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string evaluate(string s, vector<vector<string>>& knowledge) {\n        unordered_map<string, string> mp;\n        mp.reserve(knowledge.size());\n        for (auto& kv : knowledge) {\n            mp[kv[0]] = kv[1];\n        }\n        string result;\n        result.reserve(s.size());\n        int i = 0, n = (int)s.size();\n        while (i < n) {\n            if (s[i] == '(') {\n                ++i;\n                string key;\n                while (i < n && s[i] != ')') {\n                    key.push_back(s[i]);\n                    ++i;\n                }\n                ++i; // skip ')'\n                auto it = mp.find(key);\n                if (it != mp.end()) {\n                    result += it->second;\n                } else {\n                    result.push_back('?');\n                }\n            } else {\n                result.push_back(s[i]);\n                ++i;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

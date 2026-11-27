@@ -2,40 +2,39 @@
   "slug": "sum-of-all-subset-xor-totals",
   "title": "Sum of All Subset XOR Totals",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
   "pattern": "Bit Manipulation",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- integer `orAll`: stores bitwise OR of all elements → O(1)  \n- recursion depth: none  \n- not counted: input vector, returned int",
-  "approach": "Each bit works independently when XOR‑ing a subset: if at least one number contains that bit, exactly half of all subsets have the bit set in the XOR total. Therefore the total contribution of a bit is (bit value) × 2^{n‑1}. Summing over all bits is equivalent to (bitwise OR of the whole array) × 2^{n‑1}. This gives a linear‑time solution that is trivially correct because every subset’s XOR is accounted for by the independent contributions of its bits.",
+  "spaceBreakdown": "- int orAll: single integer → O(1)\n- int n: single integer → O(1)\n- not counted: input vector, returned int",
+  "approach": "Each bit position contributes independently to the sum. A bit contributes 2^bit to a subset's XOR total iff an odd number of elements in that subset have the bit set. If at least one element has the bit set, exactly half of all 2^n subsets (i.e., 2^(n-1)) produce an odd count. Summing over all bits gives answer = (bitwise OR of all nums) × 2^(n-1), computed in a single pass.",
   "hints": [
-    "What happens to the parity of a particular bit when you pick a random subset of the array?  \nSince the array length is small (n ≤ 12), think about how many subsets give a 1 for that bit versus a 0.",
-    "Use the integer type as a bitset (bitwise OR) to collect all bits that ever appear.  \nExample: for [5,1,6] the OR is 5 | 1 | 6 = 7, and there are 2^{3‑1}=4 subsets contributing each bit.",
-    "```\norAll = 0\nfor each x in nums:\n    orAll = orAll OR x\npower = 1 << (size(nums) - 1)   // 2^{n-1}\nreturn orAll * power\n```",
-    "**Single element** - only one non‑empty subset exists.  \n`Input: [9]` → `Expected: 9`  \n⚠️ Bug: returning `orAll * (1 << n)` → returns 18.  \n\n**All elements identical** - every subset’s XOR is either 0 or the element value.  \n`Input: [4,4,4]` → `Expected: 4 * 2^{3‑1} = 16`  \n⚠️ Bug: using `orAll * (1 << (n-2))` → returns 8.  \n\n**Maximum size** - n = 12, values up to 20, ensure no overflow.  \n`Input: [20,20,20,20,20,20,20,20,20,20,20,20]` → `Expected: 20 * 2^{11} = 40960`  \n⚠️ Bug: storing result in `int` after multiplying by `1<<30` (if n were larger) would overflow, but here it fits."
+    "Fix a single bit position. If at least one number in the array has that bit set, in how many of the 2^n subsets does the XOR of that bit come out as 1? The constraint n ≤ 12 means 2^n ≤ 4096.",
+    "Bitwise OR trick: compute the OR of all elements, then multiply by 2^(n-1). For nums = [5,1,6], the OR is 5|1|6 = 7, and with n = 3 the answer is 7 × 2^2 = 28.",
+    "```\norAll = 0\nfor each x in nums:\n    orAll = orAll OR x\nreturn orAll * (2 ^ (n - 1))\n```",
+    "**Single element** - only one non-empty subset exists.\n`Input: nums = [7]` → `Expected: 7`\n⚠️ Bug: using `1 << n` instead of `1 << (n - 1)` → returns 14\n\n**All elements equal** - duplicates still count as distinct subsets.\n`Input: nums = [4,4,4]` → `Expected: 16`\n⚠️ Bug: deduplicating the array first (n becomes 1) → returns 4 × 2^0 = 4\n\n**Using addition instead of OR** - sum and OR differ when bits overlap.\n`Input: nums = [5,1,6]` → `Expected: 28`\n⚠️ Bug: using `orAll += x` instead of `orAll |= x` → returns 12 × 4 = 48"
   ],
   "followUps": [
     {
-      "q": "What if nums.length can be up to 10^5 and the answer must be given modulo 10^9+7?",
-      "a": "The same formula works; compute orAll mod M, compute 2^{n‑1} mod M with fast exponentiation, then multiply modulo M. Time stays O(n) and space O(1)."
+      "q": "What if nums.length can be up to 10^5 and the answer must be returned modulo 10^9 + 7?",
+      "a": "The same formula applies. Compute the OR in one pass, then multiply by 2^(n-1) mod (10^9+7) using fast exponentiation. Time O(n + log n) = O(n), space O(1)."
     },
     {
-      "q": "How would you solve the problem if the numbers could be up to 10^9 so that the OR may exceed 32 bits?",
-      "a": "Use a 64‑bit integer (long long) for the OR and the final multiplication; the reasoning about independent bits still holds, and the algorithm remains O(n) time, O(1) space."
+      "q": "What if we need the sum of XOR totals only for subsets of exactly size k?",
+      "a": "For each bit set in m of the n elements, count size-k subsets with an odd number of those m elements: sum over odd j of C(m,j)·C(n-m, k-j). Precompute factorials for O(1) binomial lookups. Time O(n·k), space O(n) for the factorial table."
     },
     {
-      "q": "Suppose you must output the sum for every prefix of the array (i.e., for each i return the sum for nums[0..i]).",
-      "a": "Maintain a running OR while iterating; for each position i compute orPrefix × 2^{i‑1}. This yields an O(n) overall solution with O(1) extra memory."
+      "q": "What if the array arrives as a stream and we can only store O(1) elements?",
+      "a": "Maintain the running OR and a count of elements seen. When the stream ends, apply the same formula. Time O(n), space O(1) - only the OR accumulator and count are needed."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int subsetXORSum(vector<int>& nums) {\n        int orAll = 0;\n        for (int x : nums) {\n            orAll |= x;\n        }\n        int n = nums.size();\n        int power = 1 << (n - 1);          // 2^{n-1}\n        return orAll * power;\n    }\n};",
-    "java": "class Solution {\n    public int subsetXORSum(int[] nums) {\n        int orAll = 0;\n        for (int x : nums) {\n            orAll |= x;\n        }\n        int n = nums.length;\n        int power = 1 << (n - 1);          // 2^{n-1}\n        return orAll * power;\n    }\n}",
-    "python3": "class Solution:\n    def subsetXORSum(self, nums: list[int]) -> int:\n        or_all = 0\n        for x in nums:\n            or_all |= x\n        n = len(nums)\n        power = 1 << (n - 1)          # 2^{n-1}\n        return or_all * power",
-    "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar subsetXORSum = function(nums) {\n    let orAll = 0;\n    for (const x of nums) {\n        orAll |= x;\n    }\n    const n = nums.length;\n    const power = 1 << (n - 1); // 2^(n-1)\n    return orAll * power;\n};"
+    "cpp": "class Solution {\npublic:\n    int subsetXORSum(vector<int>& nums) {\n        int orAll = 0;\n        for (int x : nums) orAll |= x;\n        int n = nums.size();\n        return orAll * (1 << (n - 1));\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

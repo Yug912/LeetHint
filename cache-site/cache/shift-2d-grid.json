@@ -1,0 +1,40 @@
+{
+  "slug": "shift-2d-grid",
+  "title": "Shift 2D Grid",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Array Rotation",
+  "tc": "O(m*n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<vector<int>> result: m×n entries - this is the returned output (not counted)\n- no other containers, no recursion, no call stack\n- not counted: input grid, returned result",
+  "approach": "The shift operation moves every element one position forward in row-major order with wraparound, which is exactly a right rotation of the flattened grid. Flatten conceptually, reduce k modulo m×n, then for each output cell (i,j) compute its source index as (i*n + j − k + total) % total and read from the original grid. This avoids k separate simulation passes.",
+  "hints": [
+    "If you write the grid's elements in row-major order as a single sequence, what does one shift operation do to that sequence?",
+    "Flatten the grid into a 1D array and rotate it right by k positions. For Example 1, [1,2,3,4,5,6,7,8,9] rotated right by 1 becomes [9,1,2,3,4,5,6,7,8].",
+    "```\ntotal = m * n\nk = k % total\nfor each cell (i, j):\n    src = (i*n + j - k + total) % total\n    result[i][j] = grid[src / n][src % n]\nreturn result\n```",
+    "**k exceeds grid size** - k > m*n, so the effective shift wraps around.\n`Input: grid = [[1,2],[3,4]], k = 5` → `Expected: [[4,1],[2,3]]`\n⚠️ Bug: computing `src = (flat - k) % total` without adding `total` first → for flat=0, k=5: src = -5 % 4 = -1 in C++ → grid[0][-1] → out-of-bounds access\n\n**Single row** - m=1, so the last element wraps to the first position of the same row.\n`Input: grid = [[1,2,3,4]], k = 2` → `Expected: [[3,4,1,2]]`\n⚠️ Bug: in simulation, moving grid[0][3] to grid[1][0] when m=1 → out-of-bounds row access\n\n**Single column** - n=1, so each shift moves elements down one row with wrap.\n`Input: grid = [[1],[2],[3]], k = 1` → `Expected: [[3],[1],[2]]`\n⚠️ Bug: in simulation, moving grid[i][0] to grid[i][1] when n=1 → out-of-bounds column access\n\n**k = 0** - no shifts needed; the grid is returned unchanged.\n`Input: grid = [[1,2,3],[4,5,6],[7,8,9]], k = 0` → `Expected: [[1,2,3],[4,5,6],[7,8,9]]`\n⚠️ Bug: using `do { shift(); } while (--k > 0)` → performs 1 shift instead of 0 → returns `[[9,1,2],[3,4,5],[6,7,8]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "The formula already handles this via `k %= total`, which reduces any k to [0, total−1] in O(1). Time stays O(m*n) and space stays O(1). No code change needed."
+    },
+    {
+      "q": "What if the grid arrives as a stream and cannot fit in memory?",
+      "a": "Buffer only the last (k % total) elements of the stream, emit them first, then emit the remaining elements in order. Space drops from O(m*n) to O(k % total), time stays O(m*n)."
+    },
+    {
+      "q": "What if shifts can go left or right?",
+      "a": "A left shift by k equals a right shift by (total − k % total) % total. Compute the effective right-shift amount from the direction, then apply the same index formula. Time and space are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> shiftGrid(vector<vector<int>>& grid, int k) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int total = m * n;\n        k %= total;\n        vector<vector<int>> result(m, vector<int>(n));\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                int src = (i * n + j - k + total) % total;\n                result[i][j] = grid[src / n][src % n];\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-completing-word",
+  "title": "Shortest Completing Word",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Counting",
+  "tc": "O(n * m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int lp[26]: fixed 26 ints → O(1)\n- int wc[26]: fixed 26 ints, reused per word → O(1)\n- string best: bounded by max word length 15 → O(1)\n- recursion depth: none\n- not counted: input licensePlate, input words vector, returned string",
+  "approach": "Count the letter frequencies (case-insensitive, ignoring digits/spaces) of `licensePlate` into a fixed 26-element array. For each word, build its own 26-element frequency array and check it is elementwise ≥ the licensePlate array. Track the shortest completing word seen so far, using strict `<` on length so the first occurring word wins ties. This is correct because the elementwise comparison exactly encodes \"contains every letter at least as many times.\"",
+  "hints": [
+    "For each word you must verify it covers every letter of the licensePlate with at least the required multiplicity. What single precomputed object about the licensePlate would let you check any candidate word in one pass over its characters? Recall licensePlate.length ≤ 7 and words[i].length ≤ 15.",
+    "Use a fixed 26-element frequency array. For \"1s3 PSt\" the array holds s=2, p=1, t=1; a word completes iff its own 26-element array is ≥ elementwise.",
+    "```\ncount letters of licensePlate (lowercase, skip non-letters) into L[26]\nbest = \"\"\nfor each word w:\n    count letters of w into W[26]\n    if W[i] >= L[i] for all i in 0..25:\n        if best == \"\" or len(w) < len(best):\n            best = w\nreturn best\n```",
+    "**No letters in licensePlate** - licensePlate is all digits/spaces, so every word trivially completes.\n`Input: licensePlate = \"1 2 3\", words = [\"a\",\"bb\",\"ccc\"]` → `Expected: \"a\"`\n⚠️ Bug: requiring at least one letter to match before accepting → returns \"\" (no word accepted).\n\n**Tie on shortest length** - several words of the same shortest length all complete.\n`Input: licensePlate = \"1s3 456\", words = [\"pest\",\"stew\",\"show\"]` → `Expected: \"pest\"`\n⚠️ Bug: using `<=` instead of `<` when comparing lengths → returns \"show\" (last equal-length word).\n\n**Duplicate letters in licensePlate** - a letter appears more than once.\n`Input: licensePlate = \"aBc 12c\", words = [\"abc\",\"abcc\",\"cbca\"]` → `Expected: \"abcc\"`\n⚠️ Bug: storing only letter presence (a set) instead of counts → \"abc\" passes and returns \"abc\", missing the second 'c'.\n\n**Single character, single word** - minimal valid input.\n`Input: licensePlate = \"a\", words = [\"a\"]` → `Expected: \"a\"`\n⚠️ Bug: requiring word length strictly greater than licensePlate letter count → returns \"\"."
+  ],
+  "followUps": [
+    {
+      "q": "Words arrive in an unbounded stream and cannot all be stored. How do you still return the shortest completing word?",
+      "a": "Precompute the licensePlate frequency array once, then for each streamed word compute its frequency array and check elementwise coverage. Keep only the current best word and its length, so auxiliary space stays O(1) beyond the two 26-int arrays. Time per word is O(m), total O(total streamed characters)."
+    },
+    {
+      "q": "licensePlate length grows to 10^5 with many repeated letters. Does the approach still work?",
+      "a": "Yes. You still collapse it into a 26-element frequency array in one O(L) pass, then check each word in O(m). The licensePlate length only affects preprocessing, not the per-word check, so total time is O(L + n·m) and space stays O(1)."
+    },
+    {
+      "q": "Instead of the single shortest, return the k shortest completing words in order.",
+      "a": "Maintain a max-heap of size k keyed by (length, original index) so the worst of the kept k is at the top. When a word completes and the heap has fewer than k entries, push it; if it has k and the new word is shorter than the top, pop and push. Final answer is the heap sorted ascending by length then index. Time O(n log k), space O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string shortestCompletingWord(string licensePlate, vector<string>& words) {\n        int lp[26] = {0};\n        for (char c : licensePlate) {\n            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {\n                char lc = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;\n                lp[lc - 'a']++;\n            }\n        }\n        string best;\n        for (const string& w : words) {\n            int wc[26] = {0};\n            for (char c : w) {\n                wc[c - 'a']++;\n            }\n            bool ok = true;\n            for (int i = 0; i < 26; i++) {\n                if (wc[i] < lp[i]) {\n                    ok = false;\n                    break;\n                }\n            }\n            if (ok && (best.empty() || w.size() < best.size())) {\n                best = w;\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

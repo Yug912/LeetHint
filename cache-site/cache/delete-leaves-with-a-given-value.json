@@ -1,0 +1,40 @@
+{
+  "slug": "delete-leaves-with-a-given-value",
+  "title": "Delete Leaves With a Given Value",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order DFS Tree Pruning",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call-stack depth: up to h (worst case n for a skewed tree) → O(h)\n- no other allocations\n- not counted: input tree, returned tree",
+  "approach": "Use post-order DFS: recursively process both children first, then check if the current node has become a leaf with value equal to target. If so, return nullptr (delete it); otherwise return the node with updated child pointers. This works because a node's fate depends on its children's fate - you can only know if a node is a leaf after its children have been processed (and possibly deleted).",
+  "hints": [
+    "A node should be deleted only if it becomes a leaf with the target value - but its children might also be deleted. What must you determine about a node's children before you can decide whether to keep or delete the node itself?",
+    "Use post-order DFS (process children before parent). In Example 1, after recursing on both children of the leftmost node 2, it is a leaf with val=target, so return nullptr; its parent 2 then also becomes a target leaf and returns nullptr.",
+    "```\nfunction remove(node, target):\n    if node is null: return null\n    node.left = remove(node.left, target)\n    node.right = remove(node.right, target)\n    if node.left is null and node.right is null and node.val == target:\n        return null\n    return node\n```",
+    "**Single target root** - the only node is a target leaf.\n`Input: root = [5], target = 5` → `Expected: []`\n⚠️ Bug: returning root without checking if it is a target leaf → returns `[5]`\n\n**Cascading deletion** - deleting a leaf makes its parent a target leaf.\n`Input: root = [2,2], target = 2` → `Expected: []`\n⚠️ Bug: checking if node is a target leaf before recursing on children (pre-order) → returns `[2]`\n\n**Skewed all-target chain** - left-skewed list where every node has value target.\n`Input: root = [2,2,null,2], target = 2` → `Expected: []`\n⚠️ Bug: deleting only originally-existing target leaves without cascading → returns `[2,2]`\n\n**No target leaves** - no leaf has the target value.\n`Input: root = [1,2,3], target = 4` → `Expected: [1,2,3]`\n⚠️ Bug: deleting any leaf node regardless of its value → returns `[1]`"
+  ],
+  "followUps": [
+    {
+      "q": "Can you solve this iteratively without recursion?",
+      "a": "Yes - use an explicit stack for post-order traversal. Push each node with a \"visited\" flag; on second visit, check if it is a target leaf and null out the parent's child pointer. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if instead of a single target, you are given a set of target values?",
+      "a": "Replace the equality check `node.val == target` with a set membership test. Everything else stays the same. TC: O(n), SC: O(h + k) where k is the set size."
+    },
+    {
+      "q": "What if you must also return the count of deleted nodes?",
+      "a": "Pass a counter by reference through the recursion and increment it each time you return nullptr for a target leaf. The pruning logic is unchanged. TC: O(n), SC: O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* removeLeafNodes(TreeNode* root, int target) {\n        if (!root) return nullptr;\n        root->left = removeLeafNodes(root->left, target);\n        root->right = removeLeafNodes(root->right, target);\n        if (!root->left && !root->right && root->val == target) {\n            return nullptr;\n        }\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

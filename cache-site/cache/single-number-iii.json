@@ -1,0 +1,40 @@
+{
+  "slug": "single-number-iii",
+  "title": "Single Number III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bit Manipulation (XOR Partitioning)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long xor2, mask: O(1) scalars\n- int a, b: O(1) scalars\n- returned vector<int>: 2 elements, not counted (LeetCode convention)\n- no containers, no recursion",
+  "approach": "XOR all numbers together: duplicate pairs cancel (x ⊕ x = 0), leaving `xor2 = a ⊕ b`. Since a ≠ b, `xor2` is nonzero and has at least one set bit where a and b differ. Isolate the lowest such bit with `mask = xor2 & -xor2` (computed in `long long` to avoid overflow when `xor2 = INT_MIN`). Partition the array by that bit and XOR each group separately - each group contains one unique plus cancelling pairs, yielding a and b.",
+  "hints": [
+    "Every element except two appears exactly twice. What property of those pairs could let you eliminate all of them in a single combining pass over the array?",
+    "XOR all elements → `a ⊕ b`. Use the lowest set bit of that result to split the array into two groups; XOR each group separately to recover a and b. For [1,2,1,3,2,5]: XOR all → 6 (= 3 ⊕ 5), lowest set bit = 2, split by bit 2 → groups XOR to 3 and 5.",
+    "```\nxor2 = XOR of all elements\nmask = xor2 & (-xor2)        // lowest set bit\na = 0, b = 0\nfor each x in array:\n    if x & mask:  a = a XOR x\n    else:         b = b XOR x\nreturn [a, b]\n```",
+    "**Wrong mask bit** - xor2 may have bit 0 unset, so a fixed bit position fails.\n`Input: nums = [1,2,1,3,2,5]` → `Expected: [3,5]`\n⚠️ Bug: hardcoding `mask = 1` instead of extracting a set bit from xor2 → xor2 = 6 (110₂) has bit 0 unset, so 3 (011₂) and 5 (101₂) both have bit 0 set and land in the same group → returns [6, 0]\n\n**Negative numbers** - sign extension must be preserved when testing the mask bit.\n`Input: nums = [-1,0]` → `Expected: [-1,0]`\n⚠️ Bug: guarding the XOR with `if (x > 0)` → both -1 and 0 are skipped → returns [0, 0]\n\n**Operator precedence** - `&` binds looser than `!=` in C++.\n`Input: nums = [2,2,4,6]` → `Expected: [4,6]`\n⚠️ Bug: writing `if (x & mask != 0)` parses as `if (x & (mask != 0))` = `if (x & 1)` → all elements are even so all go to group b → returns [0, 2]\n\n**INT_MIN overflow** - negating INT_MIN in `int` is undefined behaviour.\n`Input: nums = [-2147483648,0]` → `Expected: [-2147483648,0]`\n⚠️ Bug: `int mask = xor2 & -xor2` when xor2 = -2147483648 → -(-2147483648) = 2147483648 overflows 32-bit int → compiler exploiting UB may eliminate the mask → returns [0, 0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if exactly one element appears once instead of two?",
+      "a": "XOR all elements - duplicates cancel, leaving the single value. Same bit-manipulation principle, no partitioning needed. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if exactly three elements appear once and all others twice?",
+      "a": "XOR all to get a⊕b⊕c. For each of the 32 bit positions, count how many array elements have that bit set; if the count is odd, an odd number of the three uniques share that bit. This gives enough equations to reconstruct a, b, c individually. O(32n) time, O(1) space."
+    },
+    {
+      "q": "What if the data arrives as a stream you can read only once?",
+      "a": "Replace the second pass with 32 running XOR accumulators - accumulator i holds the XOR of all elements whose i-th bit is set. After the stream ends, combine these with the total XOR to recover a and b. O(32n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> singleNumber(vector<int>& nums) {\n        long long xor2 = 0;\n        for (int x : nums) xor2 ^= x;\n        long long mask = xor2 & -xor2;\n        int a = 0, b = 0;\n        for (int x : nums) {\n            if (x & mask) a ^= x;\n            else b ^= x;\n        }\n        return {a, b};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

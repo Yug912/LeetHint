@@ -1,0 +1,40 @@
+{
+  "slug": "decoded-string-at-index",
+  "title": "Decoded String at Index",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Forward-Backward Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long size: single scalar → O(1)\n- long long kk: single scalar → O(1)\n- int n, i: scalars → O(1)\n- recursion depth: none\n- not counted: input string s, returned string",
+  "approach": "The decoded string can have up to 2^63 letters, so we never build it. We track the total decoded length in one forward pass (multiply by each digit, increment for each letter). Then we walk `s` backward: reduce `k` via `k %= size` at every step; if `k` becomes 0 at a letter, that letter is the answer; at digits we divide `size`, at letters we decrement `size`. This is correct because when a digit `d` repeats the tape, the k-th letter of the repeated version equals the (k mod old_length)-th letter of the pre-repeat version.",
+  "hints": [
+    "The decoded string can have up to 2^63 letters, far too many to build. When a digit d repeats the entire current tape, where does the k-th letter of the result come from inside the tape that existed just before that repetition?",
+    "Track the decoded length forward without building the string, then walk s backward reducing k by modulo at each step. For \"leet2code3\" the forward length is 36; walking back, k = 10 % 36 = 10 at digit '3' (size → 12), then at letter 'o' k % 10 = 0 → return 'o'.",
+    "```\nsize = 0\nfor c in s:\n    if c is digit: size *= value(c)\n    else:          size += 1\nfor c in reversed(s):\n    k = k % size\n    if k == 0 and c is letter: return c\n    if c is digit: size /= value(c)\n    else:          size -= 1\n```",
+    "**Overflow** - the forward size product exceeds 2^31−1 well before the string ends.\n`Input: s = \"a2345678999999999999999\", k = 1` → `Expected: \"a\"`\n⚠️ Bug: declaring `size` as `int` → after 2×3×4×5×6×7×8×9⁵ ≈ 2.38×10⁹ it overflows, producing a wrong size and returning the wrong letter.\n\n**Repetition boundary** - k is an exact multiple of the current segment size, so k % size == 0.\n`Input: s = \"ha22\", k = 8` → `Expected: \"a\"`\n⚠️ Bug: testing `k == size` instead of `k % size == 0` → at letter 'a' k=0 ≠ size=2, the check fails, loop ends returning \"\".\n\n**Mod order** - k must be reduced by the current size before testing whether it hits a letter.\n`Input: s = \"leet2code3\", k = 10` → `Expected: \"o\"`\n⚠️ Bug: checking `k == 0` before `k %= size` → at 'o' k=10≠0 so the check passes, then k becomes 0, and the next letter 'c' wrongly returns 'c'."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^18 and the decoded string can exceed 2^63 letters?",
+      "a": "Use `__int128` (or a big-integer type) for `size` and `kk` so the forward products and backward divisions never overflow. The algorithm structure is identical - one forward pass to compute size, one backward pass reducing k. TC stays O(n); SC stays O(1)."
+    },
+    {
+      "q": "What if you must return a substring of length m starting at position k instead of a single letter?",
+      "a": "For each of the m consecutive positions, run the backward walk to find that letter. Each lookup is O(n), so total TC is O(n·m) and SC is O(m) for the output string. If m is large, batch nearby positions that share the same backward path segment."
+    },
+    {
+      "q": "What if the encoded string arrives as a forward-only stream you can read once?",
+      "a": "Store each character and its cumulative decoded length in a vector during the single forward pass, then run the backward walk over that stored vector. TC stays O(n); SC becomes O(n) to hold the characters and their size checkpoints."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string decodeAtIndex(string s, int k) {\n        long long size = 0;\n        int n = (int)s.size();\n        for (int i = 0; i < n; i++) {\n            if (s[i] >= '0' && s[i] <= '9') {\n                size *= (long long)(s[i] - '0');\n            } else {\n                size += 1;\n            }\n        }\n        long long kk = (long long)k;\n        for (int i = n - 1; i >= 0; i--) {\n            kk %= size;\n            if (kk == 0 && s[i] >= 'a' && s[i] <= 'z') {\n                return string(1, s[i]);\n            }\n            if (s[i] >= '0' && s[i] <= '9') {\n                size /= (long long)(s[i] - '0');\n            } else {\n                size -= 1;\n            }\n        }\n        return \"\";\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

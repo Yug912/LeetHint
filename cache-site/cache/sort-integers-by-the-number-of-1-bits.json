@@ -1,0 +1,40 @@
+{
+  "slug": "sort-integers-by-the-number-of-1-bits",
+  "title": "Sort Integers by The Number of 1 Bits",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Custom Comparator Sort",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n) depth\n- not counted: input vector (modified in place, returned as output)",
+  "approach": "Each number's sort key - its popcount (number of set bits) - can be computed independently from the number itself in O(1) using `__builtin_popcount`. This means we can sort the array in place with a custom comparator: primary key is popcount (ascending), secondary key is the numeric value (ascending) to break ties. The sort is correct because the comparator defines a strict weak ordering that matches the problem's specification exactly.",
+  "hints": [
+    "Can each number's sorting key be computed from the number alone, without comparing it to other elements? The values satisfy 0 ≤ arr[i] ≤ 10^4.",
+    "Use `sort` with a custom comparator: compare `__builtin_popcount(a)` vs `__builtin_popcount(b)`, breaking ties with `a < b`. For arr = [0,1,2,3,4,5,6,7,8], 0 has 0 bits (sorts first), while 1, 2, 4, 8 each have 1 bit and order by value.",
+    "```\nsort arr using comparator(a, b):\n    ca = number of 1-bits in a\n    cb = number of 1-bits in b\n    if ca != cb:\n        return ca < cb\n    return a < b\nreturn arr\n```",
+    "**Single element** - only one integer to sort.\n`Input: [42]` → `Expected: [42]`\n⚠️ Bug: returning an empty vector instead of arr → returns `[]`\n\n**Tie-breaking** - all elements share the same bit count, so value order decides.\n`Input: [8,4,2,1]` → `Expected: [1,2,4,8]`\n⚠️ Bug: comparator returns only `ca < cb` with no value tie-breaker → stable_sort preserves original order, returns `[8,4,2,1]`\n\n**All equal values** - duplicates must all appear in the output.\n`Input: [3,3,3]` → `Expected: [3,3,3]`\n⚠️ Bug: inserting elements into a set before sorting → returns `[3]`\n\n**Value-sorted but not bit-sorted** - ascending by value does not imply ascending by bit count.\n`Input: [1,2,3,4]` → `Expected: [1,2,4,3]`\n⚠️ Bug: skipping the sort and returning input as-is → returns `[1,2,3,4]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if arr[i] can be up to 10^18?",
+      "a": "Replace `__builtin_popcount` with `__builtin_popcountll` for 64-bit integers. The approach and complexity are unchanged - O(n log n) time, O(log n) space - since popcount remains O(1) for fixed-width integers."
+    },
+    {
+      "q": "What if the array has 10^9 elements and you only need the first k results?",
+      "a": "Maintain a max-heap of size k using an inverted version of the same comparator. Process each element once, pushing and popping to keep only the k smallest by bit count. Time is O(n log k), space is O(k)."
+    },
+    {
+      "q": "What if you need to answer many queries: \"how many numbers in arr have exactly k bits set?\"",
+      "a": "Precompute a frequency array indexed by bit count (0 to 14 for values up to 10^4). Each query is O(1) lookup. Precomputation is O(n), space is O(15) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> sortByBits(vector<int>& arr) {\n        sort(arr.begin(), arr.end(), [](int a, int b) {\n            int ca = __builtin_popcount(a);\n            int cb = __builtin_popcount(b);\n            if (ca != cb) return ca < cb;\n            return a < b;\n        });\n        return arr;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

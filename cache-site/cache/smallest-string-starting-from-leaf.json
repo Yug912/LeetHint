@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-string-starting-from-leaf",
+  "title": "Smallest String Starting From Leaf",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS with Backtracking",
+  "tc": "O(n·h)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- string path: up to h characters → O(h)\n- string rev (temporary per leaf): up to h characters → O(h), freed after each leaf\n- recursion call stack: up to h frames → O(h)\n- not counted: string best (returned output), input tree",
+  "approach": "Every valid string corresponds to a root-to-leaf path reversed. We perform a DFS from the root, maintaining the current path as a string. At each leaf, we reverse the path to obtain the leaf-to-root string and keep the lexicographically smallest one seen. Standard C++ string comparison (`<`) correctly handles the prefix rule (shorter prefix is smaller), so no special length logic is needed.",
+  "hints": [
+    "Each leaf of the tree defines exactly one candidate string - what in the tree determines the characters and the order of that string?",
+    "Use depth-first search with backtracking: maintain the current root-to-leaf path, and at each leaf reverse it to get the leaf-to-root string. In Example 1, reaching leaf 3 (under node 1) gives path \"abd\", reversed to \"dba\" - the current best.",
+    "```\ndfs(node, path):\n    if node is null: return\n    append node's char to path\n    if node is a leaf:\n        candidate = reverse(path)\n        if best is empty or candidate < best:\n            best = candidate\n    else:\n        dfs(node.left, path)\n        dfs(node.right, path)\n    remove last char from path\n```",
+    "**Root with only right child** - root has one child, must not be treated as a leaf.\n`Input: [0,null,1]` → `Expected: \"ba\"`\n⚠️ Bug: checking `if (!node->left)` for leaf detection → root has no left child, treated as leaf → returns \"a\"\n\n**Longer string is lexicographically smaller** - a deeper leaf can produce a smaller string.\n`Input: [1,0,0,0]` → `Expected: \"aab\"`\n⚠️ Bug: preferring shorter strings with `if (rev.size() < best.size())` → \"ab\" (len 2) preferred over \"aab\" (len 3) → returns \"ab\"\n\n**Prefix tie** - one candidate is a prefix of another; the shorter must win.\n`Input: [2,2,1,null,1,0,null,0]` → `Expected: \"abc\"`\n⚠️ Bug: comparing character-by-character without checking length when one string ends → \"abc\" and \"abcc\" compare equal through 3 chars, keeps first found \"abcc\" → returns \"abcc\""
+  ],
+  "followUps": [
+    {
+      "q": "What if each node can have any number of children (n-ary tree) instead of just two?",
+      "a": "The DFS with backtracking approach generalizes directly - iterate over all children instead of just left and right. The path string and reversal logic stay identical. TC: O(n·h), SC: O(h), unchanged."
+    },
+    {
+      "q": "Return the k-th lexicographically smallest string instead of the smallest.",
+      "a": "Maintain a max-heap of size k. At each leaf, push the reversed string; if the heap exceeds size k, pop the largest. The top of the heap at the end is the k-th smallest. TC: O(n·h·log k), SC: O(h + k)."
+    },
+    {
+      "q": "Count the number of distinct leaf-to-root strings.",
+      "a": "Insert each reversed string into a hash set at each leaf, then return the set size. TC: O(n·h), SC: O(n·h) in the worst case when all strings are distinct."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    string best;\n    void dfs(TreeNode* node, string& path) {\n        if (!node) return;\n        path.push_back('a' + node->val);\n        if (!node->left && !node->right) {\n            string rev(path.rbegin(), path.rend());\n            if (best.empty() || rev < best) {\n                best = rev;\n            }\n        } else {\n            dfs(node->left, path);\n            dfs(node->right, path);\n        }\n        path.pop_back();\n    }\npublic:\n    string smallestFromLeaf(TreeNode* root) {\n        best.clear();\n        string path;\n        dfs(root, path);\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
