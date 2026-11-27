@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-laser-beams-in-a-bank",
+  "title": "Number of Laser Beams in a Bank",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with Running State",
+  "tc": "O(m × n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int prev, long long ans: scalar variables → O(1)\n- no containers allocated\n- not counted: input bank",
+  "approach": "A laser beam exists between two devices on different rows only if no row between them contains any device. This means beams only form between devices on consecutive non-empty rows. If one non-empty row has `a` devices and the next non-empty row has `b` devices, they contribute `a × b` beams. Scan all rows, count devices per row, skip empty rows, and accumulate the product of each adjacent pair of non-empty row counts.",
+  "hints": [
+    "In example 1, why is there no beam between any device on row 0 and any device on row 3, even though both rows contain devices?",
+    "Linear scan keeping the previous non-empty row's device count. In example 1, row 0 has 3 devices and the next non-empty row (row 2) has 2, contributing 3 × 2 = 6 beams; row 2 and row 3 contribute 2 × 1 = 2, totaling 8.",
+    "```\nans = 0\nprev = 0\nfor each row in bank:\n    cnt = number of '1' in row\n    if cnt > 0:\n        ans += prev * cnt\n        prev = cnt\nreturn ans\n```",
+    "**Empty rows between devices** - zero-device rows sit between rows that have devices\n`Input: [\"011001\",\"000000\",\"010100\",\"001000\"]` → `Expected: 8`\n⚠️ Bug: multiplying counts of every adjacent row pair without skipping empty rows (3×0 + 0×2 + 2×1 = 2) → returns 2\n\n**Single row** - bank has only one row\n`Input: [\"111\"]` → `Expected: 0`\n⚠️ Bug: returning `prev` (the last device count) instead of `ans` → returns 3\n\n**Wrong initial previous count** - first row has devices, prev starts non-zero\n`Input: [\"101\",\"000\",\"001\"]` → `Expected: 2`\n⚠️ Bug: initializing `prev = 1` instead of `prev = 0` (adds 1×2 = 2 extra on the first non-empty row) → returns 4\n\n**Addition instead of multiplication** - two consecutive non-empty rows\n`Input: [\"111\",\"111\"]` → `Expected: 9`\n⚠️ Bug: using `prev + cnt` instead of `prev * cnt` → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "If the bank is too large to fit in memory and rows arrive one at a time, how would you adapt?",
+      "a": "The solution already processes rows sequentially and only retains the previous non-empty row's device count. Stream rows in, count devices per row, skip empties, and accumulate - no change to the logic. TC: O(m × n), SC: O(1)."
+    },
+    {
+      "q": "What if laser beams can also form horizontally between devices in the same row with no device between them?",
+      "a": "For each row, scan left to right tracking the column of the previous device; every pair of consecutive devices in a row adds one horizontal beam. Sum horizontal and vertical counts independently. TC: O(m × n), SC: O(1)."
+    },
+    {
+      "q": "If a beam can span at most k rows (devices must be within k rows with no device between), how does the solution change?",
+      "a": "Track both the previous non-empty row's index and its count. When the current row index minus the last non-empty row index exceeds k, reset prev to 0 before multiplying. TC: O(m × n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfBeams(vector<string>& bank) {\n        long long ans = 0;\n        int prev = 0;\n        for (const string& row : bank) {\n            int cnt = 0;\n            for (char c : row) {\n                if (c == '1') cnt++;\n            }\n            if (cnt > 0) {\n                ans += (long long)prev * cnt;\n                prev = cnt;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

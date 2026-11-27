@@ -1,0 +1,40 @@
+{
+  "slug": "ipo",
+  "title": "IPO",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Max-Heap",
+  "tc": "O((n + k) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> proj: n entries → O(n)\n- priority_queue<int> pq: up to n entries → O(n)\n- sort(): O(log n) stack (introsort)\n- not counted: input vectors profits/capital, returned int",
+  "approach": "The key insight is that capital only ever increases, so the set of affordable projects only grows over time. Sort projects by capital requirement ascending, then greedily pick the highest-profit affordable project at each of the k steps. A max-heap holds profits of all currently affordable projects; as capital grows, newly affordable projects are pushed in. This is optimal because among all affordable projects, picking the one with the highest profit always leaves you with the most capital for future picks, and never blocks a future option (since affordability only expands).",
+  "hints": [
+    "Since your capital only ever increases after finishing a project, what can you say about the set of projects you can afford after each pick compared to before? The constraints allow k and n up to 10^5.",
+    "Sort projects by capital requirement ascending; maintain a max-heap of profits for all currently affordable projects. In Example 1 (w=0): sorted projects are [(0,1),(1,2),(1,3)]; push profit 1, pop it (w=1), then push profits 2 and 3, pop 3 (w=4).",
+    "```\nsort projects by capital ascending\ncur = w, idx = 0, heap = empty\nrepeat k times:\n    while idx < n and projects[idx].capital <= cur:\n        push projects[idx].profit to heap\n        idx++\n    if heap is empty: break\n    cur += pop max from heap\nreturn cur\n```",
+    "**k exceeds n** - more picks allowed than projects exist\n`k=5, w=0, profits=[1,2,3], capital=[0,1,2]` → `Expected: 6`\n⚠️ Bug: looping exactly k times without checking heap emptiness → calls top() on empty heap (undefined behavior)\n\n**No affordable project** - initial capital below every project's requirement\n`k=3, w=0, profits=[1,2,3], capital=[5,10,15]` → `Expected: 0`\n⚠️ Bug: not breaking when heap is empty → calls top() on empty heap (undefined behavior)\n\n**All affordable from start** - w already exceeds every capital requirement\n`k=1, w=100, profits=[1,2,3], capital=[0,1,2]` → `Expected: 103`\n⚠️ Bug: using == instead of <= when checking affordability → adds no projects (none have capital exactly 100), returns 100\n\n**Ties in capital, different profits** - all projects share the same capital requirement\n`k=2, w=0, profits=[3,5,2], capital=[0,0,0]` → `Expected: 8`\n⚠️ Bug: using a min-heap instead of max-heap → pops 2 then 3, returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if profits could be negative - when would you stop picking?",
+      "a": "Stop as soon as the maximum-profit affordable project has profit ≤ 0, since taking it would not increase capital. Add a check `if (pq.top() <= 0) break;` before popping. TC and SC are unchanged."
+    },
+    {
+      "q": "What if k can be up to 10^9 (far larger than n)?",
+      "a": "No change needed - the loop already breaks when the heap is empty, so it runs at most min(k, n) iterations. TC remains O(n log n) when k >> n."
+    },
+    {
+      "q": "What if projects arrive in an online stream and you must decide immediately whether to accept each?",
+      "a": "Maintain a balanced BST of projects keyed by capital. When a new project arrives, insert it; when capital increases, move newly-affordable projects into the max-heap. Each project is inserted once and moved once, so amortized TC is O(n log n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMaximizedCapital(int k, int w, vector<int>& profits, vector<int>& capital) {\n        int n = profits.size();\n        vector<pair<int,int>> proj(n);\n        for (int i = 0; i < n; i++) {\n            proj[i] = {capital[i], profits[i]};\n        }\n        sort(proj.begin(), proj.end());\n        priority_queue<int> pq;\n        long long cur = w;\n        int idx = 0;\n        for (int i = 0; i < k; i++) {\n            while (idx < n && proj[idx].first <= cur) {\n                pq.push(proj[idx].second);\n                idx++;\n            }\n            if (pq.empty()) break;\n            cur += pq.top();\n            pq.pop();\n        }\n        return (int)cur;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

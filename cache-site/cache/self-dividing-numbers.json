@@ -1,0 +1,40 @@
+{
+  "slug": "self-dividing-numbers",
+  "title": "Self Dividing Numbers",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with Digit Extraction",
+  "tc": "O((right - left + 1) * d)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> result: returned output, not counted\n- int locals (num, original, digit): O(1)\n- recursion depth: none\n- not counted: input scalars, returned vector",
+  "approach": "Iterate through every number in [left, right]. For each number, extract its digits one by one (via `% 10` and `/ 10`); if any digit is 0 or does not evenly divide the original number, reject it. Otherwise collect it. With `right ≤ 10^4` and at most 5 digits per number, this is at most ~5×10^4 cheap operations - well within budget. Correctness follows directly from the definition: a number qualifies iff every digit is nonzero and divides it.",
+  "hints": [
+    "For a candidate number, what must be true about each of its individual digits for the number to qualify? The range is small: `right ≤ 10^4`.",
+    "Linear scan with digit extraction via `% 10`. For 128: check `128 % 8 == 0`, then `128 % 2 == 0`, then `128 % 1 == 0` - all pass, so 128 is collected.",
+    "```\nfor num in [left, right]:\n    temp = num\n    valid = true\n    while temp > 0:\n        digit = temp % 10\n        if digit == 0 or num % digit != 0:\n            valid = false\n            break\n        temp = temp / 10\n    if valid:\n        append num to result\nreturn result\n```",
+    "**Single-element range** - left equals right, only one candidate\n`Input: left = 1, right = 1` → `Expected: [1]`\n⚠️ Bug: loop condition `num < right` instead of `num <= right` → returns `[]`\n\n**Zero digit rejection** - any number containing digit 0 is automatically excluded\n`Input: left = 10, right = 10` → `Expected: []`\n⚠️ Bug: checking `num % digit != 0` before testing `digit == 0` → division by zero / crash on 10\n\n**Mutating the candidate** - extracting digits must use a copy, not the number being tested\n`Input: left = 128, right = 128` → `Expected: [128]`\n⚠️ Bug: dividing `num` itself and then checking `num % digit` → after first step num=12, `12 % 8 = 4 ≠ 0` → returns `[]`\n\n**Largest bound contains zeros** - right = 10000 must be excluded\n`Input: left = 9999, right = 10000` → `Expected: [9999]`\n⚠️ Bug: stopping digit extraction at `temp > 1` instead of `temp > 0` → skips the leading 1, misclassifies 10000 as valid → returns `[9999, 10000]`"
+  ],
+  "followUps": [
+    {
+      "q": "If `right` could be up to 10^9, brute force (10^9 × 10 ops) would TLE. How would you generate only self-dividing numbers?",
+      "a": "Build them by DFS/BFS: start from digits 1-9, repeatedly append a digit 1-9, and keep a candidate only if the current value is divisible by the newly appended digit. This visits only self-dividing prefixes, of which there are far fewer than 10^9. TC: O(count of self-dividing numbers ≤ 10^9 × 9), SC: O(depth) ≈ O(10)."
+    },
+    {
+      "q": "What if digit 0 were allowed but simply skipped during the divisibility check (no division by zero)?",
+      "a": "Remove the `digit == 0` early-exit and `continue` to the next digit when it is 0; everything else stays identical. TC and SC are unchanged: O(N·d) and O(1)."
+    },
+    {
+      "q": "Given an unbounded range, produce self-dividing numbers in increasing order as a stream.",
+      "a": "Use a min-heap seeded with 1-9; pop the smallest, then push `value*10 + d` for d in 1-9 whenever `value*10 + d` is divisible by d. Each pop yields the next number in order. TC: O(K log K) for K outputs, SC: O(K) heap size."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> selfDividingNumbers(int left, int right) {\n        vector<int> result;\n        for (int num = left; num <= right; num++) {\n            if (isSelfDividing(num)) {\n                result.push_back(num);\n            }\n        }\n        return result;\n    }\nprivate:\n    bool isSelfDividing(int num) {\n        int original = num;\n        while (num > 0) {\n            int digit = num % 10;\n            if (digit == 0 || original % digit != 0) {\n                return false;\n            }\n            num /= 10;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

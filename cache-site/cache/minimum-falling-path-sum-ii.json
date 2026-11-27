@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-falling-path-sum-ii",
+  "title": "Minimum Falling Path Sum II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP with Running Minima",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n entries → O(n)\n- vector<int> newDp: n entries → O(n)\n- scalars (min1, min2, idx1, loop vars): O(1)\n- recursion depth: none\n- not counted: input grid, returned int",
+  "approach": "Use dynamic programming where dp[j] = minimum falling path sum ending at column j in the current row. For each new row, instead of checking all n-1 columns from the previous row for each j (O(n³) total), observe that only two values matter: the smallest and second-smallest dp values from the previous row. If column j holds the minimum, use the second minimum; otherwise use the minimum. This reduces the transition to O(n) per row, giving O(n²) overall.",
+  "hints": [
+    "When filling in the best path sum ending at each column of row i, how many values from row i's previous row do you actually need to look at to handle the \"no same column\" rule for every j at once?",
+    "Dynamic programming: keep dp[j] = best path sum ending at column j. For each new row, track the smallest and second-smallest dp values from the previous row. In Example 1, row 0 gives dp=[1,2,3]; the smallest is 1 (column 0) and second-smallest is 2, so row 1 column 0 adds 2, columns 1-2 add 1.",
+    "```\ndp = copy of first row\nfor each row i from 1 to n-1:\n    find min1, min2, idx1 in dp\n    for each column j:\n        newDp[j] = grid[i][j] + (j == idx1 ? min2 : min1)\n    dp = newDp\nreturn min(dp)\n```",
+    "**Single element** - n=1, the grid has one cell\n`Input: [[7]]` → `Expected: 7`\n⚠️ Bug: not guarding n==1, min2 stays INT_MAX → newDp[0] = 7 + INT_MAX → overflow\n\n**Minimum not at first position** - the smallest dp value is not the first element\n`Input: [[3,1,4],[10,20,30],[100,200,300]]` → `Expected: 123`\n⚠️ Bug: not shifting old min1 to min2 when a new min1 is found → min2=4 instead of 3 → returns 124\n\n**All positive values** - every cell is positive, testing initialization\n`Input: [[10,20,30],[40,50,60],[70,80,90]]` → `Expected: 130`\n⚠️ Bug: initializing min1/min2 to 0 instead of INT_MAX → no value is < 0 → returns 70\n\n**Tied minimum in 2-column grid** - two columns share the minimum, n=2\n`Input: [[1,1],[4,5]]` → `Expected: 5`\n⚠️ Bug: using `<=` for the first comparison without shifting min1→min2 → min2 stays INT_MAX → overflow"
+  ],
+  "followUps": [
+    {
+      "q": "What if no two elements chosen in ANY two rows (not just adjacent) can share a column?",
+      "a": "This becomes a minimum-weight bipartite matching problem (rows vs columns), solvable with the Hungarian algorithm in O(n³). The running-minima trick no longer applies because the constraint is global, not local to adjacent rows."
+    },
+    {
+      "q": "What if you can skip at most k rows (choose no element from up to k rows)?",
+      "a": "Add a skip dimension: dp[i][j][s] = best sum through row i ending at column j having used s skips. Transition either picks grid[i][j] (using the previous row's min excluding j) or skips row i (carrying forward the previous row's dp with s+1). TC: O(n²k), SC: O(nk)."
+    },
+    {
+      "q": "What if you can only use O(1) extra space?",
+      "a": "Modify the grid in place: store each row's dp values directly in grid[i], keeping only min1, min2, and idx1 as scalars between rows. TC: O(n²), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minFallingPathSum(vector<vector<int>>& grid) {\n        int n = grid.size();\n        if (n == 1) return grid[0][0];\n        \n        vector<int> dp(grid[0].begin(), grid[0].end());\n        \n        for (int i = 1; i < n; i++) {\n            int min1 = INT_MAX, min2 = INT_MAX, idx1 = -1;\n            for (int j = 0; j < n; j++) {\n                if (dp[j] < min1) {\n                    min2 = min1;\n                    min1 = dp[j];\n                    idx1 = j;\n                } else if (dp[j] < min2) {\n                    min2 = dp[j];\n                }\n            }\n            \n            vector<int> newDp(n);\n            for (int j = 0; j < n; j++) {\n                newDp[j] = grid[i][j] + (j == idx1 ? min2 : min1);\n            }\n            dp = move(newDp);\n        }\n        \n        return *min_element(dp.begin(), dp.end());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

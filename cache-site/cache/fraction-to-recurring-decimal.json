@@ -1,0 +1,40 @@
+{
+  "slug": "fraction-to-recurring-decimal",
+  "title": "Fraction to Recurring Decimal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map for Cycle Detection",
+  "tc": "O(k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- unordered_map<long long,int> pos: at most k entries (one per emitted digit) → O(k)\n- string res: the returned output (not counted as auxiliary)\n- recursion depth: none",
+  "approach": "Simulate long division: produce the integer part first, then repeatedly multiply the remainder by 10, append the next quotient digit, and reduce. The key insight is that a remainder that has appeared before forces the *same* sequence of digits to follow, so the digits between the first occurrence of that remainder and now form the repeating block - wrap them in parentheses. Use `long long` for absolute values because `INT_MIN`'s absolute value overflows `int`.",
+  "hints": [
+    "When you carry out long division by hand, what property of the intermediate state at each step fully determines every digit you will write from that point onward?",
+    "Use a hash map mapping each remainder to the index in the result string where its digit was written. For 4/333: remainder 4 is recorded, digits 0,1,2 are produced, then remainder 4 reappears - insert '(' at the stored index and append ')'.",
+    "```\ncompute sign, append integer part\nremainder = num % den\nif remainder == 0: return\nappend '.'\nwhile remainder != 0:\n    if remainder in map:\n        insert '(' at map[remainder], append ')', break\n    map[remainder] = current length\n    remainder *= 10\n    append digit = remainder / den\n    remainder = remainder % den\n```",
+    "**Zero numerator with negative denominator** - sign logic alone yields a spurious minus.\n`Input: numerator = 0, denominator = -5` → `Expected: \"0\"`\n⚠️ Bug: not special-casing numerator == 0 before the sign check → returns \"-0\"\n\n**INT_MIN absolute value** - `abs(INT_MIN)` cannot fit in a signed int.\n`Input: numerator = -2147483648, denominator = -1` → `Expected: \"2147483648\"`\n⚠️ Bug: casting to `long long` *after* calling `abs` on an int → returns \"-2147483648\"\n\n**Exact division** - no fractional part should be emitted.\n`Input: numerator = 2, denominator = 1` → `Expected: \"2\"`\n⚠️ Bug: always appending '.' before checking the remainder → returns \"2.\"\n\n**Repeating block starts at the first fractional digit** - the '(' must go before, not after, the digit.\n`Input: numerator = 1, denominator = 3` → `Expected: \"0.(3)\"`\n⚠️ Bug: storing `pos[rem] = res.size()` *after* appending the digit → returns \"0.3(\""
+  ],
+  "followUps": [
+    {
+      "q": "Instead of building the whole string, how would you produce digits one at a time as a stream, with bounded memory once the cycle is known?",
+      "a": "Run the same long division, but once a remainder repeats you know the cycle length and its starting offset. Keep emitting digits from the stored cycle buffer cyclically. TC: O(1) amortized per digit after detection; SC: O(cycle length)."
+    },
+    {
+      "q": "Given only numerator and denominator, return the length of the repeating part (0 if terminating) without constructing the string.",
+      "a": "Strip factors of 2 and 5 from the denominator; if nothing remains the decimal terminates. Otherwise the period equals the multiplicative order of 10 modulo the remaining denominator, found by iterating powers of 10. TC: O(den), SC: O(den) with a remainder map, or O(√den) with factorization."
+    },
+    {
+      "q": "Given a decimal string possibly containing a parenthesized repeating block, recover the fraction in lowest terms.",
+      "a": "Let the non-repeating fractional part have length m and the repeating block length k. The value equals (integer·10^m + nonRepeat)·(10^k − 1) + repeat, over 10^m·(10^k − 1); reduce by gcd. TC: O(L) for parsing, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string fractionToDecimal(int numerator, int denominator) {\n        if (numerator == 0) return \"0\";\n        string res;\n        if ((numerator < 0) ^ (denominator < 0)) res += '-';\n        long long n = abs((long long)numerator);\n        long long d = abs((long long)denominator);\n        res += to_string(n / d);\n        long long rem = n % d;\n        if (rem == 0) return res;\n        res += '.';\n        unordered_map<long long, int> pos;\n        while (rem != 0) {\n            if (pos.count(rem)) {\n                res.insert(pos[rem], \"(\");\n                res += ')';\n                break;\n            }\n            pos[rem] = res.size();\n            rem *= 10;\n            res += (char)('0' + rem / d);\n            rem %= d;\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

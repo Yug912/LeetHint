@@ -1,0 +1,40 @@
+{
+  "slug": "construct-the-lexicographically-largest-valid-sequence",
+  "title": "Construct the Lexicographically Largest Valid Sequence",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking with Greedy Ordering",
+  "tc": "O(n!)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> used: n+1 entries → O(n)\n- recursion call-stack depth: up to 2n-1 → O(n)\n- not counted: input, returned vector ans (size 2n-1)",
+  "approach": "To get the lexicographically largest sequence, greedily attempt to place the largest unused value at the leftmost empty position first; if that choice leads to a dead end, backtrack and try the next smaller value. For value `v > 1`, it must occupy two slots exactly `v` apart, so place it at `pos` and `pos+v` simultaneously (only if both are free and in range); value `1` occupies a single slot. Because `n ≤ 20`, the sequence has at most 39 slots and this backtracking with strong pruning runs well within limits.",
+  "hints": [
+    "The constraint n ≤ 20 means the sequence has at most 39 slots. For the result to be lexicographically largest, what should be true about the value placed at the leftmost unfilled position?",
+    "Use backtracking: at each empty slot, try values from n down to 1; for v > 1 place copies at pos and pos+v. For n=3, first try placing 3 at slots 0 and 3.",
+    "```\nfill(pos):\n  if pos == length: return true\n  if slot[pos] filled: return fill(pos+1)\n  for v from n down to 1:\n    if used[v]: continue\n    if v == 1:\n      place 1 at pos\n      if fill(pos+1): return true\n      unplace\n    else if pos+v < length and slot[pos+v] empty:\n      place v at pos and pos+v\n      if fill(pos+1): return true\n      unplace both\n  return false\n```",
+    "**Smallest input** - only the value 1 exists, appearing once.\n`Input: n = 1` → `Expected: [1]`\n⚠️ Bug: special-casing v==1 the same as v>1 (requiring a second slot at pos+1) → returns `[]` or crashes.\n\n**Second slot out of bounds** - a value v placed at pos may need pos+v beyond the array.\n`Input: n = 3` → `Expected: [3,1,2,3,2]`\n⚠️ Bug: not checking `pos+v < length` before writing slot[pos+v] → out-of-bounds write / undefined behavior.\n\n**Slot already occupied** - the partner slot pos+v may already hold another value.\n`Input: n = 5` → `Expected: [5,3,1,4,3,5,2,4,2]`\n⚠️ Bug: skipping the `slot[pos+v] == 0` check and overwriting it → returns `[5,3,4,1,3,5,4,2,2]` (invalid, distances wrong).\n\n**Largest input** - n=20 yields 39 slots; naive permutation generation without pruning is infeasible.\n`Input: n = 20` → `Expected: [20,18,19,16,15,17,12,14,11,8,13,6,10,4,7,9,5,2,3,2,1,20,3,18,5,19,16,6,15,17,12,14,7,11,8,4,13,9,10]` (one valid largest sequence)\n⚠️ Bug: trying all permutations of values without greedy largest-first ordering → TLE."
+  ],
+  "followUps": [
+    {
+      "q": "What if n could be up to 1000 - can the backtracking still work?",
+      "a": "No, the search space explodes. One would need a constructive pattern (Langford-type sequences have known constructions for certain n), giving O(n) time and O(n) space, but lexicographically-largest guarantees become much harder."
+    },
+    {
+      "q": "What if instead of lexicographically largest we wanted the lexicographically smallest valid sequence?",
+      "a": "Same backtracking, but iterate candidate values from 1 up to n instead of n down to 1. Time and space complexity remain O(n!) worst case and O(n) respectively."
+    },
+    {
+      "q": "What if each value i (including 1) had to appear exactly i times instead of twice?",
+      "a": "The placement constraint changes to filling i slots at fixed offsets; backtracking still applies but branching factor grows, making pruning essential. Time complexity worsens to roughly O(n^n) worst case, space stays O(n) for the used counter and recursion stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> constructDistancedSequence(int n) {\n        int len = 2 * n - 1;\n        vector<int> ans(len, 0);\n        vector<bool> used(n + 1, false);\n        backtrack(ans, used, 0, n);\n        return ans;\n    }\nprivate:\n    bool backtrack(vector<int>& ans, vector<bool>& used, int pos, int n) {\n        int len = (int)ans.size();\n        if (pos == len) return true;\n        if (ans[pos] != 0) return backtrack(ans, used, pos + 1, n);\n        for (int v = n; v >= 1; v--) {\n            if (used[v]) continue;\n            if (v == 1) {\n                ans[pos] = 1;\n                used[1] = true;\n                if (backtrack(ans, used, pos + 1, n)) return true;\n                used[1] = false;\n                ans[pos] = 0;\n            } else {\n                int p2 = pos + v;\n                if (p2 >= len || ans[p2] != 0) continue;\n                ans[pos] = v;\n                ans[p2] = v;\n                used[v] = true;\n                if (backtrack(ans, used, pos + 1, n)) return true;\n                used[v] = false;\n                ans[pos] = 0;\n                ans[p2] = 0;\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

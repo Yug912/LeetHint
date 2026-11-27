@@ -1,0 +1,40 @@
+{
+  "slug": "convert-a-number-to-hexadecimal",
+  "title": "Convert a Number to Hexadecimal",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bit Manipulation",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string hex: 16 chars constant → O(1)\n- string result: at most 8 chars → O(1)\n- no recursion, no other containers",
+  "approach": "Casting a signed `int` to `unsigned int` yields the exact two's complement bit pattern, so positive and negative numbers are handled uniformly. We scan the 32 bits from the most significant nibble (bits 28-31) down to the least significant (bits 0-3), mapping each 4-bit group to a hex character and skipping leading zeros. The only special case is zero, which returns `\"0\"` since the loop would otherwise produce an empty string.",
+  "hints": [
+    "In C++, what happens to the bit pattern of a negative `int` when you reinterpret it as `unsigned int`? The constraint says the input is a 32-bit integer, so the answer never exceeds 8 hex digits.",
+    "Cast `num` to `unsigned int` (this gives the two's complement bit pattern), then extract 4 bits at a time. For `num = -1`, the unsigned value is `0xffffffff`; pulling each nibble gives `f,f,f,f,f,f,f,f` → `\"ffffffff\"`.",
+    "```\nif num == 0: return \"0\"\nn ← unsigned(num)\nfor i from 7 down to 0:\n    nibble ← (n >> (i*4)) & 0xF\n    if result not empty or nibble != 0:\n        append hex_char[nibble] to result\nreturn result\n```",
+    "**Zero** - the loop produces no characters when every nibble is zero.\n`Input: 0` → `Expected: \"0\"`\n⚠️ Bug: omitting the zero guard → returns `\"\"`\n\n**INT_MIN** - the most negative 32-bit value has no positive counterpart.\n`Input: -2147483648` → `Expected: \"80000000\"`\n⚠️ Bug: doing `num = -num` for negatives → `-(-2147483648)` overflows to `-2147483648`, producing `\"80000000\"` only by accident of wraparound (undefined behavior, and wrong on platforms where it traps)\n\n**Single nibble** - value fits in one hex digit.\n`Input: 15` → `Expected: \"f\"`\n⚠️ Bug: not skipping leading zeros and always emitting 8 digits → returns `\"0000000f\"`\n\n**Power of 16** - tests nibble boundary crossing.\n`Input: 16` → `Expected: \"10\"`\n⚠️ Bug: extracting nibbles with `n % 16` and `n / 16` on a signed negative `num` → implementation-defined division gives wrong digits for negatives"
+  ],
+  "followUps": [
+    {
+      "q": "How would you generalize this to convert to any base from 2 to 16?",
+      "a": "Replace the fixed 4-bit shift with repeated `n % base` and `n /= base`, still using `unsigned int` to handle negatives. The lookup string becomes `\"0123456789abcdef\"` truncated to the base. Time stays O(log n), space O(log n) for the output."
+    },
+    {
+      "q": "What changes for a 64-bit integer?",
+      "a": "Cast to `unsigned long long` and loop `i` from 15 down to 0 (16 nibbles). Everything else is identical. Time and space remain O(1) since the output is at most 16 characters."
+    },
+    {
+      "q": "What if the output must be fixed-width (always 8 hex digits with leading zeros)?",
+      "a": "Remove the leading-zero skip condition and always append every nibble. For zero this yields `\"00000000\"`. Time and space are still O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string toHex(int num) {\n        if (num == 0) return \"0\";\n        string hex = \"0123456789abcdef\";\n        string result;\n        unsigned int n = static_cast<unsigned int>(num);\n        for (int i = 7; i >= 0; i--) {\n            int nibble = (n >> (i * 4)) & 0xf;\n            if (!result.empty() || nibble != 0) {\n                result.push_back(hex[nibble]);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

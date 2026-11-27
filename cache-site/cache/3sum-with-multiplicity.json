@@ -1,0 +1,40 @@
+{
+  "slug": "3sum-with-multiplicity",
+  "title": "3Sum With Multiplicity",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting / Frequency Table",
+  "tc": "O(n + V²)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- `long long count[101]`: fixed 101 entries → O(1)\n- no recursion, no other containers\n- not counted: input vector, returned int",
+  "approach": "Since every `arr[i]` is in `[0, 100]`, build a frequency array `count[0..100]`. Then iterate over all value pairs `(x, y)` with `x ≤ y`, compute `z = target − x − y`, and require `z ≥ y` (and `z ≤ 100`) to enumerate each distinct triple exactly once. Depending on how many of `x, y, z` are equal, multiply the appropriate combination counts. Take everything modulo `10^9 + 7` and use `long long` to avoid overflow since `C(3000, 3) ≈ 4.5 × 10^9`.",
+  "hints": [
+    "The array can hold up to 3000 elements, yet every value lies in `[0, 100]`. What does that narrow value range let you count instead of searching through indices?",
+    "Use a frequency array `count[0..100]`. In Example 1, `count[1]=2, count[2]=2, …`; for each value pair `(x, y)` with `x ≤ y`, set `z = target − x − y` and combine the three counts according to how many are equal.",
+    "```\ncount[v] = frequency of v in arr\nans = 0\nfor x in 0..100:\n  for y in x..100:\n    z = target - x - y\n    if z < y or z > 100: continue\n    if x == y == z: ans += C(count[x], 3)\n    elif x == y:     ans += C(count[x], 2) * count[z]\n    elif y == z:     ans += count[x] * C(count[y], 2)\n    else:            ans += count[x] * count[y] * count[z]\nreturn ans mod 1e9+7\n```",
+    "**All equal** - three identical values must be chosen from the same bucket.\n`Input: arr = [1,1,1], target = 3` → `Expected: 1`\n⚠️ Bug: using `count[x]*count[y]*count[z]` when `x==y==z` → returns `27` instead of `1`.\n\n**Overflow** - `C(3000, 3) = 4,495,501,000 > 2³¹−1`.\n`Input: arr = [50]*3000, target = 150` → `Expected: 495500972`\n⚠️ Bug: storing the combination in `int` → overflow wraps to `200533704`, then mod gives a wrong value.\n\n**Two equal, one distinct** - the middle and largest value coincide.\n`Input: arr = [1,1,2,2,2,2], target = 5` → `Expected: 12`\n⚠️ Bug: treating `y == z` as `count[x]*count[y]*count[z]` → returns `32` instead of `12`.\n\n**No valid triple** - `z` falls outside `[0, 100]`.\n`Input: arr = [1,1,1], target = 10` → `Expected: 0`\n⚠️ Bug: omitting the `z > 100` guard → reads garbage from `count[z]` and returns a nonzero value."
+  ],
+  "followUps": [
+    {
+      "q": "What if `arr[i]` could be negative, say in `[-100, 100]`?",
+      "a": "The frequency approach still works - use a count array of size 201 with an offset of 100. The pair iteration becomes O(201²). Time stays O(n + V²) where V is the value-range size; space stays O(V)."
+    },
+    {
+      "q": "What if the array arrives as an unbounded stream you cannot store?",
+      "a": "Maintain a running frequency map. For each incoming value `v`, count how many already-seen pairs `(a, b)` satisfy `a + b = target − v` by iterating over seen values, then insert `v`. This is O(n · V) time and O(V) space, processing one element at a time."
+    },
+    {
+      "q": "What if you need 4Sum with multiplicity under the same constraints?",
+      "a": "Precompute a pair-sum frequency table: for every value pair `(a, b)` with `a ≤ b`, record `a + b` and its multiplicity. Then for each pair sum `s`, look up `target − s` and combine, carefully handling value overlaps. This gives O(n + V²) time and O(V²) space for the pair-sum table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int threeSumMulti(vector<int>& arr, int target) {\n        const int MOD = 1000000007;\n        long long count[101] = {0};\n        for (int v : arr) count[v]++;\n        long long ans = 0;\n        for (int x = 0; x <= 100; x++) {\n            if (count[x] == 0) continue;\n            for (int y = x; y <= 100; y++) {\n                if (count[y] == 0) continue;\n                int z = target - x - y;\n                if (z < y || z > 100) continue;\n                if (count[z] == 0) continue;\n                if (x == y && y == z) {\n                    ans += count[x] * (count[x] - 1) * (count[x] - 2) / 6;\n                } else if (x == y) {\n                    ans += count[x] * (count[x] - 1) / 2 * count[z];\n                } else if (y == z) {\n                    ans += count[x] * count[y] * (count[y] - 1) / 2;\n                } else {\n                    ans += count[x] * count[y] * count[z];\n                }\n                ans %= MOD;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

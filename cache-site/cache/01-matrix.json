@@ -1,0 +1,40 @@
+{
+  "slug": "01-matrix",
+  "title": "01 Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-pass Dynamic Programming",
+  "tc": "O(m * n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- input matrix `mat` modified in place: O(1) auxiliary\n- loop variables `i`, `j`, `m`, `n`, `INF`: O(1)\n- not counted: input, returned matrix",
+  "approach": "The key insight is that the distance of a cell to the nearest 0 is 1 plus the minimum distance among its four adjacent cells. We can solve this using a two-pass dynamic programming approach. In the first pass (top-left to bottom-right), we update each cell based on its top and left neighbors. In the second pass (bottom-right to top-left), we update each cell based on its bottom and right neighbors, correcting any paths that originate from those directions. This avoids the need for a queue and achieves O(1) auxiliary space by modifying the matrix in place.",
+  "hints": [
+    "If a cell's nearest 0 is reached via a path, that path must enter the cell from one of its four adjacent cells. If you process the cells in reading order, which of those four neighbors already have their correct distances computed?",
+    "Two-pass dynamic programming. First sweep top-left to bottom-right using top and left neighbors; then sweep bottom-right to top-left using bottom and right neighbors. For `mat[2][1]` in Example 2, the first pass sets it to `min(mat[1][1], mat[2][0]) + 1 = 2`.",
+    "```\nfor i, j in top-left to bottom-right:\n  if mat[i][j] != 0:\n    mat[i][j] = min(top_neighbor + 1, left_neighbor + 1, INF)\n\nfor i, j in bottom-right to top-left:\n  if mat[i][j] != 0:\n    mat[i][j] = min(mat[i][j], bottom_neighbor + 1, right_neighbor + 1)\n```",
+    "**Single 1x1 grid** - The grid has only one cell, which must be 0.\n`Input: [[0]]` → `Expected: [[0]]`\n⚠️ Bug: Accessing `mat[i-1][j]` without checking `i > 0` → returns out-of-bounds memory or crashes.\n\n**All 1s except one 0** - The 0 is at the bottom-right corner, requiring maximum distance propagation.\n`Input: [[1,1,1],[1,1,1],[1,1,0]]` → `Expected: [[4,3,2],[3,2,1],[2,1,0]]`\n⚠️ Bug: Only doing a single top-left to bottom-right pass → returns `[[1000000, 1000000, 1000000], [1000000, 1000000, 1000000], [1000000, 1000000, 0]]` because the 0 is at the bottom-right.\n\n**All 0s** - The grid contains only 0s.\n`Input: [[0,0],[0,0]]` → `Expected: [[0,0],[0,0]]`\n⚠️ Bug: Unconditionally setting `mat[i][j] = INF` before checking if it's 0 → returns `[[INF, INF], [INF, INF]]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the matrix is streamed row by row and cannot fit entirely in memory?",
+      "a": "The two-pass DP requires the full matrix for the backward pass. You could process the matrix in horizontal strips, keeping a few rows in memory, running the two-pass DP on the strip, and carrying over the bottom boundary values to the next strip. Time complexity remains O(m * n), but space complexity drops to O(n)."
+    },
+    {
+      "q": "What if diagonal movements (cost 1) were also allowed?",
+      "a": "The two-pass DP would need to check 8 neighbors instead of 4. The top-left pass would consider top, left, top-left, and top-right neighbors, while the bottom-right pass would consider bottom, right, bottom-right, and bottom-left. Time and space complexity remain unchanged."
+    },
+    {
+      "q": "What if the matrix is updated dynamically with point changes (flipping a 0 to 1 or vice versa)?",
+      "a": "A single point change could affect distances across the entire matrix, so the two-pass DP would need to be rerun from scratch. Time complexity per update would be O(m * n), and space would be O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> updateMatrix(vector<vector<int>>& mat) {\n        int m = mat.size();\n        int n = mat[0].size();\n        int INF = 1e6;\n        \n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (mat[i][j] != 0) {\n                    mat[i][j] = INF;\n                    if (i > 0) mat[i][j] = min(mat[i][j], mat[i-1][j] + 1);\n                    if (j > 0) mat[i][j] = min(mat[i][j], mat[i][j-1] + 1);\n                }\n            }\n        }\n        \n        for (int i = m - 1; i >= 0; i--) {\n            for (int j = n - 1; j >= 0; j--) {\n                if (mat[i][j] != 0) {\n                    if (i < m - 1) mat[i][j] = min(mat[i][j], mat[i+1][j] + 1);\n                    if (j < n - 1) mat[i][j] = min(mat[i][j], mat[i][j+1] + 1);\n                }\n            }\n        }\n        \n        return mat;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "next-greater-node-in-linked-list",
+  "title": "Next Greater Node In Linked List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- stack<pair<int,int>> st: up to n entries (worst case: strictly decreasing list) → O(n)\n- int i: O(1)\n- not counted: input linked list, returned vector<int> ans",
+  "approach": "The key insight is that when we encounter a node with value v, it is the \"next greater\" for all previously seen, still-unresolved nodes whose values are strictly less than v. We maintain a monotonic decreasing stack of (index, value) pairs. For each new node, we pop every stack entry with a smaller value and record the current node's value as that entry's answer. Any entry left on the stack at the end has no next greater and keeps its default 0. This is correct because the stack always holds unresolved nodes in strictly decreasing order, so the first node larger than the top resolves it - and only it - until the next pop.",
+  "hints": [
+    "As you scan the list left to right, when a new node arrives, which earlier nodes does it become the answer for - and what do those unresolved nodes have in common? The list has up to 10^4 nodes, so checking every pair would be too slow.",
+    "Use a monotonic decreasing stack of (index, value) pairs. In [2,1,5], when node 5 arrives it pops index 1 (value 1) setting answer[1]=5, then pops index 0 (value 2) setting answer[0]=5.",
+    "```\nans = []\nstack = empty\ni = 0\nfor each node in list:\n    append 0 to ans\n    while stack not empty and node.val > stack.top.value:\n        ans[stack.top.index] = node.val\n        pop stack\n    push (i, node.val) to stack\n    i = i + 1\nreturn ans\n```",
+    "**Single node** - only one node exists, so no next greater is possible.\n`Input: [7]` → `Expected: [0]`\n⚠️ Bug: returning an empty vector when head->next is nullptr → returns `[]`\n\n**All equal values** - strictly larger is required, so equal values never resolve each other.\n`Input: [5,5,5]` → `Expected: [0,0,0]`\n⚠️ Bug: using `>=` instead of `>` in the pop condition → returns `[5,5,0]`\n\n**Strictly increasing** - each node immediately resolves the previous one.\n`Input: [1,2,3,4,5]` → `Expected: [2,3,4,5,0]`\n⚠️ Bug: pushing the current node onto the stack before the while-loop → returns `[0,0,0,0,0]`\n\n**Non-adjacent next greater** - the next greater may be several nodes ahead, not the immediate neighbor.\n`Input: [5,1,4,2,3]` → `Expected: [0,4,5,3,0]`\n⚠️ Bug: only comparing with the immediately next node instead of using a stack → returns `[0,4,0,3,0]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the linked list is circular - the last node connects back to the first?",
+      "a": "Traverse the list twice (2n iterations) using the same monotonic stack, but only record answers for indices 0 to n−1. Nodes unresolved after the second pass have no next greater. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you need the previous greater node (nearest earlier node with a larger value) instead of the next?",
+      "a": "Use the same monotonic decreasing stack, but assign the answer at push time: when the while-loop stops, the current top (if any) is the previous greater for the new node. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you also need to return, for each node, the distance (number of hops) to its next greater node?",
+      "a": "Store (index, value) in the stack as before; when popping index j at current index i, the distance is i − j. Store distances in a parallel array initialized to 0. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> nextLargerNodes(ListNode* head) {\n        vector<int> ans;\n        stack<pair<int,int>> st;\n        int i = 0;\n        while (head) {\n            ans.push_back(0);\n            while (!st.empty() && head->val > st.top().second) {\n                ans[st.top().first] = head->val;\n                st.pop();\n            }\n            st.push({i, head->val});\n            head = head->next;\n            i++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "longest-word-in-dictionary",
+  "title": "Longest Word in Dictionary",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Trie + DFS",
+  "tc": "O(n * L)",
+  "sc": "O(n * L)",
+  "spaceBreakdown": "- Trie nodes: up to n*L nodes, each with 26 pointers + 1 bool → O(n*L)\n- `current` string: up to L characters → O(L)\n- Recursion call-stack: up to L depth → O(L)\n- `best` string: not counted (returned output)",
+  "approach": "Build a trie from all words. DFS from the root, following only children that are marked as word-endings - this guarantees every prefix of the current path is a valid word. Track the longest word found; since children are visited in alphabetical order ('a' to 'z'), using strict `>` for length comparison naturally keeps the lexicographically smallest word among ties. A word is valid if and only if every prefix is a word-ending in the trie, which the DFS ensures by only traversing word-ending nodes.",
+  "hints": [
+    "In Example 1, trace how \"world\" is built - what connects each intermediate word to the next? Each word in the dictionary has length at most 30.",
+    "Use a trie. Insert all words, then DFS from the root following only children marked as word-endings. In Example 1, the path root→w→o→r→l→d yields \"world\".",
+    "```\ninsert all words into trie\nbest = \"\"\ndfs(node, current):\n    if len(current) > len(best): best = current\n    for c in 'a'..'z' where child[c].isEnd:\n        dfs(child[c], current + c)\ndfs(root, \"\")\nreturn best\n```",
+    "**Smallest input** - A single one-letter word with no prefixes needed.\n`Input: words = [\"a\"]` → `Expected: \"a\"`\n⚠️ Bug: requiring current.length() > 1 before updating best → returns \"\"\n\n**No valid answer** - A word whose prefix is not in the dictionary.\n`Input: words = [\"ab\"]` → `Expected: \"\"`\n⚠️ Bug: following all trie children regardless of isEnd flag → returns \"ab\"\n\n**Tie-breaking** - Two valid words of the same length; lexicographic order decides.\n`Input: words = [\"a\",\"b\",\"ab\",\"bc\"]` → `Expected: \"ab\"`\n⚠️ Bug: using >= instead of > in length comparison → returns \"bc\"\n\n**Longer word later in traversal** - A longer valid word appears after a shorter one alphabetically.\n`Input: words = [\"a\",\"ab\",\"abc\",\"b\",\"bc\",\"bcd\",\"bcde\"]` → `Expected: \"bcde\"`\n⚠️ Bug: returning the first word found at max depth without continuing DFS → returns \"abc\""
+  ],
+  "followUps": [
+    {
+      "q": "Return all longest words that can be built one character at a time, not just one.",
+      "a": "Same trie and DFS, but collect all words at the maximum depth instead of tracking a single best. Since DFS visits children in alphabetical order, the collected list is already sorted lexicographically. Time stays O(n*L), space becomes O(n*L + k) where k is the number of longest valid words."
+    },
+    {
+      "q": "What if words.length is up to 10^6?",
+      "a": "The trie could have up to 3*10^7 nodes, each with 26 pointers (~208 bytes) ≈ 6 GB - too much. Replace the trie with an unordered_set of all words, sort by (length descending, then lexicographic ascending), and for each word check if its prefix (word without last char) is in the set. This gives O(n*L*log n) time and O(n*L) space."
+    },
+    {
+      "q": "What if the dictionary arrives as a stream and you must return the answer after each insertion?",
+      "a": "Maintain a trie and a hash set of valid words. On each insertion, add the word to the trie, then check if all its prefixes are word-endings - if so, mark it valid and update the best. A word whose prefix arrives later remains invalid until rechecked; to handle this, also store a reverse map from each word to longer words that need it as a prefix, and revalidate those on insertion. Each insertion is O(L) amortized; the answer is O(1) to return."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct TrieNode {\n        TrieNode* children[26];\n        bool isEnd;\n        TrieNode() : isEnd(false) {\n            for (int i = 0; i < 26; i++) children[i] = nullptr;\n        }\n    };\n\n    TrieNode* root;\n    string best;\n\n    void insert(const string& word) {\n        TrieNode* node = root;\n        for (char c : word) {\n            int idx = c - 'a';\n            if (!node->children[idx]) {\n                node->children[idx] = new TrieNode();\n            }\n            node = node->children[idx];\n        }\n        node->isEnd = true;\n    }\n\n    void dfs(TrieNode* node, string& current) {\n        if (current.length() > best.length()) {\n            best = current;\n        }\n        for (int i = 0; i < 26; i++) {\n            if (node->children[i] && node->children[i]->isEnd) {\n                current.push_back('a' + i);\n                dfs(node->children[i], current);\n                current.pop_back();\n            }\n        }\n    }\n\npublic:\n    string longestWord(vector<string>& words) {\n        root = new TrieNode();\n        for (const string& w : words) {\n            insert(w);\n        }\n        best = \"\";\n        string current = \"\";\n        dfs(root, current);\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

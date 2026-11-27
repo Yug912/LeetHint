@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-kth-largest-integer-in-the-array",
+  "title": "Find the Kth Largest Integer in the Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Quickselect",
+  "tc": "O(n * L)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- nth_element internal recursion stack (introselect): O(log n)\n- Lambda comparator: O(1) (stateless, no captures)\n- Input vector: modified in place, not counted\n- Returned string: reference into input, not counted",
+  "approach": "The key insight is that comparing two non-negative integers represented as strings doesn't require numeric conversion: a longer string is always the larger number, and for equal lengths, lexicographic (character-by-character) comparison gives the correct numeric order. We use `nth_element` with a custom comparator implementing this logic to place the element at index `n - k` (the kth largest in 0-indexed ascending order) into its final sorted position in O(n) average time. This avoids any overflow issues from 100-digit strings and is more efficient than a full sort.",
+  "hints": [
+    "When comparing two numbers given as digit-strings, what two properties of those strings let you determine which number is larger without ever converting to an integer? Each string can be up to 100 digits long.",
+    "Use `nth_element` with a custom comparator: compare string lengths first (shorter = smaller), then lexicographic order for equal lengths. For `nums = [\"2\",\"21\",\"12\",\"1\"]` and `k=3`, the target index is `n-k = 1`, and the element placed there is `\"2\"`.",
+    "```\nfunction kthLargestNumber(nums, k):\n    n = length(nums)\n    comparator(a, b):\n        if length(a) != length(b):\n            return length(a) < length(b)\n        return a < b          // lexicographic for equal length\n    target = n - k\n    nth_element(nums, target, comparator)\n    return nums[target]\n```",
+    "**Long numbers overflow** - nums[i] can be up to 100 digits, far exceeding `long long` range (≈19 digits).\n`Input: nums = [\"123456789012345678901234567890\",\"1\"], k = 1` → `Expected: \"123456789012345678901234567890\"`\n⚠️ Bug: converting strings to `long long` before comparing → overflow, returns `\"1\"`\n\n**Lexicographic without length check** - \"9\" sorts after \"10\" lexicographically but 9 < 10 numerically.\n`Input: nums = [\"9\",\"10\"], k = 1` → `Expected: \"10\"`\n⚠️ Bug: using plain `a < b` as the comparator → \"9\" placed as largest, returns `\"9\"`\n\n**All duplicates** - duplicates must be counted distinctly per the problem statement.\n`Input: nums = [\"7\",\"7\",\"7\"], k = 2` → `Expected: \"7\"`\n⚠️ Bug: deduplicating with a set before selecting → only one \"7\" remains, k=2 out of bounds\n\n**Boundary index k = n** - the kth largest is the smallest element, at sorted index 0.\n`Input: nums = [\"3\",\"6\",\"7\",\"10\"], k = 4` → `Expected: \"3\"`\n⚠️ Bug: using index `n - k + 1` instead of `n - k` → returns `\"6\"`"
+  ],
+  "followUps": [
+    {
+      "q": "If nums arrives as a stream and you can only hold k strings in memory, how would you find the kth largest?",
+      "a": "Maintain a min-heap of size k using the same length-then-lexicographic comparator. For each incoming string, if it is larger than the heap top, pop and push. After processing all elements, the heap top is the kth largest. TC: O(n · L · log k), SC: O(k · L)."
+    },
+    {
+      "q": "If you need to answer many different k queries on the same array, how would you preprocess?",
+      "a": "Sort the array once with the custom comparator, then answer each query in O(1) by indexing into position n - k. Preprocessing TC: O(n · L · log n), per-query TC: O(1), SC: O(log n) for the sort stack (in-place)."
+    },
+    {
+      "q": "If n grows to 10^9 and strings are short (≤ 10 digits), how would you adapt?",
+      "a": "Convert each string to a 64-bit integer (10 digits fits), then use a size-k min-heap or distributed quickselect across machines. TC: O(n · log k) with O(k) space per machine, or O(n) average with introselect on a single machine if memory allows."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string kthLargestNumber(vector<string>& nums, int k) {\n        int n = nums.size();\n        auto cmp = [](const string& a, const string& b) {\n            if (a.size() != b.size()) return a.size() < b.size();\n            return a < b;\n        };\n        nth_element(nums.begin(), nums.begin() + (n - k), nums.end(), cmp);\n        return nums[n - k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

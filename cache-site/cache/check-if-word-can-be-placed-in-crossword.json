@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-word-can-be-placed-in-crossword",
+  "title": "Check if Word Can Be Placed In Crossword",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Enumeration / Linear Scan",
+  "tc": "O(m·n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string word: input, not counted\n- a few int/bool locals: O(1)\n- no containers allocated",
+  "approach": "A valid placement must occupy a maximal run of non-`#` cells (in a row or column) whose length equals `word.length()`; the run is naturally bounded by `#` or the board edge, which enforces the \"no empty/letter adjacent\" rule. Scan every row for horizontal runs and every column for vertical runs. For each run of length `L == word.length()`, try matching the word forward and reversed (covering left-to-right/right-to-left and top-to-bottom/bottom-to-top). Return true on the first match.",
+  "hints": [
+    "In the direction the word runs, what must be true of the cell immediately before the first letter and immediately after the last letter? The board has up to 2·10^5 cells, so checking every cell pair is too slow.",
+    "Scan each row and each column for maximal runs of non-`#` cells. For each run whose length equals `word.length()`, test the word forward and reversed against the run's cells. In Example 1, column 1 has the run `[' ',' ','c']` of length 3, and `\"abc\"` matches it top-to-bottom.",
+    "```\nfor each row i:\n    find maximal runs of non-'#' cells\n    for each run [start, end) with length == word.length():\n        if cells match word forward  -> return true\n        if cells match word reversed -> return true\nfor each column j:\n    same as above on column cells\nreturn false\n```",
+    "**Slot longer than word** - run length exceeds word length\n`board = [[\" \",\" \",\" \"]], word = \"ab\"` → `Expected: false`\n⚠️ Bug: checking that the word matches a subsegment of the run instead of requiring equal length → returns `true`\n\n**Reversed-only fit** - word matches only when reversed\n`board = [[\"a\",\"b\"]], word = \"ba\"` → `Expected: true`\n⚠️ Bug: testing only the forward direction → returns `false`\n\n**Letter mismatch inside slot** - run length is right but a letter disagrees\n`board = [[\"a\",\"b\"]], word = \"aa\"` → `Expected: false`\n⚠️ Bug: checking only run length, skipping the per-cell letter comparison → returns `true`\n\n**Single-cell board** - m = n = 1\n`board = [[\"a\"]], word = \"a\"` → `Expected: true`\n⚠️ Bug: loop condition `j < n-1` or `i < m-1` that skips the last cell → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "Given a list of words, return all words that can be placed somewhere on the board.",
+      "a": "Precompute every run (with its cells) once in O(m·n). For each word, test it against each run of matching length in both directions. Total time O(m·n + W·R) where R is the number of runs and W the word count; space stays O(1) beyond storing the runs if you keep them."
+    },
+    {
+      "q": "Place two given words simultaneously so they may share one crossing cell; is it possible?",
+      "a": "Enumerate every valid placement of word A (position, direction, orientation) and every placement of word B as in the single-word solution, then check pairs whose perpendicular directions cross at exactly one cell where both letters agree. Time O(R_A·R_B) in the worst case with R_A, R_B the counts of valid placements; space O(R_A + R_B) to store candidate placements."
+    },
+    {
+      "q": "The board arrives row-by-row as a stream and you cannot store all of it; decide online whether the word fits.",
+      "a": "Keep a sliding window of the last `word.length()` rows plus the current row's horizontal run state. Horizontal placements are decidable per row in O(n) memory; vertical placements need a buffer of the last `word.length()` rows (O(n·word.length()) memory) to test each column's recent run. Time stays O(m·n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool placeWordInCrossword(vector<vector<char>>& board, string word) {\n        int m = board.size();\n        int n = board[0].size();\n        int wl = (int)word.size();\n\n        // Horizontal runs\n        for (int i = 0; i < m; i++) {\n            int j = 0;\n            while (j < n) {\n                if (board[i][j] == '#') { j++; continue; }\n                int start = j;\n                while (j < n && board[i][j] != '#') j++;\n                int len = j - start;\n                if (len == wl) {\n                    bool fwd = true;\n                    for (int k = 0; k < wl && fwd; k++) {\n                        char c = board[i][start + k];\n                        if (c != ' ' && c != word[k]) fwd = false;\n                    }\n                    if (fwd) return true;\n                    bool rev = true;\n                    for (int k = 0; k < wl && rev; k++) {\n                        char c = board[i][start + k];\n                        if (c != ' ' && c != word[wl - 1 - k]) rev = false;\n                    }\n                    if (rev) return true;\n                }\n            }\n        }\n\n        // Vertical runs\n        for (int j = 0; j < n; j++) {\n            int i = 0;\n            while (i < m) {\n                if (board[i][j] == '#') { i++; continue; }\n                int start = i;\n                while (i < m && board[i][j] != '#') i++;\n                int len = i - start;\n                if (len == wl) {\n                    bool fwd = true;\n                    for (int k = 0; k < wl && fwd; k++) {\n                        char c = board[start + k][j];\n                        if (c != ' ' && c != word[k]) fwd = false;\n                    }\n                    if (fwd) return true;\n                    bool rev = true;\n                    for (int k = 0; k < wl && rev; k++) {\n                        char c = board[start + k][j];\n                        if (c != ' ' && c != word[wl - 1 - k]) rev = false;\n                    }\n                    if (rev) return true;\n                }\n            }\n        }\n\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

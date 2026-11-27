@@ -1,0 +1,40 @@
+{
+  "slug": "rotated-digits",
+  "title": "Rotated Digits",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Digit DP",
+  "tc": "O(log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- `memo` 3D vector: up to `len * 2 * 2` entries → O(log n)\n- recursion depth: up to `len` → O(log n)\n- not counted: input string `s`",
+  "approach": "The key insight is that a number is good if it contains only valid digits (0, 1, 2, 5, 6, 8, 9) and at least one digit that changes after rotation (2, 5, 6, 9). We use Digit DP to count such numbers up to `n` by tracking the current position, whether the prefix is tightly bound to `n`, and whether a changing digit has been used. This avoids checking every number individually by reusing counts for unbounded suffixes, yielding an O(log n) time complexity.",
+  "hints": [
+    "As you build a number from left to right, what minimal information about the prefix determines whether the final number will be valid and strictly less than the upper bound?\nThe constraints allow n up to 10^4.",
+    "Use Digit DP with memoization on states (position, tight bound, has different digit). For n = 10, at position 0 with tight=1, choosing digit 1 keeps tight=1 and hasDiff=0, while choosing 0 makes tight=0.",
+    "```\nfunction dfs(pos, tight, hasDiff):\n    if pos == length: return hasDiff\n    if memo[pos][tight][hasDiff] is valid: return it\n    max_digit = tight ? s[pos] : 9\n    total = 0\n    for d from 0 to max_digit:\n        if d in {3, 4, 7}: continue\n        total += dfs(pos+1, tight and d==max_digit, hasDiff or d in {2,5,6,9})\n    memo[pos][tight][hasDiff] = total\n    return total\n```",
+    "**Smallest input** - n = 1 has no good numbers.\n`Input: n = 1` → `Expected: 0`\n⚠️ Bug: returning 1 when `pos == len` regardless of `hasDiff` → returns 1\n\n**Leading zeros** - numbers like 02 are evaluated as 2.\n`Input: n = 10` → `Expected: 4`\n⚠️ Bug: treating leading zero as an invalid digit → returns 0\n\n**Boundary value** - n = 10000 is the max constraint and not a good number itself.\n`Input: n = 10000` → `Expected: 316`\n⚠️ Bug: memo array sized to 4 instead of 5 → memory corruption or out of bounds\n\n**All valid digits** - n = 9 contains only good numbers.\n`Input: n = 9` → `Expected: 4`\n⚠️ Bug: not including 9 in the set of digits that set `hasDiff` → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve this if n could be up to 10^18?",
+      "a": "The same Digit DP approach works perfectly, as the number of digits increases to at most 19. The time and space complexity remain O(log n), easily handling the larger constraint."
+    },
+    {
+      "q": "What if the rotation rules changed so that 2 and 5 rotated to themselves, making them invalid for a good number?",
+      "a": "We would update the set of digits that set `hasDiff` to only include {6, 9}. The DP structure remains identical, and the time complexity stays O(log n)."
+    },
+    {
+      "q": "How would you find the count of good numbers in a range [L, R] instead of [1, n]?",
+      "a": "Use the inclusion-exclusion principle: compute the count up to R and subtract the count up to L-1. Both calls use the same Digit DP function, keeping the overall time complexity at O(log R)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    string s;\n    int len;\n    vector<vector<vector<int>>> memo;\n    \n    int dfs(int pos, int tight, int hasDiff) {\n        if (pos == len) {\n            return hasDiff;\n        }\n        if (memo[pos][tight][hasDiff] != -1) {\n            return memo[pos][tight][hasDiff];\n        }\n        \n        int max_digit = tight ? (s[pos] - '0') : 9;\n        int total = 0;\n        for (int d = 0; d <= max_digit; d++) {\n            if (d == 3 || d == 4 || d == 7) continue;\n            int next_tight = tight && (d == max_digit);\n            int next_hasDiff = hasDiff || (d == 2 || d == 5 || d == 6 || d == 9);\n            total += dfs(pos + 1, next_tight, next_hasDiff);\n        }\n        \n        return memo[pos][tight][hasDiff] = total;\n    }\npublic:\n    int rotatedDigits(int n) {\n        s = to_string(n);\n        len = s.size();\n        memo.assign(len, vector<vector<int>>(2, vector<int>(2, -1)));\n        return dfs(0, 1, 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

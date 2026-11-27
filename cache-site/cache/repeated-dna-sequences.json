@@ -1,0 +1,40 @@
+{
+  "slug": "repeated-dna-sequences",
+  "title": "Repeated DNA Sequences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window with Rolling Hash",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> cnt: fixed size 1,048,576 (4^10) → O(1)\n- vector<string> res: up to n/10 elements, but this is the returned output, so not counted as auxiliary space\n- not counted: input string, returned vector",
+  "approach": "Map each nucleotide to a 2-bit integer (A=0, C=1, G=2, T=3). A 10-letter sequence becomes a 20-bit integer. Use a sliding window to compute this integer in O(1) per step. Maintain a fixed-size count array of size 4^10 = 1,048,576 to track occurrences of each sequence. When a sequence's count reaches exactly 2, add it to the result. This yields O(n) time and O(1) auxiliary space.",
+  "hints": [
+    "With only 4 possible characters and a fixed length of 10, how many distinct 10-letter sequences can possibly exist? Does this finite, small number suggest a way to track occurrences directly?",
+    "Use a direct-addressing array of size 4^10 = 1,048,576. Map 'A' to 0, 'C' to 1, 'G' to 2, 'T' to 3, and represent a 10-letter sequence as a 20-bit integer. For example, \"AAAAACCCCC\" becomes a unique integer index into this array.",
+    "```\ncnt = array of size 4^10 initialized to 0\nhash = 0\nfor i from 0 to n-1:\n    hash = ((hash << 2) & 0xFFFFF) | char_val(s[i])\n    if i >= 9:\n        if ++cnt[hash] == 2:\n            add s[i-9 .. i] to result\n```",
+    "**Short string** - string length is less than 10\n`Input: s = \"ACGT\"` → `Expected: []`\n⚠️ Bug: accessing `s[i-9]` without checking `i >= 9` → returns out-of-bounds memory or crashes.\n\n**All elements equal** - string of identical characters\n`Input: s = \"AAAAAAAAAAAAA\"` → `Expected: [\"AAAAAAAAAA\"]`\n⚠️ Bug: adding to result when `cnt[hash] >= 2` instead of `== 2` → returns `[\"AAAAAAAAAA\", \"AAAAAAAAAA\", \"AAAAAAAAAA\"]`.\n\n**No repeats** - string with all unique 10-letter windows\n`Input: s = \"ACGTACGTACGT\"` → `Expected: []`\n⚠️ Bug: not masking the hash with `& 0xFFFFF` → hash grows beyond 20 bits, causing out-of-bounds array access."
+  ],
+  "followUps": [
+    {
+      "q": "What if the DNA sequence is streamed and cannot fit in memory?",
+      "a": "Use a Bloom filter to probabilistically track seen sequences, requiring only a few bits per sequence. This reduces memory usage significantly at the cost of potential false positives, which can be resolved in a second pass."
+    },
+    {
+      "q": "What if we need to find sequences of length K that repeat at least M times?",
+      "a": "The fixed array approach only works if K is small (e.g., K=10). For arbitrary K, use a hash map to count occurrences of rolling hashes, resulting in O(n) time and O(n) space."
+    },
+    {
+      "q": "What if the alphabet included lowercase letters as well?",
+      "a": "The 2-bit encoding would need to expand to accommodate more characters (e.g., 3 bits for up to 8 characters). The array size would become 8^K, which might exceed memory limits for K=10, making a hash map the more practical choice."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> findRepeatedDnaSequences(string s) {\n        vector<string> res;\n        if (s.length() < 10) return res;\n        \n        vector<int> cnt(1048576, 0);\n        int hash = 0;\n        \n        for (int i = 0; i < s.length(); ++i) {\n            int val = 0;\n            if (s[i] == 'A') val = 0;\n            else if (s[i] == 'C') val = 1;\n            else if (s[i] == 'G') val = 2;\n            else if (s[i] == 'T') val = 3;\n            \n            hash = ((hash << 2) & 0xFFFFF) | val;\n            \n            if (i >= 9) {\n                if (++cnt[hash] == 2) {\n                    res.push_back(s.substr(i - 9, 10));\n                }\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

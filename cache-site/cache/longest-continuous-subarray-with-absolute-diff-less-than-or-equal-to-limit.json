@@ -1,0 +1,40 @@
+{
+  "slug": "longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit",
+  "title": "Longest Continuous Subarray With Absolute Diff Less Than or Equal to Limit",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window with Monotonic Deques",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- deque<int> maxq: up to n indices → O(n)\n- deque<int> minq: up to n indices → O(n)\n- recursion: none\n- not counted: input vector, return value",
+  "approach": "The key insight is that a subarray is valid iff `max - min <= limit`, since the largest absolute difference between any pair is always `max - min`. Use a sliding window with two monotonic deques: one decreasing (tracking the max) and one increasing (tracking the min), both storing indices. Expand the right pointer; whenever `max - min > limit`, advance the left pointer and pop stale fronts from both deques. Each element enters and leaves each deque at most once, giving linear time.",
+  "hints": [
+    "For any subarray, which two elements determine whether every pair's absolute difference stays within `limit`? The constraint n ≤ 10^5 rules out checking every pair.",
+    "Use a sliding window with two monotonic deques - one decreasing (max) and one increasing (min), both storing indices. For `nums = [8,2,4,7]`, `limit = 4`: at r = 1 (value 2), max = 8, min = 2, diff = 6 > 4, so advance the left pointer past index 0.",
+    "```\nl = 0, ans = 0\nfor r in 0..n-1:\n    push r into max-deque (pop back while back value <= nums[r])\n    push r into min-deque (pop back while back value >= nums[r])\n    while nums[max-deque.front] - nums[min-deque.front] > limit:\n        pop front of either deque if it equals l\n        l += 1\n    ans = max(ans, r - l + 1)\nreturn ans\n```",
+    "**Single element** - n = 1, the window contains exactly one element with diff 0\n`Input: nums = [5], limit = 0` → `Expected: 1`\n⚠️ Bug: returning `r - l` instead of `r - l + 1` → returns 0\n\n**Inclusive limit** - a diff exactly equal to limit is valid\n`Input: nums = [2,4,7,2], limit = 5` → `Expected: 4`\n⚠️ Bug: shrinking when `max - min >= limit` instead of `> limit` → returns 2\n\n**Stale front index** - deque front must be removed when the left pointer passes it\n`Input: nums = [8,2,4,7], limit = 4` → `Expected: 2`\n⚠️ Bug: incrementing `l` without popping deque fronts equal to `l` → maxq.front() stays at index 0 (value 8), diff always reads 6, returns 1\n\n**Shrink loop must repeat** - multiple elements may need removal before the window is valid\n`Input: nums = [4,2,2,2,4,4,2,2], limit = 0` → `Expected: 3`\n⚠️ Bug: using `if` instead of `while` for the shrink loop → at r = 5 the window [2,2,4,4] is not fully shrunk, returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array arrives as a stream with no random access?",
+      "a": "The two-deque sliding window works online - each new element is pushed to both deques, and when the diff exceeds limit, pop fronts and advance the left pointer. Time stays O(n) amortized, space O(n) in the worst case."
+    },
+    {
+      "q": "What if you must return the actual subarray instead of just its length?",
+      "a": "Track the best left and right indices alongside the answer; whenever a longer valid window is found, record `l` and `r`. Return `nums[bestL..bestR]` at the end. Time O(n), space O(1) extra beyond the deques."
+    },
+    {
+      "q": "What if you need the count of all valid subarrays, not just the longest?",
+      "a": "For each right pointer `r`, the number of valid subarrays ending at `r` is `r - l + 1` where `l` is the smallest valid left boundary. Sum these counts across all `r`. Time O(n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestSubarray(vector<int>& nums, int limit) {\n        deque<int> maxq, minq;\n        int l = 0, ans = 0;\n        int n = (int)nums.size();\n        for (int r = 0; r < n; r++) {\n            while (!maxq.empty() && nums[maxq.back()] <= nums[r])\n                maxq.pop_back();\n            while (!minq.empty() && nums[minq.back()] >= nums[r])\n                minq.pop_back();\n            maxq.push_back(r);\n            minq.push_back(r);\n            while (nums[maxq.front()] - nums[minq.front()] > limit) {\n                if (maxq.front() == l) maxq.pop_front();\n                if (minq.front() == l) minq.pop_front();\n                l++;\n            }\n            ans = max(ans, r - l + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

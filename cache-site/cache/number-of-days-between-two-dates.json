@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-days-between-two-dates",
+  "title": "Number of Days Between Two Dates",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Closed-Form Arithmetic",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int prefix[13]: 13 ints, constant → O(1)\n- local variables y, m, d, total: O(1)\n- not counted: input strings, returned int",
+  "approach": "Convert each date to an absolute day count (days since a fixed epoch like year 0) using closed-form arithmetic: the number of leap years before year `y` is `(y-1)/4 - (y-1)/100 + (y-1)/400`, so days from year 0 to the start of year `y` is `y*365 + (y-1)/4 - (y-1)/100 + (y-1)/400`. Add a month prefix-sum table for the months elapsed, plus one extra day if the current year is leap and the month is past February, then add `d-1`. The answer is the absolute difference of the two day counts. This is O(1) time and O(1) space - no loops over years.",
+  "hints": [
+    "If you could place each date at a single position on a number line, what would the answer between two dates reduce to? The dates span years 1971 to 2100.",
+    "Convert each date to an integer day-count using the leap-year count formula `(y-1)/4 - (y-1)/100 + (y-1)/400` plus a month prefix-sum table, then return the absolute difference. For \"2019-06-29\": year part = 2019·365 + 2018/4 − 2018/100 + 2018/400 = 737424, month part = prefix[6] = 151, day part = 28.",
+    "```\nfunction toDays(date):\n    parse y, m, d\n    days = y*365 + (y-1)/4 - (y-1)/100 + (y-1)/400\n    days += monthPrefix[m]\n    if m > 2 and isLeap(y): days += 1\n    days += d - 1\n    return days\nreturn |toDays(date1) - toDays(date2)|\n```",
+    "**Leap day boundary** - Feb 29 exists only in leap years\n`Input: date1 = \"2020-02-29\", date2 = \"2020-03-01\"` → `Expected: 1`\n⚠️ Bug: not adding +1 for leap year when m > 2 → returns 0\n\n**Same date** - both inputs are identical\n`Input: date1 = \"2000-01-01\", date2 = \"2000-01-01\"` → `Expected: 0`\n⚠️ Bug: using d instead of d-1 → returns 1\n\n**Century non-leap** - 2100 is divisible by 4 but not by 400\n`Input: date1 = \"2100-02-28\", date2 = \"2100-03-01\"` → `Expected: 1`\n⚠️ Bug: checking only y%4==0 for leap → treats 2100 as leap → returns 2\n\n**Century leap** - 2000 is divisible by 400\n`Input: date1 = \"2000-02-28\", date2 = \"2000-03-01\"` → `Expected: 2`\n⚠️ Bug: requiring y%100!=0 for all leap years → treats 2000 as non-leap → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the dates also included time (hours, minutes, seconds)?",
+      "a": "Extend toDays to add hours*3600 + minutes*60 + seconds, then return the absolute difference in seconds. The closed-form year/month logic stays identical. TC O(1), SC O(1)."
+    },
+    {
+      "q": "What if the year range extended to 10^9?",
+      "a": "The closed-form formula is pure arithmetic, so it still runs in O(1). Use long long for intermediates since 10^9 × 365 ≈ 3.65×10^11 exceeds int range. TC O(1), SC O(1)."
+    },
+    {
+      "q": "What if you had to answer 10^6 date-pair queries?",
+      "a": "Each query is already O(1), so total time is O(Q) with no preprocessing needed. Just call the same toDays function per query. TC O(Q), SC O(1) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int daysBetweenDates(string date1, string date2) {\n        auto toDays = [](const string& s) -> long long {\n            int y = stoi(s.substr(0, 4));\n            int m = stoi(s.substr(5, 2));\n            int d = stoi(s.substr(8, 2));\n            int prefix[] = {0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};\n            long long total = (long long)y * 365 + (y - 1) / 4 - (y - 1) / 100 + (y - 1) / 400;\n            total += prefix[m];\n            if (m > 2 && ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0))) total += 1;\n            total += d - 1;\n            return total;\n        };\n        long long a = toDays(date1);\n        long long b = toDays(date2);\n        return (int)(a > b ? a - b : b - a);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

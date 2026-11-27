@@ -1,0 +1,40 @@
+{
+  "slug": "arithmetic-slices",
+  "title": "Arithmetic Slices",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear DP with O(1) state",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- prev, total, i, n: scalar integers → O(1)\n- no containers, no recursion → O(1)\n- not counted: input vector",
+  "approach": "Scan left to right and maintain `prev` = number of arithmetic slices ending at the previous index. When `nums[i]-nums[i-1] == nums[i-1]-nums[i-2]`, every slice that ended at `i-1` extends to `i`, plus the new length-3 slice `[i-2,i-1,i]`, so `prev` increments by 1 and is added to the total. On a mismatch, `prev` resets to 0. This is correct because arithmetic slices are exactly maximal constant-difference runs, and within a run of length L the count is 1+2+…+(L-2).",
+  "hints": [
+    "For [1,2,3,4] the answer is 3; what would it be for [1,2,3,4,5], and what pattern emerges in how the total grows each time a new element continues the same common difference?",
+    "Use dynamic programming with a single variable `prev` = count of arithmetic slices ending at the previous index. On [1,2,3,4]: at i=2 the diff matches so `prev=1`, total=1; at i=3 it matches again so `prev=2`, total=3.",
+    "```\nif n < 3: return 0\nprev = 0, total = 0\nfor i from 2 to n-1:\n    if nums[i]-nums[i-1] == nums[i-1]-nums[i-2]:\n        prev = prev + 1\n        total = total + prev\n    else:\n        prev = 0\nreturn total\n```",
+    "**Smallest input** - only one element, no length-3 subarray exists.\n`Input: nums = [1]` → `Expected: 0`\n⚠️ Bug: starting the loop at i=1 without an n<3 guard → accesses nums[2] out of bounds.\n\n**All equal** - difference 0 throughout, every triple counts.\n`Input: nums = [7,7,7,7]` → `Expected: 3`\n⚠️ Bug: setting `prev = 1` instead of `prev += 1` on each match → returns 2 instead of 3.\n\n**Broken run** - the common difference changes in the middle.\n`Input: nums = [1,2,3,5,7,9]` → `Expected: 4`\n⚠️ Bug: not resetting prev to 0 on mismatch → returns 6 instead of 4.\n\n**Alternating differences** - same magnitude, opposite sign.\n`Input: nums = [1,3,5,3,1]` → `Expected: 2`\n⚠️ Bug: comparing abs(differences) instead of signed differences → returns 6 instead of 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums.length can be up to 10^7 and the array is streamed (you cannot store it all)?",
+      "a": "Keep only the last two elements and the running `prev`/`total`; emit a slice count whenever the stream ends. Time stays O(n), space stays O(1) - the algorithm is already single-pass and streaming-friendly."
+    },
+    {
+      "q": "What if you must count arithmetic subarrays of length exactly k (k ≥ 3)?",
+      "a": "Track the current run length L; whenever L ≥ k, add (L − k + 1) to the total instead of accumulating `prev`. Still O(n) time and O(1) space."
+    },
+    {
+      "q": "What if the subarrays need not be contiguous (arithmetic subsequences)?",
+      "a": "This becomes \"Arithmetic Slices II\"; use per-index hash maps mapping (difference → count of weak subsequences ending here), combining counts from earlier indices. Time O(n²), space O(n²) in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfArithmeticSlices(vector<int>& nums) {\n        int n = nums.size();\n        if (n < 3) return 0;\n        int prev = 0, total = 0;\n        for (int i = 2; i < n; i++) {\n            if (nums[i] - nums[i-1] == nums[i-1] - nums[i-2]) {\n                prev++;\n                total += prev;\n            } else {\n                prev = 0;\n            }\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

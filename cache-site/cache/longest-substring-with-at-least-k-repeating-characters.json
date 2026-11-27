@@ -1,0 +1,40 @@
+{
+  "slug": "longest-substring-with-at-least-k-repeating-characters",
+  "title": "Longest Substring with At Least K Repeating Characters",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- cnt[26]: fixed-size array of 26 ints → O(1)\n- No recursion, no dynamic containers\n- Not counted: input string s",
+  "approach": "Since the string contains only 26 lowercase letters, any substring has between 1 and 26 distinct characters. For each possible target count of distinct characters, we run a sliding window that maintains at most `target` unique characters. Within that window we track how many characters have frequency ≥ k. When the number of unique characters equals `target` and all of them have frequency ≥ k, the window is valid and we update the answer. This gives O(26·n) = O(n).",
+  "hints": [
+    "The string uses only lowercase English letters - how many different values can the count of distinct characters in any substring take?",
+    "Sliding window with a fixed number of unique characters. For s = \"ababbc\", k = 2, fixing 2 unique characters, the window \"ababb\" has 'a' appearing 2 times and 'b' appearing 3 times, both ≥ 2.",
+    "```\nfor target in 1..26:\n    left = 0, unique = 0, atLeastK = 0\n    for right in 0..n-1:\n        add s[right] to window (update unique, atLeastK)\n        while unique > target:\n            remove s[left], left++\n        if unique == target and atLeastK == target:\n            ans = max(ans, right - left + 1)\n```",
+    "**k exceeds string length** - no character can ever reach frequency k.\n`Input: s = \"a\", k = 2` → `Expected: 0`\n⚠️ Bug: returning `right - left + 1` whenever `unique == target` without checking `atLeastK == target` → returns `1`\n\n**k equals 1** - every single character is a valid substring, so the whole string qualifies.\n`Input: s = \"abc\", k = 1` → `Expected: 3`\n⚠️ Bug: using `while (unique >= target)` instead of `while (unique > target)` shrinks the window past valid points → returns `1`\n\n**All characters identical** - the entire string is one valid substring.\n`Input: s = \"aaaa\", k = 2` → `Expected: 4`\n⚠️ Bug: only checking `target == 1` and skipping other targets → returns `4` here but fails mixed strings like \"aaabb\" with k=3 where the answer comes from target=1\n\n**Single character, k = 1** - smallest valid input.\n`Input: s = \"a\", k = 1` → `Expected: 1`\n⚠️ Bug: initialising `ans` to `-1` instead of `0` for \"no valid substring\" → returns `-1`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet includes uppercase letters and digits (62 possible characters)?",
+      "a": "The same sliding window approach works, but the outer loop runs from 1 to 62 instead of 1 to 26, giving O(62n). The logic is identical - just expand the frequency array to size 62 and map characters accordingly. TC becomes O(62n), SC stays O(1)."
+    },
+    {
+      "q": "What if you must return the count of all valid substrings instead of just the longest length?",
+      "a": "For each target, when the window is valid you need to count how many left positions also yield a valid window. Track the leftmost position where the window became valid; every position from that point to `left` gives a valid substring ending at `right`. This adds O(1) work per step, keeping TC at O(62n) but requiring careful bookkeeping of the earliest valid left boundary."
+    },
+    {
+      "q": "What if the string arrives as a stream and you must answer the query after each character?",
+      "a": "This is significantly harder because the sliding window needs to be maintained incrementally. You could use a segment tree over character frequencies to check whether all present characters have count ≥ k, but the \"number of unique characters\" constraint no longer has a fixed target. A practical approach is to re-run the 26-pass sliding window on the prefix seen so far after each new character, giving O(26n) per query and O(26n²) total."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestSubstring(string s, int k) {\n        int n = s.size();\n        int ans = 0;\n        for (int target = 1; target <= 26; target++) {\n            int cnt[26] = {0};\n            int unique = 0;\n            int atLeastK = 0;\n            int left = 0;\n            for (int right = 0; right < n; right++) {\n                int idx = s[right] - 'a';\n                if (cnt[idx] == 0) unique++;\n                cnt[idx]++;\n                if (cnt[idx] == k) atLeastK++;\n\n                while (unique > target) {\n                    int lidx = s[left] - 'a';\n                    if (cnt[lidx] == k) atLeastK--;\n                    cnt[lidx]--;\n                    if (cnt[lidx] == 0) unique--;\n                    left++;\n                }\n\n                if (unique == target && atLeastK == target) {\n                    ans = max(ans, right - left + 1);\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

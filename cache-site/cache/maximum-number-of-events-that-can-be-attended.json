@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-events-that-can-be-attended",
+  "title": "Maximum Number of Events That Can Be Attended",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sweep Line with Priority Queue",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<int,vector<int>,greater<int>> pq: up to n end-days → O(n)\n- sort(): introsort recursion stack O(log n)\n- scalar variables (n, i, count, day): O(1)\n- not counted: input vector, return value",
+  "approach": "Sort events by start day. Sweep through time using a min-heap keyed by end day: on each day, push all events that have started, discard those that already ended, and attend the one ending earliest (most urgent). When the heap is empty, jump the current day directly to the next unprocessed event's start day instead of incrementing one-by-one. This yields O(n log n) time because each event is pushed and popped at most once and the number of day-iterations is bounded by O(n).",
+  "hints": [
+    "On a given day several events are available. Which event is most dangerous to postpone - the one whose window closes soonest or latest?",
+    "Sort by start day; maintain a min-heap of end days. In Example 1 on day 1, event [1,2] becomes available, so push end=2 and attend it.",
+    "```\nsort events by start day\nmin-heap pq by end day\ni = 0, day = 0\nwhile i < n or pq not empty:\n    if pq empty: day = events[i].start\n    push all events with start <= day\n    pop all heap tops with end < day\n    if pq not empty: pop top, count++\n    day++\n```",
+    "**Expired events** - two events end before the current day but remain in the heap\n`Input: [[1,1],[1,1],[2,2]]` → `Expected: 2`\n⚠️ Bug: not popping events with end < day before attending → returns 3\n\n**All same day** - every event occupies exactly one day\n`Input: [[1,1],[1,1],[1,1]]` → `Expected: 1`\n⚠️ Bug: attending multiple events without incrementing day → returns 3\n\n**Greedy choice matters** - earliest-ending must go first\n`Input: [[1,4],[1,4],[1,1],[2,2]]` → `Expected: 4`\n⚠️ Bug: using a max-heap by end day instead of min-heap → returns 3\n\n**Single late event** - one event far from day 1\n`Input: [[5,5]]` → `Expected: 1`\n⚠️ Bug: starting day at 1 and adding only events with start == day (not <= day) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "If endDay can be up to 10^9, does your solution still work?",
+      "a": "Yes. The day-jump when the heap is empty skips all idle days, so the loop runs O(n) times regardless of the day range. Time stays O(n log n), space O(n)."
+    },
+    {
+      "q": "Each event now carries a positive value; maximize total value of attended events.",
+      "a": "Sort by end day. Keep a min-heap of selected values; for each event push its value, and if the heap size exceeds the number of days available up to that event's end day, evict the smallest value. O(n log n) time, O(n) space."
+    },
+    {
+      "q": "You may attend up to k events per day.",
+      "a": "Same sweep with day-jumping, but each day pop and count up to k events from the min-heap instead of one. O(n log n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxEvents(vector<vector<int>>& events) {\n        sort(events.begin(), events.end());\n        priority_queue<int, vector<int>, greater<int>> pq;\n        int n = events.size();\n        int i = 0;\n        int count = 0;\n        int day = 0;\n        while (i < n || !pq.empty()) {\n            if (pq.empty()) {\n                day = events[i][0];\n            }\n            while (i < n && events[i][0] <= day) {\n                pq.push(events[i][1]);\n                i++;\n            }\n            while (!pq.empty() && pq.top() < day) {\n                pq.pop();\n            }\n            if (!pq.empty()) {\n                pq.pop();\n                count++;\n            }\n            day++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

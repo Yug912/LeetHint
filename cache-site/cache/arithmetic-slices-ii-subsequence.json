@@ -1,0 +1,40 @@
+{
+  "slug": "arithmetic-slices-ii-subsequence",
+  "title": "Arithmetic Slices II - Subsequence",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP with Hash Map",
+  "tc": "O(n^2)",
+  "sc": "O(n^2)",
+  "spaceBreakdown": "- vector<unordered_map<long long,long long>> dp: n maps, up to n(n-1)/2 total entries → O(n^2)\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "Use DP where `dp[j][d]` = number of weak (length ≥ 2) arithmetic subsequences ending at index `j` with common difference `d`. For each pair `(i, j)` with `i < j`, compute `d = nums[j] - nums[i]`; the `dp[i][d]` weak subsequences ending at `i` can be extended by `nums[j]`, each becoming a valid (length ≥ 3) slice, so add `dp[i][d]` to the answer, then register the new weak subsequence `[nums[i], nums[j]]` plus the extensions into `dp[j][d]`. Differences can exceed 32-bit range (INT_MAX − INT_MIN ≈ 2^32), so use `long long` for `d` and counts.",
+  "hints": [
+    "For each pair of indices (i, j) with i < j, what single quantity decides whether they can be the last two elements of a longer arithmetic subsequence?",
+    "Dynamic programming with a hash map per index: `dp[j][d]` = count of weak (length ≥ 2) arithmetic subsequences ending at j with difference d. For nums = [2,4,6], at j=2 (value 6) with i=1 (value 4): d=2, dp[1][2]=1, so add 1 to the answer and set dp[2][2] += 1+1.",
+    "```\nfor j in 1..n-1:\n    for i in 0..j-1:\n        d = nums[j] - nums[i]\n        cnt = dp[i].get(d, 0)\n        ans += cnt\n        dp[j][d] += cnt + 1\nreturn ans\n```",
+    "**Overflow** - the difference between two elements can exceed the 32-bit int range.\n`Input: nums = [2147483647,-2147483648,-2147483647]` → `Expected: 0`\n⚠️ Bug: computing `d = nums[j] - nums[i]` as `int` → both (0,1) and (1,2) wrap to d=1, returns 1\n\n**All equal** - every subsequence of length ≥ 3 is arithmetic.\n`Input: nums = [7,7,7,7,7]` → `Expected: 16`\n⚠️ Bug: counting only length-3 windows (C(5,3)=10) instead of all lengths ≥ 3 → returns 10\n\n**Zero difference** - d = 0 is a valid common difference.\n`Input: nums = [0,0,0]` → `Expected: 1`\n⚠️ Bug: skipping pairs where d == 0 → returns 0\n\n**Negatives** - the common difference can be negative.\n`Input: nums = [3,-1,-5]` → `Expected: 1`\n⚠️ Bug: only considering positive differences → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Count only arithmetic subsequences of exactly length k.",
+      "a": "Extend the state to dp[j][d][len] = number of weak subsequences of length len ending at j with difference d. Each transition extends the length by 1; add to the answer only when len == k. TC O(n^2 · k), SC O(n^2 · k)."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "O(n^2) no longer fits the budget. For the general subsequence version there is no known exact subquadratic algorithm; you would restrict the problem to contiguous subarrays (the easier \"Arithmetic Slices\" problem), which is solvable in O(n) time and O(1) extra space."
+    },
+    {
+      "q": "Values arrive in a stream; report the count after each insertion.",
+      "a": "Keep the same per-index hash maps and process online. When a new value x arrives, iterate over all prior indices i, compute d = x − nums[i], add dp[i][d] to the running answer, and update dp[current][d] += dp[i][d] + 1. Amortized O(n) per insertion, O(n^2) total time, O(n^2) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfArithmeticSlices(vector<int>& nums) {\n        int n = (int)nums.size();\n        if (n < 3) return 0;\n        vector<unordered_map<long long, long long>> dp(n);\n        long long ans = 0;\n        for (int j = 1; j < n; j++) {\n            for (int i = 0; i < j; i++) {\n                long long d = (long long)nums[j] - (long long)nums[i];\n                long long cnt = 0;\n                auto it = dp[i].find(d);\n                if (it != dp[i].end()) cnt = it->second;\n                ans += cnt;\n                dp[j][d] += cnt + 1;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

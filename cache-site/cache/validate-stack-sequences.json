@@ -1,0 +1,40 @@
+{
+  "slug": "validate-stack-sequences",
+  "title": "Validate Stack Sequences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-Place Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int top, popIdx, i: scalars → O(1)\n- pushed array: reused in place as the stack (input, not counted) → O(1) extra\n- recursion depth: none\n- not counted: input arrays, no returned container",
+  "approach": "Simulate the push/pop process in one left-to-right pass over `pushed`, reusing the `pushed` array itself as stack storage with an integer `top` index marking the current top. After each push, greedily pop as long as the current top equals the next expected `popped` value. Because all values are distinct, this greedy simulation is forced-there is never a real choice about whether to pop-so the simulation succeeds if and only if the sequence is valid. Each element is pushed and popped at most once, giving O(n) time and O(1) extra space.",
+  "hints": [
+    "When you add elements one at a time in the `pushed` order, after each addition what is the only position from which a removal can legally happen? All values are distinct and `popped` is a permutation of `pushed`.",
+    "Simulate with a stack, reusing the `pushed` array itself as storage and an index `top` for the top. For `pushed=[1,2,3,4,5]`, `popped=[4,5,3,2,1]`: after pushing 1,2,3,4 the top is 4 which equals `popped[0]`, so pop it; then push 5, top is 5 equals `popped[1]`, pop it, and so on.",
+    "```\ntop = -1, popIdx = 0\nfor i in 0..n-1:\n    pushed[++top] = pushed[i]      # push\n    while top >= 0 and pushed[top] == popped[popIdx]:\n        top -= 1\n        popIdx += 1\nreturn popIdx == n\n```",
+    "**Single element** - n=1, the only permutation is itself.\n`pushed = [1], popped = [1]` → `Expected: true`\n⚠️ Bug: initializing `top = 0` instead of `-1` → first push writes to `pushed[1]` (out of range / wrong slot), `pushed[0]` never set to 1, comparison fails → returns `false`.\n\n**Pop-immediately order** - `pushed` equals `popped`, every element removed right after being added.\n`pushed = [1,2,3], popped = [1,2,3]` → `Expected: true`\n⚠️ Bug: writing `while (top > 0 && ...)` instead of `top >= 0` → after pushing 1, `top=0`, loop body skipped, 1 never removed → returns `false`.\n\n**All pushed then all popped** - fully reversed removal.\n`pushed = [1,2,3], popped = [3,2,1]` → `Expected: true`\n⚠️ Bug: using `if` instead of `while` for the pop step → after the final push of 3 only one pop happens per iteration, chained pops of 2 and 1 are missed → returns `false`.\n\n**Buried element** - next value to pop is not at the top and never will be.\n`pushed = [1,2,3,4,5], popped = [4,3,5,1,2]` → `Expected: false`\n⚠️ Bug: returning `true` whenever `popIdx` increased at least once → returns `true` (wrong)."
+  ],
+  "followUps": [
+    {
+      "q": "What if `pushed` and `popped` may contain duplicate values?",
+      "a": "Matching the top to `popped[popIdx]` becomes ambiguous because several distinct positions hold the same value. You can still simulate with an explicit stack, but the greedy pop is no longer forced; in the worst case you may need to try alternatives or track per-value position lists, raising the worst-case time above O(n)."
+    },
+    {
+      "q": "What if `pushed` arrives as a streaming input you cannot store or revisit?",
+      "a": "You cannot reuse `pushed` as in-place storage, so you must keep an explicit stack of up to n elements, making space O(n). The simulation logic-push then pop while top matches-is otherwise identical, still O(n) time."
+    },
+    {
+      "q": "Instead of true/false, return one concrete sequence of \"push\"/\"pop\" operations that produces `popped`.",
+      "a": "During the same simulation, emit \"push\" before each `pushed[++top] = pushed[i]` and emit \"pop\" inside the while loop each time `top` decrements. The emitted list is a valid witness of length 2n; time stays O(n), space becomes O(n) for the output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool validateStackSequences(vector<int>& pushed, vector<int>& popped) {\n        int top = -1;\n        int popIdx = 0;\n        int n = (int)pushed.size();\n        for (int i = 0; i < n; i++) {\n            pushed[++top] = pushed[i];\n            while (top >= 0 && pushed[top] == popped[popIdx]) {\n                top--;\n                popIdx++;\n            }\n        }\n        return popIdx == n;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

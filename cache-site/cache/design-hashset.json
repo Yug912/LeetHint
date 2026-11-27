@@ -1,0 +1,39 @@
+{
+  "slug": "design-hashset",
+  "title": "Design HashSet",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Direct Addressing / Boolean Array",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bool data[1000001]: fixed 10^6+1 booleans, does not grow with number of calls → O(1)\n- recursion depth: none\n- not counted: input, returned bool",
+  "approach": "Since keys are integers in the fixed range [0, 10^6], use a direct-addressed boolean array of size 10^6 + 1. The key itself is the index, so add/remove/contains each touch exactly one cell in O(1). Correctness follows because every valid key maps to a unique, pre-allocated slot, and a boolean flag precisely represents membership (duplicates are idempotent).",
+  "hints": [
+    "The keys are integers in a fixed, known range [0, 10^6]. What property of the key value itself lets you know exactly where its membership record should live, without comparing it against other stored keys?",
+    "Use a direct-addressed boolean array of size 10^6 + 1. For add(1), set arr[1] = true; contains(1) just returns arr[1].",
+    "```\narray[0 .. 10^6] initialized to false\nadd(key):       array[key] = true\nremove(key):    array[key] = false\ncontains(key):  return array[key]\n```",
+    "**Key = 0 (smallest valid)** - boundary at the low end of the key range.\n`Input: [\"MyHashSet\",\"add\",\"contains\"] [[],[0],[0]]` → `Expected: [null,null,true]`\n⚠️ Bug: sizing the array as `bool data[1000000]` (off-by-one in thinking the range is 0..999999) → still works for key 0, but masks the real boundary bug below.\n\n**Key = 10^6 (largest valid)** - boundary at the high end of the key range.\n`Input: [\"MyHashSet\",\"add\",\"contains\"] [[],[1000000],[1000000]]` → `Expected: [null,null,true]`\n⚠️ Bug: declaring `bool data[1000000]` instead of `bool data[1000001]` → add(1000000) writes out of bounds, contains(1000000) reads garbage (undefined behavior, often returns false).\n\n**Duplicate add** - adding the same key twice must be idempotent.\n`Input: [\"MyHashSet\",\"add\",\"add\",\"contains\"] [[],[5],[5],[5]]` → `Expected: [null,null,null,true]`\n⚠️ Bug: storing an integer count and incrementing on each add, then decrementing once on remove → after add(5),add(5),remove(5) the count is still 1, so contains(5) wrongly returns true.\n\n**Remove a key never added** - remove on an absent key must be a no-op.\n`Input: [\"MyHashSet\",\"remove\",\"contains\"] [[],[7],[7]]` → `Expected: [null,false]`\n⚠️ Bug: skipping constructor initialization of the array → contains(7) reads uninitialized memory, may return true.\n\n**Re-add after remove** - a removed key must be addable again.\n`Input: [\"MyHashSet\",\"add\",\"remove\",\"add\",\"contains\"] [[],[3],[3],[3],[3]]` → `Expected: [null,null,null,null,true]`\n⚠️ Bug: using a \"tombstone\" sentinel that add refuses to overwrite → after remove(3) then add(3), contains(3) still returns false."
+  ],
+  "followUps": [
+    {
+      "q": "What if the key range were unbounded (e.g., any 32-bit integer) - how would you adapt this design?",
+      "a": "Replace the direct-addressed array with an array of buckets plus a hash function (e.g., key % bucketCount), storing collisions in a small linked list or vector per bucket. Each operation becomes O(1) average, O(n) worst case, and space grows as O(number of distinct keys actually inserted)."
+    },
+    {
+      "q": "What if memory is tight and you cannot afford 10^6 + 1 booleans, but only ~10^4 keys are ever inserted?",
+      "a": "Use a bitset of size 10^6 + 1 (one bit per key) to cut memory 8×, or switch to open addressing with a load factor and linear probing over a table sized to ~2× the maximum number of inserted keys. Time stays O(1) average; space drops to O(inserted keys) for the probing approach."
+    },
+    {
+      "q": "What if you must also support a `count(key)` returning the number of times a key was added (a multiset)?",
+      "a": "Store an integer counter per slot instead of a boolean; add increments, remove decrements (clamped at 0), and count returns the counter. Time stays O(1); space is unchanged since the array size is fixed by the key range, not by multiplicities."
+    }
+  ],
+  "code": {
+    "cpp": "class MyHashSet {\nprivate:\n    bool data[1000001];\npublic:\n    MyHashSet() {\n        for (int i = 0; i <= 1000000; ++i) {\n            data[i] = false;\n        }\n    }\n    \n    void add(int key) {\n        data[key] = true;\n    }\n    \n    void remove(int key) {\n        data[key] = false;\n    }\n    \n    bool contains(int key) {\n        return data[key];\n    }\n};\n\n/**\n * Your MyHashSet object will be instantiated and called as such:\n * MyHashSet* obj = new MyHashSet();\n * obj->add(key);\n * obj->remove(key);\n * bool param_3 = obj->contains(key);\n */"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

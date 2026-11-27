@@ -1,0 +1,40 @@
+{
+  "slug": "count-good-meals",
+  "title": "Count Good Meals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Complement Counting",
+  "tc": "O(n·log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> seen: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Since each deliciousness value is at most 2^20, the maximum pair sum is 2^21, giving only 22 possible target powers of two (2^0 through 2^21). For each element, we check all 22 powers and look up the complement (power − current value) in a hash map of previously seen values. This counts each valid pair exactly once when the second element is processed.",
+  "hints": [
+    "Given that each deliciousness value is at most 2^20, how many different powers of two could a valid pair sum equal?",
+    "Use a hash map storing how many times each value has been seen so far. For example, when processing 3 in [1,3,5,7,9], check if 4−3=1 exists in the map (it does, from the first element), adding 1 to the answer.",
+    "```\nans = 0\nseen = empty map\nfor each x in array:\n    for each power p in {1, 2, 4, ..., 2^21}:\n        ans += seen[p - x]   (0 if absent)\n    seen[x] += 1\nreturn ans mod (10^9 + 7)\n```",
+    "**Minimum power** - a pair can sum to 2^0 = 1\n`Input: [0, 1]` → `Expected: 1`\n⚠️ Bug: starting the power loop at p=2 instead of p=1 → returns 0\n\n**All zeros** - zero is not a power of two\n`Input: [0,0,0]` → `Expected: 0`\n⚠️ Bug: including 0 in the set of valid powers of two → returns 3\n\n**Overflow** - 10^5 items all equal to 1 produce C(10^5,2) = 4,999,950,000 pairs\n`Input: [1,1,...,1]` (100000 elements) → `Expected: 999949972`\n⚠️ Bug: using int for the answer counter → returns 704982704 (signed overflow wraps modulo 2^32)\n\n**Duplicates** - identical values at different indices form distinct pairs\n`Input: [1,1,1,1]` → `Expected: 6`\n⚠️ Bug: using a set instead of a frequency map → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed to count triples (i, j, k) with i < j < k whose sum is a power of two?",
+      "a": "For each of the ~22 target powers p, iterate over each element as the first item, then use the same hash-map complement approach to count pairs in the remaining suffix that sum to p − a[i]. This gives O(n² · 22) time and O(n) space."
+    },
+    {
+      "q": "What if deliciousness[i] could be as large as 2^30?",
+      "a": "The maximum pair sum becomes 2^31, so we check 32 powers of two instead of 22. The algorithm is unchanged; time complexity remains O(n) with a constant factor of 32."
+    },
+    {
+      "q": "What if you need to return the actual index pairs, not just the count?",
+      "a": "Store lists of indices for each value in the map instead of counts. When a match is found, enumerate all index pairs. In the worst case (all elements equal and summing to a power of two), the output itself is O(n²), so time and space become O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPairs(vector<int>& deliciousness) {\n        const int MOD = 1000000007;\n        unordered_map<int, int> seen;\n        long long ans = 0;\n        for (int x : deliciousness) {\n            for (int p = 1; p <= (1 << 21); p <<= 1) {\n                int target = p - x;\n                auto it = seen.find(target);\n                if (it != seen.end()) {\n                    ans += it->second;\n                }\n            }\n            seen[x]++;\n        }\n        return (int)(ans % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

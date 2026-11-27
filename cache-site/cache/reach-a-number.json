@@ -1,0 +1,40 @@
+{
+  "slug": "reach-a-number",
+  "title": "Reach a Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Math + Binary Search",
+  "tc": "O(log target)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long lo, hi, mid, k, s: a handful of scalars → O(1)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "The sign of `target` is irrelevant (going left vs right is symmetric), so work with `|target|`. After k all-right moves you reach S = k(k+1)/2; flipping move i to left reduces the final position by exactly 2i, so the reachable positions in k moves are exactly S, S−2, S−4, … . Thus k moves suffice iff S ≥ target and (S − target) is even. Binary-search the smallest k with S ≥ target, then bump k (at most twice, since consecutive integers alternate parity) until (S − target) is even.",
+  "hints": [
+    "With |target| up to 10^9, trying every move sequence is impossible. If you always move right for the first k moves you land at 1+2+…+k; flipping the direction of move i shifts your final spot by a fixed amount - what property must the gap (1+2+…+k) − |target| have for k moves to be enough?",
+    "Binary search the smallest k with k(k+1)/2 ≥ |target|, then fix parity. For target=2 that finds k=2 (sum 3); gap 3−2=1 is odd, so add moves until the gap is even - k=3 gives sum 6, gap 4, answer 3.",
+    "t = abs(target)\nlo, hi = 0, 1\nwhile hi*(hi+1)/2 < t: hi *= 2\nwhile lo < hi:\n    mid = (lo+hi)/2\n    if mid*(mid+1)/2 >= t: hi = mid\n    else: lo = mid+1\nk = lo\ns = k*(k+1)/2\nwhile (s - t) odd:\n    k += 1\n    s += k\nreturn k",
+    "**Smallest positive** - target equals the first move length.\n`Input: target = 1` → `Expected: 1`\n⚠️ Bug: initialising binary-search `hi = 0` and doubling never grows → infinite loop / wrong k.\n\n**Negative target** - sign is symmetric but a naive search assumes positive.\n`Input: target = -2` → `Expected: 3`\n⚠️ Bug: skipping `target = abs(target)` and searching with negative t → k*(k+1)/2 ≥ −2 is true at k=0 → returns 0.\n\n**Parity gap** - the all-right sum overshoots by an odd number.\n`Input: target = 2` → `Expected: 3`\n⚠️ Bug: returning k right after the binary search without the parity loop → returns 2.\n\n**Overflow at max** - target = 10^9 forces k ≈ 44721, so k(k+1)/2 ≈ 10^9.\n`Input: target = 1000000000` → `Expected: 44723`\n⚠️ Bug: storing `s = k*(k+1)/2` in `int` (max ~2.1·10^9, but k*(k+1) before halving reaches ~2·10^9 and intermediate products during doubling exceed it) → overflow → wrong k."
+  ],
+  "followUps": [
+    {
+      "q": "What if you must reach the target in exactly numMoves moves and also report whether it is possible for a given numMoves?",
+      "a": "Reuse the parity condition: with numMoves = k, reachable iff k(k+1)/2 ≥ |target| and (k(k+1)/2 − |target|) is even. O(1) per query after O(1) arithmetic; no search needed."
+    },
+    {
+      "q": "What if each move i lets you take any positive integer number of steps up to i (instead of exactly i)?",
+      "a": "Then any position in [−S, S] with the same parity as S is reachable in k moves, so the answer is the smallest k with k(k+1)/2 ≥ |target| and (k(k+1)/2 − |target|) even - same formula, O(log target)."
+    },
+    {
+      "q": "What if target arrives as a stream of up to 10^7 queries and you must answer each in O(1) amortised?",
+      "a": "Precompute nothing; each query is independent O(log target) via binary search, or O(1) using k = ceil((√(8t+1)−1)/2) then the parity bump - total O(Q) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int reachNumber(int target) {\n        long long t = target < 0 ? -(long long)target : (long long)target;\n        long long lo = 0, hi = 1;\n        while (hi * (hi + 1) / 2 < t) hi *= 2;\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2;\n            if (mid * (mid + 1) / 2 >= t) hi = mid;\n            else lo = mid + 1;\n        }\n        long long k = lo;\n        long long s = k * (k + 1) / 2;\n        while (((s - t) & 1LL) != 0) {\n            k++;\n            s += k;\n        }\n        return (int)k;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

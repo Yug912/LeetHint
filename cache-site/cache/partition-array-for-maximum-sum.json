@@ -1,0 +1,40 @@
+{
+  "slug": "partition-array-for-maximum-sum",
+  "title": "Partition Array for Maximum Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "1D Dynamic Programming",
+  "tc": "O(n·k)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> dp: n+1 entries → O(n)\n- no recursion, no other containers\n- not counted: input arr, returned int",
+  "approach": "The key insight is optimal substructure: once you fix the length j (1 ≤ j ≤ k) of the last subarray ending at position i, the best total for the first i elements is dp[i−j] + max(arr[i−j..i−1]) × j. We compute dp[i] for i from 1 to n by trying every valid j, tracking the running maximum incrementally as j grows so we never rescan. The answer is dp[n].",
+  "hints": [
+    "When you extend a subarray by one more element, how does its maximum change, and how does that affect the contribution of every element already in it? Each subarray has length at most k.",
+    "Use a 1D DP array where dp[i] is the best sum for the first i elements. For arr = [1,15,7,9,2,5,10], k = 3, computing dp[3] tries last-subarray lengths 1, 2, 3: max(dp[2]+7, dp[1]+15·2, dp[0]+15·3) = 45.",
+    "```\ndp[0] = 0\nfor i = 1 to n:\n    mx = 0\n    for j = 1 to min(i, k):\n        mx = max(mx, arr[i-j])\n        dp[i] = max(dp[i], dp[i-j] + mx * j)\nreturn dp[n]\n```",
+    "**Single element** - the smallest valid input\n`Input: arr = [1], k = 1` → `Expected: 1`\n⚠️ Bug: starting the outer loop at i = 0 instead of i = 1 → returns 0\n\n**k equals array length** - one subarray can cover the entire array\n`Input: arr = [1,15,7], k = 3` → `Expected: 45`\n⚠️ Bug: using `j < k` instead of `j <= k` in the inner loop → returns 37\n\n**k equals 1** - no partitioning, the answer is the plain sum\n`Input: arr = [1,15,7,9,2,5,10], k = 1` → `Expected: 49`\n⚠️ Bug: returning dp[n-1] instead of dp[n] → returns 39\n\n**Maximum not at subarray end** - the largest element is early in its subarray\n`Input: arr = [10,1,1], k = 3` → `Expected: 30`\n⚠️ Bug: not updating mx as j increases, keeping mx = arr[i-1] → returns 21"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^5 and k up to n, how would you avoid the O(n·k) bottleneck?",
+      "a": "The inner loop scans j = 1..k looking for the best dp[i−j] + max(arr[i−j..i−1])·j. A monotonic deque storing candidate (value, index) pairs can maintain the relevant maxima and prune dominated candidates, reducing each step to amortized O(1) or O(log n). Total time becomes O(n) or O(n log n), space stays O(n) or O(k)."
+    },
+    {
+      "q": "Instead of returning just the sum, return the actual partition boundaries.",
+      "a": "Store argmax_j alongside each dp[i] in a parallel choice array. After filling dp, backtrack from i = n: read choice[n] to get the last subarray length, jump to i − choice[n], repeat until i = 0. Time stays O(n·k), extra space O(n) for the choice array."
+    },
+    {
+      "q": "Elements arrive one at a time in a stream; output the best sum after each new element.",
+      "a": "The recurrence only reads dp[i−j] for j = 1..k, so keep a circular buffer of the last k dp values. Each new element triggers at most k comparisons. Time per element is O(k), total O(n·k), space drops to O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSumAfterPartitioning(vector<int>& arr, int k) {\n        int n = arr.size();\n        vector<long long> dp(n + 1, 0);\n        for (int i = 1; i <= n; i++) {\n            long long mx = 0;\n            for (int j = 1; j <= k && i - j >= 0; j++) {\n                mx = max(mx, (long long)arr[i - j]);\n                dp[i] = max(dp[i], dp[i - j] + mx * j);\n            }\n        }\n        return (int)dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

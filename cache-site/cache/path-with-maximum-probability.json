@@ -1,0 +1,40 @@
+{
+  "slug": "path-with-maximum-probability",
+  "title": "Path with Maximum Probability",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dijkstra's Algorithm",
+  "tc": "O(E log V)",
+  "sc": "O(V + E)",
+  "spaceBreakdown": "- adj (adjacency list): up to V + 2E entries → O(V + E)\n- dist (distance array): exactly V entries → O(V)\n- pq (priority queue): up to V + E entries in the worst case → O(V + E)\n- not counted: input parameters, returned output",
+  "approach": "To find the path with the maximum probability, we can use Dijkstra's algorithm. Since multiplying many probabilities (which are $\\le 1$) can lead to floating-point underflow, we take the negative natural logarithm of each probability. This transforms the problem into finding the shortest path in a graph with non-negative edge weights. We use a min-heap (priority queue) to always expand the node with the smallest accumulated negative log-probability. If the destination is unreachable, its distance remains infinity, and we return 0. Otherwise, we convert the shortest path's negative log-probability back to a probability using `exp()`.",
+  "hints": [
+    "Every edge probability lies in [0, 1]. If you extend a path by one more edge, how does the overall success probability change?",
+    "Use a max-heap Dijkstra: always expand the node with the highest probability-so-far. In Example 1, start at node 0 with prob 1.0; neighbors 1 and 2 get probs 0.5 and 0.2, so node 1 is expanded next, updating node 2 to 0.25.",
+    "```\nbuild adjacency list from edges and succProb\nprob[start] = 1.0, all others 0.0\nmax-heap.push((1.0, start))\nwhile heap not empty:\n    (p, u) = heap.pop()\n    if p < prob[u]: skip          // stale entry\n    if u == end: return p\n    for each neighbor (v, edgeProb) of u:\n        newProb = p * edgeProb\n        if newProb > prob[v]:\n            prob[v] = newProb\n            heap.push((newProb, v))\nreturn 0.0\n```",
+    "**Disconnected graph** - start and end are in different components\n`Input: n = 3, edges = [[0,1]], succProb = [0.5], start_node = 0, end_node = 2` → `Expected: 0.00000`\n⚠️ Bug: omitting `return 0.0` after the while loop → undefined behavior, returns garbage like 6.95e-310\n\n**Min-heap instead of max-heap** - finds minimum-probability path\n`Input: n = 3, edges = [[0,1],[1,2],[0,2]], succProb = [0.5,0.5,0.2], start_node = 0, end_node = 2` → `Expected: 0.25000`\n⚠️ Bug: using `greater<pair<double,int>>` comparator → pops (0.2, node 2) before exploring path through node 1, returns 0.20000\n\n**All probabilities are 1** - answer should be 1.0\n`Input: n = 3, edges = [[0,1],[1,2]], succProb = [1.0,1.0], start_node = 0, end_node = 2` → `Expected: 1.00000`\n⚠️ Bug: initializing prob[start_node] to 0.0 instead of 1.0 → all products are 0, returns 0.00000\n\n**Adding instead of multiplying** - wrong aggregation of edge weights\n`Input: n = 3, edges = [[0,1],[1,2],[0,2]], succProb = [0.5,0.5,0.2], start_node = 0, end_node = 2` → `Expected: 0.25000`\n⚠️ Bug: summing probabilities (0.5+0.5=1.0) instead of multiplying (0.5*0.5=0.25) → returns 1.00000"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to return the actual path (node sequence) instead of just the probability?",
+      "a": "Maintain a parent array alongside prob. When updating prob[v], set parent[v] = u. After Dijkstra finds the optimal probability, backtrack from end_node to start_node using parent. TC: O((V+E) log V), SC: O(V+E) (same, plus O(V) for parent array)."
+    },
+    {
+      "q": "What if there are many queries (different start-end pairs) on the same graph?",
+      "a": "Precompute by running Dijkstra from every node, storing an n×n probability table. Each query is then O(1) lookup. TC: O(V·(V+E) log V) precomputation, O(1) per query. SC: O(V²) for the table."
+    },
+    {
+      "q": "What if edge probabilities can exceed 1 (amplifying edges)?",
+      "a": "The monotonicity that makes Dijkstra correct no longer holds-a longer path could have a higher product. If no positive cycles exist (cycle product ≤ 1), use a modified Bellman-Ford that maximizes products with V-1 relaxation rounds. TC: O(V·E), SC: O(V)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double maxProbability(int n, vector<vector<int>>& edges, vector<double>& succProb, int start_node, int end_node) {\n        vector<vector<pair<int, double>>> adj(n);\n        for (int i = 0; i < edges.size(); ++i) {\n            int u = edges[i][0];\n            int v = edges[i][1];\n            double prob = succProb[i];\n            if (prob > 0.0) {\n                double w = -log(prob);\n                adj[u].push_back({v, w});\n                adj[v].push_back({u, w});\n            }\n        }\n        \n        vector<double> dist(n, 1e18);\n        dist[start_node] = 0.0;\n        priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>> pq;\n        pq.push({0.0, start_node});\n        \n        while (!pq.empty()) {\n            double d = pq.top().first;\n            int u = pq.top().second;\n            pq.pop();\n            \n            if (d > dist[u]) continue;\n            if (u == end_node) break;\n            \n            for (int i = 0; i < adj[u].size(); ++i) {\n                int v = adj[u][i].first;\n                double w = adj[u][i].second;\n                if (dist[u] + w < dist[v]) {\n                    dist[v] = dist[u] + w;\n                    pq.push({dist[v], v});\n                }\n            }\n        }\n        \n        if (dist[end_node] >= 1e18) {\n            return 0.0;\n        }\n        return exp(-dist[end_node]);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

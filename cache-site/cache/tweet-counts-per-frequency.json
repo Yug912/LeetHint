@@ -1,0 +1,39 @@
+{
+  "slug": "tweet-counts-per-frequency",
+  "title": "Tweet Counts Per Frequency",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Ordered Map Range Query",
+  "tc": "O(Q · (log N + R))",
+  "sc": "O(N)",
+  "spaceBreakdown": "- unordered_map<string, map<int,int>> data: up to N = total recordTweet calls entries → O(N)\n- vector<int> result: returned output, not counted\n- recursion depth: none",
+  "approach": "Store each tweet name's recorded times in a sorted `map<int,int>` (time → count, so duplicate timestamps accumulate). On a query, compute the chunk size from `freq`, create `numChunks = (endTime - startTime)/chunk + 1` buckets, then walk the map from `lower_bound(startTime)` until the time exceeds `endTime`, dropping each entry into bucket `(time - startTime)/chunk`. Because `endTime - startTime ≤ 10^4`, the number of buckets is tiny, and we only touch tweets actually inside the queried range.",
+  "hints": [
+    "If you had all tweet times for one name laid out in front of you, what single property of that collection would let you skip every time outside [startTime, endTime] without scanning them all?\nendTime - startTime ≤ 10^4, so each query spans at most a few hundred minute-chunks.",
+    "Store each name's times in a sorted map (time → count). To answer a query, start at lower_bound(startTime) and walk forward while time ≤ endTime, adding each entry's count to bucket (time - startTime)/chunkSize. Example: times {0,10,60} for \"minute\" on [0,60] → 0 and 10 land in bucket 0, 60 lands in bucket 1, giving [2,1].",
+    "```\nchunk = 60 if \"minute\", 3600 if \"hour\", else 86400\nnumChunks = (endTime - startTime) / chunk + 1\nresult = array of numChunks zeros\npos = map.lower_bound(startTime)\nwhile pos != end and pos.time <= endTime:\n    result[(pos.time - startTime) / chunk] += pos.count\n    pos = pos.next\nreturn result\n```",
+    "**Tweet at startTime** - a tweet recorded exactly at the query's start boundary.\n`recordTweet(\"t\",0); getTweetCountsPerFrequency(\"minute\",\"t\",0,59)` → `Expected: [1]`\n⚠️ Bug: starting the walk at `upper_bound(startTime)` instead of `lower_bound(startTime)` → returns `[0]`\n\n**Tweet at endTime** - a tweet recorded exactly at the query's end boundary.\n`recordTweet(\"t\",60); getTweetCountsPerFrequency(\"minute\",\"t\",0,60)` → `Expected: [0,1]`\n⚠️ Bug: loop condition `pos->first < endTime` instead of `<=` → returns `[0,0]`\n\n**Duplicate timestamps** - the same tweet recorded twice at the same second.\n`recordTweet(\"t\",5); recordTweet(\"t\",5); getTweetCountsPerFrequency(\"minute\",\"t\",0,59)` → `Expected: [2]`\n⚠️ Bug: storing times in a `set<int>` (no counts) instead of `map<int,int>` → returns `[1]`\n\n**Single-second range** - startTime equals endTime.\n`recordTweet(\"t\",5); getTweetCountsPerFrequency(\"minute\",\"t\",5,5)` → `Expected: [1]`\n⚠️ Bug: computing `numChunks = (endTime - startTime) / chunk` without `+ 1` → returns `[]` (empty vector)"
+  ],
+  "followUps": [
+    {
+      "q": "What if there were up to 10^7 calls with times up to 10^9?",
+      "a": "Replace the per-name map with an order-statistic tree (or Fenwick tree over online coordinate compression) so each range count is O(log N) instead of O(R). Record and query both become O(log N), giving O(Q log N) total."
+    },
+    {
+      "q": "What if tweets could be deleted via removeTweet(tweetName, time)?",
+      "a": "Decrement the count in map<int,int>; erase the key when it hits 0. The query code is unchanged because it reads current counts. Delete is O(log N)."
+    },
+    {
+      "q": "What if endTime - startTime could be as large as 10^9 (millions of chunks)?",
+      "a": "Maintain a prefix-sum array over the sorted times per name, rebuilt lazily when dirty. Each chunk's count becomes prefix(upper_bound(chunkEnd)) - prefix(lower_bound(chunkStart)), O(log N) per chunk. A query with K chunks costs O(K log N) instead of O(K log N + R)."
+    }
+  ],
+  "code": {
+    "cpp": "class TweetCounts {\n    unordered_map<string, map<int,int>> data;\npublic:\n    TweetCounts() {\n        \n    }\n    \n    void recordTweet(string tweetName, int time) {\n        data[tweetName][time]++;\n    }\n    \n    vector<int> getTweetCountsPerFrequency(string freq, string tweetName, int startTime, int endTime) {\n        int chunk;\n        if (freq == \"minute\") chunk = 60;\n        else if (freq == \"hour\") chunk = 3600;\n        else chunk = 86400;\n        \n        int numChunks = (endTime - startTime) / chunk + 1;\n        vector<int> result(numChunks, 0);\n        \n        auto it = data.find(tweetName);\n        if (it == data.end()) return result;\n        \n        map<int,int>& times = it->second;\n        auto pos = times.lower_bound(startTime);\n        while (pos != times.end() && pos->first <= endTime) {\n            int idx = (pos->first - startTime) / chunk;\n            result[idx] += pos->second;\n            ++pos;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

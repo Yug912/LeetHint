@@ -1,0 +1,40 @@
+{
+  "slug": "decompress-run-length-encoded-list",
+  "title": "Decompress Run-Length Encoded List",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> result: returned output, not counted\n- int n, total: O(1)\n- Loop variables i: O(1)\n- No recursion, no auxiliary containers",
+  "approach": "The input is a flat array of (freq, val) pairs at indices (2*i, 2*i+1). For each pair, we append `val` exactly `freq` times to a result vector. We first compute the total output size by summing all frequencies, then `reserve` that capacity to avoid reallocations. This directly simulates the decompression specification.",
+  "hints": [
+    "If you read the input two elements at a time, what does each consecutive pair tell you about a segment of the output? The input length is always even (nums.length % 2 == 0).",
+    "Use a result vector. For each pair (freq, val) at indices 2*i and 2*i+1, append val exactly freq times. Example: pair (1,2) from [1,2,3,4] appends 2 once → [2].",
+    "```\nresult = []\nfor i = 0 to len(nums) - 1 step 2:\n    freq = nums[i]\n    val = nums[i + 1]\n    repeat freq times:\n        result.append(val)\nreturn result\n```",
+    "**Swapped pair roles** - reading nums[i] as value and nums[i+1] as frequency\n`Input: [1,2,3,4]` → `Expected: [2,4,4,4]`\n⚠️ Bug: treating nums[i] as val and nums[i+1] as freq → returns [1,1,3,3,3,3]\n\n**All frequencies equal to 1** - every pair expands to a single element\n`Input: [1,1,1,2]` → `Expected: [1,2]`\n⚠️ Bug: inner loop `for j = 0; j <= freq; j++` (off-by-one) → returns [1,1,2,2]\n\n**Overwriting instead of appending** - using resize then filling from index 0\n`Input: [1,1,2,3]` → `Expected: [1,3,3]`\n⚠️ Bug: `result.resize(freq)` then assigning `result[j] = val` → returns [3,3]\n\n**Maximum frequency** - freq at constraint maximum 100\n`Input: [100,100]` → `Expected: [100,100,...,100]` (100 copies)\n⚠️ Bug: inner loop `for j = 0; j < freq - 1; j++` → returns 99 copies of 100"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums can have up to 10^6 elements and frequencies up to 10^9 - how do you return the result without running out of memory?",
+      "a": "The output could have up to 5×10^14 elements, far exceeding memory. Return a lazy iterator that tracks the current pair index and remaining copies, yielding one element per call to next(). TC per query: O(1). SC: O(1)."
+    },
+    {
+      "q": "What if a pair's value can itself be a run-length encoded list (nested encoding)?",
+      "a": "Recursively decompress each val that is itself a list and concatenate the results. Use an explicit stack or recursion to handle arbitrary nesting depth. TC: O(total output size across all levels). SC: O(max nesting depth) for the call stack."
+    },
+    {
+      "q": "What if you need to answer \"what is the k-th element of the decompressed list\" for many queries without fully decompressing?",
+      "a": "Precompute prefix sums of the frequencies. For each query, binary search for the pair whose prefix-sum range contains k, then return that pair's val. TC: O(n) preprocessing, O(log n) per query. SC: O(n) for prefix sums."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> decompressRLElist(vector<int>& nums) {\n        vector<int> result;\n        int n = nums.size();\n        int total = 0;\n        for (int i = 0; i < n; i += 2) {\n            total += nums[i];\n        }\n        result.reserve(total);\n        for (int i = 0; i < n; i += 2) {\n            result.insert(result.end(), nums[i], nums[i + 1]);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

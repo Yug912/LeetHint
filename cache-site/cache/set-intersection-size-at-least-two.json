@@ -1,0 +1,40 @@
+{
+  "slug": "set-intersection-size-at-least-two",
+  "title": "Set Intersection Size At Least Two",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Interval Coverage",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() on intervals (in place): introsort stack → O(log n)\n- int a, b, ans: O(1)\n- not counted: input intervals",
+  "approach": "Sort intervals by end ascending, breaking ties by start descending. Scan left to right tracking the two most recently picked numbers `a < b`. For each interval `[s,e]`: if `s ≤ a`, both picks already lie inside; if `s ≤ b`, only `b` lies inside so append `e`; otherwise append `e−1` and `e`. Picking the rightmost values maximizes overlap with later intervals (whose ends are ≥ current end), and ascending-end order guarantees earlier picks are never invalidated.",
+  "hints": [
+    "When an interval still needs numbers added to it, which positions inside that interval give those numbers the best chance of also falling inside other intervals? Each interval must contain at least two integers from the set.",
+    "Greedy with sorting: sort intervals by end ascending (start descending on ties), then scan always picking the rightmost still-needed positions. For [1,3] with nothing picked yet, choose 2 and 3.",
+    "```\nsort intervals by end asc, start desc\na = b = -1\nans = 0\nfor each [s, e]:\n    if s <= a:          # both a, b already inside\n        continue\n    elif s <= b:        # only b inside\n        a = b; b = e; ans += 1\n    else:               # neither inside\n        a = e-1; b = e; ans += 2\nreturn ans\n```",
+    "**Single interval** - only one interval exists, so two distinct numbers are mandatory.\n`Input: [[0,1]]` → `Expected: 2`\n⚠️ Bug: initializing a=b=0 instead of -1 → returns 0\n\n**Nested intervals** - a wide interval contains narrower ones processed in the wrong order.\n`Input: [[1,5],[2,3],[3,4]]` → `Expected: 3`\n⚠️ Bug: sorting by start ascending instead of end → returns 2\n\n**All identical intervals** - every interval is the same, so two numbers suffice.\n`Input: [[1,3],[1,3],[1,3]]` → `Expected: 2`\n⚠️ Bug: always adding 2 per interval without checking coverage → returns 6\n\n**Touching consecutive intervals** - each adjacent pair shares exactly one point.\n`Input: [[1,2],[2,3],[3,4]]` → `Expected: 4`\n⚠️ Bug: using `s < b` instead of `s <= b` → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if each interval must contain at least k integers (k ≥ 2) instead of exactly two?",
+      "a": "Generalize the tracking to the last k picked numbers. For each interval, count how many of those k fall inside [s,e]; if c < k, append the k−c largest uncovered positions ending at e. Time stays O(n log n + nk); space O(k)."
+    },
+    {
+      "q": "What if intervals arrive in a streaming fashion and cannot all be stored?",
+      "a": "Keep a bounded buffer of the last k picks and process intervals sorted by end using an external/online sort. Correctness is unchanged; memory drops to O(k), but you must sort the stream first (O(n log n) time with external sort)."
+    },
+    {
+      "q": "What if intervals can be added or removed dynamically and you must answer the minimum set size after each update?",
+      "a": "This becomes much harder; the greedy order depends on all current intervals. A segment-tree or balanced-BST structure tracking coverage counts per coordinate would be needed, raising time to O(n log C) per query where C is the coordinate range."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int intersectionSizeTwo(vector<vector<int>>& intervals) {\n        sort(intervals.begin(), intervals.end(), [](const vector<int>& a, const vector<int>& b){\n            if (a[1] != b[1]) return a[1] < b[1];\n            return a[0] > b[0];\n        });\n        int ans = 0;\n        int a = -1, b = -1;\n        for (const auto& iv : intervals) {\n            int s = iv[0], e = iv[1];\n            if (s <= a) {\n                // both a and b already inside [s, e]\n            } else if (s <= b) {\n                ans += 1;\n                a = b;\n                b = e;\n            } else {\n                ans += 2;\n                a = e - 1;\n                b = e;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

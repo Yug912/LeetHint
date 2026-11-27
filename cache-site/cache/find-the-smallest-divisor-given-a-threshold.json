@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-smallest-divisor-given-a-threshold",
+  "title": "Find the Smallest Divisor Given a Threshold",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log M)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- lo, hi, mid, sum, loop counter: a constant number of scalars → O(1)\n- max_element: in-place, O(1) extra\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "The sum of ceil(nums[i]/d) is monotonically non-increasing in d: larger divisors never increase the total. We want the smallest d with sum ≤ threshold. The answer lies in [1, max(nums)] because at d = max(nums) every term is ≤ 1, so the sum is ≤ n ≤ threshold. Binary search this range: for a candidate mid, compute the sum (in `long long` to avoid overflow); if it fits, try smaller (hi = mid), else go larger (lo = mid + 1).",
+  "hints": [
+    "List the total sum for divisors 1, 2, 3, 4, 5 on the array [1,2,5,9] - does the total ever go up as the divisor grows? nums[i] can be as large as 10^6.",
+    "Binary search the divisor in [1, max(nums)]. For [1,2,5,9] with threshold 6, testing divisor 5 gives 1+1+1+2 = 5 ≤ 6, so the answer is at most 5.",
+    "```\nlo = 1, hi = max(nums)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    total = sum of ceil(x / mid) for x in nums\n    if total <= threshold:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Single element** - n = 1, the divisor must make one ceiling fit the threshold.\n`Input: nums = [5], threshold = 1` → `Expected: 5`\n⚠️ Bug: initializing hi to threshold instead of max(nums) → returns 1, but ceil(5/1)=5 > 1.\n\n**Overflow** - n = 5·10^4 elements all equal to 10^6; at d = 1 the sum is 5·10^4 × 10^6 = 5·10^10 > 2^31−1.\n`Input: nums = [1000000]×50000, threshold = 1000000` → `Expected: 50000`\n⚠️ Bug: accumulating the sum in a signed `int` → at d = 1 the sum overflows to about −1.5·10^9, which is ≤ threshold, so the search reports 1.\n\n**Threshold equals n** - every element must round up to exactly 1.\n`Input: nums = [1,2,5,9], threshold = 4` → `Expected: 9`\n⚠️ Bug: setting hi = max(nums) − 1 → returns 8, but ceil(9/8)=2 gives sum 1+1+1+2 = 5 > 4.\n\n**All equal with wrong rounding** - identical elements expose truncation vs. ceiling.\n`Input: nums = [7,7,7,7], threshold = 4` → `Expected: 7`\n⚠️ Bug: using `x / mid` (truncating) instead of `(x + mid − 1) / mid` (ceiling) → at d = 4 reports sum 1+1+1+1 = 4 ≤ 4 and returns 4."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums arrives as a streaming input you cannot store entirely?",
+      "a": "You still need max(nums) for the upper bound and the sum for each probe. Make two passes over the stream per binary-search step: one to find the max (only on the first probe), then one per mid to compute the sum. Time stays O(n log M) but with higher constant; space drops to O(1) beyond the stream cursor."
+    },
+    {
+      "q": "What if threshold can be smaller than n, so no divisor works?",
+      "a": "At d = max(nums) the sum equals the count of distinct ceilings, which is at least 1 per element, i.e. ≥ n. If threshold < n, return −1 immediately; otherwise run the same binary search. Time O(n log M), space O(1)."
+    },
+    {
+      "q": "What if you instead need the largest divisor whose sum is ≥ threshold?",
+      "a": "The sum is non-increasing, so invert the predicate: keep lo = mid when sum ≥ threshold, else hi = mid − 1, searching [1, max(nums)]. Time O(n log M), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int smallestDivisor(vector<int>& nums, int threshold) {\n        int lo = 1;\n        int hi = *max_element(nums.begin(), nums.end());\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long long sum = 0;\n            for (int x : nums) {\n                sum += (x + mid - 1) / mid;\n            }\n            if (sum <= threshold) {\n                hi = mid;\n            } else {\n                lo = mid + 1;\n            }\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

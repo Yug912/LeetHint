@@ -2,40 +2,39 @@
   "slug": "greatest-common-divisor-of-strings",
   "title": "Greatest Common Divisor of Strings",
   "difficulty": "Easy",
-  "promptVersion": "p7",
-  "generatedAt": "2026-11-07",
-  "pattern": "Euclidean Algorithm + String Prefix Check",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Euclidean Algorithm",
   "tc": "O(n + m)",
   "sc": "O(1)",
-  "spaceBreakdown": "- gcd calculation: O(1)  \n- substring extraction: O(1) (creates a new string of length gcd, but counted as output)",
-  "approach": "The greatest common divisor string must be a prefix of both strings.  \nIts length is the greatest common divisor of the two string lengths, and the prefix of that length must repeat to form both strings.  \nIf that prefix works, it is the answer; otherwise no such string exists.  \nThis runs in linear time over the input strings.",
+  "spaceBreakdown": "- int variables (n, m, g, i, t): O(1)\n- char variables (c1, c2): O(1)\n- returned string via str1.substr(0, g): not counted (output)\n- not counted: input strings str1, str2",
+  "approach": "The key insight is that if a string x divides both str1 and str2, then str1+str2 must equal str2+str1 (both become x repeated (n+m)/len(x) times). We verify this by comparing characters of the virtual concatenations directly-indexing into str1 or str2 based on position-without ever building the concatenated strings. If all characters match, the answer is the prefix of length gcd(n, m); otherwise, no common divisor exists and we return \"\".",
   "hints": [
-    "If two strings share a common divisor, that divisor must appear at the very start of each string.  \nSince the lengths are at most 1000, can we use the length relationship to limit our search?",
-    "Use the Euclidean algorithm to compute the greatest common divisor of the two lengths.  \nFor example, with str1 = \"ABCABC\" (len 6) and str2 = \"ABC\" (len 3), gcd(6,3)=3, so test the first 3 characters \"ABC\".",
-    "```\ng = gcd(len(str1), len(str2))\ncandidate = first g characters of str1\nif candidate repeated len(str1)/g times == str1\n   and candidate repeated len(str2)/g times == str2\n   return candidate\nelse\n   return \"\"\n```",
-    "**All characters same** - `Input: str1 = \"AAAA\", str2 = \"AA\"` → `Expected: \"AA\"`  \n⚠️ Bug: checking only the first character of the candidate → returns `\"A\"` instead of `\"AA\"`  \n\n**No common divisor** - `Input: str1 = \"LEET\", str2 = \"CODE\"` → `Expected: \"\"`  \n⚠️ Bug: assuming gcd of lengths > 0 always yields a valid string → returns `\"L\"` incorrectly  \n\n**Different lengths but same prefix** - `Input: str1 = \"ABABAB\", str2 = \"ABAB\"` → `Expected: \"AB\"`  \n⚠️ Bug: using the smaller string's length as gcd → returns `\"ABAB\"` incorrectly  \n\n**Large equal strings** - `Input: str1 = string(1000,'X'), str2 = string(1000,'X')` → `Expected: string(1000,'X')`  \n⚠️ Bug: using `substr(0, gcd)` where gcd=1000 but then checking repeats with integer division may overflow indices → returns empty string"
+    "If the same string x divides both str1 and str2, how does the concatenation str1+str2 relate to str2+str1? Both strings have length at most 1000.",
+    "Use the Euclidean algorithm on the string lengths: g = gcd(n, m). Verify the common divisor exists by comparing characters of the virtual concatenations str1+str2 and str2+str1 directly, without building them. For \"ABCABC\" (n=6) and \"ABC\" (m=3): g=3, the virtual concatenations match character-by-character, so return \"ABC\".",
+    "```\ng = gcd(len(str1), len(str2))\nfor i from 0 to len(str1) + len(str2) - 1:\n    c1 = str1[i] if i < len(str1) else str2[i - len(str1)]\n    c2 = str2[i] if i < len(str2) else str1[i - len(str2)]\n    if c1 != c2: return \"\"\nreturn str1[0:g]\n```",
+    "**No common divisor** - strings with no shared repeating pattern\n`Input: str1 = \"LEET\", str2 = \"CODE\"` → `Expected: \"\"`\n⚠️ Bug: returning str1.substr(0, gcd(n,m)) without checking concatenation equality → returns \"LEET\" (gcd(4,4)=4)\n\n**Neither divides the other but a shorter string divides both** -\n`Input: str1 = \"ABABAB\", str2 = \"ABAB\"` → `Expected: \"AB\"`\n⚠️ Bug: checking only if one string divides the other → returns \"\" (neither \"ABABAB\" nor \"ABAB\" divides the other)\n\n**Length divides but content doesn't** -\n`Input: str1 = \"AAAAAB\", str2 = \"AAA\"` → `Expected: \"\"`\n⚠️ Bug: checking only if str2's length divides str1's length (6 % 3 == 0) and returning str2 → returns \"AAA\" (wrong, \"AAA\"×2 = \"AAAAAA\" ≠ \"AAAAAB\")\n\n**Both strings identical** -\n`Input: str1 = \"ABC\", str2 = \"ABC\"` → `Expected: \"ABC\"`\n⚠️ Bug: Euclidean algorithm without temp variable (`b = a % b; a = b;` instead of `int t = b; b = a % b; a = t;`) → returns \"\" (gcd computed as 0, substr(0,0) is empty)"
   ],
   "followUps": [
     {
-      "q": "What if the strings could be up to 10^6 characters long?",
-      "a": "The same algorithm works; computing gcd is O(log min(n,m)) and the repeat checks are O(n+m), so overall O(n+m) still fits."
+      "q": "What if str1 and str2 can each be up to 10^6 characters long?",
+      "a": "The same approach works unchanged. The character-by-character comparison runs in O(n+m) time and O(1) extra space, which handles 10^6 characters within time limits. The Euclidean algorithm on the lengths is O(log(min(n,m))). TC: O(n+m), SC: O(1)."
     },
     {
-      "q": "How would you modify the solution to handle lowercase letters only?",
-      "a": "No change needed; the algorithm is independent of the alphabet. Complexity remains O(n+m)."
+      "q": "What if you must return ALL strings that divide both str1 and str2?",
+      "a": "First find the greatest common divisor x of length g. Every common divisor is a prefix of x whose length divides g. For each divisor d of g, check whether repeating str1[0:d] forms x; if so, str1[0:d] is a common divisor. TC: O(n+m + g·d(g)) where d(g) is the number of divisors of g. SC: O(g) for storing all valid divisors."
     },
     {
-      "q": "Suppose you could only stream the strings once (no random access).",
-      "a": "You would need to read each string into a buffer to compute its length and then compare prefixes; streaming alone is insufficient because you must check repeats, so you still need O(n+m) memory."
+      "q": "What if the strings arrive as a character stream with a delimiter, and you can only store O(g) characters?",
+      "a": "First pass: count n and m, compute g = gcd(n,m). Second pass: buffer the first g characters of str1 as the candidate, then verify it repeats correctly in both strings by comparing each incoming character against candidate[i % g]. TC: O(n+m), SC: O(g)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    string gcdOfStrings(string str1, string str2) {\n        int n = str1.size(), m = str2.size();\n        int g = gcd(n, m);\n        string candidate = str1.substr(0, g);\n        if (candidate + candidate == str1 && candidate + candidate == str2) {\n            // The above is wrong; need to repeat properly\n        }\n        // Correct repeat check\n        if (repeatCheck(str1, candidate) && repeatCheck(str2, candidate))\n            return candidate;\n        return \"\";\n    }\nprivate:\n    bool repeatCheck(const string& s, const string& cand) {\n        int len = cand.size();\n        if (s.size() % len != 0) return false;\n        for (int i = 0; i < (int)s.size(); i += len) {\n            if (s.compare(i, len, cand) != 0) return false;\n        }\n        return true;\n    }\n};",
-    "java": "class Solution {\n    public String gcdOfStrings(String str1, String str2) {\n        int n = str1.length();\n        int m = str2.length();\n        int g = gcd(n, m);\n        String candidate = str1.substring(0, g);\n        if (repeatCheck(str1, candidate) && repeatCheck(str2, candidate)) {\n            return candidate;\n        }\n        return \"\";\n    }\n\n    private int gcd(int a, int b) {\n        while (b != 0) {\n            int t = a % b;\n            a = b;\n            b = t;\n        }\n        return a;\n    }\n\n    private boolean repeatCheck(String s, String cand) {\n        int len = cand.length();\n        if (s.length() % len != 0) return false;\n        for (int i = 0; i < s.length(); i += len) {\n            if (!s.regionMatches(i, cand, 0, len)) return false;\n        }\n        return true;\n    }\n}",
-    "python3": "class Solution:\n    def gcdOfStrings(self, str1: str, str2: str) -> str:\n        import math\n        n = len(str1)\n        m = len(str2)\n        g = math.gcd(n, m)\n        candidate = str1[:g]\n        \n        def repeatCheck(s: str, cand: str) -> bool:\n            len_cand = len(cand)\n            if len(s) % len_cand != 0:\n                return False\n            for i in range(0, len(s), len_cand):\n                if s[i:i+len_cand] != cand:\n                    return False\n            return True\n        \n        if repeatCheck(str1, candidate) and repeatCheck(str2, candidate):\n            return candidate\n        return \"\"",
-    "javascript": "/**\n * @param {string} str1\n * @param {string} str2\n * @return {string}\n */\nvar gcdOfStrings = function(str1, str2) {\n    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);\n    \n    const n = str1.length;\n    const m = str2.length;\n    const g = gcd(n, m);\n    const candidate = str1.substring(0, g);\n    \n    const repeatCheck = (s, cand) => {\n        const len = cand.length;\n        if (s.length % len !== 0) return false;\n        for (let i = 0; i < s.length; i += len) {\n            if (s.substring(i, i + len) !== cand) return false;\n        }\n        return true;\n    };\n    \n    if (repeatCheck(str1, candidate) && repeatCheck(str2, candidate)) {\n        return candidate;\n    }\n    return \"\";\n};"
+    "cpp": "class Solution {\npublic:\n    string gcdOfStrings(string str1, string str2) {\n        int n = str1.size(), m = str2.size();\n        int g = gcd(n, m);\n        for (int i = 0; i < n + m; i++) {\n            char c1 = (i < n) ? str1[i] : str2[i - n];\n            char c2 = (i < m) ? str2[i] : str1[i - m];\n            if (c1 != c2) return \"\";\n        }\n        return str1.substr(0, g);\n    }\nprivate:\n    int gcd(int a, int b) {\n        while (b) {\n            int t = b;\n            b = a % b;\n            a = t;\n        }\n        return a;\n    }\n};"
   },
   "verified": {
-    "compiled": true
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
   }
 }

@@ -1,0 +1,40 @@
+{
+  "slug": "rank-transform-of-an-array",
+  "title": "Rank Transform of an Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Coordinate Compression",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> sorted: copy of arr, n elements → O(n)\n- unordered_map<int,int> rankMap: up to n unique entries → O(n)\n- sort(): introsort uses O(log n) stack\n- not counted: input arr, returned result vector",
+  "approach": "The key insight is that an element's rank equals the number of distinct values strictly smaller than it, plus one. Sort a copy of the array, then walk through it assigning increasing ranks to each new distinct value, storing value→rank in a hash map. Finally, map each original element to its rank. This is correct because the sorted order captures the relative ordering, and skipping duplicates ensures equal elements share the same rank.",
+  "hints": [
+    "In Example 3, the value 37 gets rank 5 - how many distinct values in the array are strictly smaller than 37?",
+    "Sort a copy of the array, then assign increasing ranks to each new distinct value in a hash map. For Example 1, sorted = [10,20,30,40] gives 10→1, 20→2, 30→3, 40→4.",
+    "```\nsorted_arr = sorted copy of arr\nrank_map = empty map\nr = 1\nfor x in sorted_arr:\n    if x not in rank_map:\n        rank_map[x] = r\n        r = r + 1\nreturn [rank_map[x] for x in arr]\n```",
+    "**Empty array** - n = 0 is allowed by constraints\n`Input: arr = []` → `Expected: []`\n⚠️ Bug: accessing arr[0] without checking size → undefined behavior / crash\n\n**All elements equal** - every value is the same\n`Input: arr = [100,100,100]` → `Expected: [1,1,1]`\n⚠️ Bug: computing rank as count of elements ≤ x in sorted array → 100 gets rank 3, result = [3,3,3]\n\n**Negative values** - values span negative to positive\n`Input: arr = [-5,-10,0]` → `Expected: [2,1,3]`\n⚠️ Bug: initializing rank counter to 0 instead of 1 → [1,0,2]\n\n**Duplicates mixed with unique values** - some values repeat\n`Input: arr = [10,10,20]` → `Expected: [1,1,2]`\n⚠️ Bug: assigning rank = sorted_index + 1 without skipping duplicates (last write wins) → [2,2,3]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array arrives as a stream and you must output each element's rank as it arrives?",
+      "a": "You cannot know the final rank until you've seen all elements, so buffer the stream and apply the same sort-and-rank approach once it ends. If you must output immediately, maintain a sorted structure (e.g., balanced BST) and compute rank as the number of unique elements smaller than the current value plus one. Time per element: O(log n) for insertion and rank query; space: O(n)."
+    },
+    {
+      "q": "What if you need to support point updates (change arr[i] to a new value) and re-rank efficiently?",
+      "a": "Maintain a sorted set of unique values. On each update, remove the old value if no other element shares it and insert the new value, then recompute ranks for affected elements. With a balanced BST supporting order statistics, each update takes O(log n) time. Space: O(n) for the set and value-to-rank map."
+    },
+    {
+      "q": "What if the array has 10^9 elements but only 10^5 distinct values?",
+      "a": "The rank depends only on distinct values, so extract unique keys via a hash set, sort only those keys, and assign ranks. Map each original element back through the rank map in O(1) per element. Time: O(n + k log k) where k = 10^5 distinct values; space: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> arrayRankTransform(vector<int>& arr) {\n        vector<int> sorted = arr;\n        sort(sorted.begin(), sorted.end());\n        unordered_map<int, int> rankMap;\n        int r = 1;\n        for (int x : sorted) {\n            if (rankMap.count(x) == 0) {\n                rankMap[x] = r++;\n            }\n        }\n        vector<int> result;\n        result.reserve(arr.size());\n        for (int x : arr) {\n            result.push_back(rankMap[x]);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

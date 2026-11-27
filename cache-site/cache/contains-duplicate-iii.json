@@ -1,0 +1,40 @@
+{
+  "slug": "contains-duplicate-iii",
+  "title": "Contains Duplicate III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bucket Sort",
+  "tc": "O(n)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- unordered_map<long long, long long> buckets: up to indexDiff+1 entries → O(k)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Use bucket sort with a sliding window. Assign each number to a bucket of width `valueDiff + 1`; any two numbers in the same bucket are guaranteed within `valueDiff` of each other, so we only need to check the current bucket and its two neighbors. Maintain a hash map of at most `indexDiff + 1` buckets; when the window slides past an element, remove its bucket entry. Negative numbers need floor-division adjustment because C++ truncates toward zero.",
+  "hints": [
+    "Given n ≤ 10^5, checking all pairs is too slow. What property of the value difference would let you group numbers so each new number only needs to look at a constant number of groups?",
+    "Use a hash map implementing bucket sort: assign each number to a bucket of width valueDiff+1. Numbers in the same bucket are within valueDiff; only check the same bucket and its two neighbors. In Example 1 (valueDiff=0, width=1), nums[0]=1 → bucket 1; when nums[3]=1 arrives it hits bucket 1 again → true.",
+    "```\nw = valueDiff + 1\nfor each index i with value num:\n    b = floor(num / w)\n    if b in map: return true\n    if (b-1 in map and |num - map[b-1]| <= valueDiff): return true\n    if (b+1 in map and |num - map[b+1]| <= valueDiff): return true\n    map[b] = num\n    if i >= indexDiff: remove nums[i-indexDiff] from map\nreturn false\n```",
+    "**valueDiff = 0** - bucket width is 1, so only exact duplicates trigger true\n`Input: nums = [1,2,3,1], indexDiff = 3, valueDiff = 0` → `Expected: true`\n⚠️ Bug: using bucket width = valueDiff instead of valueDiff+1 → width 0 causes division by zero → crash\n\n**Negative numbers** - C++ truncates integer division toward zero, not toward negative infinity\n`Input: nums = [-3,-1], indexDiff = 1, valueDiff = 2` → `Expected: true`\n⚠️ Bug: using `num / w` directly for negatives without floor adjustment → -1/3 = 0 and -3/3 = -1, placing -1 and -3 in different buckets → returns false\n\n**Window boundary** - duplicate exists but outside the index window\n`Input: nums = [1,2,3,4,5,1], indexDiff = 1, valueDiff = 0` → `Expected: false`\n⚠️ Bug: never erasing old entries from the map → finds pair (0,5) with index diff 5 > 1 → returns true\n\n**Removal order** - the only valid pair is exactly indexDiff apart\n`Input: nums = [1,2,1], indexDiff = 2, valueDiff = 0` → `Expected: true`\n⚠️ Bug: erasing the outgoing window element before checking the current element → removes bucket 1 (from index 0) before index 2 can match it → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the actual pair of indices instead of just true/false?",
+      "a": "Store the index alongside the value in each bucket entry. When a match is found, return the stored index and the current index. Time and space complexity remain O(n) and O(k)."
+    },
+    {
+      "q": "What if the input is an unbounded stream and memory is limited to O(indexDiff)?",
+      "a": "The current solution already maintains at most indexDiff+1 entries in the hash map and evicts old elements as the window slides, so it works as-is for streaming with O(1) amortized time per element."
+    },
+    {
+      "q": "What if valueDiff varies per query and you must answer many queries on the same array?",
+      "a": "Process queries offline sorted by valueDiff. As the threshold grows, merge adjacent buckets (or rebuild with a wider width). Each rebuild costs O(n); with Q queries the total is O(n · Q) in the worst case, or O(n log n + Q log n) if you binary-search sorted values within the window."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool containsNearbyAlmostDuplicate(vector<int>& nums, int indexDiff, int valueDiff) {\n        int n = nums.size();\n        long long w = (long long)valueDiff + 1;\n        unordered_map<long long, long long> buckets;\n\n        for (int i = 0; i < n; i++) {\n            long long num = nums[i];\n            long long b = (num >= 0) ? (num / w) : ((num + 1) / w - 1);\n\n            if (buckets.count(b)) return true;\n\n            auto it = buckets.find(b - 1);\n            if (it != buckets.end()) {\n                long long d = num - it->second;\n                if (d < 0) d = -d;\n                if (d <= valueDiff) return true;\n            }\n\n            it = buckets.find(b + 1);\n            if (it != buckets.end()) {\n                long long d = num - it->second;\n                if (d < 0) d = -d;\n                if (d <= valueDiff) return true;\n            }\n\n            buckets[b] = num;\n\n            if (i >= indexDiff) {\n                long long oldNum = nums[i - indexDiff];\n                long long oldB = (oldNum >= 0) ? (oldNum / w) : ((oldNum + 1) / w - 1);\n                if (buckets.count(oldB) && buckets[oldB] == oldNum) buckets.erase(oldB);\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

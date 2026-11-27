@@ -1,0 +1,40 @@
+{
+  "slug": "goat-latin",
+  "title": "Goat Latin",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Direct String Construction",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `result` string: this IS the returned output, not counted (LeetCode convention).\n- scalar locals (i, start, end, wordIndex, k): O(1).\n- no recursion, no containers, no per-word allocations.",
+  "approach": "The output can be quadratically larger than the input: if there are k one-letter words, word i receives i trailing 'a's, totaling ~k²/2 characters. So any solution is Ω(n²) in time just to emit the output. The optimal approach builds the result string by appending characters one at a time-no intermediate `substr` calls or per-word string allocations-keeping auxiliary space at O(1) (the returned string itself is not counted). For each word we check (case-insensitively) whether it begins with a vowel, emit the body (skipping the first char for consonants, then appending it), append \"ma\", then append i copies of 'a' and a separating space.",
+  "hints": [
+    "With many one-letter words, how does the total count of trailing 'a' characters grow relative to the input length? The constraint sentence.length ≤ 150 means the output can still be thousands of characters long.",
+    "Build one output string by appending characters directly. For \"I\" (word 1, vowel start): append 'I', then 'm','a', then one 'a' → \"Imaa\".",
+    "```\ni = 0, wordIndex = 0\nwhile i < n:\n    start = i\n    while i < n and s[i] != ' ': i++\n    end = i\n    wordIndex++\n    if vowel(s[start]):\n        for j in [start, end): append s[j]\n    else:\n        for j in [start+1, end): append s[j]\n        append s[start]\n    append 'm','a'\n    repeat wordIndex times: append 'a'\n    if i < n: append ' ', i++\n```",
+    "**Single consonant word** - the word has no body after removing its first letter\n`Input: \"b\"` → `Expected: \"bmaa\"`\n⚠️ Bug: erasing the first char of a temp word then reading `word[0]` to append it → reads from an empty string, returns garbage like \"\\x00maa\"\n\n**Uppercase vowel start** - vowel check must be case-insensitive\n`Input: \"Apple\"` → `Expected: \"Applemaa\"`\n⚠️ Bug: checking only lowercase vowels (`c=='a'||c=='e'||...`) → treats 'A' as consonant, returns \"ppleAmaa\"\n\n**Uppercase consonant moved** - the moved first letter keeps its case\n`Input: \"Goat\"` → `Expected: \"oatGmaa\"`\n⚠️ Bug: lowercasing the moved consonant before appending → returns \"oatgmaa\"\n\n**Many single-letter words** - output is far longer than input\n`Input: \"a b\"` → `Expected: \"amaa bmaaa\"`\n⚠️ Bug: pre-allocating result as `sentence.size()` characters → truncates to \"a b\", losing all suffixes\n\n**Trailing space** - last word must not be followed by a space\n`Input: \"I\"` → `Expected: \"Imaa\"`\n⚠️ Bug: appending a space after every word unconditionally → returns \"Imaa \" with a trailing space"
+  ],
+  "followUps": [
+    {
+      "q": "What if words could be separated by multiple spaces and the original spacing must be preserved?",
+      "a": "Track run-lengths of spaces between words and emit the same number of spaces into the output. Time stays O(n²) (output-bound); auxiliary space stays O(1)."
+    },
+    {
+      "q": "What if the suffix were the word index repeated as digits (e.g., word 12 gets \"1212\") instead of 'a's?",
+      "a": "The output is still O(n²) in the worst case (digit strings grow ~log n, but there are n of them, so ~n log n total - actually smaller). Convert each index to a string and append it; time O(n log n), space O(1)."
+    },
+    {
+      "q": "What if the input is a stream too large to hold in memory and you must emit Goat Latin token by token?",
+      "a": "Maintain a running word index and a small buffer for the current word only; flush each transformed word plus its 'a'-suffix to the output stream as soon as the word ends. Time O(n²) total emitted, auxiliary space O(L) where L is the max word length."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string toGoatLatin(string sentence) {\n        string result;\n        int n = sentence.size();\n        int i = 0;\n        int wordIndex = 0;\n        auto isVowel = [](char c) -> bool {\n            char d = (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;\n            return d == 'a' || d == 'e' || d == 'i' || d == 'o' || d == 'u';\n        };\n        while (i < n) {\n            int start = i;\n            while (i < n && sentence[i] != ' ') i++;\n            int end = i;\n            wordIndex++;\n            if (isVowel(sentence[start])) {\n                for (int j = start; j < end; j++) result += sentence[j];\n            } else {\n                for (int j = start + 1; j < end; j++) result += sentence[j];\n                result += sentence[start];\n            }\n            result += 'm';\n            result += 'a';\n            for (int k = 0; k < wordIndex; k++) result += 'a';\n            if (i < n) {\n                result += ' ';\n                i++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-boomerangs",
+  "title": "Number of Boomerangs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Grouping",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long,int> cnt: up to n−1 entries per center iteration, reused → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "For each point i (the \"center\"), count how many other points share each squared distance from i. If c points are at the same distance, they form c·(c−1) ordered (j, k) pairs (order matters, so permutations not combinations). Sum over all centers and all distance groups. Using squared distance avoids floating-point issues and keeps everything in integers.",
+  "hints": [
+    "For a fixed point i, what property must points j and k share for (i, j, k) to be a boomerang? The constraint n ≤ 500 means an O(n²) approach is affordable.",
+    "Use a hash map keyed by squared distance from the center point i. In Example 1, fixing i = [1,0], both [0,0] and [2,0] land at squared distance 1, yielding 2 ordered (j, k) pairs.",
+    "```\nfor each point i:\n    map = empty\n    for each point j ≠ i:\n        d = squared_distance(i, j)\n        map[d] += 1\n    for each count c in map:\n        ans += c * (c - 1)\nreturn ans\n```",
+    "**Order matters** - the tuple (i, j, k) is ordered, so (j, k) and (k, j) are distinct.\n`Input: [[0,0],[1,0],[2,0]]` → `Expected: 2`\n⚠️ Bug: using c*(c-1)/2 instead of c*(c-1) → returns 1\n\n**Inner loop from i+1** - every point j ≠ i must be considered, not just those after i.\n`Input: [[0,0],[1,0],[2,0]]` → `Expected: 2`\n⚠️ Bug: inner loop `for j = i+1 to n` instead of `for j = 0 to n` → returns 0\n\n**Wrong distance metric** - the problem uses Euclidean distance; Manhattan distance produces false equalities.\n`Input: [[0,0],[1,1],[2,0]]` → `Expected: 2`\n⚠️ Bug: using |dx|+|dy| instead of dx²+dy² → returns 6\n\n**All equidistant from center** - a single center can contribute many boomerangs from one distance group.\n`Input: [[0,0],[1,0],[0,1],[-1,0],[0,-1]]` → `Expected: 20`\n⚠️ Bug: using c*(c-1)/2 → returns 10"
+  ],
+  "followUps": [
+    {
+      "q": "If coordinates can be up to 10^9, how does the solution change?",
+      "a": "Squared distance becomes up to (2×10^9)² = 4×10^18, which exceeds int and even risks int64 overflow when summing two terms - use long long for dx, dy, and d. The algorithm structure stays the same; TC remains O(n²), SC O(n)."
+    },
+    {
+      "q": "If n can be up to 10^5, how would you reduce the O(n²) cost?",
+      "a": "This is an open research-style problem; exact counting for all centers is inherently O(n²) in the worst case. An approximate approach could sample centers or use spatial partitioning (e.g., a grid or k-d tree) to prune far-away points, trading accuracy for speed."
+    },
+    {
+      "q": "If points arrive as a stream and you must answer after each insertion, how would you adapt?",
+      "a": "Maintain a hash map per existing center keyed by squared distance. On inserting a new point p, for each existing center i compute d(i, p) and add the current count at that distance to the running total, then increment. TC per insertion is O(n), SC O(n²) total across all centers' maps."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfBoomerangs(vector<vector<int>>& points) {\n        int n = points.size();\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            unordered_map<long long, int> cnt;\n            for (int j = 0; j < n; j++) {\n                if (i == j) continue;\n                long long dx = (long long)points[i][0] - points[j][0];\n                long long dy = (long long)points[i][1] - points[j][1];\n                long long d = dx * dx + dy * dy;\n                cnt[d]++;\n            }\n            for (auto& p : cnt) {\n                int c = p.second;\n                ans += c * (c - 1);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

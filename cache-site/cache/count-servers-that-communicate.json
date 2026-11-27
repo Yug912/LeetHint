@@ -1,0 +1,40 @@
+{
+  "slug": "count-servers-that-communicate",
+  "title": "Count Servers that Communicate",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Arrays",
+  "tc": "O(m*n)",
+  "sc": "O(min(m,n))",
+  "spaceBreakdown": "- vector<int> rowCount(m) or colCount(n): only one is allocated, sized to the smaller dimension → O(min(m,n))\n- no recursion, no other containers\n- not counted: input grid",
+  "approach": "A server communicates if and only if its row or column contains at least one other server (count > 1). We store counts for only the smaller dimension (rows if m ≤ n, columns otherwise) in a first pass, then in a second pass recompute the other dimension's count per line on the fly and check each server against both counts. This avoids storing both dimension arrays simultaneously, cutting auxiliary space from O(m+n) to O(min(m,n)) while keeping time at O(m*n) since every cell is examined a constant number of times.",
+  "hints": [
+    "In Example 3, the server at (3,3) can't communicate while the server at (0,0) can. What observation about their respective rows and columns explains this difference?",
+    "Use counting arrays for the smaller dimension only; recompute the other dimension's count per line during a second pass. In Example 2 [[1,0],[1,1]], store row counts [1,2]; when scanning column 0, recompute its count as 2 - server (0,0) qualifies because column 0 has 2 servers.",
+    "```\nstore counts for the smaller dimension\nfor each line in the other dimension:\n    count servers in this line on the fly\n    for each server in this line:\n        if this line's count > 1 or stored count for its line > 1:\n            increment result\nreturn result\n```",
+    "**Single cell** - 1×1 grid with one server, no other server exists\n`Input: [[1]]` → `Expected: 0`\n⚠️ Bug: using `>= 1` instead of `> 1` for the count comparison → returns 1\n\n**Single row** - all servers share one row, each column has exactly one server\n`Input: [[1,1,1]]` → `Expected: 3`\n⚠️ Bug: checking only column counts and ignoring row counts → returns 0\n\n**Diagonal** - each server is alone in its row and column\n`Input: [[1,0,0],[0,1,0],[0,0,1]]` → `Expected: 0`\n⚠️ Bug: using `>= 1` instead of `> 1` → returns 3\n\n**Single column** - all servers share one column, each row has exactly one server\n`Input: [[1],[1],[1]]` → `Expected: 3`\n⚠️ Bug: checking only row counts and ignoring column counts → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is too large to store in memory and servers arrive as a stream of (row, col) coordinates?",
+      "a": "We can no longer recompute counts on the fly, so we must store both row and column counts simultaneously. Maintain two arrays (or hash maps if dimensions are unbounded) tracking server counts per row and column. For each incoming server, increment both counts and check if either exceeds 1. Space becomes O(m + n) instead of O(min(m, n)), time O(1) per server."
+    },
+    {
+      "q": "What if each server has a weight and we need the total weight of all communicating servers?",
+      "a": "Same counting approach - a server communicates if its row or column count exceeds 1. After identifying communicating servers, sum their weights instead of incrementing a counter. Time stays O(m*n), space stays O(min(m,n))."
+    },
+    {
+      "q": "What if servers communicate only when there are at least k servers in the same row or column?",
+      "a": "Change the threshold from `> 1` to `>= k` in the comparison. Everything else in the algorithm stays identical. Time O(m*n), space O(min(m,n))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countServers(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size(), result = 0;\n        if (m <= n) {\n            vector<int> rowCount(m, 0);\n            for (int i = 0; i < m; i++)\n                for (int j = 0; j < n; j++)\n                    rowCount[i] += grid[i][j];\n            for (int j = 0; j < n; j++) {\n                int colCount = 0;\n                for (int i = 0; i < m; i++) colCount += grid[i][j];\n                for (int i = 0; i < m; i++)\n                    if (grid[i][j] && (colCount > 1 || rowCount[i] > 1)) result++;\n            }\n        } else {\n            vector<int> colCount(n, 0);\n            for (int i = 0; i < m; i++)\n                for (int j = 0; j < n; j++)\n                    colCount[j] += grid[i][j];\n            for (int i = 0; i < m; i++) {\n                int rowCount = 0;\n                for (int j = 0; j < n; j++) rowCount += grid[i][j];\n                for (int j = 0; j < n; j++)\n                    if (grid[i][j] && (rowCount > 1 || colCount[j] > 1)) result++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

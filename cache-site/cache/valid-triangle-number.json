@@ -1,0 +1,40 @@
+{
+  "slug": "valid-triangle-number",
+  "title": "Valid Triangle Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers on Sorted Array",
+  "tc": "O(n²)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- all other variables (ans, i, j, k, n): O(1)\n- input vector modified in place: not counted",
+  "approach": "Sort the array. For three sides a ≤ b ≤ c, the only triangle condition needed is a + b > c (the other two inequalities hold automatically). Fix the smallest side at index i, then use two pointers: j scans upward from i+1, and k advances as far right as possible while nums[i] + nums[j] > nums[k]. Because the array is sorted, as j grows the sum nums[i]+nums[j] only increases, so k never moves left - every valid largest side for pair (i, j) lies in (j, k), giving k−j−1 triplets.",
+  "hints": [
+    "If you order any three chosen sides as smallest ≤ middle ≤ largest, how many of the three triangle-inequality checks become redundant? The constraint n ≤ 1000 lets an O(n²) scan fit comfortably.",
+    "Sort the array, then for each pair of smaller sides (i, j) advance a pointer k rightward while nums[i] + nums[j] > nums[k]; all indices in (j, k) are valid largest sides. Example: sorted [2,2,3,4], i=0, j=1 gives sum 4, so k stops at index 3 (value 4), contributing 3−1−1 = 1 triplet.",
+    "sort(nums)\nans = 0\nfor i in 0 .. n-3:\n    k = i+2\n    for j in i+1 .. n-2:\n        k = max(k, j+1)\n        while k < n and nums[i]+nums[j] > nums[k]:\n            k = k+1\n        ans = ans + (k - j - 1)\nreturn ans",
+    "**Smallest input** - only one side, no triplet possible.\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: looping `i` up to `n-1` instead of `n-3` → returns 0 here but misindexes on larger inputs.\n\n**Zeros present** - a zero side can never form a triangle.\n`Input: [0,1,2]` → `Expected: 0`\n⚠️ Bug: skipping the `k = max(k, j+1)` clamp → when nums[i]=0 the while never advances and `ans += k-j-1` adds −1, returning a negative count.\n\n**All elements equal** - every triplet is valid.\n`Input: [2,2,2,2]` → `Expected: 4`\n⚠️ Bug: using `>=` instead of `>` in the while condition `nums[i]+nums[j] > nums[k]` → k advances past equal sides, returning 6 instead of 4.\n\n**Duplicates with zero** - multiple zeros still yield zero triangles.\n`Input: [0,0,0]` → `Expected: 0`\n⚠️ Bug: initializing `k = i+2` without clamping to `j+1` inside the j-loop → on j=i+1 with k=i+2 the while checks `0+0 > 0` (false), but a missing clamp on later j lets k lag behind j, producing `k-j-1 = -1`."
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 10^5, how would you adapt?",
+      "a": "The O(n²) two-pointer scan is too slow. Sort, then for each candidate largest side c count pairs (a, b) with a + b > c using a frequency-array convolution (FFT) over the value range, yielding O(M log M) where M is the max side value."
+    },
+    {
+      "q": "What if the array arrives as an unbounded stream and you must report the count after each insertion?",
+      "a": "Keep a Fenwick tree over side-value frequencies. When a new value x arrives as the largest side, you need the number of existing pairs summing above x; with a small value range maintain a second Fenwick tree over pair-sum frequencies, giving O(V log V) per insertion where V is the value range."
+    },
+    {
+      "q": "What if you must enumerate the triplets themselves, not just count them?",
+      "a": "The count is still O(n²), but listing every triplet is inherently O(output size). Reuse the same two-pointer scan and, for each valid range (j, k), emit every index in that range paired with (i, j); total work is O(n² + number of triplets)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int triangleNumber(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        int n = (int)nums.size();\n        int ans = 0;\n        for (int i = 0; i + 2 < n; i++) {\n            int k = i + 2;\n            for (int j = i + 1; j + 1 < n; j++) {\n                if (k < j + 1) k = j + 1;\n                while (k < n && nums[i] + nums[j] > nums[k]) k++;\n                ans += k - j - 1;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

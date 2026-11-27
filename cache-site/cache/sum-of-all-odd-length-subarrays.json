@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-all-odd-length-subarrays",
+  "title": "Sum of All Odd Length Subarrays",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Contribution Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers, arrays, or strings allocated\n- No recursion\n- Only scalar int variables (n, total, i, evenStarts, oddStarts, evenEnds, oddEnds, cnt) → O(1)",
+  "approach": "Instead of enumerating every odd-length subarray, count for each element how many odd-length subarrays contain it, then sum `arr[i] * count`. A subarray containing index `i` with start `s` and end `e` has odd length exactly when `e - s` is even, i.e., `s` and `e` share the same parity. So the count for index `i` is `(even starts in [0,i]) × (even ends in [i,n-1]) + (odd starts in [0,i]) × (odd ends in [i,n-1])`. This gives O(n) time and O(1) space.",
+  "hints": [
+    "Instead of enumerating every odd-length subarray, ask: for a single element at index `i`, what determines how many odd-length subarrays include it? The follow-up asks for O(n), and `n ≤ 100`.",
+    "Use the contribution/counting technique. For element at index `i`, an odd-length subarray containing it needs start `s ≤ i` and end `e ≥ i` with `e − s` even (same parity). In `arr = [1,4,2,5,3]`, index 2 appears in 5 odd-length subarrays, contributing `2 × 5 = 10`.",
+    "```\nfor each index i in [0, n-1]:\n    even_starts = count of even indices in [0, i]\n    odd_starts  = count of odd indices in [0, i]\n    even_ends   = count of even indices in [i, n-1]\n    odd_ends    = count of odd indices in [i, n-1]\n    cnt = even_starts * even_ends + odd_starts * odd_ends\n    total += arr[i] * cnt\nreturn total\n```",
+    "**Single element** - n = 1, the only odd-length subarray is the array itself.\n`Input: arr = [5]` → `Expected: 5`\n⚠️ Bug: loop condition `i < n - 1` instead of `i < n` → skips index 0, returns 0.\n\n**Two elements** - no odd-length subarray longer than 1 exists.\n`Input: arr = [1,2]` → `Expected: 3`\n⚠️ Bug: including the length-2 subarray [1,2] in the sum → returns 1 + 2 + 3 = 6 instead of 3.\n\n**All elements equal** - contributions differ by position even when values are identical.\n`Input: arr = [3,3,3]` → `Expected: 18`\n⚠️ Bug: counting all subarrays via `(i+1)*(n-i)` instead of only odd-length ones → returns 3×3 + 3×4 + 3×3 = 30 instead of 18.\n\n**Wrong parity pairing** - swapping which parity pairs to multiply.\n`Input: arr = [1,4,2,5,3]` → `Expected: 58`\n⚠️ Bug: computing `even_starts × odd_ends + odd_starts × even_ends` (even-length subarrays) instead of `even × even + odd × odd` → returns 52 instead of 58."
+  ],
+  "followUps": [
+    {
+      "q": "Sum of all even-length subarrays instead of odd-length.",
+      "a": "Use the same contribution technique but swap the parity pairing: `cnt = even_starts × odd_ends + odd_starts × even_ends`. Everything else stays identical. O(n) time, O(1) space."
+    },
+    {
+      "q": "arr.length up to 10^5 - does the solution still work?",
+      "a": "Yes, the O(n) contribution approach handles 10^5 easily. A brute-force O(n^3) or O(n^2) solution would TLE. The formula per element is O(1), so total is O(n) time, O(1) space."
+    },
+    {
+      "q": "arr arrives as a stream, readable once, with only O(1) memory allowed.",
+      "a": "The contribution formula for index `i` needs only `i`, `n`, and `arr[i]`. If `n` is known upfront, process each element in a single pass with no buffering. O(n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int sumOddLengthSubarrays(vector<int>& arr) {\n        int n = arr.size();\n        int total = 0;\n        for (int i = 0; i < n; i++) {\n            int evenStarts = countParity(0, i, 0);\n            int oddStarts  = countParity(0, i, 1);\n            int evenEnds   = countParity(i, n - 1, 0);\n            int oddEnds    = countParity(i, n - 1, 1);\n            int cnt = evenStarts * evenEnds + oddStarts * oddEnds;\n            total += arr[i] * cnt;\n        }\n        return total;\n    }\nprivate:\n    int countParity(int a, int b, int r) {\n        if (a > b) return 0;\n        if (a % 2 != r) a++;\n        if (a > b) return 0;\n        return (b - a) / 2 + 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

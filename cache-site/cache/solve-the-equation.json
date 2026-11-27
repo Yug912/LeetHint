@@ -1,0 +1,40 @@
+{
+  "slug": "solve-the-equation",
+  "title": "Solve the Equation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-place String Parsing",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (eqPos, leftCoeff, leftConst, rightCoeff, rightConst, i, sign, num, hasDigit): O(1)\n- equation.find('='): returns a scalar, no allocation\n- to_string result: part of returned output, not counted\n- no containers, no recursion",
+  "approach": "The equation is linear in x: each side is a sum of x-terms and constant terms. Parse each side in-place using an index pointer (no substr copies), accumulating the total coefficient of x and the total constant. A term ending in 'x' contributes its numeric prefix (or 1 if none) to the coefficient; a plain number contributes to the constant. Then solve (leftCoeff − rightCoeff)·x = (rightConst − leftConst): if the combined coefficient is zero, the answer is \"Infinite solutions\" when the constant is also zero, otherwise \"No solution\".",
+  "hints": [
+    "Every term in the equation is either a plain integer or a coefficient times 'x'. How few running totals do you need to capture the entire equation?",
+    "Use two running accumulators per side (coefficient of x and constant sum), parsing the string in-place with an index pointer. For \"x+5-3+x\", the left side yields coefficient 2 and constant 2.",
+    "```\nfind '=' position → eqPos\nparse [0, eqPos): accumulate leftCoeff, leftConst\nparse [eqPos+1, n): accumulate rightCoeff, rightConst\ncoeff = leftCoeff - rightCoeff\nconst = rightConst - leftConst\nif coeff == 0:\n    return \"Infinite solutions\" if const == 0 else \"No solution\"\nelse:\n    return \"x=\" + (const / coeff)\n```",
+    "**Infinite solutions** - both sides have identical coefficients and constants.\n`Input: \"x=x\"` → `Expected: \"Infinite solutions\"`\n⚠️ Bug: checking only `coeff == 0` without checking `constant == 0` → returns \"No solution\"\n\n**No solution** - coefficients match but constants differ.\n`Input: \"x+1=x\"` → `Expected: \"No solution\"`\n⚠️ Bug: returning \"Infinite solutions\" whenever `coeff == 0` regardless of constant → returns \"Infinite solutions\"\n\n**Implicit coefficient of 1** - term is bare \"x\" with no preceding digit.\n`Input: \"x=2\"` → `Expected: \"x=2\"`\n⚠️ Bug: treating bare \"x\" as coefficient 0 instead of 1 → returns \"No solution\"\n\n**Leading negative on right side** - right side starts with '-'.\n`Input: \"2x=-2\"` → `Expected: \"x=-1\"`\n⚠️ Bug: defaulting sign to +1 at the start of each side without checking for a leading '-' → returns \"x=1\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the equation could contain parentheses with multiplication, e.g. \"2*(x+3)=10\"?",
+      "a": "You'd need a preprocessing pass to expand parentheses by distributing coefficients, using a stack to handle nesting. This makes parsing O(n) time and O(n) space for the stack. The linear solving logic afterward stays the same."
+    },
+    {
+      "q": "What if coefficients could be floating-point instead of integers?",
+      "a": "Replace integer parsing with double parsing and compare the final combined coefficient against an epsilon (e.g. 1e-9) instead of exact zero. The structure is identical; time stays O(n) and space O(1)."
+    },
+    {
+      "q": "What if the equation arrives as a character stream and you can only store O(1) state?",
+      "a": "Maintain the four running totals with a small state machine tracking which side of '=' you're on and whether you're mid-number. This is already what the in-place index-pointer approach does, so it works unchanged in O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string solveEquation(string equation) {\n        int n = equation.size();\n        int eqPos = equation.find('=');\n        \n        int leftCoeff = 0, leftConst = 0;\n        int rightCoeff = 0, rightConst = 0;\n        \n        parse(equation, 0, eqPos, leftCoeff, leftConst);\n        parse(equation, eqPos + 1, n, rightCoeff, rightConst);\n        \n        int coeff = leftCoeff - rightCoeff;\n        int constant = rightConst - leftConst;\n        \n        if (coeff == 0) {\n            if (constant == 0) return \"Infinite solutions\";\n            return \"No solution\";\n        }\n        return \"x=\" + to_string(constant / coeff);\n    }\n    \nprivate:\n    void parse(const string& s, int start, int end, int& coeff, int& constant) {\n        int i = start;\n        while (i < end) {\n            int sign = 1;\n            if (s[i] == '+') { sign = 1; i++; }\n            else if (s[i] == '-') { sign = -1; i++; }\n            \n            int num = 0;\n            bool hasDigit = false;\n            while (i < end && s[i] >= '0' && s[i] <= '9') {\n                num = num * 10 + (s[i] - '0');\n                i++;\n                hasDigit = true;\n            }\n            \n            if (i < end && s[i] == 'x') {\n                coeff += sign * (hasDigit ? num : 1);\n                i++;\n            } else {\n                constant += sign * num;\n            }\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

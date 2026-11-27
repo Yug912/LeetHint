@@ -1,0 +1,40 @@
+{
+  "slug": "print-binary-tree",
+  "title": "Print Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS Traversal",
+  "tc": "O(m × n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- vector<vector<string>> res: m × n strings - returned output, not counted\n- recursion call stack (getHeight + fill): worst case O(h) for a skewed tree\n- no other containers allocated",
+  "approach": "Compute the tree's height (max depth, root at depth 0) via DFS. The grid has `height+1` rows and `2^(height+1)-1` columns, all initialized to `\"\"`. Place the root at the center of the top row, then recursively place each node's children at column offsets `2^(height-r-1)` left and right of the parent. This directly implements the placement rules from the statement.",
+  "hints": [
+    "Before you can create the grid, what single property of the tree determines both its row count and its column count? The tree depth is at most 10.",
+    "Use DFS: first compute the tree's height (max depth, root at depth 0), then DFS again placing each node and its children. For root = [1,2], height = 1 gives a 2×3 grid; root goes at (0,1), child 2 at (1,0).",
+    "```\nheight = maxDepth(root)        # root at depth 0\nm = height + 1\nn = 2^(height+1) - 1\ngrid = m × n filled with \"\"\nplace(root, row=0, col=(n-1)/2)\n\nfunction place(node, r, c):\n    grid[r][c] = str(node.val)\n    offset = 2^(height - r - 1)\n    if node.left:  place(node.left,  r+1, c - offset)\n    if node.right: place(node.right, r+1, c + offset)\n```",
+    "**Single node** - Tree with only a root, height 0.\n`Input: [1]` → `Expected: [[\"1\"]]`\n⚠️ Bug: computing height as `1 + max(h(left), h(right))` with base case `return 0` for null → returns 1 → grid is 2×3 → `[[\"\",\"1\",\"\"],[\"\",\"\",\"\"]]`\n\n**Skewed left tree** - Each node only has a left child, forming a linked-list shape.\n`Input: [1,2,null,3]` → `Expected: [[\"\",\"\",\"\",\"1\",\"\",\"\",\"\"],[\"\",\"2\",\"\",\"\",\"\",\"\",\"\"],[\"3\",\"\",\"\",\"\",\"\",\"\",\"\"]]`\n⚠️ Bug: using `(1 << height) - 1` instead of `(1 << (height+1)) - 1` for column count → n = 3 instead of 7 → child placed at column −1 → out-of-bounds access\n\n**Negative node value** - Node value is negative.\n`Input: [-5]` → `Expected: [[\"-5\"]]`\n⚠️ Bug: building the string with `string(1, char(val + '0'))` → produces a single garbage character instead of `\"-5\"`\n\n**Two-digit value** - Node value has two digits.\n`Input: [99]` → `Expected: [[\"99\"]]`\n⚠️ Bug: building the string with `string(1, char(val + '0'))` → produces one garbage character instead of `\"99\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree height could be up to 30 - how would you avoid allocating a grid with 2^31 columns?",
+      "a": "The grid would have billions of columns, so you cannot materialize it. Instead, store only non-empty cells in a map keyed by (row, col), or switch to a sparse row-by-row representation that tracks column ranges. Time becomes O(n) for placement, space O(n) for the sparse map."
+    },
+    {
+      "q": "What if you also needed to draw visual edges (slashes) between each parent and its children?",
+      "a": "Add an extra row between every pair of consecutive data rows for slash characters. For a node at (r, c) with children at columns c−offset and c+offset, place \"/\" at (r+1, c−offset/2) and \"\\\\\" at (r+1, c+offset/2). This doubles the row count; time and space remain O(m × n)."
+    },
+    {
+      "q": "What if each node could have up to k children instead of just two?",
+      "a": "Generalize the offset: for k children, divide the subtree's column span into k equal parts and place each child at the center of its partition. The column count becomes k^(height+1) − 1 divided appropriately, and the DFS placement logic uses offset = k^(height−r−1). Time and space remain O(m × n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int getHeight(TreeNode* root) {\n        if (!root) return -1;\n        return 1 + max(getHeight(root->left), getHeight(root->right));\n    }\n\n    void fill(TreeNode* root, int r, int c, int height, vector<vector<string>>& res) {\n        if (!root) return;\n        res[r][c] = to_string(root->val);\n        int offset = 1 << (height - r - 1);\n        if (root->left)  fill(root->left,  r + 1, c - offset, height, res);\n        if (root->right) fill(root->right, r + 1, c + offset, height, res);\n    }\n\n    vector<vector<string>> printTree(TreeNode* root) {\n        int h = getHeight(root);\n        int m = h + 1;\n        int n = (1 << (h + 1)) - 1;\n        vector<vector<string>> res(m, vector<string>(n, \"\"));\n        fill(root, 0, (n - 1) / 2, h, res);\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

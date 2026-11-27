@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-every-row-and-column-contains-all-numbers",
+  "title": "Check if Every Row and Column Contains All Numbers",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Set Verification",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> seen: n+1 entries → O(n)\n- recursion depth: none\n- not counted: input matrix, returned bool",
+  "approach": "For each row, mark which values 1..n appear using a boolean array, then verify all are present; repeat for each column. Since values are guaranteed in [1, n], a row/column is valid iff every value 1..n appears at least once (equivalently exactly once, since there are n cells). Reusing one boolean array of size n+1 across all checks keeps auxiliary space at O(n).",
+  "hints": [
+    "A valid row of length n must contain exactly the integers 1 through n. What must be true about how many distinct values appear in such a row?",
+    "Use a boolean array of size n+1 as a set. For row [1,2,3] with n=3, mark seen[1], seen[2], seen[3] true, then confirm all of seen[1..3] are true; repeat per column.",
+    "```\nfor each row i:\n    reset seen\n    for each column j: seen[matrix[i][j]] = true\n    if any seen[1..n] is false: return false\nfor each column j:\n    reset seen\n    for each row i: seen[matrix[i][j]] = true\n    if any seen[1..n] is false: return false\nreturn true\n```",
+    "**Smallest input** - n = 1, single cell\n`Input: [[1]]` → `Expected: true`\n⚠️ Bug: looping k from 0 to n-1 instead of 1 to n → returns false (seen[0] is never set)\n\n**Duplicate row that sums correctly** - row of all 2s sums to 6 = 1+2+3\n`Input: [[2,2,2],[1,2,3],[1,2,3]]` → `Expected: false`\n⚠️ Bug: checking only that each row sum equals n(n+1)/2 → returns true (2+2+2 = 6 = 1+2+3)\n\n**Forgotten reset** - seen array carries over between rows\n`Input: [[1,2,3],[1,1,1],[1,1,1]]` → `Expected: false`\n⚠️ Bug: not clearing seen between rows → returns true (all entries still true from row 0)\n\n**Column check skipped** - rows valid but a column is not\n`Input: [[1,2,3],[2,3,1],[2,3,1]]` → `Expected: false`\n⚠️ Bug: checking only rows and skipping columns → returns true (column 0 is [1,2,2], missing 3)"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^5 and rows arrive one at a time from a stream, how do you keep memory low?",
+      "a": "Process each row as it arrives using a single boolean array of size n+1, resetting between rows; columns cannot be checked in a single pass, so you'd need to maintain n column-sets (or bitsets) in parallel, giving O(n²/64) bits ≈ O(n²) memory for the column accumulators."
+    },
+    {
+      "q": "What if values can repeat and you must verify each value 1..n appears exactly once per row/column?",
+      "a": "Replace the boolean array with an integer count array of size n+1; after scanning a row/column, confirm every count equals 1. Time stays O(n²), space stays O(n)."
+    },
+    {
+      "q": "Can you solve it in O(1) extra space without modifying the input?",
+      "a": "Not in general - without extra storage you cannot track which of n values appeared. If modifying the input is allowed, sort each row and each column in place (O(n² log n) time, O(log n) stack) and check they equal [1,2,…,n]."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkValid(vector<vector<int>>& matrix) {\n        int n = matrix.size();\n        vector<bool> seen(n + 1, false);\n        for (int i = 0; i < n; i++) {\n            fill(seen.begin(), seen.end(), false);\n            for (int j = 0; j < n; j++) {\n                seen[matrix[i][j]] = true;\n            }\n            for (int k = 1; k <= n; k++) {\n                if (!seen[k]) return false;\n            }\n        }\n        for (int j = 0; j < n; j++) {\n            fill(seen.begin(), seen.end(), false);\n            for (int i = 0; i < n; i++) {\n                seen[matrix[i][j]] = true;\n            }\n            for (int k = 1; k <= n; k++) {\n                if (!seen[k]) return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

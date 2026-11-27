@@ -1,0 +1,40 @@
+{
+  "slug": "element-appearing-more-than-25-in-sorted-array",
+  "title": "Element Appearing More Than 25% In Sorted Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Sorted Array",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int idx[3]: fixed-size array of 3 ints → O(1)\n- recursion depth: none\n- not counted: input arr, returned int",
+  "approach": "Since the array is sorted and the target element occupies more than 25% of positions, its index range must span at least one of the three quarter-points (n/4, n/2, 3n/4). We pick the values at those three indices as candidates, then use `lower_bound` and `upper_bound` to count each candidate's frequency in O(log n). The candidate whose count exceeds n/4 is the answer. This works because any interval longer than n/4 in an array of size n must cover at least one of these quarter-point indices.",
+  "hints": [
+    "The array is sorted and one value fills more than a quarter of all positions. Which specific indices must that value's range of occurrences necessarily cover?",
+    "Binary search (`lower_bound`/`upper_bound`). The element spanning more than 25% must cover at least one of indices n/4, n/2, or 3n/4 - check those three candidates. In [1,2,2,6,6,6,6,7,10] (n=9), arr[4]=6; counting 6's gives 4 > 9/4=2.",
+    "```\ncandidates = {arr[n/4], arr[n/2], arr[3*n/4]}\nfor each c in candidates:\n    left  = first index where arr[i] >= c\n    right = first index where arr[i] > c\n    if right - left > n / 4:\n        return c\n```",
+    "**Exactly 25% is not enough** - an element appearing exactly n/4 times must not be selected.\n`Input: arr = [1,1,2,2,3,3,3,3]` → `Expected: 3`\n⚠️ Bug: using `>= n/4` instead of `> n/4` → returns 1 (count 2, 2 >= 2 is true)\n\n**Answer confined to first quarter** - the majority element's range never reaches the midpoint.\n`Input: arr = [1,1,1,2,3,4,5,6,7]` → `Expected: 1`\n⚠️ Bug: checking only arr[n/2] as the sole candidate → arr[4]=3, count of 3 is 1, not > 2, returns -1\n\n**Answer at the tail** - the majority element sits at the end of the array.\n`Input: arr = [1,2,3,4,5,6,7,7,7,7]` → `Expected: 7`\n⚠️ Bug: checking only arr[n/4] and arr[n/2] but skipping arr[3*n/4] → candidates 3 and 6, neither count exceeds 2, returns -1\n\n**Single element** - n=1, the only element is trivially the answer.\n`Input: arr = [5]` → `Expected: 5`\n⚠️ Bug: computing `3*n/4` with integer division and indexing without guarding n=1 → arr[0]=5 works, but a loop starting at i=1 skipping i=0 returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is not sorted?",
+      "a": "Use a hash map to count every element in one pass, then scan for the entry with count > n/4. This costs O(n) time and O(n) space, losing the O(log n) advantage that sorting provided."
+    },
+    {
+      "q": "What if multiple elements could each appear more than 25%?",
+      "a": "At most three such elements can coexist. Check the same three candidates but collect all whose frequency exceeds n/4 instead of returning the first. Time stays O(log n), space stays O(1) for the result list (max 3 elements)."
+    },
+    {
+      "q": "What if the threshold drops to 10% instead of 25%?",
+      "a": "Check 9 candidates at indices n/10, 2n/10, …, 9n/10 using the same binary-search counting. Any element occupying more than 10% must cover at least one of these points. Time is still O(log n) with 9 binary searches, space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findSpecialInteger(vector<int>& arr) {\n        int n = arr.size();\n        int idx[3] = {n / 4, n / 2, 3 * n / 4};\n        for (int i = 0; i < 3; i++) {\n            int c = arr[idx[i]];\n            int left = lower_bound(arr.begin(), arr.end(), c) - arr.begin();\n            int right = upper_bound(arr.begin(), arr.end(), c) - arr.begin();\n            if (right - left > n / 4) return c;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

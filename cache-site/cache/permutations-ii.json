@@ -1,0 +1,40 @@
+{
+  "slug": "permutations-ii",
+  "title": "Permutations II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking with Deduplication",
+  "tc": "O(n · n!)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> used: n entries → O(n)\n- vector<int> current: up to n entries → O(n)\n- recursion call-stack depth: up to n → O(n)\n- sort(): introsort uses O(log n) stack\n- not counted: input nums, returned result",
+  "approach": "Sort the array so duplicates become adjacent, then backtrack with a `used` boolean array. At each decision point, skip index `i` if `nums[i] == nums[i-1]` and `i-1` has not been used in the current path - this ensures that among identical values, we always pick them left-to-right, preventing the same permutation from being generated via different index orderings. The base case fires when the current path reaches length `n`.",
+  "hints": [
+    "When the array has repeated values, what determines whether two different index sequences produce the same permutation? The array length is at most 8.",
+    "Sort the array, then backtrack with a `used` boolean array. Skip index `i` when `nums[i] == nums[i-1]` and index `i-1` is not yet used. Example: sorted [1,1,2] - at the root, index 1 is skipped because index 0 (same value) is still free.",
+    "```\nsort nums\nbacktrack(path, used):\n  if path.size == n: add copy of path to result; return\n  for i in 0..n-1:\n    if used[i]: continue\n    if i > 0 and nums[i] == nums[i-1] and not used[i-1]: continue\n    used[i] = true; path.add(nums[i])\n    backtrack(path, used)\n    path.pop(); used[i] = false\n```",
+    "**Single element** - smallest valid input.\n`Input: nums = [5]` → `Expected: [[5]]`\n⚠️ Bug: checking `current.size() > nums.size()` instead of `==` → returns `[]`\n\n**All elements equal** - every arrangement is identical.\n`Input: nums = [1,1,1]` → `Expected: [[1,1,1]]`\n⚠️ Bug: skipping with `nums[i] == nums[i-1]` but omitting the `!used[i-1]` guard → returns `[]`\n\n**Unsorted duplicates** - duplicates not adjacent before backtracking.\n`Input: nums = [1,2,1]` → `Expected: [[1,1,2],[1,2,1],[2,1,1]]`\n⚠️ Bug: skipping the sort step → returns 6 permutations including duplicate `[2,1,1]` twice\n\n**Negatives with duplicates** - negative values must sort and compare correctly.\n`Input: nums = [-1,-1,2]` → `Expected: [[-1,-1,2],[-1,2,-1],[2,-1,-1]]`\n⚠️ Bug: comparing `abs(nums[i]) == abs(nums[i-1])` instead of raw values → treats `-1` and `1` as duplicates, producing wrong permutations"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of returning all permutations, return only the count of unique permutations for n up to 10^5.",
+      "a": "Sort and count frequencies of each value, then compute the multinomial coefficient n! / (c1! × c2! × ... × ck!) using precomputed factorials and modular inverses. TC: O(n log n), SC: O(n) for the frequency map."
+    },
+    {
+      "q": "Return the k-th lexicographically smallest unique permutation without generating all of them.",
+      "a": "Sort the array, maintain a frequency map of remaining values, and at each position determine which value to place by computing how many permutations start with each candidate using the multinomial formula on the remaining counts. TC: O(n²), SC: O(n)."
+    },
+    {
+      "q": "Generate unique permutations one at a time as an iterator, using O(n) memory total.",
+      "a": "Sort the array and implement next-permutation logic: find the rightmost ascent, swap with the smallest larger value to the right, then reverse the suffix. Call repeatedly until no ascent remains. TC: O(n) per permutation, SC: O(1) auxiliary beyond the array itself."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> permuteUnique(vector<int>& nums) {\n        vector<vector<int>> result;\n        vector<int> current;\n        vector<bool> used(nums.size(), false);\n        sort(nums.begin(), nums.end());\n        backtrack(nums, used, current, result);\n        return result;\n    }\nprivate:\n    void backtrack(vector<int>& nums, vector<bool>& used, vector<int>& current, vector<vector<int>>& result) {\n        if (current.size() == nums.size()) {\n            result.push_back(current);\n            return;\n        }\n        for (int i = 0; i < (int)nums.size(); i++) {\n            if (used[i]) continue;\n            if (i > 0 && nums[i] == nums[i - 1] && !used[i - 1]) continue;\n            used[i] = true;\n            current.push_back(nums[i]);\n            backtrack(nums, used, current, result);\n            current.pop_back();\n            used[i] = false;\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "max-increase-to-keep-city-skyline",
+  "title": "Max Increase to Keep City Skyline",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Precomputed Row/Column Maxima",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> rowMax: n entries → O(n)\n- vector<int> colMax: n entries → O(n)\n- not counted: input grid, returned int",
+  "approach": "The skyline from north/south is fixed by each column's maximum height; the skyline from east/west is fixed by each row's maximum. A building at (r,c) can therefore grow up to min(rowMax[r], colMax[c]) without exceeding either skyline. Compute row and column maxima in one pass, then sum min(rowMax[r], colMax[c]) - grid[r][c] over all cells.",
+  "hints": [
+    "For a building at row r, column c, what two quantities must its new height stay below so that neither the north/south skyline nor the east/west skyline changes?",
+    "Precompute rowMax[r] (max of row r) and colMax[c] (max of column c). In Example 1, rowMax[0]=8 and colMax[0]=9, so cell (0,0) of height 3 can rise to min(8,9)=8, gaining 5.",
+    "```\nfor each r: rowMax[r] = max(grid[r][*])\nfor each c: colMax[c] = max(grid[*][c])\nans = 0\nfor each (r,c):\n    ans += min(rowMax[r], colMax[c]) - grid[r][c]\nreturn ans\n```",
+    "**All zeros** - every building already at the (zero) skyline.\n`[[0,0,0],[0,0,0],[0,0,0]]` → `0`\n⚠️ Bug: initializing rowMax/colMax to 1 instead of 0 → returns 9\n\n**Asymmetric grid** - row and column maxima differ, so the column constraint actually binds.\n`[[1,2],[3,4]]` → `1`\n⚠️ Bug: adding `rowMax[r] - grid[r][c]` without taking min with colMax → returns 2\n\n**Corner max only** - one tall building pins both its row and column.\n`[[100,0],[0,0]]` → `0`\n⚠️ Bug: using `rowMax[r] - grid[r][c]` (ignoring column maxima) → returns 100\n\n**All equal** - every cell already equals both its row and column max.\n`[[5,5],[5,5]]` → `0`\n⚠️ Bug: computing only one of rowMax/colMax and using it as the limit → returns 0 (correct here, but fails the asymmetric case above)"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^5 but the grid is given row-by-row as a stream (only one row in memory at a time), how do you compute the answer?",
+      "a": "First pass: stream rows once to compute colMax[c] for all c (keep an array of size n). Second pass: for each row, compute its rowMax on the fly, then add min(rowMax, colMax[c]) - grid[r][c] for each cell. Time O(n²), space O(n) for colMax only."
+    },
+    {
+      "q": "If buildings can also be decreased in height (at no cost) and you want the minimum total absolute change to reach a target skyline, what changes?",
+      "a": "The target skyline gives fixed rowMax[r] and colMax[c]; each cell must end at some value ≤ min(rowMax[r], colMax[c]) and ≥ 0, so the optimal final height is clamp(grid[r][c], 0, min(rowMax[r], colMax[c])), and you sum |grid[r][c] - clamped|. Same O(n²) time, O(n) space."
+    },
+    {
+      "q": "If the skyline is allowed to change by at most k total units (sum of increases in any row or column max), maximize the total building increase.",
+      "a": "This becomes a bottleneck allocation: each unit of skyline raise on row r or column c costs against the shared budget k but enables raises across that whole row/column. A greedy/flow formulation is needed; complexity rises to roughly O(n² log n) with a priority-queue approach over marginal gains."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxIncreaseKeepingSkyline(vector<vector<int>>& grid) {\n        int n = (int)grid.size();\n        vector<int> rowMax(n, 0), colMax(n, 0);\n        for (int r = 0; r < n; r++) {\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c] > rowMax[r]) rowMax[r] = grid[r][c];\n                if (grid[r][c] > colMax[c]) colMax[c] = grid[r][c];\n            }\n        }\n        int total = 0;\n        for (int r = 0; r < n; r++) {\n            for (int c = 0; c < n; c++) {\n                int limit = rowMax[r] < colMax[c] ? rowMax[r] : colMax[c];\n                total += limit - grid[r][c];\n            }\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

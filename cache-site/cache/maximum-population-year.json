@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-population-year",
+  "title": "Maximum Population Year",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Difference Array",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int diff[101]: fixed-size array of 101 ints → O(1)\n- recursion depth: none\n- not counted: input logs, returned int",
+  "approach": "Use a difference array over the 101 possible years (1950-2050). For each person, increment at birth year and decrement at death year, then sweep left to right accumulating the running sum to get each year's population. Track the maximum population and return the earliest year achieving it; correctness follows because the running sum at year y equals the count of people with birth ≤ y < death.",
+  "hints": [
+    "The constraints bound years to 1950-2050, only 101 distinct values. For each person, at how many moments does the total population count change?",
+    "Use a difference array of size 101 (years 1950-2050). For `[[1950,1961],[1960,1971]]`, add +1 at index 0, −1 at index 11, +1 at index 10, −1 at index 21, then sweep left to right accumulating a running sum.",
+    "```\ndiff[0..100] = 0\nfor each (birth, death):\n    diff[birth - 1950] += 1\n    diff[death - 1950] -= 1\ncurr = 0, best = 0, ans = 1950\nfor i in 0..100:\n    curr += diff[i]\n    if curr > best:\n        best = curr\n        ans = 1950 + i\nreturn ans\n```",
+    "**Tie between years** - two non-overlapping intervals produce the same maximum population at different years.\n`Input: [[1950,1960],[1970,1980]]` → `Expected: 1950`\n⚠️ Bug: using `curr >= maxPop` instead of `curr > maxPop` → returns 1970\n\n**Death year exclusion** - a person born one year and dying the next is alive for only one year.\n`Input: [[1950,1951],[1951,1952]]` → `Expected: 1950`\n⚠️ Bug: decrementing at `death + 1` instead of `death` → returns 1951\n\n**Boundary death year** - a person dies in 2050, the latest allowed death year.\n`Input: [[2049,2050]]` → `Expected: 2049`\n⚠️ Bug: allocating `int diff[100]` and writing `diff[2050 - 1950]` = `diff[100]` → out-of-bounds write, returns undefined value"
+  ],
+  "followUps": [
+    {
+      "q": "What if the year range were 1 to 10^9 instead of 1950-2050?",
+      "a": "Replace the fixed-size array with a std::map<int,int>. For each log, increment map[birth] and decrement map[death], then sweep the map's keys in sorted order accumulating the running sum. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if logs arrive one at a time as a stream and you must report the maximum population year after each insertion?",
+      "a": "Keep a std::map<int,int> of year→delta. After each insertion, sweep the map to find the max population and earliest year. Each insertion is O(log n), each sweep is O(n). TC: O(n) per query, SC: O(n)."
+    },
+    {
+      "q": "What if you need the year with the k-th largest population instead of the maximum?",
+      "a": "During the sweep, collect all (population, year) pairs into a list, then run quickselect to find the k-th largest population value. TC: O(n) average, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumPopulation(vector<vector<int>>& logs) {\n        int diff[101] = {0};\n        for (auto& log : logs) {\n            diff[log[0] - 1950]++;\n            diff[log[1] - 1950]--;\n        }\n        int maxPop = 0, curr = 0, ans = 1950;\n        for (int i = 0; i < 101; i++) {\n            curr += diff[i];\n            if (curr > maxPop) {\n                maxPop = curr;\n                ans = 1950 + i;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

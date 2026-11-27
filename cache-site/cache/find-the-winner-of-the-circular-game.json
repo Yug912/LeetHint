@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-winner-of-the-circular-game",
+  "title": "Find the Winner of the Circular Game",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Josephus Recurrence",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int winner: single integer → O(1)\n- loop variable i: single integer → O(1)\n- recursion depth: none (iterative)\n- not counted: input parameters, returned int",
+  "approach": "This is the classic Josephus problem. After the k-th friend is removed, the remaining n−1 friends form a smaller circle whose winner is the same person, just relabeled by a rotation of k positions. This gives the recurrence f(1)=0 and f(i)=(f(i−1)+k) mod i (0-indexed); the answer is f(n)+1. Iterating from 2 to n yields the winner in linear time with constant space.",
+  "hints": [
+    "In example 1 (n=5, k=2), after friend 2 leaves the remaining circle is [3,4,5,1] starting at friend 3. If you relabel these four friends as 1,2,3,4 in that order, the eventual winner (friend 3) sits at relabeled position 1. What does this relabeling tell you about solving the smaller circle first, then mapping its winner back?",
+    "Use the Josephus recurrence f(1)=0, f(i)=(f(i−1)+k) mod i, answer f(n)+1. For n=5, k=2: f(2)=(0+2)%2=0, f(3)=(0+2)%3=2, f(4)=(2+2)%4=0, f(5)=(0+2)%5=2 → answer 3.",
+    "```\nwinner = 0\nfor i from 2 to n:\n    winner = (winner + k) mod i\nreturn winner + 1\n```",
+    "**Single player** - only one friend exists, so no elimination happens.\n`Input: n=1, k=1` → `Expected: 1`\n⚠️ Bug: `return winner;` without adding 1 → returns 0\n\n**k equals 1** - the first counted friend is removed every round, so the last friend wins.\n`Input: n=5, k=1` → `Expected: 5`\n⚠️ Bug: initializing `winner = 1` instead of 0 → returns 4\n\n**k equals n** - the count wraps exactly once around the circle each round.\n`Input: n=6, k=6` → `Expected: 4`\n⚠️ Bug: using `(winner + k - 1) % i` instead of `(winner + k) % i` → returns 1\n\n**Missing modulo** - without the mod, the index grows unbounded and never wraps.\n`Input: n=6, k=5` → `Expected: 1`\n⚠️ Bug: `winner = winner + k` with no `% i` → returns 26"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^9 - can you still solve it in sub-linear time per round?",
+      "a": "When k is huge but n is moderate, many consecutive rounds remove the same relative position before the modulus changes meaningfully; you can batch-skip rounds where floor((winner+k)/i) stays constant. This keeps the overall work near O(n) even for k up to 10^9, with O(1) extra space."
+    },
+    {
+      "q": "What if friends can re-enter the circle after being removed (a revival rule)?",
+      "a": "The recurrence breaks because the circle no longer strictly shrinks, so you fall back to an explicit ordered simulation with a balanced BST or Fenwick tree to find and delete the k-th living friend in O(log n) per round. Time becomes O(n log n), space O(n)."
+    },
+    {
+      "q": "What if you must report the full elimination order, not just the winner?",
+      "a": "Simulate with an order-statistics structure (Fenwick tree over n slots) so each round finds and removes the k-th survivor in O(log n); record each removed index. Time O(n log n), space O(n) for the tree and output list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findTheWinner(int n, int k) {\n        int winner = 0; // 0-indexed Josephus position for size 1\n        for (int i = 2; i <= n; ++i) {\n            winner = (winner + k) % i;\n        }\n        return winner + 1; // convert to 1-indexed friend number\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

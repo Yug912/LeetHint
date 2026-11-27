@@ -1,0 +1,40 @@
+{
+  "slug": "split-linked-list-in-parts",
+  "title": "Split Linked List in Parts",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass Linked List",
+  "tc": "O(n + k)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<ListNode*> result: k entries, but k ≤ 50 and output is not counted → O(1)\n- local variables (n, base, extra, cur, size, nxt): O(1)\n- recursion depth: none\n- not counted: input list, returned vector",
+  "approach": "Count the total nodes N in one pass. Each part gets base = N/k nodes, and the first extra = N%k parts get one additional node. In a second pass, walk the list and cut after each part's computed size, storing each part's head. This guarantees sizes differ by at most 1 and earlier parts are ≥ later parts.",
+  "hints": [
+    "When splitting N items into k groups where no two sizes differ by more than 1, what determines how many groups receive the larger size? In Example 2, ten nodes become parts of sizes 4, 3, and 3.",
+    "Count nodes first, then single-pass pointer cutting. For Example 2 (N=10, k=3): base = 3, remainder = 1, so part 0 gets 4 nodes and parts 1-2 get 3 each.",
+    "```\ncount N by walking the list\nbase = N / k\nextra = N % k\ncur = head\nfor i in 0 .. k-1:\n    parts[i] = cur\n    size = base + (1 if i < extra else 0)\n    advance cur by (size - 1) steps\n    if cur: cut link, move cur to next\nreturn parts\n```",
+    "**Empty list** - no nodes at all\n`Input: head = [], k = 3` → `Expected: [[],[],[]]`\n⚠️ Bug: using `while (cur)` instead of `for i in 0..k-1` → returns [] (0 parts instead of 3)\n\n**More parts than nodes** - k exceeds N\n`Input: head = [1,2,3], k = 5` → `Expected: [[1],[2],[3],[],[]]`\n⚠️ Bug: computing size as `max(1, n/k)` → returns [[1],[2],[3]] (only 3 parts, missing 2 empty)\n\n**Equal split** - N divisible by k\n`Input: head = [1,2,3,4], k = 2` → `Expected: [[1,2],[3,4]]`\n⚠️ Bug: using `i <= extra` instead of `i < extra` → returns [[1,2,3],[4]]\n\n**Extra to first parts** - N not divisible by k\n`Input: head = [1,2,3,4,5,6,7,8,9,10], k = 3` → `Expected: [[1,2,3,4],[5,6,7],[8,9,10]]`\n⚠️ Bug: giving extra to last parts via `i >= k - extra` → returns [[1,2,3],[4,5,6],[7,8,9,10]]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the list is a streaming input you can only traverse once with O(1) extra memory?",
+      "a": "You still need N to compute part sizes, so a first counting pass is required (re-readable stream). If truly one pass only, you cannot guarantee even splits without buffering nodes. TC stays O(n), SC O(1)."
+    },
+    {
+      "q": "What if parts must be exactly equal in size and you return an empty result when impossible?",
+      "a": "Check N % k == 0 first; if nonzero, return an empty vector immediately. Otherwise each part has size N/k and the same cutting logic applies. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if instead of k you are given a target part size s, splitting into as many parts of size s as possible (last part may be smaller)?",
+      "a": "Walk the list once, cutting every s nodes until you reach the end-no need to count N first. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<ListNode*> splitListToParts(ListNode* head, int k) {\n        int n = 0;\n        for (ListNode* cur = head; cur; cur = cur->next) n++;\n        int base = n / k;\n        int extra = n % k;\n        vector<ListNode*> result;\n        result.reserve(k);\n        ListNode* cur = head;\n        for (int i = 0; i < k; i++) {\n            result.push_back(cur);\n            int size = base + (i < extra ? 1 : 0);\n            for (int j = 0; j < size - 1 && cur; j++) cur = cur->next;\n            if (cur) {\n                ListNode* nxt = cur->next;\n                cur->next = nullptr;\n                cur = nxt;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

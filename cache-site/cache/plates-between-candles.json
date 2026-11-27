@@ -1,0 +1,40 @@
+{
+  "slug": "plates-between-candles",
+  "title": "Plates Between Candles",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum with Nearest-Element Precomputation",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> prevCandle: n entries → O(n)\n- vector<int> nextCandle: n entries → O(n)\n- vector<int> prefix: n+1 entries → O(n)\n- vector<int> ans: returned output, not counted\n- recursion depth: none",
+  "approach": "Precompute three arrays in O(n): `prevCandle[i]` (nearest '|' at or before i), `nextCandle[i]` (nearest '|' at or after i), and `prefix[i]` (count of '*' in s[0..i-1]). For each query [l, r], the leftmost candle in range is `nextCandle[l]` and the rightmost is `prevCandle[r]`. If either is -1 or they don't form a valid pair (leftCandle >= rightCandle), the answer is 0. Otherwise, plates between them = `prefix[rightCandle] - prefix[leftCandle]`, since s[leftCandle] is '|' so the subtraction naturally excludes it. Each query is O(1).",
+  "hints": [
+    "For a given query range, which two candle positions bound all the plates that count? The constraint n ≤ 10^5 with up to 10^5 queries means each query must be answered in near-constant time.",
+    "Precompute nearest-candle arrays (`prevCandle[i]`, `nextCandle[i]`) via one forward and one backward pass, plus a prefix sum of plate counts. For query [2,5] on \"**|**|***|\", `nextCandle[2]=2` and `prevCandle[5]=5`, so plates = `prefix[5]-prefix[2] = 4-2 = 2`.",
+    "```\nprevCandle[i] = last '|' seen scanning left→right\nnextCandle[i] = last '|' seen scanning right→left\nprefix[i] = count of '*' in s[0..i-1]\n\nfor each query [l, r]:\n    L = nextCandle[l]\n    R = prevCandle[r]\n    if L == -1 or R == -1 or L >= R:\n        answer = 0\n    else:\n        answer = prefix[R] - prefix[L]\n```",
+    "**No candle in range** - nearest candles are outside the query range on both sides\n`Input: s = \"|***|\", queries = [[1,3]]` → `Expected: [0]`\n⚠️ Bug: only checking for -1, not checking leftCandle >= rightCandle → returns prefix[0]-prefix[4] = 0-3 = -3\n\n**All plates, no candles** - string has no '|' at all\n`Input: s = \"****\", queries = [[0,3]]` → `Expected: [0]`\n⚠️ Bug: not checking nextCandle[l] == -1 → accesses prefix[-1], undefined behavior\n\n**Candle at query left boundary** - leftmost candle is exactly at index l\n`Input: s = \"|**|\", queries = [[0,3]]` → `Expected: [2]`\n⚠️ Bug: using nextCandle[l+1] instead of nextCandle[l] → skips the boundary candle, returns 0\n\n**Query spans entire string** - l=0, r=n-1\n`Input: s = \"**|**|***|\", queries = [[0,9]]` → `Expected: [5]`\n⚠️ Bug: using prefix[r]-prefix[l] instead of prefix[rightCandle]-prefix[leftCandle] → returns 7-0=7 instead of 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if characters can be flipped between '*' and '|' between queries?",
+      "a": "Replace the prefix sum with a Fenwick tree for dynamic plate counts and a sorted set (e.g., std::set) for candle positions. Each query uses lower_bound on the set to find nearest candles in O(log n) and a Fenwick range query in O(log n). Updates are O(log n) for both structures. Total: O((n + q) log n) time, O(n) space."
+    },
+    {
+      "q": "What if queries ask for plates between the a-th and b-th candle (by candle order) rather than by string index?",
+      "a": "Store candle positions in an array candlePos[]. For query [a, b], the answer is prefix[candlePos[b]] - prefix[candlePos[a]], since s[candlePos[a]] is '|' so no plate is double-counted. This is O(1) per query with the same precomputation, O(n + q) time, O(n) space."
+    },
+    {
+      "q": "What if the string arrives as a stream (one character at a time) with interleaved queries?",
+      "a": "Use a Fenwick tree for dynamic prefix sums and a balanced BST for candle positions. Each incoming character is an O(log n) update; each query finds nearest candles via BST lookup and range sum via Fenwick tree, both O(log n). Total: O((n + q) log n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> platesBetweenCandles(string s, vector<vector<int>>& queries) {\n        int n = s.size();\n        vector<int> prevCandle(n), nextCandle(n), prefix(n + 1, 0);\n        \n        int last = -1;\n        for (int i = 0; i < n; i++) {\n            if (s[i] == '|') last = i;\n            prevCandle[i] = last;\n        }\n        \n        last = -1;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s[i] == '|') last = i;\n            nextCandle[i] = last;\n        }\n        \n        for (int i = 0; i < n; i++) {\n            prefix[i + 1] = prefix[i] + (s[i] == '*' ? 1 : 0);\n        }\n        \n        vector<int> ans;\n        ans.reserve(queries.size());\n        for (auto& q : queries) {\n            int l = q[0], r = q[1];\n            int leftCandle = nextCandle[l];\n            int rightCandle = prevCandle[r];\n            if (leftCandle == -1 || rightCandle == -1 || leftCandle >= rightCandle) {\n                ans.push_back(0);\n            } else {\n                ans.push_back(prefix[rightCandle] - prefix[leftCandle]);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

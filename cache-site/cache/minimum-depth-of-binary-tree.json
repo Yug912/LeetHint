@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-depth-of-binary-tree",
+  "title": "Minimum Depth of Binary Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Level-Order BFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: up to n/2 nodes (last level of a complete tree) → O(n)\n- int depth, sz, i: O(1)\n- recursion: none\n- not counted: input tree",
+  "approach": "Use breadth-first search (level-order traversal). Process nodes level by level; the moment we dequeue a node with no children, the current depth is the minimum depth. This is optimal because BFS explores in increasing distance from the root, so the first leaf found is guaranteed to be the nearest one, and we stop early without visiting the rest of the tree.",
+  "hints": [
+    "You need the depth of the *nearest* leaf, not every leaf. Given that, must your search examine every node before it can answer? The tree can have up to 10^5 nodes.",
+    "Use a breadth-first (level-order) traversal and return the depth the instant you dequeue a node with no children. On Example 1, after processing root 3 you enqueue 9 and 20; dequeuing 9 (a leaf) at depth 2 immediately yields the answer.",
+    "```\nif root is null: return 0\nqueue ← [root], depth ← 1\nwhile queue not empty:\n    levelSize ← size of queue\n    repeat levelSize times:\n        node ← dequeue\n        if node has no left and no right: return depth\n        if node has left: enqueue left\n        if node has right: enqueue right\n    depth ← depth + 1\n```",
+    "**Empty tree** - root is null, the only input with zero nodes.\n`Input: []` → `Expected: 0`\n⚠️ Bug: omitting the `if (!root) return 0;` guard and pushing root into the queue → dereferences nullptr and crashes.\n\n**Skewed (linked-list-shaped) tree** - every node has only one child, so the only leaf is at the very bottom.\n`Input: [2,null,3,null,4,null,5,null,6]` → `Expected: 5`\n⚠️ Bug: a DFS that returns `1 + min(depth(left), depth(right))` with a missing child counted as 0 → returns `1 + min(0, 4) = 1`.\n\n**Single node** - the root is itself the only leaf.\n`Input: [7]` → `Expected: 1`\n⚠️ Bug: returning `0` when a node has no children instead of the current depth → returns `0`."
+  ],
+  "followUps": [
+    {
+      "q": "Find the *maximum* depth of the tree instead of the minimum.",
+      "a": "Continue the same level-order loop until the queue is empty and return the final depth, or use a simple recursive DFS returning `1 + max(depth(left), depth(right))`. Both are O(n) time; the DFS uses O(h) stack space versus O(n) for the queue."
+    },
+    {
+      "q": "Return the actual sequence of node values on the shortest root-to-leaf path, not just its length.",
+      "a": "Keep BFS but store each node's parent (or the full path so far) alongside it in the queue; when you hit the first leaf, walk the parent chain back to the root. Time stays O(n), space becomes O(n) for the parent map plus O(h) for reconstructing the path."
+    },
+    {
+      "q": "Some node values are \"blocked\" and cannot be traversed; find the minimum depth avoiding them.",
+      "a": "Run the same BFS but skip enqueueing any child whose value is in the blocked set (store blocked values in a hash set for O(1) lookup). Time is O(n), space is O(n + b) where b is the number of blocked values; if no unblocked leaf is reachable, return -1."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDepth(TreeNode* root) {\n        if (!root) return 0;\n        queue<TreeNode*> q;\n        q.push(root);\n        int depth = 1;\n        while (!q.empty()) {\n            int sz = q.size();\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                if (!node->left && !node->right) return depth;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            depth++;\n        }\n        return depth;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

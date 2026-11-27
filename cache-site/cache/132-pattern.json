@@ -1,0 +1,40 @@
+{
+  "slug": "132-pattern",
+  "title": "132 Pattern",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> st: up to n entries → O(n)\n- int nums_k: O(1)\n- recursion depth: none\n- not counted: input, returned boolean",
+  "approach": "The key insight is to fix the middle element `nums[j]` and find the maximum valid `nums[k]` to its right, which makes it easiest to find a `nums[i]` to its left that is smaller. By scanning from right to left, we can maintain a monotonically decreasing stack of candidates for `nums[j]`. When the current element is greater than the top of the stack, we pop elements and keep track of the maximum popped value as `nums_k`. If we encounter an element smaller than `nums_k`, we have found a valid 132 pattern.",
+  "hints": [
+    "If you fix the middle element `nums[j]` of the pattern, what information about the elements to its right would let you immediately decide if a valid `nums[i]` exists to its left?\nConstraint: `n <= 2 * 10^5` rules out checking every triplet.",
+    "Use a monotonically decreasing stack while scanning from right to left.\nFor `nums = [3, 1, 4, 2]`, scanning right-to-left, when we reach `4`, we pop `2` from the stack and record it as the best `nums[k]`. Then at `1`, since `1 < 2`, we found a pattern.",
+    "```\nnums_k = -infinity\nstack = empty\nfor i from n-1 down to 0:\n    if nums[i] < nums_k:\n        return true\n    while stack is not empty and stack.top() < nums[i]:\n        nums_k = stack.top()\n        stack.pop()\n    stack.push(nums[i])\nreturn false\n```",
+    "**Smallest input** - Array has fewer than 3 elements.\n`Input: nums = [1,2]` → `Expected: false`\n⚠️ Bug: omitting the `n < 3` early return → may access out-of-bounds memory or return `true` due to uninitialized `nums_k`.\n\n**Duplicates** - Array contains equal elements, which must not satisfy the strict inequalities.\n`Input: nums = [1,2,2]` → `Expected: false`\n⚠️ Bug: using `stack.top() <= nums[i]` in the pop condition → pops the second `2`, sets `nums_k = 2`, then returns `true` for `1 < 2`.\n\n**Negatives** - Array contains only negative numbers in strictly increasing order.\n`Input: nums = [-4,-3,-2,-1]` → `Expected: false`\n⚠️ Bug: initializing `nums_k` to `0` instead of `INT_MIN` → returns `true` because `-4 < 0`."
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to return the indices of the 132 pattern instead of a boolean?",
+      "a": "Store the index alongside the value in the stack. When updating `nums_k`, also store the index of the element that popped it. When `nums[i] < nums_k` is satisfied, return the current index `i`, the stored index of `nums[j]`, and the index of `nums_k`. Time and space complexity remain O(n)."
+    },
+    {
+      "q": "What if the array is too large to fit in memory and arrives as a left-to-right stream?",
+      "a": "Since the algorithm requires a right-to-left pass, you cannot process it directly as a left-to-right stream without reversing. You would need to buffer chunks of the stream to disk and process them in reverse, maintaining the stack across chunk boundaries. Time complexity remains O(n), but space becomes O(chunk size)."
+    },
+    {
+      "q": "What if you need to find a 132 pattern where the indices are at most `k` apart?",
+      "a": "This adds a window constraint, meaning elements outside the window must be removed from the stack. A standard stack does not support arbitrary removal, so you would need a balanced binary search tree or a monotonic queue with lazy deletion. Time complexity increases to O(n log k) and space to O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool find132pattern(vector<int>& nums) {\n        int n = nums.size();\n        if (n < 3) return false;\n        \n        int nums_k = INT_MIN;\n        vector<int> st;\n        \n        for (int i = n - 1; i >= 0; --i) {\n            if (nums[i] < nums_k) {\n                return true;\n            }\n            while (!st.empty() && st.back() < nums[i]) {\n                nums_k = st.back();\n                st.pop_back();\n            }\n            st.push_back(nums[i]);\n        }\n        \n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "even-odd-tree",
+  "title": "Even Odd Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Level-Order BFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: holds up to the widest level, which in a complete tree is ~n/2 → O(n)\n- local variables (level, sz, prev, first, evenLevel, i, v): O(1)\n- no recursion\n- not counted: input tree",
+  "approach": "Use level-order traversal (BFS) to process all nodes at each depth together. For each level, verify two invariants: (1) every node's value has the correct parity (odd on even levels, even on odd levels), and (2) values are strictly monotonic in the correct direction (increasing on even levels, decreasing on odd levels). Track the previous value within each level to enforce strict ordering. This is correct because the conditions are defined per-level, and BFS visits nodes level by level in left-to-right order.",
+  "hints": [
+    "The parity rule depends on a node's depth and the ordering rule depends on its left-to-right position. What observation about how these two rules interact suggests examining nodes grouped by depth? The tree has up to 10^5 nodes.",
+    "Use level-order traversal with a queue. Process all nodes at depth d together: for Example 1, Level 1 = [10, 4] - verify each value is even and that 10 > 4 (strictly decreasing).",
+    "```\nqueue = [root], level = 0\nwhile queue not empty:\n    size = queue.size()\n    prev = none\n    for i in 0..size:\n        node = queue.pop_front()\n        if level is even:\n            if node.val is even: return false\n            if prev exists and node.val <= prev: return false\n        else:\n            if node.val is odd: return false\n            if prev exists and node.val >= prev: return false\n        prev = node.val\n        push node.left and node.right if they exist\n    level += 1\nreturn true\n```",
+    "**Single odd root** - minimum input, one node at level 0\n`Input: root = [1]` → `Expected: true`\n⚠️ Bug: returning false whenever a level has only one node → returns false\n\n**Single even root** - root value must be odd at level 0\n`Input: root = [2]` → `Expected: false`\n⚠️ Bug: skipping the parity check for the root → returns true\n\n**Duplicates on even level** - strict increase required\n`Input: root = [1,4,2,3,3]` → `Expected: false`\n⚠️ Bug: using `<` instead of `<=` in the increase check (allowing equal values) → returns true\n\n**Skewed right chain** - each level has one node, tests null child handling\n`Input: root = [1,null,2,null,3]` → `Expected: true`\n⚠️ Bug: pushing nullptr children into the queue without null checks → crash"
+  ],
+  "followUps": [
+    {
+      "q": "What if node values could be negative?",
+      "a": "In C++, `val % 2` for a negative odd value returns -1, not 1, but `val % 2 == 0` still correctly identifies even values and `val % 2 != 0` correctly identifies odd values. The monotonicity checks are unchanged. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the tree is a complete binary tree with 10^5 nodes?",
+      "a": "The bottom level has ~50,000 nodes, so the queue holds up to ~50,000 pointers simultaneously. This fits comfortably in memory with no change to the algorithm. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you must also return the first violating node's value and level?",
+      "a": "Instead of returning false immediately, store the first violating node's value and its level, then return that information after the loop or at the first violation. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isEvenOddTree(TreeNode* root) {\n        if (!root) return true;\n        queue<TreeNode*> q;\n        q.push(root);\n        int level = 0;\n        while (!q.empty()) {\n            int sz = q.size();\n            int prev = 0;\n            bool first = true;\n            bool evenLevel = (level % 2 == 0);\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                int v = node->val;\n                if (evenLevel) {\n                    if (v % 2 == 0) return false;\n                    if (!first && v <= prev) return false;\n                } else {\n                    if (v % 2 != 0) return false;\n                    if (!first && v >= prev) return false;\n                }\n                prev = v;\n                first = false;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            level++;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

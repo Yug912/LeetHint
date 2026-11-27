@@ -1,0 +1,40 @@
+{
+  "slug": "unique-email-addresses",
+  "title": "Unique Email Addresses",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "String Normalization + Hash Set",
+  "tc": "O(N * L)",
+  "sc": "O(N * L)",
+  "spaceBreakdown": "- unordered_set<string> seen: up to N entries, each up to L chars → O(N * L)\n- string normalized: up to L chars, reused per iteration → O(L), dominated by the set\n- recursion depth: none\n- not counted: input vector<string>& emails",
+  "approach": "Normalize each email by processing only the local name (the part before '@'): skip every '.', and once a '+' is seen, skip the rest of the local name up to '@'. Append the domain (from '@' onward) unchanged. Insert each normalized string into a hash set and return its size. Two emails share an inbox exactly when their normalized forms are identical, so the set size is the answer.",
+  "hints": [
+    "Looking at the three emails in Example 1, what makes the first two deliver to the same inbox while the third lands elsewhere? The constraints guarantee each email has exactly one '@' and local names never start with '+'.",
+    "Use an unordered_set<string> to collect normalized forms. For \"test.email+alex@leetcode.com\", drop '.' in the local part, cut from the first '+' to '@', keep the domain → \"testemail@leetcode.com\".",
+    "seen = empty set\nfor each email:\n    split at '@' into local and domain\n    cut local at first '+' (keep only the part before it)\n    remove every '.' from local\n    insert (local + domain) into seen\nreturn size(seen)",
+    "**All duplicates** - every email is identical\n`Input: [\"a@b.com\",\"a@b.com\",\"a@b.com\"]` → `Expected: 1`\n⚠️ Bug: returning emails.size() without deduplication → returns 3\n\n**Domain dots preserved** - domain contains '.' that must NOT be stripped\n`Input: [\"a@b.c.com\",\"a@bc.com\"]` → `Expected: 2`\n⚠️ Bug: stripping '.' from the entire email including the domain → returns 1\n\n**Local dots removed** - local contains '.' that must be stripped\n`Input: [\"a.b.c@d.com\",\"abc@d.com\"]` → `Expected: 1`\n⚠️ Bug: keeping '.' in the local name → returns 2\n\n**Multiple pluses** - local has more than one '+'\n`Input: [\"a+b+c@d.com\",\"a@d.com\"]` → `Expected: 1`\n⚠️ Bug: cutting at the last '+' instead of the first → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if emails may contain uppercase letters and matching is case-insensitive?",
+      "a": "Lowercase the entire email (or just the local part) before normalizing. Time stays O(N*L), space stays O(N*L)."
+    },
+    {
+      "q": "What if the email stream is unbounded and cannot fit in memory?",
+      "a": "Hash each normalized email to a 64-bit key and store keys in an external hash set on disk, or use a Bloom filter for an approximate count. Exact counting needs O(N*L) space; approximate uses O(N) bits."
+    },
+    {
+      "q": "What if '+' filtering applied to the domain too (rule change)?",
+      "a": "Apply the same '+' cut to the domain before appending it. The structure is unchanged; only the domain-processing step is added. TC and SC remain O(N*L)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numUniqueEmails(vector<string>& emails) {\n        unordered_set<string> seen;\n        for (const string& email : emails) {\n            string normalized;\n            int n = email.size();\n            int i = 0;\n            while (i < n && email[i] != '@') {\n                if (email[i] == '+') {\n                    while (i < n && email[i] != '@') i++;\n                    break;\n                }\n                if (email[i] != '.') {\n                    normalized += email[i];\n                }\n                i++;\n            }\n            while (i < n) {\n                normalized += email[i];\n                i++;\n            }\n            seen.insert(normalized);\n        }\n        return seen.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "keys-and-rooms",
+  "title": "Keys and Rooms",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Graph Reachability (DFS)",
+  "tc": "O(n + sum(rooms[i].length))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> visited: n entries → O(n)\n- stack<int> st: up to n entries in worst case → O(n)\n- int count, int room: O(1)\n- not counted: input rooms, returned bool",
+  "approach": "This is a graph reachability problem: rooms are nodes, keys are directed edges, and room 0 is the source. Starting from room 0, we traverse all reachable rooms using DFS (or BFS), marking each room as visited when we first enter it. After traversal, if the count of visited rooms equals n, every room was reachable. The visited check prevents re-processing and infinite loops on cyclic key chains.",
+  "hints": [
+    "Starting from room 0, what determines whether a particular room can ever be entered? Room 0 is the only initially unlocked room.",
+    "Use DFS (or BFS) from room 0, tracking visited rooms in a boolean array. In Example 1, you start at room 0, collect key 1, enter room 1, collect key 2, and continue until all 4 rooms are visited.",
+    "```\nvisited = {0}\nstack = [0]\nwhile stack not empty:\n    room = stack.pop()\n    for key in rooms[room]:\n        if key not in visited:\n            visited.add(key)\n            stack.push(key)\nreturn size(visited) == n\n```",
+    "**Self-key only** - room 0 contains only its own key, n = 2\n`Input: [[0],[0]]` → `Expected: false`\n⚠️ Bug: comparing count to n-1 instead of n → count=1, n-1=1, returns true\n\n**Linear chain** - keys form a path 0→1→2→3, last room empty\n`Input: [[1],[2],[3],[]]` → `Expected: true`\n⚠️ Bug: not marking room 0 as visited before the loop → count=3 (rooms 1,2,3 only), returns false\n\n**Cyclic two rooms** - rooms 0 and 1 reference each other\n`Input: [[1],[0]]` → `Expected: true`\n⚠️ Bug: pushing keys without checking visited first → infinite loop, TLE\n\n**Empty first room** - room 0 has no keys, n = 2\n`Input: [[],[1]]` → `Expected: false`\n⚠️ Bug: pushing all room indices onto the stack initially instead of only room 0 → visits both rooms, returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to return the list of unreachable room indices instead of a boolean?",
+      "a": "After DFS, scan the visited array and collect every index where visited is false. The traversal logic is unchanged. TC: O(n + sum(rooms[i].length)), SC: O(n) for the output list."
+    },
+    {
+      "q": "What if n can be up to 10^7 and memory is tight?",
+      "a": "Replace vector<bool> with a bitset or use the input array itself as a visited marker (e.g., negating room indices) to avoid a separate array. The algorithm stays the same. TC: O(n + E), SC: O(n) bits or O(1) auxiliary if in-place."
+    },
+    {
+      "q": "What if you must find the minimum number of keys to add so all rooms become reachable?",
+      "a": "Run DFS from room 0, then run DFS on each unvisited room to find its connected component. Each unvisited component needs exactly one key placed from a visited room. The answer is the number of unvisited components. TC: O(n + E), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canVisitAllRooms(vector<vector<int>>& rooms) {\n        int n = rooms.size();\n        vector<bool> visited(n, false);\n        stack<int> st;\n        st.push(0);\n        visited[0] = true;\n        int count = 1;\n        while (!st.empty()) {\n            int room = st.top();\n            st.pop();\n            for (int key : rooms[room]) {\n                if (!visited[key]) {\n                    visited[key] = true;\n                    count++;\n                    st.push(key);\n                }\n            }\n        }\n        return count == n;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

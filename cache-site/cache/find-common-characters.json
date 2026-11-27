@@ -1,0 +1,40 @@
+{
+  "slug": "find-common-characters",
+  "title": "Find Common Characters",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Array Aggregation",
+  "tc": "O(n * m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> cnt(26): 26 ints → O(1)\n- int cur[26] per iteration: 26 ints, reused → O(1)\n- not counted: input words, returned vector<string> res",
+  "approach": "For each of the 26 lowercase letters, the number of times it must appear in the answer is the minimum count of that letter across all words (because a letter can only be \"common\" as many times as it appears in every word). Maintain a running 26-element frequency array initialized from the first word, then for each subsequent word take the per-letter minimum. Finally, emit each letter repeated by its final count.",
+  "hints": [
+    "For any single letter, what one number - computed from all the words - decides how many copies of that letter belong in the answer? The alphabet is only the 26 lowercase English letters.",
+    "Use a 26-element frequency array per word and keep a running per-letter minimum. For \"bella\" the counts are a:1, b:1, e:1, l:2; after \"label\" the running minima are unchanged, and after \"roller\" they become e:1, l:2 (others drop to 0).",
+    "```\ncnt = frequency counts of words[0]\nfor each remaining word w:\n    cur = frequency counts of w\n    for i in 0..25:\n        cnt[i] = min(cnt[i], cur[i])\nfor i in 0..25:\n    append letter ('a'+i) to result, cnt[i] times\nreturn result\n```",
+    "**Single word** - n = 1, so every character of the only word is \"common\".\n`Input: words = [\"abc\"]` → `Expected: [\"a\",\"b\",\"c\"]`\n⚠️ Bug: initializing `cnt` to all zeros instead of `INT_MAX`, then taking `min(0, cur[i])` → returns `[]`.\n\n**No common letters** - disjoint alphabets across words.\n`Input: words = [\"a\",\"b\"]` → `Expected: []`\n⚠️ Bug: appending a letter whenever `cur[i] > 0` in the last word, ignoring the running minimum → returns `[\"a\"]` or `[\"b\"]`.\n\n**Duplicate handling** - same letter repeated in every word.\n`Input: words = [\"aa\",\"aa\"]` → `Expected: [\"a\",\"a\"]`\n⚠️ Bug: storing seen letters in a set instead of counts → returns `[\"a\"]`.\n\n**All words identical** - every character survives at full multiplicity.\n`Input: words = [\"hello\",\"hello\",\"hello\"]` → `Expected: [\"e\",\"h\",\"l\",\"l\",\"o\"]`\n⚠️ Bug: taking `max` instead of `min` when combining counts → returns `[\"e\",\"h\",\"l\",\"l\",\"o\"]` here but fails on `[\"a\",\"aa\"]` by returning `[\"a\",\"a\"]` instead of `[\"a\"]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if words can contain any Unicode characters instead of only lowercase English letters?",
+      "a": "Replace the 26-element array with a hash map keyed by character code, taking per-key minima across words. Time stays O(total characters); auxiliary space becomes O(k) where k is the number of distinct characters in the first word."
+    },
+    {
+      "q": "What if words arrives as an unbounded stream and cannot all be stored in memory?",
+      "a": "Keep only the running 26-count array and process each word as it arrives, updating minima in place. Time is still O(total characters) and auxiliary space stays O(1) (alphabet size)."
+    },
+    {
+      "q": "What if the answer must be returned as a single concatenated string rather than a vector of one-character strings?",
+      "a": "Append each letter `cnt[i]` times directly to a `string` instead of pushing `vector<string>` entries. Time and auxiliary space are unchanged; only the output representation differs."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> commonChars(vector<string>& words) {\n        vector<int> cnt(26, INT_MAX);\n        for (const string& w : words) {\n            int cur[26] = {0};\n            for (char c : w) cur[c - 'a']++;\n            for (int i = 0; i < 26; i++) {\n                if (cur[i] < cnt[i]) cnt[i] = cur[i];\n            }\n        }\n        vector<string> res;\n        for (int i = 0; i < 26; i++) {\n            for (int j = 0; j < cnt[i]; j++) {\n                res.push_back(string(1, static_cast<char>('a' + i)));\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

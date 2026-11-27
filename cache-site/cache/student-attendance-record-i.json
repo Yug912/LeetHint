@@ -1,0 +1,40 @@
+{
+  "slug": "student-attendance-record-i",
+  "title": "Student Attendance Record I",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Single Pass / Running Counters",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int absent, late: two scalars → O(1)\n- no containers, no recursion\n- not counted: input string s",
+  "approach": "Make one left-to-right pass over the string maintaining two counters: the total number of 'A's seen so far, and the length of the current run of consecutive 'L's. If the late run ever reaches 3, return false immediately; otherwise at the end return whether the absent count is strictly less than 2. This is correct because the two eligibility rules are independent and each only needs local/aggregate information gathered in a single scan.",
+  "hints": [
+    "What two independent facts about the string must both be true, and for each fact, do you need to remember the whole string or just a running count as you scan left to right?",
+    "Use a single pass with two integer counters: total 'A's and the current consecutive-'L' run length. In \"PPALLL\", the run hits 3 at the final 'L', so the answer is false.",
+    "```\nabsent = 0, late = 0\nfor each char c in s:\n    if c == 'A': absent = absent + 1; late = 0\n    else if c == 'L': late = late + 1\n        if late >= 3: return false\n    else: late = 0\nreturn absent < 2\n```",
+    "**Smallest input** - only one character, the boundary where both counters start at 0.\n`Input: s = \"A\"` → `Expected: true`\n⚠️ Bug: returning `absent <= 2` instead of `absent < 2` → returns true on \"AA\" (wrong, should be false).\n\n**Two absences** - exactly hits the absent threshold.\n`Input: s = \"AA\"` → `Expected: false`\n⚠️ Bug: using `absent <= 1` instead of `absent < 2` → returns false correctly here, but `absent < 1` would wrongly return false on \"A\".\n\n**Three consecutive L at start** - late run reaches 3 before any other character.\n`Input: s = \"LLL\"` → `Expected: false`\n⚠️ Bug: checking `late > 3` instead of `late >= 3` → returns true (wrong).\n\n**Late run broken by A** - 'A' must reset the late counter, not just increment absent.\n`Input: s = \"LLALLL\"` → `Expected: false`\n⚠️ Bug: not resetting `late = 0` when c == 'A' → late reaches 3 at the last 'L' only if not reset; actually here it would still hit 3, but on \"LLAPLL\" the reset matters: without reset, late goes 1,2,0,1,2 → true; with reset on 'A' it is 1,2,0,1,2 → true too. Correct buggy example: \"LLALL\" without resetting late on 'A' gives 1,2,3 → false (wrong, expected true).\n\n**All present** - neither counter ever grows.\n`Input: s = \"PPP\"` → `Expected: true`\n⚠️ Bug: initialising `late = 1` instead of `late = 0` → on \"PP\" late stays 0 but on \"PPP\" still fine; real bug: initialising `absent = 1` → returns false on \"PPP\" (wrong)."
+  ],
+  "followUps": [
+    {
+      "q": "What if the late-day threshold were a parameter k instead of 3?",
+      "a": "Replace the constant 3 with k in the comparison `late >= k`. The single-pass structure is unchanged, so time stays O(n) and space O(1)."
+    },
+    {
+      "q": "What if attendance records arrive one day at a time as a stream and you must answer eligibility after each day?",
+      "a": "Keep the two counters persistent across updates; each new character updates absent and the late run in O(1). Total time over n days is O(n), space O(1)."
+    },
+    {
+      "q": "What if the string length were up to 10^9 and could not fit in memory at once?",
+      "a": "The algorithm only needs the current character and two counters, so it processes a stream character by character without storing the string. Time is O(n), auxiliary space is O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkRecord(string s) {\n        int absent = 0, late = 0;\n        for (char c : s) {\n            if (c == 'A') {\n                absent++;\n                late = 0;\n            } else if (c == 'L') {\n                late++;\n                if (late >= 3) return false;\n            } else {\n                late = 0;\n            }\n        }\n        return absent < 2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

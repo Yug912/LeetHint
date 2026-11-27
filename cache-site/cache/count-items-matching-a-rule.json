@@ -1,0 +1,40 @@
+{
+  "slug": "count-items-matching-a-rule",
+  "title": "Count Items Matching a Rule",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with Index Mapping",
+  "tc": "O(n·L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int idx, int count: scalars → O(1)\n- range-for reference `const auto& item`: no copy → O(1)\n- recursion depth: none\n- not counted: input items, returned int",
+  "approach": "Each item is a fixed 3-tuple [type, color, name]. The ruleKey is always one of these three, so it selects exactly one column index (0, 1, or 2). A single linear pass over items comparing that column to ruleValue counts every match. Correctness follows directly from the problem's matching definition.",
+  "hints": [
+    "Each item always has exactly three fields in the same order - what does ruleKey tell you about which of those three fields you actually need to look at? ruleKey is always one of \"type\", \"color\", or \"name\".",
+    "Map ruleKey to a fixed column index (type→0, color→1, name→2), then do one linear pass comparing items[i][idx] with ruleValue. For Example 1, ruleKey=\"color\" gives idx=1, and items[1][1]=\"silver\" matches.",
+    "```\nidx = map ruleKey to 0, 1, or 2\ncount = 0\nfor each item in items:\n    if item[idx] equals ruleValue:\n        count = count + 1\nreturn count\n```",
+    "**Smallest input** - only one item, which matches.\n`items = [[\"phone\",\"blue\",\"pixel\"]], ruleKey = \"type\", ruleValue = \"phone\"` → `Expected: 1`\n⚠️ Bug: returning 0 when the loop body is skipped due to an off-by-one range (e.g. `for i in 0..items.size()-1` with unsigned underflow when size is 1) → returns `0`\n\n**All match** - every item matches the rule.\n`items = [[\"phone\",\"blue\",\"a\"],[\"phone\",\"silver\",\"b\"]], ruleKey = \"type\", ruleValue = \"phone\"` → `Expected: 2`\n⚠️ Bug: incrementing count inside an `if/else if` that only fires once per item but breaks early → returns `1`\n\n**ruleKey = \"name\" (last column)** - the matching field is the third one.\n`items = [[\"phone\",\"blue\",\"pixel\"]], ruleKey = \"name\", ruleValue = \"pixel\"` → `Expected: 1`\n⚠️ Bug: mapping with `idx = (ruleKey==\"type\")?0:1;` (no branch for \"name\") → checks column 1 (\"blue\"), returns `0`\n\n**None match** - no item satisfies the rule.\n`items = [[\"phone\",\"blue\",\"pixel\"],[\"computer\",\"silver\",\"lenovo\"]], ruleKey = \"color\", ruleValue = \"red\"` → `Expected: 0`\n⚠️ Bug: initialising `count = 1` instead of `0` → returns `1`"
+  ],
+  "followUps": [
+    {
+      "q": "What if each item could have a variable number of fields and ruleKey referred to an arbitrary field name given in a header row?",
+      "a": "First build a small map from field name to column index using the header, then run the same linear scan using that index. Preprocessing is O(k) for k fields; the scan stays O(n). Space becomes O(k) for the header map."
+    },
+    {
+      "q": "What if you are given multiple rules and an item counts only if it matches ALL of them?",
+      "a": "For each item, check every rule's column against its value and increment the counter only if all checks pass. Time becomes O(n·r) for r rules; space stays O(1) since each rule is checked on the fly."
+    },
+    {
+      "q": "What if items arrive as a stream and you must answer many ruleKey/ruleValue queries online?",
+      "a": "Pre-index items into three maps (type→count, color→count, name→count) during streaming, then each query is an O(1) lookup. Preprocessing is O(n), total query cost is O(q), and space is O(n) for the indexes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countMatches(vector<vector<string>>& items, string ruleKey, string ruleValue) {\n        int idx = (ruleKey == \"type\") ? 0 : (ruleKey == \"color\") ? 1 : 2;\n        int count = 0;\n        for (const auto& item : items) {\n            if (item[idx] == ruleValue) {\n                ++count;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "rotate-function",
+  "title": "Rotate Function",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Recurrence / DP",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar variables (sum, f, maxF, n, k, i): constant → O(1)\n- no containers, no recursion, no call stack\n- not counted: input vector nums",
+  "approach": "The key insight is that F(k+1) can be computed from F(k) in O(1): when the array rotates by one, every element's coefficient increases by 1 (contributing +sum), except the element that wraps from the last position (coefficient n-1) to position 0 (coefficient 0), which loses n times its value. So F(k) = F(k-1) + sum - n * nums[n-k]. Compute F(0) and sum in one pass, then iterate k=1..n-1 applying the recurrence, tracking the maximum. Use long long to avoid any intermediate overflow.",
+  "hints": [
+    "When the array rotates by one position, how do the coefficients (multipliers) of each element change compared to the previous rotation? n ≤ 10^5 rules out computing each F(k) from scratch.",
+    "Use a recurrence relation: F(k) = F(k-1) + sum(nums) - n * nums[n-k]. For nums=[4,3,2,6]: F(0)=25, sum=15, so F(1) = 25 + 15 - 4×6 = 16.",
+    "```\nsum = sum of all nums\nf = sum of i * nums[i] for i in 0..n-1\nmaxF = f\nfor k = 1 to n-1:\n    f = f + sum - n * nums[n - k]\n    maxF = max(maxF, f)\nreturn maxF\n```",
+    "**Single element** - n=1, only F(0)=0 exists\n`Input: [100]` → `Expected: 0`\n⚠️ Bug: returning nums[0] instead of 0*nums[0] → returns 100\n\n**All negatives** - every F(k) is negative\n`Input: [-1,-2,-3,-4]` → `Expected: -12`\n⚠️ Bug: initializing maxF to 0 instead of F(0) → returns 0\n\n**Wrong index** - the wrapped element comes from position n-k, not k\n`Input: [4,3,2,6]` → `Expected: 26`\n⚠️ Bug: using nums[k] instead of nums[n-k] → F(1)=25+15-4*3=28, returns 28\n\n**All equal values** - every rotation yields the same F\n`Input: [5,5,5,5]` → `Expected: 30`\n⚠️ Bug: using 1-based indexing (i from 1 to n) → F(0)=5*(1+2+3+4)=50, returns 50"
+  ],
+  "followUps": [
+    {
+      "q": "If multiple k values achieve the maximum F(k), return all of them sorted in ascending order.",
+      "a": "During the single pass, maintain a list of optimal k values. When F(k) strictly exceeds the current max, reset the list to [k]. When F(k) equals the max, append k. Initialize with [0] for F(0). O(n) time, O(n) space in the worst case (all elements equal)."
+    },
+    {
+      "q": "What if the multiplier sequence is 1, 2, ..., n instead of 0, 1, ..., n-1?",
+      "a": "The new F'(k) = F(k) + sum(nums) for every k, since each coefficient increases by 1. The optimal k remains the same. Compute the original max F(k) and add sum(nums) to the result. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if nums is provided as a read-once stream with O(1) extra space?",
+      "a": "Use two passes. Pass 1: compute sum and F(0). Pass 2: maintain a running prefix sum P; after seeing j elements, compute F(n-j) = F(0) - j*sum + n*P and track the max. This evaluates F(n-1), F(n-2), ..., F(1) in stream order. O(n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxRotateFunction(vector<int>& nums) {\n        int n = nums.size();\n        long long sum = 0;\n        long long f = 0;\n        for (int i = 0; i < n; i++) {\n            sum += nums[i];\n            f += (long long)i * nums[i];\n        }\n        long long maxF = f;\n        for (int k = 1; k < n; k++) {\n            f = f + sum - (long long)n * nums[n - k];\n            if (f > maxF) maxF = f;\n        }\n        return (int)maxF;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

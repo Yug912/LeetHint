@@ -1,0 +1,40 @@
+{
+  "slug": "find-if-path-exists-in-graph",
+  "title": "Find if Path Exists in Graph",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Union-Find / Disjoint Set Union",
+  "tc": "O((n + E) · α(n))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> parent: n entries → O(n)\n- vector<int> rank_: n entries → O(n)\n- recursion depth in find: O(log n) with union by rank (amortized O(α(n)))\n- not counted: input edges, returned bool",
+  "approach": "Treat \"is there a path from source to destination\" as a connectivity question: two vertices are connected iff they belong to the same connected component. Union-Find (Disjoint Set Union) with path compression and union by rank merges components as edges are processed, then a final find on both endpoints checks shared root. This is correct because bidirectional edges induce equivalence classes of mutually reachable vertices, and union exactly builds those classes.",
+  "hints": [
+    "If you could partition all vertices into groups where every vertex in a group can reach every other, what single property must source and destination share? With n up to 2·10^5, enumerating every possible path is too slow.",
+    "Use Union-Find (Disjoint Set Union). For edge [0,1], merge vertex 0's set with vertex 1's set; after processing all edges, source and destination are connected iff their roots match.",
+    "```\nparent[i] = i for all i\nfor each edge (u, v):\n    ru = find(u); rv = find(v)\n    if ru != rv: union(ru, rv)\nreturn find(source) == find(destination)\n```",
+    "**Smallest input** - single vertex, source equals destination, no edges.\n`Input: n = 1, edges = [], source = 0, destination = 0` → `Expected: true`\n⚠️ Bug: returning false when edges is empty → returns false\n\n**No edges, different vertices** - graph has no connections at all.\n`Input: n = 3, edges = [], source = 0, destination = 1` → `Expected: false`\n⚠️ Bug: returning true whenever source and destination are both in [0, n-1] → returns true\n\n**Disconnected components** - source and destination sit in separate components.\n`Input: n = 6, edges = [[0,1],[0,2],[3,5],[5,4],[4,3]], source = 0, destination = 5` → `Expected: false`\n⚠️ Bug: returning true if both source and destination appear in any edge → returns true (both 0 and 5 appear)\n\n**Multi-hop path** - connection requires two edges, not one.\n`Input: n = 4, edges = [[0,1],[1,3]], source = 0, destination = 3` → `Expected: true`\n⚠️ Bug: comparing `parent[source] == parent[destination]` instead of `find(source) == find(destination)` → parent[0]=1, parent[3]=3, returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if edges arrive one at a time, interleaved with connectivity queries?",
+      "a": "Union-Find already handles online operations - treat each new edge as a union and each query as a find. Per-operation cost stays O(α(n)), total SC O(n)."
+    },
+    {
+      "q": "What if you must return the actual path from source to destination, not just yes/no?",
+      "a": "Switch to BFS or DFS over an adjacency list, storing parent[v] = u when v is first discovered, then backtrack from destination to source. TC becomes O(V + E), SC O(V + E) for the adjacency list."
+    },
+    {
+      "q": "What if the graph is directed?",
+      "a": "Union-Find no longer applies because reachability is not symmetric. Run BFS/DFS from source for a single query in O(V + E); for many queries, precompute strongly connected components with Tarjan or Kosaraju and reduce to a DAG."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<int> parent, rank_;\n    int find(int x) {\n        if (parent[x] != x) parent[x] = find(parent[x]);\n        return parent[x];\n    }\n    void unite(int x, int y) {\n        int rx = find(x), ry = find(y);\n        if (rx == ry) return;\n        if (rank_[rx] < rank_[ry]) parent[rx] = ry;\n        else if (rank_[rx] > rank_[ry]) parent[ry] = rx;\n        else { parent[ry] = rx; rank_[rx]++; }\n    }\npublic:\n    bool validPath(int n, vector<vector<int>>& edges, int source, int destination) {\n        parent.resize(n);\n        rank_.assign(n, 0);\n        for (int i = 0; i < n; i++) parent[i] = i;\n        for (auto& e : edges) unite(e[0], e[1]);\n        return find(source) == find(destination);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

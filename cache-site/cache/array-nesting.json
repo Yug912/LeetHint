@@ -1,0 +1,40 @@
+{
+  "slug": "array-nesting",
+  "title": "Array Nesting",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Cycle Detection in Functional Graph",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No additional containers or arrays allocated\n- No recursion (iterative cycle following)\n- Input vector modified in place with -1 markers (not counted per LeetCode convention)",
+  "approach": "Since nums is a permutation of [0, n-1], the mapping i → nums[i] forms a functional graph consisting entirely of disjoint cycles. Each set s[k] traces exactly one such cycle, so its length equals the cycle size. We iterate over every index; for each unvisited index we follow the cycle, marking elements in-place (overwrite with -1, which is outside [0, n-1]) and counting. The answer is the maximum cycle length found.",
+  "hints": [
+    "Since every value in nums is unique and lies in [0, n-1], what happens when you repeatedly apply the mapping i → nums[i] starting from any index?",
+    "The mapping forms disjoint cycles. Mark visited indices by overwriting them with -1 and follow each unvisited cycle, counting its length. For nums = [5,4,0,3,1,6,2], starting at index 0: 0→5→6→2→0 gives length 4.",
+    "```\nmaxLen = 0\nfor i in 0..n-1:\n    if nums[i] != -1:\n        count = 0\n        j = i\n        while nums[j] != -1:\n            next = nums[j]\n            nums[j] = -1\n            j = next\n            count = count + 1\n        maxLen = max(maxLen, count)\nreturn maxLen\n```",
+    "**Single element** - n=1, the only element maps to itself.\n`Input: nums = [0]` → `Expected: 1`\n⚠️ Bug: using `while (j != i)` as the only loop condition → loop never enters, returns 0\n\n**Using 0 as marker** - 0 is a valid value in [0, n-1], so it cannot serve as a sentinel.\n`Input: nums = [1,0]` → `Expected: 2`\n⚠️ Bug: using 0 as the visited marker → the cycle 0→1→0 is cut short at value 0, returns 1\n\n**First cycle not longest** - the longest cycle does not start at index 0.\n`Input: nums = [1,0,4,2,3]` → `Expected: 3`\n⚠️ Bug: returning the first cycle's length without tracking the maximum → returns 2\n\n**Global counter** - count must reset for each new cycle.\n`Input: nums = [1,0,3,2]` → `Expected: 2`\n⚠️ Bug: using a global counter that accumulates across cycles → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums is not a permutation (duplicates allowed, values still in [0, n-1])?",
+      "a": "The functional graph still has one outgoing edge per node, so cycles exist, but chains can lead into cycles and multiple nodes can point to the same successor. Mark visited nodes globally and follow each chain until a visited node is reached, counting steps along the way. TC stays O(n); SC is O(1) if in-place marking is allowed, O(n) otherwise."
+    },
+    {
+      "q": "What if you must return the actual longest set s[k] (the indices visited), not just its length?",
+      "a": "During each cycle traversal, collect indices into a temporary vector. When the cycle completes, compare its size to the maximum and copy the vector if larger. TC stays O(n); SC becomes O(n) since the longest cycle can contain up to n elements."
+    },
+    {
+      "q": "What if you cannot modify the input and must use O(1) extra space?",
+      "a": "Use Floyd's tortoise-and-hare cycle detection for each starting index to find cycle length without a visited array. Without skipping already-processed cycles, each index may be re-examined. TC becomes O(n²) in the worst case (many small cycles); SC is O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int arrayNesting(vector<int>& nums) {\n        int n = nums.size();\n        int maxLen = 0;\n        for (int i = 0; i < n; i++) {\n            if (nums[i] != -1) {\n                int count = 0;\n                int j = i;\n                while (nums[j] != -1) {\n                    int next = nums[j];\n                    nums[j] = -1;\n                    j = next;\n                    count++;\n                }\n                maxLen = max(maxLen, count);\n            }\n        }\n        return maxLen;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

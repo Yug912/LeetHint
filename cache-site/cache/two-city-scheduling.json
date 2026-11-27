@@ -1,0 +1,40 @@
+{
+  "slug": "two-city-scheduling",
+  "title": "Two City Scheduling",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Sorting by Marginal Cost",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- no other containers allocated\n- input modified in place (not counted)",
+  "approach": "Send everyone to city B, then \"switch\" exactly n of them to A. Switching person i changes the total by (aCost_i − bCost_i). To minimize the final total, switch the n people with the smallest (most negative) differences. Equivalently: sort by (aCost − bCost) ascending; the first n go to A, the rest to B. This is optimal because any assignment with n in each city can be viewed as choosing which n to put in A, and the cost is sum of all bCosts plus sum of (aCost − bCost) over the chosen n - minimized by picking the n smallest differences.",
+  "hints": [
+    "In Example 1, persons 1 and 2 go to city A while persons 3 and 4 go to city B. What relationship between each person's pair of costs separates the A-group from the B-group? Each person has exactly two costs, one per city.",
+    "Sort people by (aCost − bCost). In Example 1 the sorted differences are −170, −10, 10, 350; send the first half to A and the rest to B.",
+    "```\nsort people by (aCost - bCost) ascending\nn = length(people) / 2\ntotal = 0\nfor i in 0 to n-1:\n    total += people[i].aCost\nfor i in n to 2n-1:\n    total += people[i].bCost\nreturn total\n```",
+    "**Smallest input** - only two people, n = 1\n`Input: [[10,1],[1,10]]` → `Expected: 2`\n⚠️ Bug: sending the first half to A without sorting → returns 10 + 10 = 20\n\n**Wrong sort key** - sorting by aCost alone ignores bCost\n`Input: [[1,5],[5,1],[10,20],[20,10]]` → `Expected: 22`\n⚠️ Bug: sort by aCost ascending, first half to A, rest to B → returns 1 + 5 + 20 + 10 = 36\n\n**Everyone prefers the same city** - all cheaper in A\n`Input: [[1,5],[2,6]]` → `Expected: 7`\n⚠️ Bug: send each person to their cheaper city → both go to A, returns 1 + 2 = 3\n\n**Reverse-sorted input** - differences already in descending order\n`Input: [[20,10],[10,20],[5,1],[1,5]]` → `Expected: 22`\n⚠️ Bug: skip sorting, use input order directly → returns 20 + 10 + 1 + 5 = 36"
+  ],
+  "followUps": [
+    {
+      "q": "What if costs can be negative?",
+      "a": "The greedy sort by (aCost − bCost) still works unchanged - the proof only relies on the marginal cost of switching a person, which is sign-agnostic. TC stays O(n log n), SC stays O(log n)."
+    },
+    {
+      "q": "What if there are k cities and exactly n/k people must go to each?",
+      "a": "This becomes a min-cost flow problem: people on the left, cities on the right with capacity n/k each, find the min-cost bipartite assignment via successive shortest paths. TC O(n²·k), SC O(n·k)."
+    },
+    {
+      "q": "What if people arrive one at a time online and each must be assigned immediately?",
+      "a": "Maintain two heaps of size n (one per city) tracking the \"regret\" of each existing assignment; when a new person arrives, tentatively place them in their cheaper city, then swap with the worst regret in the over-full city if it improves the total. TC O(n log n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int twoCitySchedCost(vector<vector<int>>& costs) {\n        sort(costs.begin(), costs.end(), [](const vector<int>& x, const vector<int>& y) {\n            return (x[0] - x[1]) < (y[0] - y[1]);\n        });\n        int n = costs.size() / 2;\n        int total = 0;\n        for (int i = 0; i < n; i++) total += costs[i][0];\n        for (int i = n; i < (int)costs.size(); i++) total += costs[i][1];\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "rings-and-rods",
+  "title": "Rings and Rods",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int rods[10]: 10 ints, constant → O(1)\n- recursion depth: none\n- not counted: input string",
+  "approach": "Since rods are labeled 0-9 (only 10), use a fixed-size array where each entry holds a bitmask of which colors are present on that rod. Walk the input in color-position pairs, OR-ing the corresponding color bit into the rod's mask. A rod has all three colors exactly when its mask equals 7 (bits 1, 2, 4 for R, G, B). Count such rods at the end.",
+  "hints": [
+    "There are only 10 rods (labeled 0-9) but only 3 possible colors. What does each rod actually need to \"remember\" about the rings placed on it so far?",
+    "Use a 10-element integer array of bitmasks (R=1, G=2, B=4). For \"R0\", set rods[0] |= 1; a rod is complete when its mask equals 7.",
+    "```\nrods = array[10] of 0\nfor i = 0; i < len; i += 2:\n    color = rings[i]\n    rod   = rings[i+1] - '0'\n    rods[rod] |= bit_for(color)\nans = count of rods where mask == 7\nreturn ans\n```",
+    "**Single ring** - only one color-position pair given.\n`Input: \"G4\"` → `Expected: 0`\n⚠️ Bug: checking `mask != 0` instead of `mask == 7` → returns 1\n\n**Duplicate colors on one rod** - same color placed twice, no other colors.\n`Input: \"R0R0\"` → `Expected: 0`\n⚠️ Bug: incrementing a counter per ring and checking `count >= 3` → returns 0 (correct here) but fails \"R0R0G0B0\" by counting duplicates; on \"R0R0R0\" returns 1\n\n**All three colors on one rod, with extras** - rod 0 gets R, G, B plus repeats.\n`Input: \"B0R0G0R0B0G0\"` → `Expected: 1`\n⚠️ Bug: using `mask == 7` only after first occurrence via `if (!has) set` with wrong flag init → may miss the third color\n\n**All ten rods complete** - every rod 0-9 receives R, G, B.\n`Input: \"R0G0B0R1G1B1R2G2B2R3G3B3R4G4B4R5G5B5R6G6B6R7G7B7R8G8B8R9G9B9\"` → `Expected: 10`\n⚠️ Bug: array sized to 9 instead of 10 → returns 9 (misses rod 9)"
+  ],
+  "followUps": [
+    {
+      "q": "Rods are labeled 0 to 10^9 instead of 0 to 9. How does the solution change?",
+      "a": "Replace the fixed array with a hash map from rod label to its color bitmask. Time stays O(n); space becomes O(min(n, 10^9)) but bounded by the number of distinct rods touched, i.e. O(n)."
+    },
+    {
+      "q": "There are k possible colors instead of 3. How do you generalize?",
+      "a": "Assign each color a distinct bit (1, 2, 4, …, 2^(k-1)); a rod is complete when its mask equals 2^k − 1. Time O(n), space O(1) for ≤ 10 rods (or O(n) with a hash map if rod labels are large). Works while k ≤ 64 using a 64-bit integer."
+    },
+    {
+      "q": "Rings arrive as a streaming input of unknown length, one pair at a time, and you must answer \"how many rods are complete\" after each pair. How do you maintain the answer?",
+      "a": "Keep the per-rod bitmask and a running count of complete rods. After OR-ing a new color bit, if a rod transitions from incomplete to mask == 2^k−1, increment the count. Each update is O(1); total O(n) time, O(1) or O(n) space depending on rod-label range."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPoints(string rings) {\n        int rods[10] = {0};\n        int n = rings.size();\n        for (int i = 0; i + 1 < n; i += 2) {\n            char color = rings[i];\n            int rod = rings[i + 1] - '0';\n            int bit = (color == 'R') ? 1 : (color == 'G') ? 2 : 4;\n            rods[rod] |= bit;\n        }\n        int ans = 0;\n        for (int i = 0; i < 10; i++) {\n            if (rods[i] == 7) ans++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "self-crossing",
+  "title": "Self Crossing",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Geometric Case Analysis",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n: single integer → O(1)\n- loop variable i: single integer → O(1)\n- not counted: input vector",
+  "approach": "A self-crossing can only occur in one of three geometric configurations, each involving the current segment and at most the previous 5 segments. Case 1: the spiral contracts inward and the current segment crosses the segment 3 steps back. Case 2: the spiral transitions from expanding to contracting and the current segment touches/crosses the segment 4 steps back. Case 3: a deeper transition where the current segment crosses the segment 5 steps back. By checking these three conditions at each step, we detect any crossing in a single pass.",
+  "hints": [
+    "When a path spirals outward and then inward, how many previous line segments can the current segment possibly intersect?",
+    "Check only the last 5 segments against the current one using three crossing patterns. For [2,1,1,2], at i=3: distance[3]=2 ≥ distance[1]=1 and distance[2]=1 ≤ distance[0]=2, so it crosses.",
+    "```\nfor i from 3 to n-1:\n    if d[i] >= d[i-2] and d[i-1] <= d[i-3]:\n        return true\n    if i >= 4 and d[i-1] == d[i-3] and d[i] + d[i-4] >= d[i-2]:\n        return true\n    if i >= 5 and d[i-2] >= d[i-4] and d[i-3] >= d[i-1]\n        and d[i]+d[i-4] >= d[i-2] and d[i-1]+d[i-5] >= d[i-3]:\n        return true\nreturn false\n```",
+    "**All equal values** - every segment same length, closes on itself.\n`Input: distance = [2,2,2,2]` → `Expected: true`\n⚠️ Bug: using strict `>` instead of `>=` in case 1's `d[i] >= d[i-2]` → returns false (2 > 2 is false, misses crossing at origin)\n\n**Expanding spiral** - each segment longer than two before, never crosses.\n`Input: distance = [1,2,3,4,5]` → `Expected: false`\n⚠️ Bug: checking only `d[i] >= d[i-2]` without also requiring `d[i-1] <= d[i-3]` in case 1 → returns true (4 >= 2 is true, false positive)\n\n**Case 2 crossing** - spiral contracts, current line meets the line 4 back.\n`Input: distance = [1,1,2,1,1]` → `Expected: true`\n⚠️ Bug: omitting the case 2 check entirely → returns false (case 1 doesn't fire: d[4]=1 < d[2]=2)\n\n**Case 3 crossing** - spiral expands then contracts, crossing 5 segments back.\n`Input: distance = [3,3,5,4,2,2]` → `Expected: true`\n⚠️ Bug: omitting the case 3 check entirely → returns false (cases 1 and 2 don't fire at any index)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the path can also move diagonally (45 degrees), alternating between 8 directions?",
+      "a": "The same principle applies-only nearby segments can intersect-but diagonal segments can intersect more previous segments, so you'd need to enumerate additional crossing patterns, likely 6-8 cases instead of 3. Time complexity remains O(n), space O(1)."
+    },
+    {
+      "q": "What if you must return the coordinates of the first crossing point instead of a boolean?",
+      "a": "Run the same three-case check, and when a crossing is detected, compute the intersection point from the two crossing segments. For case 1, the crossing point lies at distance d[i-1] along the current segment from its start. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if distances arrive as a stream and you can only keep 6 values in memory?",
+      "a": "The algorithm already only looks back at most 5 steps, so maintain a circular buffer of the last 6 distances. Each new distance triggers the same three checks against the buffer. Time O(n), space O(1) with exactly 6 integers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isSelfCrossing(vector<int>& distance) {\n        int n = distance.size();\n        for (int i = 3; i < n; i++) {\n            if (distance[i] >= distance[i - 2] && distance[i - 1] <= distance[i - 3])\n                return true;\n            if (i >= 4 && distance[i - 1] == distance[i - 3] &&\n                distance[i] + distance[i - 4] >= distance[i - 2])\n                return true;\n            if (i >= 5 && distance[i - 2] >= distance[i - 4] &&\n                distance[i - 3] >= distance[i - 1] &&\n                distance[i] + distance[i - 4] >= distance[i - 2] &&\n                distance[i - 1] + distance[i - 5] >= distance[i - 3])\n                return true;\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

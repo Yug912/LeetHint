@@ -1,0 +1,40 @@
+{
+  "slug": "process-restricted-friend-requests",
+  "title": "Process Restricted Friend Requests",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Union-Find with Small-to-Large Merging",
+  "tc": "O((R + K log K) · α(n))",
+  "sc": "O(n + K)",
+  "spaceBreakdown": "- vector<int> parent: n entries → O(n)\n- vector<unordered_set<int>> restricted: n sets, total O(K) elements across all sets → O(n + K)\n- recursion depth: none (iterative find)\n- not counted: input, returned vector",
+  "approach": "Use a Disjoint Set Union where each component root maintains a hash set of person IDs that are restricted from that component. For each friend request (u,v), find roots ru, rv. If same root, accept. Otherwise, iterate over the smaller restricted set and check if any member's root equals the other root - if so, a restriction pair would span both components, so reject. If safe, merge using small-to-large: attach the component with the smaller restricted set to the larger, and insert all its elements into the larger set. This ensures each restricted-set element is moved O(log K) times total across all merges.",
+  "hints": [
+    "When two groups want to merge, what single property of the two groups tells you whether any restricted pair would end up connected? The constraints allow up to 1000 restrictions and 1000 requests.",
+    "Use a Union-Find where each root stores a hash set of person IDs restricted from its component. For request [0,2] in Example 1, root 0's restricted set is {1}; we check whether any member of the smaller set has its root equal to the other root.",
+    "```\nfor each request (u, v):\n    ru = find(u), rv = find(v)\n    if ru == rv: accept\n    (small, large) = smaller/larger of restricted[ru], restricted[rv]\n    reject if any p in restricted[small] has find(p) == large\n    otherwise:\n        parent[small] = large\n        move all elements of restricted[small] into restricted[large]\n        accept\n```",
+    "**Already in same component** - two people already connected via prior merges request again.\n`Input: n=3, restrictions=[], requests=[[0,1],[0,2],[1,2]]` → `Expected: [true,true,true]`\n⚠️ Bug: returning false when find(u)==find(v) → returns [true,true,false]\n\n**Indirect restriction via component members** - restriction is between non-requested members of the two components.\n`Input: n=5, restrictions=[[0,2]], requests=[[0,1],[3,2],[1,3]]` → `Expected: [true,true,false]`\n⚠️ Bug: checking only if v ∈ restricted[find(u)] or u ∈ restricted[find(v)] instead of checking all members of the other component → returns [true,true,true]\n\n**Direct restriction** - request between a directly restricted pair.\n`Input: n=3, restrictions=[[0,1]], requests=[[0,1]]` → `Expected: [false]`\n⚠️ Bug: not populating restricted sets from the restrictions array → returns [true]\n\n**Chain creating indirect restriction** - successful requests build a chain that eventually connects a restricted pair.\n`Input: n=4, restrictions=[[0,3]], requests=[[0,1],[1,2],[2,3]]` → `Expected: [true,true,false]`\n⚠️ Bug: only checking if (u,v) is directly in the restrictions list, not checking component-level restricted sets → returns [true,true,true]"
+  ],
+  "followUps": [
+    {
+      "q": "What if restrictions can be added dynamically between requests?",
+      "a": "When a new restriction (x,y) arrives, if find(x)==find(y) the restriction is violated (or we reject retroactively). Otherwise, insert y into restricted[find(x)] and x into restricted[find(y)]. The per-component hash sets handle this naturally. Complexity stays O((R + K log K)·α(n))."
+    },
+    {
+      "q": "What if n, R, and K can be up to 10^5?",
+      "a": "The same small-to-large approach works. Total merge cost is O(K log K·α(n)) and each request does O(|smaller set|·α(n)) work for the check. With hash sets, lookups and insertions are O(1) amortized, so the solution scales to 10^5 within time limits."
+    },
+    {
+      "q": "What if we also need to support removing a friendship (splitting a component)?",
+      "a": "Standard DSU cannot undo unions. We would need a dynamic connectivity structure such as link-cut trees or Euler-tour trees, which support link, cut, and connectivity in O(log n) per operation. The restricted-set idea still applies but each operation becomes O(log² n) or O(log n) depending on the structure."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> parent;\n    vector<unordered_set<int>> restricted;\n\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n\n    vector<bool> friendRequests(int n, vector<vector<int>>& restrictions, vector<vector<int>>& requests) {\n        parent.resize(n);\n        restricted.resize(n);\n        for (int i = 0; i < n; i++) parent[i] = i;\n\n        for (auto& r : restrictions) {\n            restricted[r[0]].insert(r[1]);\n            restricted[r[1]].insert(r[0]);\n        }\n\n        vector<bool> result;\n        result.reserve(requests.size());\n        for (auto& req : requests) {\n            int u = req[0], v = req[1];\n            int ru = find(u), rv = find(v);\n            if (ru == rv) {\n                result.push_back(true);\n                continue;\n            }\n            int small = (restricted[ru].size() <= restricted[rv].size()) ? ru : rv;\n            int large = (small == ru) ? rv : ru;\n            bool safe = true;\n            for (int p : restricted[small]) {\n                if (find(p) == large) {\n                    safe = false;\n                    break;\n                }\n            }\n            if (!safe) {\n                result.push_back(false);\n                continue;\n            }\n            parent[small] = large;\n            for (int p : restricted[small]) {\n                restricted[large].insert(p);\n            }\n            restricted[small].clear();\n            result.push_back(true);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

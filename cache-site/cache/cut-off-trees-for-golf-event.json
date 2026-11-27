@@ -1,0 +1,40 @@
+{
+  "slug": "cut-off-trees-for-golf-event",
+  "title": "Cut Off Trees for Golf Event",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS on Grid",
+  "tc": "O((m·n)²)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- vector<tuple<int,int,int>> trees: up to m·n entries → O(m·n)\n- vector<vector<int>> dist: m×n, allocated once per BFS (one at a time) → O(m·n)\n- queue<pair<int,int>> q: up to m·n entries → O(m·n)\n- sort(): O(log(m·n)) stack\n- not counted: input forest, return value",
+  "approach": "Since trees must be cut in increasing height order, the problem reduces to finding shortest paths between consecutive target positions (starting from (0,0) to the shortest tree, then to the next shortest, etc.). On an unweighted grid, BFS gives the shortest path between two cells. We collect all tree cells, sort by height, then run BFS for each consecutive pair, summing distances. If any BFS fails to reach its target, return -1.",
+  "hints": [
+    "The trees must be cut from shortest to tallest. Given this fixed order, what sequence of target positions must you visit, and what characterizes the path between two consecutive targets that contributes the fewest steps?",
+    "Use breadth-first search (BFS) to find the shortest path between each pair of consecutive tree positions. In Example 1, from (0,0) to the tree of height 2 at (0,1) is 1 step; from (0,1) to height 3 at (0,2) is 1 step; summing all six segments gives 6.",
+    "```\nsort trees by height\ntotal = 0, pos = (0, 0)\nfor each tree in sorted order:\n    d = shortest_path_distance(pos, tree.position)\n    if d is infinity: return -1\n    total += d\n    pos = tree.position\nreturn total\n```",
+    "**Single tree at start** - the only tree is at (0,0), no walking needed\n`Input: [[5]]` → `Expected: 0`\n⚠️ Bug: not checking source==target before BFS → BFS explores neighbors but never matches target → returns -1\n\n**Start cell blocked** - forest[0][0] is 0, cannot begin\n`Input: [[0,2]]` → `Expected: -1`\n⚠️ Bug: not checking forest[0][0]==0 before BFS → BFS starts from blocked cell, reaches (0,1) in 1 step → returns 1\n\n**Obstacle between trees** - 0 cells block the path\n`Input: [[1,0,2]]` → `Expected: -1`\n⚠️ Bug: not checking forest[nr][nc]==0 in BFS expansion → walks through obstacle → returns 2\n\n**Revisiting cells across segments** - later BFS must pass through cells visited in earlier BFS\n`Input: [[1,2,1,3]]` → `Expected: 3`\n⚠️ Bug: using a global visited array across all BFS runs → second BFS cannot start from (0,1) which was visited → returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is 1000×1000 with only a few trees?",
+      "a": "BFS per segment costs O(10^6) which is expensive for many segments. Use A* with Manhattan distance heuristic to prune the search, reducing explored cells when trees are close. Time becomes O(T · k log k) where k is cells explored per segment, space O(k)."
+    },
+    {
+      "q": "What if trees can have equal heights and you choose the cutting order?",
+      "a": "This becomes a traveling salesman problem. Compute all-pairs shortest paths with T BFS runs in O(T · m · n), then solve TSP via DP with bitmask in O(2^T · T²). Feasible only when T is small (≤ 20)."
+    },
+    {
+      "q": "What if you can move diagonally (8 directions) instead of 4?",
+      "a": "Replace the 4-direction BFS with an 8-direction BFS. The shortest path distance changes but the algorithm structure remains identical. Time and space complexity are unchanged: O(T · m · n) and O(m · n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int cutOffTree(vector<vector<int>>& forest) {\n        int m = forest.size();\n        int n = forest[0].size();\n        vector<tuple<int,int,int>> trees;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (forest[i][j] > 1) {\n                    trees.emplace_back(forest[i][j], i, j);\n                }\n            }\n        }\n        sort(trees.begin(), trees.end());\n        \n        int total = 0;\n        int sr = 0, sc = 0;\n        int dirs[4][2] = {{-1,0},{1,0},{0,-1},{0,1}};\n        \n        for (auto& t : trees) {\n            int tr = get<1>(t), tc = get<2>(t);\n            if (sr == tr && sc == tc) continue;\n            if (forest[sr][sc] == 0) return -1;\n            \n            vector<vector<int>> dist(m, vector<int>(n, -1));\n            queue<pair<int,int>> q;\n            q.push({sr, sc});\n            dist[sr][sc] = 0;\n            bool found = false;\n            while (!q.empty() && !found) {\n                int r = q.front().first, c = q.front().second;\n                q.pop();\n                for (int d = 0; d < 4; d++) {\n                    int nr = r + dirs[d][0], nc = c + dirs[d][1];\n                    if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;\n                    if (forest[nr][nc] == 0) continue;\n                    if (dist[nr][nc] != -1) continue;\n                    dist[nr][nc] = dist[r][c] + 1;\n                    if (nr == tr && nc == tc) {\n                        total += dist[nr][nc];\n                        sr = tr; sc = tc;\n                        found = true;\n                        break;\n                    }\n                    q.push({nr, nc});\n                }\n            }\n            if (!found) return -1;\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

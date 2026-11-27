@@ -1,0 +1,40 @@
+{
+  "slug": "triangle",
+  "title": "Triangle",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bottom-Up DP (In-Place)",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers allocated; triangle modified in place\n- No recursion\n- not counted: input triangle (modified in place, LeetCode convention)",
+  "approach": "Bottom-up dynamic programming: process the triangle from the second-to-last row upward. For each cell, add the minimum of the two cells directly below it (which already contain the best path sum from that point to the bottom). After processing all rows, the top cell contains the answer. This works because the optimal path from any cell depends only on the optimal paths from its two children, which have already been computed when we process bottom-up. Modifying the triangle in place gives O(1) auxiliary space.",
+  "hints": [
+    "From any cell, you can step down to one of two neighbors in the row below. What is the least information about those two neighbors that lets you decide the current cell's best path to the bottom?",
+    "Bottom-up dynamic programming, modifying the triangle in place. For cell (row 2, col 1) with value 5 in the example, it becomes 5 + min(1, 8) = 6, using the already-updated values in the row below.",
+    "```\nfor row from last-1 down to 0:\n    for col from 0 to row:\n        triangle[row][col] += min(triangle[row+1][col], triangle[row+1][col+1])\nreturn triangle[0][0]\n```",
+    "**Single element** - n=1, no row below to combine with\n`Input: [[-10]]` → `Expected: -10`\n⚠️ Bug: outer loop starting at `row = n - 1` instead of `n - 2` → accesses triangle[n] (out of bounds, undefined behavior)\n\n**All negative values** - the minimum path sum is the most negative, not closest to zero\n`Input: [[-1],[-2,-3],[-4,-5,-6]]` → `Expected: -10`\n⚠️ Bug: using `max` instead of `min` → returns -7 instead of -10\n\n**All equal values** - every path has the same sum, tests that column range is correct\n`Input: [[1],[1,1],[1,1,1]]` → `Expected: 3`\n⚠️ Bug: inner loop `col` starting at 1 instead of 0 → triangle[0][0] never updated, returns 1 instead of 3\n\n**Optimal path through rightmost elements** - the best path goes through the last element of each row\n`Input: [[1],[3,2],[6,5,4],[10,9,8,7]]` → `Expected: 14`\n⚠️ Bug: using only `triangle[row+1][col]` (forgetting `triangle[row+1][col+1]`) → always goes left, returns 20 instead of 14"
+  ],
+  "followUps": [
+    {
+      "q": "Can you return the actual path (list of column indices chosen at each row) instead of just the sum?",
+      "a": "Keep the full DP table instead of modifying in place, then backtrack from the top: at each row, pick the child with the smaller value and record its column. O(n²) time, O(n²) space for the table, O(n) for the path list."
+    },
+    {
+      "q": "What if you could also move to index i−1 on the next row (three choices: i−1, i, i+1)?",
+      "a": "The recurrence becomes triangle[row][col] += min of up to three children, with bounds checks for col−1 < 0 and col+1 exceeding the row length. O(n²) time, O(1) space in place."
+    },
+    {
+      "q": "What if rows arrive one at a time as a stream and you cannot store the whole triangle?",
+      "a": "Maintain a 1D DP array of size n. For each incoming row, update right to left: dp[j] = row[j] + min(dp[j], dp[j−1]) for interior cells, dp[0] = row[0] + dp[0] for the left edge, dp[row] = row[row] + dp[row−1] for the right edge. After all rows, return min(dp). O(n²) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumTotal(vector<vector<int>>& triangle) {\n        int n = triangle.size();\n        for (int row = n - 2; row >= 0; row--) {\n            for (int col = 0; col <= row; col++) {\n                triangle[row][col] += min(triangle[row + 1][col], triangle[row + 1][col + 1]);\n            }\n        }\n        return triangle[0][0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

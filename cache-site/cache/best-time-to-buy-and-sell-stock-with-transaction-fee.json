@@ -1,0 +1,40 @@
+{
+  "slug": "best-time-to-buy-and-sell-stock-with-transaction-fee",
+  "title": "Best Time to Buy and Sell Stock with Transaction Fee",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "State Machine DP",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cash, hold: two scalar variables → O(1)\n- int i, p, newCash, newHold: loop scalars → O(1)\n- no containers, no recursion",
+  "approach": "At the end of any day, you are in exactly one of two states: holding no stock (cash) or holding one share (hold). We track the maximum profit achievable in each state. For each price, the new cash is either the old cash (do nothing) or sell the held share (hold + price − fee); the new hold is either the old hold (do nothing) or buy a share (cash − price). Using temporary variables ensures both updates use the previous day's values. The answer is the final cash value.",
+  "hints": [
+    "At the end of any day, you either hold a share of stock or you don't. What is the single best number you would want to remember for each of those two situations to make an optimal decision the next day?",
+    "Use two-state dynamic programming with variables `cash` (best profit holding no stock) and `hold` (best profit holding one share). For prices = [1,3,2,8,4,9], fee = 2: after day 0, cash = 0, hold = −1; on day 3 (price 8), cash becomes max(0, −1 + 8 − 2) = 5.",
+    "```\ncash = 0\nhold = -prices[0]\nfor i from 1 to n-1:\n    new_cash = max(cash, hold + prices[i] - fee)\n    new_hold = max(hold, cash - prices[i])\n    cash, hold = new_cash, new_hold\nreturn cash\n```",
+    "**Single day** - only one price, no transaction can complete.\n`Input: prices = [5], fee = 2` → `Expected: 0`\n⚠️ Bug: initializing hold = INT_MIN then computing hold + prices[0] − fee on day 0 → INT_MIN + 3 overflows → undefined behavior\n\n**All equal prices** - every buy-sell pair loses the fee.\n`Input: prices = [3, 3, 3, 3], fee = 1` → `Expected: 0`\n⚠️ Bug: initializing hold = 0 instead of −prices[0] → returns 2 (phantom profit from a zero cost basis)\n\n**Zero fee** - pure buy-low-sell-high with no cost per trade.\n`Input: prices = [1, 2, 3], fee = 0` → `Expected: 2`\n⚠️ Bug: returning hold instead of cash → returns −1\n\n**Monotonically decreasing** - no profitable buy point exists.\n`Input: prices = [5, 4, 3, 2, 1], fee = 1` → `Expected: 0`\n⚠️ Bug: writing cash = hold + p − fee without max → returns −5 (forced unprofitable sale on every day)"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could hold up to k shares simultaneously instead of just one?",
+      "a": "Extend to k+1 states where hold[j] is the best profit while holding j shares. Each day, for each j from 1 to k, you can buy (move from j−1 to j) or sell (move from j to j−1), paying the fee per completed round-trip. TC: O(nk), SC: O(k)."
+    },
+    {
+      "q": "What if prices arrive one at a time in a stream and you must decide immediately whether to buy or sell?",
+      "a": "The two-state approach is already online - each new price updates cash and hold in O(1) using only the previous values, so you never need to store the full price history. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the transaction fee is split into a separate buy cost and sell cost?",
+      "a": "Adjust the two transitions: hold = max(hold, cash − price − buyFee) and cash = max(cash, hold + price − sellFee). The structure is identical; only the constants in the recurrence change. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices, int fee) {\n        int cash = 0;\n        int hold = -prices[0];\n        for (int i = 1; i < (int)prices.size(); i++) {\n            int p = prices[i];\n            int newCash = max(cash, hold + p - fee);\n            int newHold = max(hold, cash - p);\n            cash = newCash;\n            hold = newHold;\n        }\n        return cash;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

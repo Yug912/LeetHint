@@ -1,0 +1,40 @@
+{
+  "slug": "all-elements-in-two-binary-search-trees",
+  "title": "All Elements in Two Binary Search Trees",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Merge Sorted Streams",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- stack<TreeNode*> s1: up to h1 entries (left spine of tree 1) → O(h1)\n- stack<TreeNode*> s2: up to h2 entries (left spine of tree 2) → O(h2)\n- recursion depth: none (iterative)\n- not counted: input trees, returned vector",
+  "approach": "An in-order traversal of a BST yields values in sorted order. We perform iterative in-order traversal on both trees simultaneously using explicit stacks, always popping the node with the smaller current value. This merges two sorted streams in O(n) time without needing to sort all values from scratch.",
+  "hints": [
+    "Both inputs are binary search trees. What does the BST property let you do with each tree's values that you cannot do with an arbitrary binary tree?",
+    "Iterative in-order traversal with explicit stacks on both trees, merged on the fly. For root1 = [2,1,4], stack1 starts as [2,1] (top = 1); for root2 = [1,0,3], stack2 starts as [1,0] (top = 0) - pop 0 first since it is smallest.",
+    "```\npush left spine of root1 onto stack1\npush left spine of root2 onto stack2\nwhile either stack is non-empty:\n    choose the stack whose top node has the smaller value\n    pop that node, append its value to result\n    push left spine of that node's right child onto that stack\nreturn result\n```",
+    "**Both trees empty** - no nodes exist in either tree\n`Input: root1 = [], root2 = []` → `Expected: []`\n⚠️ Bug: pushing root directly then dereferencing s.top()->left without null check → null pointer dereference\n\n**One tree empty** - only one tree contributes values\n`Input: root1 = [], root2 = [1,0,3]` → `Expected: [0,1,3]`\n⚠️ Bug: accessing s1.top()->val in comparison without checking s1.empty() first → undefined behavior / crash\n\n**Duplicate values across trees** - both trees contain the same value\n`Input: root1 = [1,null,8], root2 = [8,1]` → `Expected: [1,1,8,8]`\n⚠️ Bug: popping both stacks and adding once when values are equal → returns [1,8] (missing two duplicates)\n\n**Right child has its own left subtree** - a node's right child is not a leaf\n`Input: root1 = [2,1,4], root2 = []` → `Expected: [1,2,4]`\n⚠️ Bug: forgetting to push left spine of node->right after popping → returns [1,2] (missing 4)"
+  ],
+  "followUps": [
+    {
+      "q": "What if you have k BSTs instead of 2 and need to merge all their values into one sorted list?",
+      "a": "Use a min-heap of size k where each entry stores the current stack and top value for one tree. Pop the smallest, push its right child's left spine back onto that tree's stack, repeat. TC: O(n log k), SC: O(k·h) where h is the max tree height."
+    },
+    {
+      "q": "What if the trees are too large to fit in memory and you can only stream values one at a time?",
+      "a": "The same iterative in-order traversal works as a generator - yield one value at a time from each tree and merge on the fly. You never store more than O(h) nodes per tree in memory at once. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if you only need the k-th smallest element across both trees, not the full sorted list?",
+      "a": "Run the same merge but stop after appending k values to the result. The k-th appended value is the answer. TC: O(k), SC: O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getAllElements(TreeNode* root1, TreeNode* root2) {\n        vector<int> result;\n        stack<TreeNode*> s1, s2;\n        \n        pushLeft(root1, s1);\n        pushLeft(root2, s2);\n        \n        while (!s1.empty() || !s2.empty()) {\n            stack<TreeNode*>& s = (s1.empty() || (!s2.empty() && s2.top()->val < s1.top()->val)) ? s2 : s1;\n            TreeNode* node = s.top();\n            s.pop();\n            result.push_back(node->val);\n            pushLeft(node->right, s);\n        }\n        \n        return result;\n    }\n    \nprivate:\n    void pushLeft(TreeNode* node, stack<TreeNode*>& s) {\n        while (node) {\n            s.push(node);\n            node = node->left;\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

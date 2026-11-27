@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-arrows-to-burst-balloons",
+  "title": "Minimum Number of Arrows to Burst Balloons",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Interval Scheduling",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- arrowPos (long long), arrows (int): O(1) each\n- not counted: input vector (modified in place), returned int",
+  "approach": "Sort the balloons by their right endpoint (x_end). Greedily shoot an arrow at the right endpoint of the first (earliest-ending) not-yet-covered balloon; this maximizes how many subsequent balloons that arrow can also hit. Any balloon whose start is ≤ the current arrow position is already burst; once a balloon's start exceeds it, fire a new arrow at that balloon's end. This is optimal because choosing the earliest end never wastes coverage that a later choice could have captured.",
+  "hints": [
+    "When several balloons can all be burst by one arrow, what does each balloon's interval [x_start, x_end] tell you about where that arrow's x-coordinate must lie?\nAn arrow at x bursts balloon [x_start, x_end] whenever x_start <= x <= x_end.",
+    "Sort the balloons by their right endpoint, then greedily fire an arrow at each balloon's end that isn't already covered. In Example 1, sorted by end: [1,6],[2,8],[7,12],[10,16] - fire at 6 (covers first two), then at 12 (covers last two).",
+    "```\nsort balloons by end coordinate\narrows = 0\narrow_pos = -infinity\nfor each balloon [start, end]:\n    if arrows == 0 or start > arrow_pos:\n        arrows += 1\n        arrow_pos = end\nreturn arrows\n```",
+    "**Single negative balloon** - the only interval lies entirely below zero.\n`Input: [[-5,-1]]` → `Expected: 1`\n⚠️ Bug: initializing arrow_pos to 0 with no arrows==0 guard, then checking `start > arrow_pos` → -5 > 0 is false, returns 0\n\n**Touching intervals** - two balloons share an endpoint.\n`Input: [[1,2],[2,3]]` → `Expected: 1`\n⚠️ Bug: using `start >= arrow_pos` instead of `start > arrow_pos` → 2 >= 2 is true, fires a second arrow, returns 2\n\n**Extreme coordinate values** - endpoints at INT_MIN / INT_MAX.\n`Input: [[-2147483648,2147483647]]` → `Expected: 1`\n⚠️ Bug: using `int arrow_pos = INT_MIN` with no arrows==0 guard, then `start > arrow_pos` where start == INT_MIN → -2147483648 > -2147483648 is false, returns 0\n\n**Wide balloon before narrow ones** - a long interval starts before but ends after shorter ones.\n`Input: [[1,10],[2,3],[4,5]]` → `Expected: 2`\n⚠️ Bug: sorting by start instead of end, then shooting at the first balloon's end (10) → [2,3] has start 2 ≤ 10 so it is skipped, but arrow at 10 does not reach [2,3] (end 3 < 10), returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "Return the x-coordinates of every arrow fired, not just the count.",
+      "a": "In the same greedy pass, each time you increment arrows, push the current balloon's end coordinate into a result vector. That vector is a valid optimal set of arrow positions. TC O(n log n), SC O(k) for the output where k is the number of arrows."
+    },
+    {
+      "q": "Balloons arrive one at a time in a stream; you must decide to fire an arrow before seeing future balloons.",
+      "a": "Without seeing all intervals you cannot sort by endpoint, so the offline greedy is impossible. An online heuristic can fire when a new balloon's start exceeds the current arrow's coverage, but it gives no optimality guarantee. TC O(1) per balloon, SC O(1)."
+    },
+    {
+      "q": "Each balloon has a weight; maximize total weight burst using at most k arrows.",
+      "a": "This becomes a weighted k-selection over sorted intervals and needs DP: sort by end, then dp[i][j] = best weight using j arrows among the first i balloons, transitioning from the last balloon not covered by an arrow at balloon i's end. TC O(n²·k), SC O(n·k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMinArrowShots(vector<vector<int>>& points) {\n        sort(points.begin(), points.end(), [](const vector<int>& a, const vector<int>& b) {\n            return a[1] < b[1];\n        });\n        int arrows = 0;\n        long long arrowPos = 0;\n        for (const auto& p : points) {\n            if (arrows == 0 || p[0] > arrowPos) {\n                ++arrows;\n                arrowPos = p[1];\n            }\n        }\n        return arrows;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

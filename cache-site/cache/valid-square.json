@@ -1,0 +1,40 @@
+{
+  "slug": "valid-square",
+  "title": "Valid Square",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Geometry / Distance Sorting",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long d[6]: fixed 6 entries → O(1)\n- recursion depth: none\n- not counted: input points, returned bool",
+  "approach": "Compute all 6 pairwise squared distances among the 4 points. For a valid square, after sorting these 6 distances, the first 4 must be equal (the sides), the last 2 must be equal (the diagonals), the side length must be positive (no duplicate points), and the diagonal squared must equal 2× the side squared. Using squared distances avoids floating point and overflow is safe with long long.",
+  "hints": [
+    "With four points there are exactly six pairwise distances. What pattern do those six values form when the four points are the corners of a square?",
+    "Compute all six pairwise squared distances (integer arithmetic, no sqrt), sort them, and check the grouping. In Example 1 the sorted distances are [1,1,1,1,2,2] - four equal sides and two equal diagonals.",
+    "```\ncompute all 6 pairwise squared distances into array d\nsort d\nreturn d[0] > 0\n   and d[0] == d[3]        // four equal sides\n   and d[4] == d[5]        // two equal diagonals\n   and d[4] > d[3]         // diagonal strictly longer than side\n```",
+    "**All identical points** - all six pairwise distances are zero\n`Input: p1=[0,0], p2=[0,0], p3=[0,0], p4=[0,0]` → `Expected: false`\n⚠️ Bug: omitting the `d[0] > 0` check → sorted [0,0,0,0,0,0], `d[0]==d[3]` and `d[4]==d[5]` both true → returns true\n\n**Rectangle (non-square)** - equal diagonals but two distinct side lengths\n`Input: p1=[0,0], p2=[2,0], p3=[2,1], p4=[0,1]` → `Expected: false`\n⚠️ Bug: checking only `d[4]==d[5]` (diagonals equal) → sorted [1,1,4,4,5,5], `5==5` true → returns true\n\n**Three identical, one different** - three zero distances mixed with non-zero\n`Input: p1=[0,0], p2=[0,0], p3=[0,0], p4=[1,0]` → `Expected: false`\n⚠️ Bug: checking that there are exactly 2 distinct distance values → {0, 1} has 2 distinct → returns true\n\n**Collinear points** - all four points on a single line\n`Input: p1=[0,0], p2=[1,0], p3=[2,0], p4=[3,0]` → `Expected: false`\n⚠️ Bug: checking `d[0]==d[2] && d[3]==d[4]` (3+2 pattern) → sorted [1,1,1,4,4,9], `1==1 && 4==4` true → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "Given 8 points in 3D space, determine if they form a cube.",
+      "a": "Apply the same idea in 3D: compute all C(8,2)=28 pairwise squared distances and sort them. A cube produces three groups - 12 equal edges, 12 equal face diagonals, 4 equal space diagonals - each strictly larger than the previous. TC: O(1), SC: O(1)."
+    },
+    {
+      "q": "Given n points (n ≤ 10^3), count how many distinct squares can be formed.",
+      "a": "Store all points in a hash set. For each pair of points, treat them as a diagonal: compute the midpoint and rotate half the diagonal by 90° to get the other two vertices, then check if both exist in the set. Each square is counted twice (once per diagonal), so divide by 2. TC: O(n²), SC: O(n)."
+    },
+    {
+      "q": "Coordinates are floating-point numbers with up to 9 decimal places.",
+      "a": "Replace exact equality with a tolerance check (e.g., `abs(a - b) < 1e-9`). For any hash-set lookups, round coordinates to a fixed precision before inserting. TC: O(1), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool validSquare(vector<int>& p1, vector<int>& p2, vector<int>& p3, vector<int>& p4) {\n        vector<vector<int>> pts = {p1, p2, p3, p4};\n        long long d[6];\n        int idx = 0;\n        for (int i = 0; i < 4; i++) {\n            for (int j = i + 1; j < 4; j++) {\n                long long dx = (long long)pts[i][0] - pts[j][0];\n                long long dy = (long long)pts[i][1] - pts[j][1];\n                d[idx++] = dx * dx + dy * dy;\n            }\n        }\n        sort(d, d + 6);\n        // sides: d[0..3] equal and > 0; diagonals: d[4..5] equal and = 2*side\n        return d[0] > 0 && d[0] == d[1] && d[1] == d[2] && d[2] == d[3]\n            && d[3] != d[4] && d[4] == d[5] && d[4] == 2 * d[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

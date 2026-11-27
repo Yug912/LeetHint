@@ -1,0 +1,40 @@
+{
+  "slug": "convert-bst-to-greater-tree",
+  "title": "Convert BST to Greater Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Morris Reverse Inorder Traversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int sum: O(1)\n- TreeNode* cur, TreeNode* succ: O(1)\n- no recursion, no containers, no explicit stack\n- not counted: input tree (modified in place, structure restored)",
+  "approach": "In a BST, reverse inorder (right → node → left) visits keys in strictly descending order, so a running sum always equals the total of all keys greater than the current node. We use Morris threaded traversal to perform this without recursion or an explicit stack: for each node, find the leftmost node of its right subtree (its reverse-inorder successor), temporarily link that node's left pointer back to the current node, explore the right subtree, then on the return visit unlink the thread and update the node's value. Each node is touched at most three times, giving O(n) time and O(1) auxiliary space.",
+  "hints": [
+    "In a BST, where are all the keys greater than a given node located, and what visiting order would process every one of them before that node?",
+    "Use Morris reverse-inorder traversal (right → node → left) with a running sum, threading each node's successor back to itself to avoid recursion. Example: visit 8 first → sum 0, so 8 stays 8, sum becomes 8; next node 7 → 7 + 8 = 15, sum becomes 15.",
+    "```\nsum = 0\ncur = root\nwhile cur != null:\n    if cur.right == null:\n        cur.val += sum\n        sum = cur.val\n        cur = cur.left\n    else:\n        succ = leftmost node in cur.right\n        if succ.left == null:\n            succ.left = cur        # thread\n            cur = cur.right\n        else:\n            succ.left = null       # unthread\n            cur.val += sum\n            sum = cur.val\n            cur = cur.left\n```",
+    "**Empty tree** - root is null (0 nodes is allowed).\n`Input: []` → `Expected: []`\n⚠️ Bug: initialising `int sum = root->val` without a null check → dereferences nullptr, crashes.\n\n**Single node** - no greater keys exist, so the value is unchanged.\n`Input: [5]` → `Expected: [5]`\n⚠️ Bug: initialising `sum` to `root->val` instead of 0 → returns `[10]`.\n\n**All negative values** - the largest (least negative) node is visited first with sum 0.\n`Input: [-3,null,-1]` → `Expected: [-4,null,-1]`\n⚠️ Bug: guarding the update with `if (sum > 0)` to skip non-positive sums → -3 stays -3, returns `[-3,null,-1]`.\n\n**Skewed right chain** - stresses Morris threading along a linked-list-shaped tree.\n`Input: [1,null,2,null,3]` → `Expected: [6,null,5,null,3]`\n⚠️ Bug: using left-first Morris inorder instead of reversed → visits 1,2,3 ascending, returns `[1,null,3,null,6]`."
+  ],
+  "followUps": [
+    {
+      "q": "Convert the BST so each node equals its original key plus the sum of all keys *less* than it.",
+      "a": "Use standard (left-first) Morris inorder with a running sum; everything mirrors the greater-sum case. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if the tree may contain duplicate values and \"greater\" means strictly greater?",
+      "a": "Reverse inorder still visits duplicates adjacently; buffer the current value group, add the running sum to each, then update the sum with the group total only after the whole equal-valued run is processed. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if you must not modify the tree structure even temporarily (Morris threads forbidden)?",
+      "a": "Morris temporarily mutates left pointers, so it is disallowed; use an explicit iterative stack for reverse inorder instead. O(n) time, O(h) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* convertBST(TreeNode* root) {\n        int sum = 0;\n        TreeNode* cur = root;\n        while (cur != nullptr) {\n            if (cur->right == nullptr) {\n                cur->val += sum;\n                sum = cur->val;\n                cur = cur->left;\n            } else {\n                TreeNode* succ = cur->right;\n                while (succ->left != nullptr && succ->left != cur) {\n                    succ = succ->left;\n                }\n                if (succ->left == nullptr) {\n                    succ->left = cur;\n                    cur = cur->right;\n                } else {\n                    succ->left = nullptr;\n                    cur->val += sum;\n                    sum = cur->val;\n                    cur = cur->left;\n                }\n            }\n        }\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "longest-zigzag-path-in-a-binary-tree",
+  "title": "Longest ZigZag Path in a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS on Tree (Tree DP)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call stack: up to tree height h → O(h), worst case O(n) for a skewed tree\n- member variable `ans`: O(1)\n- not counted: input tree",
+  "approach": "The longest zigzag ending at any node depends only on the direction of the last edge taken to reach it. During a single DFS, pass down two counters: `leftLen` (longest zigzag ending here via a left-edge) and `rightLen` (via a right-edge). Moving to a left child, the new `leftLen = rightLen + 1` and `rightLen` resets to 0; moving right, `rightLen = leftLen + 1` and `leftLen` resets. The answer is the global maximum of both counters across all visited nodes.",
+  "hints": [
+    "A zigzag path can start at any node, not just the root. As you walk from a parent to its child, what single fact about the parent's path determines whether the child can extend it or must restart?",
+    "Depth-first search passing two running counters down the tree: the zigzag length ending at this node via a left-edge and via a right-edge. At the root both are 0; moving to root's right child, the right-edge counter becomes 1 and the left-edge counter resets to 0.",
+    "```\nans = 0\nfunction dfs(node, leftLen, rightLen):\n    if node is null: return\n    ans = max(ans, leftLen, rightLen)\n    dfs(node.left, rightLen + 1, 0)\n    dfs(node.right, 0, leftLen + 1)\ndfs(root, 0, 0)\nreturn ans\n```",
+    "**Single node** - tree has one node and zero edges.\n`Input: [1]` → `Expected: 0`\n⚠️ Bug: initializing the answer to 1 (assuming at least one edge exists) → returns 1.\n\n**Skewed right chain** - every node has only a right child, so no alternation is possible beyond one edge.\n`Input: [1,null,2,null,3]` → `Expected: 1`\n⚠️ Bug: only updating the answer when both `leftLen` and `rightLen` are positive → returns 0.\n\n**Longest path excludes root** - the best zigzag starts at a non-root node because the root's edge direction conflicts.\n`Input: [1,2,null,3,null,null,4]` → `Expected: 2`\n⚠️ Bug: only counting zigzag paths that start at the root → returns 1.\n\n**Perfect zigzag** - the tree is a single alternating chain, testing off-by-one between edges and nodes.\n`Input: [1,null,2,3,null,null,4]` → `Expected: 3`\n⚠️ Bug: returning the number of visited nodes instead of edges (length = nodes − 1) → returns 4."
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual zigzag path (list of node values), not just its length.",
+      "a": "Alongside the global max, store the node and arrival direction where the max was achieved. After the DFS, walk down from that node following the zigzag rule (alternate directions) to collect the path. TC: O(n), SC: O(h) for reconstruction."
+    },
+    {
+      "q": "The tree is given as a forest of up to 10^5 separate trees - find the longest zigzag across all of them.",
+      "a": "Run the same DFS on each root, sharing one global `ans` variable across all trees. Each tree is visited once, so total work is proportional to the total node count. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "The tree has up to 10^7 nodes and recursion will overflow the call stack - solve iteratively.",
+      "a": "Replace the recursive DFS with an explicit stack of `(node, leftLen, rightLen)` tuples. Push children with updated counters. Everything else stays identical. TC: O(n), SC: O(h) for the explicit stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int ans;\n    void dfs(TreeNode* node, int leftLen, int rightLen) {\n        if (!node) return;\n        if (leftLen > ans) ans = leftLen;\n        if (rightLen > ans) ans = rightLen;\n        dfs(node->left, rightLen + 1, 0);\n        dfs(node->right, 0, leftLen + 1);\n    }\npublic:\n    int longestZigZag(TreeNode* root) {\n        ans = 0;\n        dfs(root, 0, 0);\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

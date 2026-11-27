@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-pruning",
+  "title": "Binary Tree Pruning",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order Tree DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call stack: depth up to h (O(n) for a skewed tree, O(log n) balanced)\n- no containers allocated\n- not counted: input tree, returned tree (modified in place)",
+  "approach": "Use post-order recursion: prune the left and right subtrees first, then decide the current node. A node must be removed exactly when its value is 0 and both of its (already pruned) children are null - meaning no 1 exists in its subtree. This works because by the time we judge a node, every descendant has already been reduced to either nullptr (no 1 below) or a kept subtree (contains a 1), so the node's own survival is determined purely by its value and its two child pointers.",
+  "hints": [
+    "In Example 1, the node valued 0 directly under the root survives, but its left child (also 0) is deleted. What does the surviving 0 have beneath it that the deleted 0 lacks?",
+    "Use post-order recursion: prune each child first, then delete the current node if it is 0 with both children null. In Example 1, the 0 under the root loses its left 0-child but keeps its right 1-child, so it survives.",
+    "function prune(node):\n    if node is null: return null\n    node.left  = prune(node.left)\n    node.right = prune(node.right)\n    if node.val == 0 and node.left == null and node.right == null:\n        return null\n    return node",
+    "**Single zero node** - smallest tree that must vanish entirely.\n`Input: [0]` → `Expected: []`\n⚠️ Bug: pruning only the children and never re-checking the root → returns `[0]`\n\n**All zeros** - every node must disappear, including the root.\n`Input: [0,0,0]` → `Expected: []`\n⚠️ Bug: returning root unconditionally when val==0 but children exist → returns `[0,0,0]`\n\n**Root is 0 with a 1 deep below** - root survives because a 1 is in its subtree.\n`Input: [0,null,0,null,1]` → `Expected: [0,null,0,null,1]`\n⚠️ Bug: deleting any node whose own val==0 regardless of subtree → returns `[]`\n\n**Skewed chain of zeros ending in 1** - deep left spine, only the leaf 1 saves the chain.\n`Input: [0,0,null,0,null,1]` → `Expected: [0,0,null,0,null,1]`\n⚠️ Bug: pruning based on the original children before recursing → returns `[0,0,null,0,null,1]` incorrectly truncated or `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if node values are arbitrary integers and we must remove subtrees whose sum is 0?",
+      "a": "Same post-order shape, but each call returns both the pruned node and the subtree sum; delete the node when its sum is 0. TC stays O(n), SC stays O(h)."
+    },
+    {
+      "q": "What if the tree can have up to 10^7 nodes and recursion may overflow the stack?",
+      "a": "Convert to an explicit-stack post-order traversal using a stack of (node, visited-flag) pairs, processing children before the node. TC O(n), SC O(h) but on the heap."
+    },
+    {
+      "q": "What if we also need to return the count of nodes removed?",
+      "a": "Accumulate a counter passed by reference: increment it each time the function returns nullptr for a non-null input. TC O(n), SC O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* pruneTree(TreeNode* root) {\n        if (!root) return nullptr;\n        root->left = pruneTree(root->left);\n        root->right = pruneTree(root->right);\n        if (root->val == 0 && !root->left && !root->right) {\n            return nullptr;\n        }\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

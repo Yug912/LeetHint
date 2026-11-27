@@ -1,0 +1,40 @@
+{
+  "slug": "binary-search-tree-to-greater-sum-tree",
+  "title": "Binary Search Tree to Greater Sum Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Morris Traversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `int sum`: O(1)\n- `TreeNode* curr`: O(1)\n- `TreeNode* succ`: O(1)\n- recursion depth: none\n- not counted: input, returned tree",
+  "approach": "To convert the BST to a Greater Sum Tree, we must visit nodes in descending order and accumulate their values. We use Morris reverse-inorder traversal, which temporarily modifies the right subtree's leftmost node's left pointer to point back to the current node, allowing us to traverse without a stack. This approach is correct because it visits every node exactly once in descending order, accumulating the sum of greater keys, and restores the original tree structure by removing the temporary links.",
+  "hints": [
+    "In a Binary Search Tree, which traversal order visits nodes from largest to smallest?\nThe problem asks to add to each node the sum of all keys greater than it.",
+    "Morris Traversal (Reverse Inorder).\nFor node 4 in Example 1, its right subtree's leftmost node is 5. We temporarily link 5's left pointer back to 4, allowing us to return to 4 after visiting 5, 6, 7, and 8, without using a stack.",
+    "```\ncurr = root, sum = 0\nwhile curr:\n    if not curr.right:\n        sum += curr.val; curr.val = sum; curr = curr.left\n    else:\n        succ = curr.right\n        while succ.left and succ.left != curr: succ = succ.left\n        if not succ.left: succ.left = curr; curr = curr.right\n        else: succ.left = null; sum += curr.val; curr.val = sum; curr = curr.left\n```",
+    "**Single node** - The tree has only one node.\n`Input: root = [5]` → `Expected: [5]`\n⚠️ Bug: Initializing `sum` to `root->val` instead of 0 → returns `[10]`\n\n**Right-skewed tree** - Every node only has a right child.\n`Input: root = [1,null,2]` → `Expected: [3,null,2]`\n⚠️ Bug: Reverting the thread before updating the node's value (`succ->left = null` then `curr = curr->left` without `sum += curr.val`) → returns `[1,null,2]`\n\n**Left-skewed tree** - Every node only has a left child.\n`Input: root = [2,1]` → `Expected: [2,3]`\n⚠️ Bug: Moving to `curr = curr->right` instead of `curr = curr->left` when `curr->right` is null → returns `[2,null]`\n\n**Balanced tree** - Nodes have both left and right children.\n`Input: root = [4,1,6,0,2,5,7,null,null,null,3,null,null,null,8]` → `Expected: [30,36,21,36,35,26,15,null,null,null,33,null,null,null,8]`\n⚠️ Bug: Updating `curr->val` before adding to `sum` (`curr->val = sum; sum += curr->val`) → returns `[0,0,0,0,0,0,0,null,null,null,0,null,null,null,0]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is extremely large and distributed across multiple machines?",
+      "a": "We would need to perform a distributed reverse-inorder traversal. Each machine processes its subtree, computes the local sum, and passes the accumulated sum from the rightmost leaf up and across machines, requiring careful synchronization of the running sum."
+    },
+    {
+      "q": "What if we are only given a stream of the tree's pre-order traversal and cannot modify the tree?",
+      "a": "We can reconstruct the BST or use a stack to simulate the reverse-inorder traversal. If we cannot modify the tree, Morris traversal is unavailable, so a stack-based reverse-inorder traversal would be needed, increasing space complexity to O(h) where h is the tree height."
+    },
+    {
+      "q": "What if the tree is not a BST but a general binary tree?",
+      "a": "We would first extract all node values, sort them in descending order, and compute a suffix sum array. Then, we traverse the tree again and replace each node's value with its corresponding suffix sum using a hash map, taking O(n log n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    TreeNode* bstToGst(TreeNode* root) {\n        int sum = 0;\n        TreeNode* curr = root;\n        while (curr != nullptr) {\n            if (curr->right == nullptr) {\n                sum += curr->val;\n                curr->val = sum;\n                curr = curr->left;\n            } else {\n                TreeNode* succ = curr->right;\n                while (succ->left != nullptr && succ->left != curr) {\n                    succ = succ->left;\n                }\n                if (succ->left == nullptr) {\n                    succ->left = curr;\n                    curr = curr->right;\n                } else {\n                    succ->left = nullptr;\n                    sum += curr->val;\n                    curr->val = sum;\n                    curr = curr->left;\n                }\n            }\n        }\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

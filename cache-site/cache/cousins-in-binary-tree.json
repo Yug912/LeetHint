@@ -1,0 +1,40 @@
+{
+  "slug": "cousins-in-binary-tree",
+  "title": "Cousins in Binary Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree Traversal (DFS)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- member variables (depthX, depthY, parentX, parentY, targetX, targetY): O(1)\n- recursion call-stack depth: up to h (worst case n for a skewed tree, log n for balanced)\n- not counted: input tree",
+  "approach": "Traverse the tree once (DFS) and record, for each of the two target values, its depth and its parent's value. Two nodes are cousins iff they have the same depth but different parents. A single traversal suffices because every node's depth and parent are determined by the recursion parameters.",
+  "hints": [
+    "For each of the two target nodes, what two pieces of information would let you decide whether they are cousins?\nThe statement guarantees every node value is unique, so each target appears exactly once.",
+    "Use DFS to record the depth and parent value of each target node. In Example 2, node 4 is at depth 2 with parent 2, and node 5 is at depth 2 with parent 3 - same depth, different parents, so true.",
+    "```\ndfs(node, parent, depth):\n    if node is null: return\n    if node.val == x: save depthX, parentX\n    if node.val == y: save depthY, parentY\n    dfs(node.left, node, depth+1)\n    dfs(node.right, node, depth+1)\n\nreturn depthX == depthY and parentX != parentY\n```",
+    "**Siblings** - x and y share the same parent at the same depth\n`Input: root = [1,2,3], x = 2, y = 3` → `Expected: false`\n⚠️ Bug: checking only depth equality without parent inequality → returns true\n\n**Root as target** - root has depth 0 and no parent, so no cousin is possible\n`Input: root = [1,2,3], x = 1, y = 2` → `Expected: false`\n⚠️ Bug: checking only parent inequality (root parent = -1 vs node 2 parent = 1) without depth check → returns true\n\n**Cousins at deepest level** - both targets at the same depth with different parents\n`Input: root = [1,2,3,4,5,6,7], x = 4, y = 7` → `Expected: true`\n⚠️ Bug: DFS that returns early after finding x, skipping the subtree containing y → returns false\n\n**Skewed tree** - chain of right children, targets at different depths\n`Input: root = [1,null,2,null,3,null,4], x = 3, y = 4` → `Expected: false`\n⚠️ Bug: BFS using a single depth counter incremented per dequeue instead of per level → assigns same depth to nodes 3 and 4 → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree could contain duplicate values?",
+      "a": "Collect every (depth, parent) pair for value x and every pair for value y during one traversal. Then check whether any x-pair and any y-pair have equal depth but different parents. TC stays O(n); SC becomes O(n) in the worst case if all nodes share one of the two values."
+    },
+    {
+      "q": "What if x or y might not exist in the tree?",
+      "a": "Initialise the recorded depths to a sentinel (e.g. -1) and return false if either target was never found. The traversal logic is unchanged. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if you must list all cousin pairs in the tree?",
+      "a": "Traverse once and group every node by depth, storing (parent, node-val) at each level. For each depth, any two entries with different parents form a cousin pair. TC: O(n + P) where P is the number of cousin pairs; SC: O(n) for the depth-grouped map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int depthX = -1, depthY = -1, parentX = -1, parentY = -1;\n    int targetX, targetY;\n\n    void dfs(TreeNode* node, TreeNode* parent, int d) {\n        if (!node) return;\n        if (node->val == targetX) {\n            depthX = d;\n            parentX = parent ? parent->val : -1;\n        }\n        if (node->val == targetY) {\n            depthY = d;\n            parentY = parent ? parent->val : -1;\n        }\n        dfs(node->left, node, d + 1);\n        dfs(node->right, node, d + 1);\n    }\n\npublic:\n    bool isCousins(TreeNode* root, int x, int y) {\n        targetX = x;\n        targetY = y;\n        dfs(root, nullptr, 0);\n        return depthX == depthY && parentX != parentY;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

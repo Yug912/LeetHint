@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-reduce-x-to-zero",
+  "title": "Minimum Operations to Reduce X to Zero",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total, target, sum: O(1)\n- int n, maxLen, left, right: O(1)\n- no containers, no recursion\n- not counted: input vector nums",
+  "approach": "The key insight is that removing elements from the left and right ends leaves a contiguous middle subarray. To minimize removed elements, we maximize the length of this middle subarray whose sum equals `total − x`. Since all elements are positive (1 ≤ nums[i] ≤ 10⁴), the running sum is monotonic, so a sliding window with two pointers finds the longest such subarray in one pass. The answer is `n − maxLength`, or −1 if no valid subarray exists.",
+  "hints": [
+    "If you remove some elements from the left end and some from the right end, what shape do the untouched elements always form? The array has up to 10⁵ elements.",
+    "Use a sliding window to find the longest contiguous subarray whose sum equals totalSum − x. For nums = [1,1,4,2,3] with x = 5, totalSum = 11 so target = 6; the window [1,1,4] has sum 6 and length 3, giving answer 5 − 3 = 2.",
+    "```\ntotal = sum of all nums\ntarget = total - x\nif target < 0: return -1\nif target == 0: return n\nleft = 0, sum = 0, maxLen = -1\nfor right from 0 to n-1:\n    sum += nums[right]\n    while sum > target:\n        sum -= nums[left]\n        left += 1\n    if sum == target:\n        maxLen = max(maxLen, right - left + 1)\nreturn maxLen == -1 ? -1 : n - maxLen\n```",
+    "**Single element** - n = 1, the only element must match x exactly.\n`Input: nums = [5], x = 5` → `Expected: 1`\n⚠️ Bug: returning maxLen instead of n - maxLen → returns 0\n\n**Total equals x** - target is 0, so every element must be removed.\n`Input: nums = [1,2,3], x = 6` → `Expected: 3`\n⚠️ Bug: initializing maxLen = -1 and not handling target == 0 separately → returns -1\n\n**No valid subarray** - target > 0 but no contiguous subarray sums to it.\n`Input: nums = [5,6,7,8,9], x = 4` → `Expected: -1`\n⚠️ Bug: initializing maxLen = 0 instead of -1 → returns 5\n\n**Shrink condition off-by-one** - using >= instead of > causes premature shrinking.\n`Input: nums = [1,1,4,2,3], x = 5` → `Expected: 2`\n⚠️ Bug: using `while (sum >= target)` instead of `while (sum > target)` → returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums can contain negative numbers or zeros?",
+      "a": "The sliding window breaks because the running sum is no longer monotonic. Replace it with a hash map storing prefix sums: for each index, check if (currentPrefixSum − target) was seen before. TC becomes O(n), SC becomes O(n)."
+    },
+    {
+      "q": "What if you receive multiple queries with different x values for the same array?",
+      "a": "Precompute the prefix sum array once. For each query, target = total − x, then use a hash map from prefix sum to earliest index to find the longest subarray with that sum. Total TC: O(n + q·n) or O(n + q) with prebuilt lookups."
+    },
+    {
+      "q": "What if you must also return the actual elements removed (left part and right part), not just the count?",
+      "a": "Track the left and right boundaries of the best window found. The removed elements are nums[0..left−1] and nums[right+1..n−1]. Store these indices during the scan. TC stays O(n), SC stays O(1) for indices or O(k) for the output list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums, int x) {\n        long long total = 0;\n        for (int v : nums) total += v;\n        long long target = total - x;\n        if (target < 0) return -1;\n        int n = (int)nums.size();\n        if (target == 0) return n;\n        int maxLen = -1;\n        long long sum = 0;\n        int left = 0;\n        for (int right = 0; right < n; right++) {\n            sum += nums[right];\n            while (sum > target) {\n                sum -= nums[left];\n                left++;\n            }\n            if (sum == target) {\n                maxLen = max(maxLen, right - left + 1);\n            }\n        }\n        if (maxLen == -1) return -1;\n        return n - maxLen;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

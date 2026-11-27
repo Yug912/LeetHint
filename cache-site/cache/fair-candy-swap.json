@@ -1,0 +1,40 @@
+{
+  "slug": "fair-candy-swap",
+  "title": "Fair Candy Swap",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Set Lookup",
+  "tc": "O(n + m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> aliceSet: up to n entries → O(n)\n- sumA, sumB, diff: O(1)\n- not counted: input vectors, returned vector",
+  "approach": "Let sumA and sumB be the total candies Alice and Bob have. If Alice gives box x and Bob gives box y, equality requires sumA − x + y = sumB − y + x, which simplifies to x − y = (sumA − sumB)/2. Store Alice's box sizes in a hash set, then for each Bob box y, check whether y + (sumA − sumB)/2 exists in Alice's set. The first match gives the answer [y + diff, y].",
+  "hints": [
+    "If Alice gives box x and receives box y, what equation must x and y satisfy in terms of their total candy counts?",
+    "Use a hash set of Alice's box sizes. For each Bob box y, check if y + (sumA − sumB)/2 is in the set. Example 1: sumA=2, sumB=4, diff=−1; for y=2, check 2+(−1)=1, which Alice has → return [1,2].",
+    "```\nsumA = sum(aliceSizes)\nsumB = sum(bobSizes)\ndiff = (sumA - sumB) / 2\naliceSet = set(aliceSizes)\nfor y in bobSizes:\n    if (y + diff) in aliceSet:\n        return [y + diff, y]\n```",
+    "**Negative difference** - Alice's total is less than Bob's, so diff is negative.\n`Input: aliceSizes = [1,1], bobSizes = [2,2]` → `Expected: [1,2]`\n⚠️ Bug: computing `diff = abs(sumA - sumB) / 2` and only checking `y + diff` → for y=2, checks 3 (not found) → returns `[]`\n\n**Swapped formula** - Using reversed subtraction for diff.\n`Input: aliceSizes = [2], bobSizes = [1,3]` → `Expected: [2,3]`\n⚠️ Bug: computing `diff = (sumB - sumA) / 2` → for y=1, checks 1+1=2 (found) → returns `[2,1]`\n\n**Return order** - answer[0] must be Alice's box, answer[1] Bob's.\n`Input: aliceSizes = [1,2], bobSizes = [2,3]` → `Expected: [1,2]`\n⚠️ Bug: returning `{y, y + diff}` instead of `{y + diff, y}` → returns `[2,1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if both Alice and Bob can each exchange up to k boxes instead of just one?",
+      "a": "You need to find subsets SA from Alice and SB from Bob (each of size ≤ k) where sum(SA) − sum(SB) = (sumA − sumB)/2. This generalizes to a meet-in-the-middle subset-sum search. TC: O(n^(k/2) · m^(k/2)) for small k, SC: O(n^(k/2))."
+    },
+    {
+      "q": "What if both arrays are already sorted and have 10^9 elements stored on disk?",
+      "a": "Replace the hash set with a two-pointer scan over the sorted arrays: advance a pointer in Alice's array alongside Bob's pointer, checking x = y + diff at each step. TC: O(n + m), SC: O(1) beyond the streaming buffers."
+    },
+    {
+      "q": "What if multiple valid swaps exist and you must return the one where Alice gives the fewest candies?",
+      "a": "Since x = y + diff, minimizing x means minimizing y when diff ≥ 0 and maximizing y when diff < 0. Sort Bob's array and scan in the appropriate direction, returning the first match found in the hash set. TC: O(n + m log m), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> fairCandySwap(vector<int>& aliceSizes, vector<int>& bobSizes) {\n        long long sumA = 0, sumB = 0;\n        for (int x : aliceSizes) sumA += x;\n        for (int x : bobSizes) sumB += x;\n        int diff = (int)((sumA - sumB) / 2);\n        unordered_set<int> aliceSet(aliceSizes.begin(), aliceSizes.end());\n        for (int y : bobSizes) {\n            if (aliceSet.count(y + diff)) {\n                return {y + diff, y};\n            }\n        }\n        return {};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
