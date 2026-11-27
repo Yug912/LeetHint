@@ -1,0 +1,40 @@
+{
+  "slug": "ones-and-zeroes",
+  "title": "Ones and Zeroes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Multi-dimensional 0-1 Knapsack DP",
+  "tc": "O(L * m * n)",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- vector<vector<int>> dp: (m+1) × (n+1) ints, max 101×101 ≈ 10⁴ entries → O(m*n)\n- zeros, ones: two ints → O(1)\n- no recursion, no auxiliary containers\n- not counted: input strs, returned int",
+  "approach": "This is a 0-1 knapsack with two capacity constraints (zeros ≤ m, ones ≤ n). For each string, count its zeros and ones as a 2D \"weight,\" and the \"value\" is always 1 (we want to maximize the count of strings). Use a 2D DP table `dp[i][j]` = max subset size achievable with at most `i` zeros and `j` ones. Process strings one at a time, updating the table in reverse (decreasing i, j) so each string is used at most once. The answer is `dp[m][n]`.",
+  "hints": [
+    "Each binary string \"costs\" some 0's and some 1's from your two separate budgets. If you process strings one at a time, what two numbers must you track to know the best achievable subset size so far?",
+    "Use a 2D 0-1 knapsack: `dp[i][j]` = max strings pickable with ≤ i zeros and ≤ j ones. For \"10\" (1 zero, 1 one) with m=5, n=3, sweep i from 5→1 and j from 3→1, setting `dp[i][j] = max(dp[i][j], dp[i-1][j-1]+1)`.",
+    "```\ndp[0..m][0..n] = 0\nfor each string s:\n    zeros = count of '0' in s\n    ones  = count of '1' in s\n    for i from m down to zeros:\n        for j from n down to ones:\n            dp[i][j] = max(dp[i][j], dp[i-zeros][j-ones] + 1)\nreturn dp[m][n]\n```",
+    "**String exceeding budget** - a string with 4 ones when n=3 must be silently skipped.\n`Input: strs = [\"1111\"], m = 5, n = 3` → `Expected: 0`\n⚠️ Bug: inner loop `for j from n down to 1` instead of `down to ones` → reads `dp[i-zeros][j-ones]` with `j-ones < 0`, out-of-bounds\n\n**Zero-cost dimension** - a string of all 1's has zero 0-cost; forward iteration reuses it.\n`Input: strs = [\"1\"], m = 0, n = 3` → `Expected: 1`\n⚠️ Bug: iterating i, j forward (0→m, 0→n) lets one string update `dp[0][1]`, then `dp[0][2]` reads the just-written value → returns 3\n\n**All identical strings** - three copies of \"1\", each pickable once.\n`Input: strs = [\"1\",\"1\",\"1\"], m = 0, n = 3` → `Expected: 3`\n⚠️ Bug: sizing dp as `[m][n]` instead of `[m+1][n+1]` drops the zero-budget row → returns 0 or crashes\n\n**Budget exactly met** - the optimal subset uses exactly m zeros and n ones.\n`Input: strs = [\"10\",\"0\",\"1\"], m = 1, n = 1` → `Expected: 2`\n⚠️ Bug: using `i > zeros` instead of `i >= zeros` skips the case where cost equals budget → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "How would you reconstruct the actual subset of strings chosen, not just its size?",
+      "a": "Maintain a parallel `choice[i][j]` table storing the index of the last string added to reach `dp[i][j]`. After filling dp, backtrack from `(m, n)`: if `choice[i][j] = k`, include `strs[k]`, subtract its zeros and ones, and repeat. TC unchanged at O(L·m·n); SC increases by O(m·n) for the choice table."
+    },
+    {
+      "q": "What if each string could be used up to k times instead of at most once?",
+      "a": "This becomes a bounded knapsack. Use binary splitting: decompose each string's k copies into O(log k) group-items (1, 2, 4, … copies bundled together) and run the same 2D reverse-sweep DP on each group. TC becomes O(L · log k · m · n); SC stays O(m · n)."
+    },
+    {
+      "q": "What if strings arrive in a stream and you must report the current best answer after each insertion?",
+      "a": "Persist the `dp` table across queries. Each new string triggers one reverse-sweep update over the (m+1)×(n+1) table in O(m·n) time, then you report `dp[m][n]`. Total TC over L strings is O(L·m·n); SC is O(m·n) for the persistent table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMaxForm(vector<string>& strs, int m, int n) {\n        vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));\n        for (const string& s : strs) {\n            int zeros = 0, ones = 0;\n            for (char c : s) {\n                if (c == '0') zeros++;\n                else ones++;\n            }\n            for (int i = m; i >= zeros; i--) {\n                for (int j = n; j >= ones; j--) {\n                    dp[i][j] = max(dp[i][j], dp[i - zeros][j - ones] + 1);\n                }\n            }\n        }\n        return dp[m][n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

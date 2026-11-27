@@ -1,0 +1,40 @@
+{
+  "slug": "teemo-attacking",
+  "title": "Teemo Attacking",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total: single scalar → O(1)\n- int n, i, gap: single scalars → O(1)\n- not counted: input vector timeSeries, returned int",
+  "approach": "For each pair of consecutive attacks, the first attack contributes only until the next attack begins (if they overlap) or the full duration (if they don't). So for consecutive times t[i] and t[i+1], the contribution is min(t[i+1]−t[i], duration). The last attack always contributes the full duration. A single linear pass accumulates the total. Using `long long` for the accumulator avoids overflow since n×duration can reach 10^11.",
+  "hints": [
+    "When two attacks happen close together, their poison intervals overlap. What single quantity - computed from two consecutive attack times - determines how many *new* poisoned seconds the earlier attack contributes?",
+    "Linear scan over consecutive pairs. For [1,2] with duration 2: the gap is 1, which is less than 2, so the first attack contributes only 1 new second before the second resets the timer; the last attack always contributes the full duration.",
+    "```\ntotal = 0\nfor i from 0 to n-2:\n    gap = timeSeries[i+1] - timeSeries[i]\n    total += min(gap, duration)\ntotal += duration\nreturn total\n```",
+    "**Single attack** - only one attack, so the pair-loop never executes\n`Input: timeSeries = [5], duration = 3` → `Expected: 3`\n⚠️ Bug: forgetting to add `duration` for the final attack after the loop → returns 0\n\n**All same time** - every attack resets the timer immediately with zero gap\n`Input: timeSeries = [3,3,3], duration = 4` → `Expected: 4`\n⚠️ Bug: adding `duration` for every attack without checking overlap → returns 12\n\n**No overlap** - attacks spaced farther apart than duration\n`Input: timeSeries = [1,100], duration = 2` → `Expected: 4`\n⚠️ Bug: always adding the raw gap instead of `min(gap, duration)` → returns 101\n\n**Overflow** - n=10^4 attacks each spaced ≥10^7 apart with duration=10^7 gives 10^11 total, exceeding 2^31−1\n`Input: timeSeries = [0,10000000,20000000,...] (10^4 elements), duration = 10000000` → `Expected: 100000000000`\n⚠️ Bug: using `int` for the accumulator → signed overflow wraps, returns a negative or truncated value"
+  ],
+  "followUps": [
+    {
+      "q": "What if timeSeries is not guaranteed to be sorted?",
+      "a": "Sort it first, then apply the same linear scan. Time becomes O(n log n) due to sorting; space stays O(1) if sorting is in-place."
+    },
+    {
+      "q": "What if attacks arrive in a stream and you must report the running total after each one?",
+      "a": "Track the current poison-end time. For each new attack at time t: if t ≥ poisonEnd, add duration; otherwise add (t + duration − poisonEnd). Update poisonEnd to t + duration. O(1) time and O(1) space per attack."
+    },
+    {
+      "q": "What if you must answer \"was Ashe poisoned at second q?\" for many query times q?",
+      "a": "Merge the poisoned intervals into disjoint segments during a linear pass, then binary search the segments for each query. O(n) preprocessing, O(log n) per query, O(n) space for the merged list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findPoisonedDuration(vector<int>& timeSeries, int duration) {\n        int n = (int)timeSeries.size();\n        if (n == 0) return 0;\n        long long total = 0;\n        for (int i = 0; i + 1 < n; ++i) {\n            int gap = timeSeries[i + 1] - timeSeries[i];\n            total += (gap < duration) ? gap : duration;\n        }\n        total += duration;\n        return (int)total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

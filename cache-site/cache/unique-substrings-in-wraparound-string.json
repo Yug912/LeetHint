@@ -1,0 +1,40 @@
+{
+  "slug": "unique-substrings-in-wraparound-string",
+  "title": "Unique Substrings in Wraparound String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP with per-character aggregation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- maxLen[26]: fixed-size array of 26 ints → O(1)\n- curLen, ans, n: scalar variables → O(1)\n- no recursion, no dynamic containers",
+  "approach": "A substring of s appears in base iff every adjacent character pair is consecutive in the alphabet (with 'z'→'a'). For each position i, compute the longest valid wraparound run ending at i. A valid substring of length L ending at character c contributes exactly L unique substrings (all its suffixes), and since any length-k substring ending at c in base is unique, we only need the maximum run length per character. Sum the 26 per-character maxima.",
+  "hints": [
+    "A substring of s is in base only if every adjacent pair of its characters is consecutive in the alphabet (with 'z' wrapping to 'a'). Given that constraint, what single property of a valid substring ending at a particular character determines how many distinct valid substrings it contributes?",
+    "Use DP: track the longest valid wraparound run ending at each position, and for each letter a-z store the maximum run length seen. For s = \"zab\", run lengths are 1, 2, 3 → maxLen['z']=1, maxLen['a']=2, maxLen['b']=3, sum = 6.",
+    "```\nmaxLen[26] = 0\ncurLen = 0\nfor i in 0..n-1:\n    if i > 0 and (s[i] - s[i-1] + 26) mod 26 == 1:\n        curLen = curLen + 1\n    else:\n        curLen = 1\n    maxLen[s[i]] = max(maxLen[s[i]], curLen)\nreturn sum(maxLen)\n```",
+    "**Single character** - smallest valid input\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing curLen to 0 and only incrementing on a match → returns 0\n\n**All same characters** - no adjacent pair is consecutive\n`Input: s = \"aaaa\"` → `Expected: 1`\n⚠️ Bug: summing curLen at every position instead of taking max per character → returns 4\n\n**Wraparound z→a** - the only non-trivial consecutive pair\n`Input: s = \"zab\"` → `Expected: 6`\n⚠️ Bug: checking s[i] == s[i-1] + 1 without modulo → returns 3\n\n**Duplicate runs** - same character appears in multiple valid runs\n`Input: s = \"abab\"` → `Expected: 3`\n⚠️ Bug: summing curLen at every position without per-character max → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet has up to 10^5 distinct characters instead of 26?",
+      "a": "Replace the fixed 26-element array with a hash map keyed by character. The algorithm is unchanged - track the maximum valid run length per character and sum all values. TC stays O(n), SC becomes O(min(n, alphabet_size))."
+    },
+    {
+      "q": "What if instead of the infinite base we must count substrings present in a given finite pattern string p?",
+      "a": "Build a suffix automaton of p, then for each position in s walk the automaton to find the longest match ending there. Use the same per-character maximum aggregation. TC: O(n + |p|), SC: O(|p|)."
+    },
+    {
+      "q": "What if s arrives as a stream and we must answer the count at any time?",
+      "a": "Maintain the 26 per-character maxima and the current run length as each character arrives. The answer is always the sum of the 26 maxima, computable in O(1) per query. TC: O(1) per character and per query, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findSubstringInWraproundString(string s) {\n        int maxLen[26] = {0};\n        int curLen = 0;\n        int n = s.size();\n        for (int i = 0; i < n; i++) {\n            if (i > 0 && (s[i] - s[i - 1] + 26) % 26 == 1) {\n                curLen++;\n            } else {\n                curLen = 1;\n            }\n            int idx = s[i] - 'a';\n            if (curLen > maxLen[idx]) {\n                maxLen[idx] = curLen;\n            }\n        }\n        int ans = 0;\n        for (int i = 0; i < 26; i++) {\n            ans += maxLen[i];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

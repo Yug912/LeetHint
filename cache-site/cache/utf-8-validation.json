@@ -1,0 +1,40 @@
+{
+  "slug": "utf-8-validation",
+  "title": "UTF-8 Validation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Single Pass with Bit Masking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables i, j, b, numBytes, n: constant → O(1)\n- no containers allocated\n- recursion: none\n- not counted: input vector",
+  "approach": "The number of leading 1-bits in the first byte of a character determines how many bytes that character occupies (1 to 4), and every continuation byte must start with the bit pattern `10`. A single left-to-right pass suffices: read a leader, determine the byte count via bit masks, then verify the next `count−1` bytes each match `10xxxxxx`. Any leader that doesn't match one of the four valid prefixes, or any missing/malformed continuation byte, makes the sequence invalid.",
+  "hints": [
+    "What in the first byte of a character tells you exactly how many bytes follow it, and what prefix must every non-leading byte share?",
+    "Single forward pass using bit-mask checks. For `data=[197,130,1]`, byte `197=11000101` matches mask `110xxxxx` (a 2-byte leader), so the next 1 byte must match `10xxxxxx`; `130=10000010` does, then `1=0xxxxxxx` is a 1-byte char → valid.",
+    "```\ni = 0\nwhile i < n:\n    b = data[i]\n    if b & 0x80 == 0:        num = 1\n    else if b & 0xE0 == 0xC0: num = 2\n    else if b & 0xF0 == 0xE0: num = 3\n    else if b & 0xF8 == 0xF0: num = 4\n    else: return false\n    for j in 1..num-1:\n        if i+j >= n or (data[i+j] & 0xC0) != 0x80: return false\n    i += num\nreturn true\n```",
+    "**Truncated multi-byte** - array ends before all continuation bytes appear.\n`Input: [197]` → `Expected: false`\n⚠️ Bug: not checking `i + j < n` before reading `data[i+j]` → out-of-bounds read / undefined behavior.\n\n**Lone continuation byte** - a byte starting with `10` appears as a leading byte.\n`Input: [145]` → `Expected: false`\n⚠️ Bug: treating any byte with the high bit set as a valid leader → returns true.\n\n**Five leading ones** - byte `11111xxx` is not a valid UTF-8 leader.\n`Input: [248]` → `Expected: false`\n⚠️ Bug: only checking `(b & 0x80) != 0` to decide multi-byte, then counting 1s without capping at 4 → returns true or reads garbage.\n\n**Single valid byte** - smallest input.\n`Input: [0]` → `Expected: true`\n⚠️ Bug: loop condition `i < n - 1` instead of `i < n` → skips the last byte, returns true even for `[0, 145]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the data arrives as a stream you cannot buffer - can you still validate?",
+      "a": "Yes. Keep a small state: how many continuation bytes are still expected. Feed bytes one at a time; a leader resets the state, a continuation byte decrements it, and any mismatch returns false. Time stays O(n), space drops to O(1) with no array needed."
+    },
+    {
+      "q": "What if characters could be up to 6 bytes long (a hypothetical extended UTF-8)?",
+      "a": "Generalize the leader detection: count leading 1-bits up to 6, require the next bit to be 0, then verify that many continuation bytes. The same single-pass bit-mask logic extends directly. Time O(n), space O(1)."
+    },
+    {
+      "q": "Instead of just validating, decode each character to its Unicode code point.",
+      "a": "Extract the payload bits from the leader (after the leading-1 prefix) and from each continuation byte (low 6 bits), then concatenate them in order. Store results in an output vector. Time O(n), space O(n) for the decoded code points."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool validUtf8(vector<int>& data) {\n        int n = (int)data.size();\n        int i = 0;\n        while (i < n) {\n            int b = data[i] & 0xFF;\n            int numBytes;\n            if ((b & 0x80) == 0x00) {\n                // 0xxxxxxx\n                numBytes = 1;\n            } else if ((b & 0xE0) == 0xC0) {\n                // 110xxxxx\n                numBytes = 2;\n            } else if ((b & 0xF0) == 0xE0) {\n                // 1110xxxx\n                numBytes = 3;\n            } else if ((b & 0xF8) == 0xF0) {\n                // 11110xxx\n                numBytes = 4;\n            } else {\n                // 10xxxxxx as leader, or 11111xxx, etc.\n                return false;\n            }\n            for (int j = 1; j < numBytes; j++) {\n                if (i + j >= n) return false;\n                int c = data[i + j] & 0xFF;\n                if ((c & 0xC0) != 0x80) return false;\n            }\n            i += numBytes;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

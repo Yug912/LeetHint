@@ -1,0 +1,40 @@
+{
+  "slug": "validate-binary-tree-nodes",
+  "title": "Validate Binary Tree Nodes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-degree Check + BFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> parentCount(n): up to n entries → O(n)\n- vector<bool> visited(n): up to n entries → O(n)\n- queue<int> q: up to n entries in worst case → O(n)\n- not counted: input leftChild, rightChild",
+  "approach": "A valid binary tree has two structural invariants: every node has at most one parent (exactly one node-the root-has zero), and all nodes are reachable from the root. We first build a parent-count array by scanning both child arrays, then reject if any node has more than one parent or if there isn't exactly one root. Finally, we BFS from the root and confirm we visit all n nodes; any disconnected component or cycle that survived the parent check will leave some nodes unvisited.",
+  "hints": [
+    "In a valid binary tree, what can you say about how many parents each node has, and how many nodes have zero parents?",
+    "Use a parent-count array. In Example 1, leftChild[0]=1 and rightChild[0]=2, so nodes 1 and 2 each gain one parent; node 0 gains none, making it the root.",
+    "```\nfor each node i:\n    increment parent count of leftChild[i] and rightChild[i]\nfind the single node with parent count 0 (root)\nif any node has parent count > 1 or root count != 1: return false\ntraverse from root, counting reachable nodes\nreturn reachable count == n\n```",
+    "**Self-loop** - node 0 is its own left child\n`Input: n=1, leftChild=[0], rightChild=[-1]` → `Expected: false`\n⚠️ Bug: assuming node 0 is always the root without checking parent counts → returns true\n\n**Cycle with no root** - every node has exactly one parent, forming a cycle\n`Input: n=2, leftChild=[1,0], rightChild=[-1,-1]` → `Expected: false`\n⚠️ Bug: only checking that each node has at most one parent, without verifying a root exists → returns true\n\n**Disconnected cycle** - valid tree plus a separate unreachable cycle\n`Input: n=5, leftChild=[1,-1,-1,4,-1], rightChild=[-1,-1,3,-1,2]` → `Expected: false`\n⚠️ Bug: checking parent counts and root existence but skipping the reachability traversal → returns true\n\n**Duplicate child** - same node assigned as both left and right child of one parent\n`Input: n=2, leftChild=[1,-1], rightChild=[1,-1]` → `Expected: false`\n⚠️ Bug: only counting parents from leftChild, ignoring rightChild → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if each node could have an arbitrary number of children (general tree, not binary)?",
+      "a": "Replace the two fixed child arrays with an adjacency list of children per node. The parent-counting, single-root, and reachability checks remain identical. TC: O(n + E), SC: O(n + E) where E is total edges."
+    },
+    {
+      "q": "What if you must return the root node index if the tree is valid, or -1 if invalid?",
+      "a": "Run the same validation. If all checks pass and the BFS count equals n, return the root index found during the parent-count pass. Otherwise return -1. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if edges arrive one at a time as a stream and you must answer after each insertion whether the current graph is a valid tree?",
+      "a": "Maintain parent counts incrementally and reject any edge that gives a node a second parent. Use union-find to detect cycles in O(α(n)) per edge. After each edge, verify exactly one root exists and all nodes are connected. TC: O(n α(n)) total, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool validateBinaryTreeNodes(int n, vector<int>& leftChild, vector<int>& rightChild) {\n        vector<int> parentCount(n, 0);\n        for (int i = 0; i < n; i++) {\n            if (leftChild[i] != -1) parentCount[leftChild[i]]++;\n            if (rightChild[i] != -1) parentCount[rightChild[i]]++;\n        }\n        \n        int root = -1;\n        for (int i = 0; i < n; i++) {\n            if (parentCount[i] > 1) return false;\n            if (parentCount[i] == 0) {\n                if (root != -1) return false;\n                root = i;\n            }\n        }\n        if (root == -1) return false;\n        \n        vector<bool> visited(n, false);\n        queue<int> q;\n        q.push(root);\n        int count = 0;\n        while (!q.empty()) {\n            int node = q.front();\n            q.pop();\n            if (visited[node]) continue;\n            visited[node] = true;\n            count++;\n            if (leftChild[node] != -1) q.push(leftChild[node]);\n            if (rightChild[node] != -1) q.push(rightChild[node]);\n        }\n        \n        return count == n;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

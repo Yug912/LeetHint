@@ -1,0 +1,40 @@
+{
+  "slug": "unique-morse-code-words",
+  "title": "Unique Morse Code Words",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Set Deduplication",
+  "tc": "O(n·L)",
+  "sc": "O(n·L)",
+  "spaceBreakdown": "- vector<string> morse: 26 fixed strings → O(1)\n- unordered_set<string> seen: up to n entries, each up to 12·4 = 48 chars → O(n·L)\n- string t: reused per word, ≤ 48 chars → O(L)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Each word maps to a Morse string by concatenating the codes of its letters. Two different words can yield the same string (e.g., \"gin\" and \"zen\"), so the answer is the count of distinct transformed strings. Build the transformation for each word and insert it into a hash set; the set's size is the answer. This is correct because set membership exactly captures \"have I seen this transformation before.\"",
+  "hints": [
+    "Given that \"gin\" and \"zen\" produce the identical Morse string \"--...-.\", what single property of the transformed strings alone determines the final count, and what does it ignore about the original words?",
+    "Use an unordered_set<string> to collect each word's Morse transformation; duplicates collapse automatically. For \"gin\", build \"--.\" + \"..-\" + \"-.\" = \"--...-.\" and insert it.",
+    "```\nmorse = [26 codes for 'a'..'z']\nseen = empty set\nfor each word w:\n    t = \"\"\n    for each char c in w:\n        t += morse[c - 'a']\n    add t to seen\nreturn size of seen\n```",
+    "**Single word** - only one transformation exists.\n`Input: [\"a\"]` → `Expected: 1`\n⚠️ Bug: returning seen.size() - 1 → returns 0\n\n**All identical words** - every word maps to the same Morse string.\n`Input: [\"gin\",\"gin\",\"gin\"]` → `Expected: 1`\n⚠️ Bug: returning words.size() instead of seen.size() → returns 3\n\n**Same Morse, different words** - distinct words collapse to one transformation.\n`Input: [\"gin\",\"zen\"]` → `Expected: 1`\n⚠️ Bug: inserting the original words into the set instead of their Morse strings → returns 2\n\n**Words sharing first letters** - multiple words start with the same letter but differ later.\n`Input: [\"ab\",\"ac\",\"ad\"]` → `Expected: 3`\n⚠️ Bug: tracking seen transformations in a bool[26] indexed by first letter → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "If words.length can be up to 10^6, how would you reduce memory?",
+      "a": "Instead of storing full Morse strings (up to 48 chars each), store a 64-bit hash of each transformation in an unordered_set<long long>. Time stays O(n·L); space drops to O(n) integers, avoiding large string allocations."
+    },
+    {
+      "q": "If you must also return the distinct transformations in lexicographic order, how does the approach change?",
+      "a": "Collect transformations into a vector<string>, sort it, then deduplicate in place. Time becomes O(n·L·log n) for the sort; space is O(n·L) for the vector."
+    },
+    {
+      "q": "If words could contain uppercase letters too, what adjustment is needed?",
+      "a": "Normalize each character to lowercase (c - 'a' after tolower) before indexing the Morse table, so 'A' and 'a' map to the same code. Complexity is unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int uniqueMorseRepresentations(vector<string>& words) {\n        vector<string> morse = {\n            \".-\",\"-...\",\"-.-.\",\"-..\",\".\",\"..-.\",\"--.\",\"....\",\"..\",\".---\",\n            \"-.-\",\".-..\",\"--\",\"-.\",\"---\",\".--.\",\"--.-\",\".-.\",\"...\",\"-\",\n            \"..-\",\"...-\",\".--\",\"-..-\",\"-.--\",\"--..\"\n        };\n        unordered_set<string> seen;\n        for (const string& w : words) {\n            string t;\n            for (char c : w) {\n                t += morse[c - 'a'];\n            }\n            seen.insert(t);\n        }\n        return static_cast<int>(seen.size());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

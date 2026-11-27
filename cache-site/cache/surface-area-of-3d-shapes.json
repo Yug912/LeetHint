@@ -1,0 +1,40 @@
+{
+  "slug": "surface-area-of-3d-shapes",
+  "title": "Surface Area of 3D Shapes",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Grid Traversal",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int dr[4], dc[4]: fixed 4-element arrays → O(1)\n- loop variables i, j, d, ni, nj, nv, v, total: scalars → O(1)\n- not counted: input grid, returned int",
+  "approach": "For each cell with tower height v, an isolated tower contributes 4v + 2 surface area (4 sides + top + bottom). When two adjacent towers of heights v and nv touch, the hidden area on each side is min(v, nv), so the exposed side of the taller tower is max(0, v − nv). We iterate over every cell: add 2 for top/bottom (if v > 0), then for each of the four cardinal neighbors add max(0, v − neighbor_height), treating out-of-bounds neighbors as height 0. Summing these gives the total surface area.",
+  "hints": [
+    "For a single isolated tower of height v, its surface area is 4v + 2. When two towers of heights v₁ and v₂ stand side by side, how much surface area gets hidden between them?",
+    "Iterate the grid; for each cell add 2 (top/bottom, if height > 0) and for each of the four cardinal neighbors add max(0, height − neighbor_height), treating out-of-bounds as 0. For grid = [[1,2],[3,4]], cell (0,0) contributes 2 + 1(up) + 0(down, neighbor 3) + 1(left) + 0(right, neighbor 2) = 4.",
+    "```\ntotal = 0\nfor each cell (i, j):\n    v = grid[i][j]\n    if v > 0:\n        total += 2\n    for each of 4 neighbors:\n        nv = neighbor value, or 0 if out of bounds\n        total += max(0, v - nv)\nreturn total\n```",
+    "**Single zero cell** - n = 1 with no cubes placed.\n`Input: [[0]]` → `Expected: 0`\n⚠️ Bug: adding 2 for top/bottom without checking v > 0 → returns 2\n\n**Single tall tower** - n = 1, one isolated tower of height 5.\n`Input: [[5]]` → `Expected: 22`\n⚠️ Bug: skipping out-of-bounds neighbors instead of treating them as height 0 → returns 2\n\n**Taller neighbor** - a cell sits next to a taller tower.\n`Input: [[1,3],[0,0]]` → `Expected: 18`\n⚠️ Bug: using (v − nv) without max(0, ...) → returns 16 (cell (0,0) contributes −2 for its right neighbor instead of 0)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is m × n (not necessarily square)?",
+      "a": "The same approach works unchanged - use grid.size() for rows and grid[0].size() for columns. Time becomes O(m × n), space stays O(1)."
+    },
+    {
+      "q": "What if cubes can be placed at arbitrary (x, y, z) coordinates instead of towers?",
+      "a": "Store all occupied cells in a hash set keyed by (x, y, z). For each cube, check all 6 face-adjacent positions; each unoccupied neighbor contributes 1 to the surface area. Time O(k) where k is the number of cubes, space O(k)."
+    },
+    {
+      "q": "What if the grid is too large to fit in memory and rows arrive as a stream?",
+      "a": "Keep only the current and previous row in memory. For each cell, look up/down within the two-row window and treat left/right within the current row. Time O(n²), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int surfaceArea(vector<vector<int>>& grid) {\n        int n = grid.size();\n        int total = 0;\n        int dr[] = {-1, 1, 0, 0};\n        int dc[] = {0, 0, -1, 1};\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < n; j++) {\n                int v = grid[i][j];\n                if (v > 0) total += 2;\n                for (int d = 0; d < 4; d++) {\n                    int ni = i + dr[d];\n                    int nj = j + dc[d];\n                    int nv = 0;\n                    if (ni >= 0 && ni < n && nj >= 0 && nj < n) {\n                        nv = grid[ni][nj];\n                    }\n                    total += (v > nv) ? (v - nv) : 0;\n                }\n            }\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
