@@ -3,37 +3,38 @@
   "title": "Distinct Points Reachable After Substring Removal",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-15",
+  "generatedAt": "2026-11-26",
   "pattern": "Prefix Sum + Hash Set",
   "tc": "O(n)",
   "sc": "O(n)",
-  "spaceBreakdown": "- vector<long long> prefX, prefY: up to n+1 entries → O(n)  \n- unordered_set of points (pair<long long,long long>): up to n entries → O(n)  \n- recursion depth: none",
-  "approach": "The final coordinate after deleting a block `[i, i+k‑1]` equals the total displacement of the whole string minus the displacement contributed by that block. By storing prefix sums of the x‑ and y‑coordinates we can obtain the block displacement in O(1). For every possible start `i` we compute the resulting point and insert it into a hash set; the size of the set is the answer.",
+  "spaceBreakdown": "- vector<int> px, py: each n+1 ints → O(n)\n- unordered_set<long long> seen: up to n−k+1 entries → O(n)\n- recursion depth: none\n- not counted: input string, returned int",
+  "approach": "Removing substring s[i..i+k-1] leaves prefix s[0..i-1] followed by suffix s[i+k..n-1]. The final coordinate is prefix_position(i) + (total_position − prefix_position(i+k)), which depends only on two prefix-sum values. Precompute x/y prefix sums, iterate every valid start i, encode each (x,y) as a 64-bit key, and insert into an unordered_set; the answer is the set size.",
   "hints": [
-    "If we know the total displacement of the whole string, how does removing a contiguous block of moves change the final position?  \nThe string length satisfies n ≤ 10⁵.",
-    "Store each reachable final coordinate in an **unordered_set** (hash set).  \nFor the example `s = \"LUL\", k = 1`, removing the first character leaves `\"UL\"` → final point `(-1,1)`.",
-    "```\ncompute prefixX, prefixY\ntotalX = prefixX[n], totalY = prefixY[n]\nfor i = 0 … n‑k\n    subX = prefixX[i+k] - prefixX[i]\n    subY = prefixY[i+k] - prefixY[i]\n    final = (totalX‑subX , totalY‑subY)\n    insert final into hash set\nreturn size of hash set\n```",
-    "**Single character string** - removing the only character leaves an empty move list.  \n`Input: s = \"U\", k = 1` → `Expected: 1`  \n⚠️ Bug: returning `0` because the loop is skipped when `i+k > n`.  \n\n**k equals whole length** - only the empty string remains.  \n`Input: s = \"UDLR\", k = 4` → `Expected: 1`  \n⚠️ Bug: using `i < n‑k` instead of `i <= n‑k` yields no iteration and returns `0`.  \n\n**All moves cancel** - total displacement is (0,0) but different blocks give the same result.  \n`Input: s = \"LRLR\", k = 2` → `Expected: 1`  \n⚠️ Bug: storing only x‑coordinate in the set loses distinct y values, producing a wrong count."
+    "After deleting one contiguous block of k moves, the remaining path is just a prefix of the original followed by a suffix of the original - so what two quantities alone determine the landing point?",
+    "Use prefix-sum arrays for x and y. For s = \"LUL\", k = 1: prefix positions are (0,0),(-1,0),(-1,1),(-2,1); removing index 0 gives final = prefix[0] + (total − prefix[1]) = (0,0)+((-2,1)−(-1,0)) = (-1,1).",
+    "build prefix_x[], prefix_y[] of length n+1\ntotal = (prefix_x[n], prefix_y[n])\nseen = empty hash set\nfor i in 0 .. n-k:\n    x = prefix_x[i] + total.x - prefix_x[i+k]\n    y = prefix_y[i] + total.y - prefix_y[i+k]\n    insert encoded (x,y) into seen\nreturn size of seen",
+    "**Smallest input** - single move, k = 1 removes everything.\n`Input: s = \"U\", k = 1` → `Expected: 1`\n⚠️ Bug: looping `i < n-k` instead of `i <= n-k` skips i=0 → returns 0.\n\n**Duplicate landing points** - different removals yield the same coordinate.\n`Input: s = \"LUL\", k = 1` → `Expected: 2`\n⚠️ Bug: using a vector and counting every insertion without dedup → returns 3.\n\n**Full removal** - k equals string length, only the empty path remains.\n`Input: s = \"UDLR\", k = 4` → `Expected: 1`\n⚠️ Bug: encoding key as `(x << 16) | y` with negative y sign-extends → collides distinct points, may return wrong count.\n\n**Large coordinate range** - n = 10^5, coordinates span [-10^5, 10^5].\n`Input: s = \"R\" repeated 100000, k = 1` → `Expected: 2`\n⚠️ Bug: encoding as `int` (32-bit) with `x*200001+y` overflows → wrong keys, wrong count."
   ],
   "followUps": [
     {
-      "q": "What if we have to remove **any number of substrings** (each of length k) instead of exactly one?",
-      "a": "We would need to consider all subsets of removable blocks, which is exponential; a DP over positions with state “how many blocks have been removed” can solve it in O(n·m) where m is the maximum number of deletions allowed, using the same prefix‑sum idea."
+      "q": "What if k is not fixed but you must answer for every k from 1 to n?",
+      "a": "Precompute prefix sums once, then for each k run the same O(n) sweep; total O(n^2). To speed up, note the answer is non-decreasing in a structured way only for special inputs, so the straightforward double loop is the practical bound."
     },
     {
-      "q": "How would the solution change if the string length could be up to 10⁶ and we were required to use only O(1) extra memory?",
-      "a": "We could compute the total displacement once, then slide a window of size k while maintaining the current block’s displacement in two running counters, inserting each result into a Bloom filter‑like structure or sorting the results on‑the‑fly; the time stays O(n) but true O(1) distinct counting is impossible without extra memory, so we would have to output the count after a second pass using an in‑place radix sort on the encoded points."
+      "q": "What if moves come as a streaming input of unknown length and you must answer online for the current k?",
+      "a": "Maintain a rolling prefix sum and a hash set of encoded endpoints for the current window of valid removal starts; each new character adds one candidate and retires none until length exceeds k, giving O(1) amortized per step and O(n) space."
     },
     {
-      "q": "Suppose the moves are given as a stream and we cannot store the whole string. Can we still compute the answer?",
-      "a": "Yes. First pass over the stream computes the total displacement. In a second pass we maintain a sliding window of size k with a queue to know the displacement of the current block, updating the final point for each possible removal and inserting it into a hash set. This uses O(k) auxiliary memory and O(n) time."
+      "q": "What if instead of counting distinct points you must report them all sorted by (x, then y)?",
+      "a": "Collect endpoints in a vector, sort with a comparator on the decoded pair, then dedup in one pass; time becomes O(n log n) due to sorting, space stays O(n)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int distinctPoints(string s, int k) {\n        int n = (int)s.size();\n        vector<long long> prefX(n + 1, 0), prefY(n + 1, 0);\n        for (int i = 0; i < n; ++i) {\n            long long dx = 0, dy = 0;\n            switch (s[i]) {\n                case 'U': dy = 1; break;\n                case 'D': dy = -1; break;\n                case 'L': dx = -1; break;\n                case 'R': dx = 1; break;\n            }\n            prefX[i + 1] = prefX[i] + dx;\n            prefY[i + 1] = prefY[i] + dy;\n        }\n        long long totalX = prefX[n];\n        long long totalY = prefY[n];\n\n        struct PairHash {\n            size_t operator()(const pair<long long,long long>&p) const noexcept {\n                return (static_cast<size_t>(p.first) << 32) ^ static_cast<size_t>(p.second);\n            }\n        };\n        unordered_set<pair<long long,long long>, PairHash> seen;\n        seen.reserve(n);\n\n        for (int i = 0; i + k <= n; ++i) {\n            long long subX = prefX[i + k] - prefX[i];\n            long long subY = prefY[i + k] - prefY[i];\n            long long fx = totalX - subX;\n            long long fy = totalY - subY;\n            seen.emplace(fx, fy);\n        }\n        return (int)seen.size();\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int distinctPoints(string s, int k) {\n        int n = (int)s.size();\n        vector<int> px(n + 1, 0), py(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            px[i + 1] = px[i];\n            py[i + 1] = py[i];\n            char c = s[i];\n            if (c == 'L') px[i + 1] -= 1;\n            else if (c == 'R') px[i + 1] += 1;\n            else if (c == 'U') py[i + 1] += 1;\n            else if (c == 'D') py[i + 1] -= 1;\n        }\n        int totalX = px[n];\n        int totalY = py[n];\n        unordered_set<long long> seen;\n        seen.reserve(n - k + 1);\n        for (int i = 0; i + k <= n; i++) {\n            int x = px[i] + (totalX - px[i + k]);\n            int y = py[i] + (totalY - py[i + k]);\n            long long key = ((long long)(x + n) << 32) | (unsigned int)(y + n);\n            seen.insert(key);\n        }\n        return (int)seen.size();\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

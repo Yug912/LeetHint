@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-frequency-of-an-element-after-performing-operations-i",
+  "title": "Maximum Frequency of an Element After Performing Operations I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Sorted Array",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- set<int> cand: up to 3n entries → O(n)\n- sort(): O(log n) stack (introsort)\n- no recursion, no other containers",
+  "approach": "Sort the array. For a target value v, the achievable frequency is: (elements already equal to v) + min(numOperations, elements in [v−k, v+k] that aren't v). The function only changes at breakpoints nums[i]−k, nums[i], nums[i]+k, so we evaluate only those O(n) candidates. For each candidate we use binary search (lower_bound/upper_bound) to count elements in range and elements equal to v in O(log n). The candidate set is provably sufficient: if the optimal v has elements already equal to it, v is some nums[i]; otherwise the count_in_range is bounded by numOperations and a breakpoint candidate achieves at least as much.",
+  "hints": [
+    "If you fix the target value v that you want elements to become, what two quantities determine how many elements can end up equal to v? The constraints allow numOperations ≤ nums.length ≤ 10^5.",
+    "Sort the array and use binary search (lower_bound/upper_bound) to count elements in [v−k, v+k] and elements equal to v. For example 1 with v=4: range [3,5] contains {4,5} (2 elements), one already equals 4, so frequency = 1 + min(2, 1) = 2.",
+    "sort nums\ncandidates = {nums[i], nums[i]-k, nums[i]+k for all i}\nans = 0\nfor v in candidates:\n    inRange = count of nums in [v-k, v+k]\n    already = count of nums == v\n    res = already + min(numOperations, inRange - already)\n    ans = max(ans, res)\nreturn ans",
+    "**Missing candidate targets** - the best target value is not an existing element.\n`nums = [1,3,5], k = 1, numOperations = 2` → `Expected: 2`\n⚠️ Bug: only trying v = nums[i] as candidates → returns 1\n\n**Double counting** - elements already equal to the target don't need operations.\n`nums = [1,1,1], k = 1, numOperations = 1` → `Expected: 3`\n⚠️ Bug: using `already + min(numOperations, inRange)` instead of `already + min(numOperations, inRange - already)` → returns 4\n\n**All equal** - every element is already the same value.\n`nums = [5,5,5], k = 1, numOperations = 2` → `Expected: 3`\n⚠️ Bug: computing `res = min(numOperations, inRange)` without adding `already` → returns 2\n\n**Zero operations** - no modifications allowed.\n`nums = [1,2,2,3], k = 5, numOperations = 0` → `Expected: 2`\n⚠️ Bug: returning `min(numOperations, inRange)` as the result → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] and k can each be up to 10^9?",
+      "a": "The algorithm is unchanged - we only compare values in binary search, never accumulate them. Use long long for v+k and v-k to avoid overflow. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if each operation can target an index that was already modified (multiple operations on the same element)?",
+      "a": "An element receiving m operations can shift by up to m·k, so the reachable range widens. You would binary-search the answer and check feasibility via a greedy assignment, making it O(n log n log n)."
+    },
+    {
+      "q": "What if the array arrives as a stream and you must report the answer after each insertion?",
+      "a": "Maintain a Fenwick tree over compressed coordinate values to answer range-count and point-count queries. Each insertion updates two Fenwick trees (range membership and exact-value counts) and re-evaluates O(1) new candidates. TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxFrequency(vector<int>& nums, int k, int numOperations) {\n        sort(nums.begin(), nums.end());\n        int n = (int)nums.size();\n        int ans = 0;\n        set<int> cand;\n        for (int i = 0; i < n; i++) {\n            cand.insert(nums[i]);\n            cand.insert(nums[i] - k);\n            cand.insert(nums[i] + k);\n        }\n        for (int v : cand) {\n            int inRange = (int)(upper_bound(nums.begin(), nums.end(), v + k)\n                              - lower_bound(nums.begin(), nums.end(), v - k));\n            int already = (int)(upper_bound(nums.begin(), nums.end(), v)\n                              - lower_bound(nums.begin(), nums.end(), v));\n            int res = already + min(numOperations, inRange - already);\n            ans = max(ans, res);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -3,37 +3,38 @@
   "title": "Container With Most Water",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
+  "generatedAt": "2026-11-26",
   "pattern": "Two Pointers",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- integer variables l, r, maxArea, curArea, h: constant amount → O(1)  \n- not counted: input vector `height`, return value",
-  "approach": "The maximum water is limited by the shorter of the two chosen lines and the distance between them. By starting with the farthest pair and repeatedly discarding the shorter line, we never lose a better solution because any container that uses the discarded line would be bounded by an even smaller height. This two‑pointer greedy scan examines each line at most once and yields the optimal area.",
+  "spaceBreakdown": "- int variables n, maxA, l, r, h, area: constant → O(1)\n- no containers, no recursion, no heap\n- not counted: input vector",
+  "approach": "Use two pointers starting at both ends of the array. At each step, compute the area formed by the current pair: min(height[l], height[r]) × (r − l). Then move the pointer at the shorter line inward - moving the taller one can never improve the area because width shrinks and the limiting height is the shorter line. Each index is visited once, giving O(n) time and O(1) space.",
   "hints": [
-    "If you pick two lines that are far apart, what determines the amount of water they can hold?  \nThe constraint n ≤ 10⁵ makes checking every pair infeasible.",
-    "Use the **two‑pointer technique**.  \nExample: with heights `[1,8,6,2,5,4,8,3,7]` start at indices 0 and 8, compute area = 9 × min(1,7)=9, then move the left pointer because height[0] < height[8].",
-    "```\nl ← 0, r ← n‑1, max ← 0\nwhile l < r do\n    h ← min(height[l], height[r])\n    max ← max(max, (r‑l) * h)\n    if height[l] < height[r] then l ← l + 1\n    else r ← r - 1\nreturn max\n```",
-    "**Minimum size** - only two lines exist.  \n`Input: [5,2]` → `Expected: 2`  \n⚠️ Bug: always moving the right pointer → returns 5.\n\n**All zeros** - no water can be stored.  \n`Input: [0,0,0,0]` → `Expected: 0`  \n⚠️ Bug: initializing maxArea to 1 → returns 1.\n\n**Decreasing heights** - the optimal container uses the first and last lines.  \n`Input: [9,8,7,6,5]` → `Expected: 16` (indices 0 and 4)  \n⚠️ Bug: moving the left pointer when heights are equal → may miss the optimal pair and return 12.\n\n**Large equal heights** - many identical heights, need correct pointer movement.  \n`Input: [10000,10000,10000,10000]` → `Expected: 30000` (indices 0 and 3)  \n⚠️ Bug: using `>` instead of `>=` when comparing heights → could stop early and return 20000."
+    "Starting from the widest possible pair of lines, what single property of the two chosen lines determines whether any narrower pair could possibly hold more water? n can be up to 10^5, so checking every pair is too slow.",
+    "Two pointers starting at both ends. On [1,8,6,2,5,4,8,3,7], begin l=0, r=8: area = min(1,7)×8 = 8. Since height[l]=1 < height[r]=7, move l inward to seek a taller limiting line.",
+    "```\nl = 0, r = n - 1, best = 0\nwhile l < r:\n    best = max(best, min(height[l], height[r]) * (r - l))\n    if height[l] < height[r]:\n        l = l + 1\n    else:\n        r = r - 1\nreturn best\n```",
+    "**Smallest input** - only one pair of lines exists\n`Input: height = [1,1]` → `Expected: 1`\n⚠️ Bug: initializing best to -1 instead of 0 → returns -1\n\n**All zeros** - every line has zero height\n`Input: height = [0,0,0,0]` → `Expected: 0`\n⚠️ Bug: initializing best to -1 instead of 0 → returns -1\n\n**Monotonically increasing** - tallest line is at the far right\n`Input: height = [1,2,3,4,5,6,7,8,9,10]` → `Expected: 25`\n⚠️ Bug: moving the taller pointer instead of the shorter one → returns 9\n\n**Equal heights at both ends** - the optimal pair is the two endpoints\n`Input: height = [8,1,1,1,1,1,1,1,8]` → `Expected: 64`\n⚠️ Bug: computing width as (r - l + 1) instead of (r - l) → returns 72"
   ],
   "followUps": [
     {
-      "q": "How would you modify the solution to also return the indices of the two lines that form the maximum container?",
-      "a": "Keep track of the pair `(lBest, rBest)` whenever `maxArea` is updated. The algorithm remains O(n) time and O(1) extra space."
+      "q": "What if you must return the indices of the two lines, not just the area?",
+      "a": "Store l and r alongside maxArea whenever you update the maximum. The two-pointer loop already visits the optimal pair, so no extra passes are needed. Time O(n), space O(1)."
     },
     {
-      "q": "If `height[i]` could be as large as 10⁹, what change is needed in the implementation?",
-      "a": "Compute the area using 64‑bit integer (`long long`) to avoid overflow, then cast or clamp the final result to `int` if the problem still expects an `int`. Time and space complexities stay the same."
+      "q": "What if heights can be updated between queries (dynamic array)?",
+      "a": "Maintain a segment tree over the height array to answer \"maximum height in a range\" queries. For each query, binary search outward from both ends to find the optimal pair. Time O(n log n) per query, space O(n)."
     },
     {
-      "q": "Suppose the heights are provided as a read‑only stream and you cannot store the entire array. Can you still solve the problem?",
-      "a": "No, because the optimal container may involve a line that appears far later in the stream; without random access or storing previous heights you cannot compare all possible pairs. A solution would require O(n) additional storage to keep the heights seen so far."
+      "q": "What if the input arrives as a stream and you can only hold B elements in memory?",
+      "a": "Process in blocks of size B. For each new block, compute areas against the stored block's running maximum from the left side. Merge the best area across all blocks. Time O(n²/B), space O(B)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int maxArea(vector<int>& height) {\n        int l = 0;\n        int r = static_cast<int>(height.size()) - 1;\n        int maxArea = 0;\n        while (l < r) {\n            int h = height[l] < height[r] ? height[l] : height[r];\n            int cur = (r - l) * h;\n            if (cur > maxArea) maxArea = cur;\n            if (height[l] < height[r])\n                ++l;\n            else\n                --r;\n        }\n        return maxArea;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int maxArea(vector<int>& height) {\n        int n = height.size();\n        int maxA = 0;\n        int l = 0, r = n - 1;\n        while (l < r) {\n            int h = min(height[l], height[r]);\n            int area = h * (r - l);\n            if (area > maxA) maxA = area;\n            if (height[l] < height[r]) l++;\n            else r--;\n        }\n        return maxA;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "2/2"
+    "examples": "2/2",
+    "reviewed": 2
   }
 }

@@ -1,0 +1,40 @@
+{
+  "slug": "count-number-of-ways-to-place-houses",
+  "title": "Count Number of Ways to Place Houses",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Matrix Exponentiation",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long r[2][2]: fixed 4 entries → O(1)\n- long long mb[2][2]: fixed 4 entries → O(1)\n- scalar temporaries (MOD, e, fn, na-nd): O(1)\n- recursion depth: none (iterative loop)",
+  "approach": "The two sides of the street are independent - the note confirms a house on plot *i* of one side never restricts plot *i* on the other. For one side with *n* plots and no two adjacent houses, the count follows f(n) = f(n−1) + f(n−2) with f(1)=2, f(2)=3, i.e. f(n) = Fib(n+2). The total answer is f(n)² mod 10⁹+7. We compute f(n) in O(log n) via 2×2 matrix exponentiation: raise [[1,1],[1,0]] to the (n+1)-th power and read the top-left entry, which equals Fib(n+2).",
+  "hints": [
+    "The note says a house on plot *i* of one side never blocks plot *i* on the other side. What does that tell you about how the two sides relate to each other?",
+    "Use 2×2 matrix exponentiation. The matrix [[1,1],[1,0]]^k has Fib(k+1) as its top-left entry. For n=1, compute M² to get Fib(3)=2 arrangements per side, then square: 2²=4.",
+    "```\nresult = identity 2×2\nbase = [[1,1],[1,0]]\nexp = n + 1\nwhile exp > 0:\n    if exp is odd: result = result × base\n    base = base × base\n    exp = exp / 2\nfn = result[0][0]        # = Fib(n+2) = arrangements per side\nreturn (fn × fn) mod p\n```",
+    "**Smallest input** - n=1, one plot per side, answer is 2²=4.\n`Input: n = 1` → `Expected: 4`\n⚠️ Bug: using exponent n instead of n+1 computes M¹, giving top-left=1, returning 1.\n\n**Off-by-one exponent** - n=2, answer is 3²=9.\n`Input: n = 2` → `Expected: 9`\n⚠️ Bug: using exponent n instead of n+1 computes M², giving top-left=Fib(3)=2, returning 4.\n\n**Overflow in final squaring** - fn=75025 exceeds √(INT_MAX)≈46340.\n`Input: n = 23` → `Expected: 628750590`\n⚠️ Bug: declaring fn as int makes fn*fn overflow (75025²=5628750625 wraps to 1333783329, then mod gives 333783322)."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10¹⁸?",
+      "a": "Matrix exponentiation already handles this - just change the exponent variable to long long. Time stays O(log n), space stays O(1)."
+    },
+    {
+      "q": "What if there are k sides of the street instead of 2?",
+      "a": "The sides remain independent, so the answer becomes f(n)^k mod p. Compute f(n) via matrix exponentiation, then use fast modular exponentiation for the k-th power. Time O(log n + log k), space O(1)."
+    },
+    {
+      "q": "What if houses on opposite sides at the same position i cannot both be occupied?",
+      "a": "The sides are no longer independent. Track a joint state per position with 3 valid states (neither, top-only, bottom-only) and a 3×3 transition matrix. Raise it to the n-th power via matrix exponentiation. Time O(27·log n) = O(log n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countHousePlacements(int n) {\n        const long long MOD = 1000000007;\n        long long r[2][2] = {{1, 0}, {0, 1}};\n        long long mb[2][2] = {{1, 1}, {1, 0}};\n        long long e = n + 1;\n        while (e > 0) {\n            if (e & 1) {\n                long long na = (r[0][0] * mb[0][0] + r[0][1] * mb[1][0]) % MOD;\n                long long nb = (r[0][0] * mb[0][1] + r[0][1] * mb[1][1]) % MOD;\n                long long nc = (r[1][0] * mb[0][0] + r[1][1] * mb[1][0]) % MOD;\n                long long nd = (r[1][0] * mb[0][1] + r[1][1] * mb[1][1]) % MOD;\n                r[0][0] = na; r[0][1] = nb; r[1][0] = nc; r[1][1] = nd;\n            }\n            long long na = (mb[0][0] * mb[0][0] + mb[0][1] * mb[1][0]) % MOD;\n            long long nb = (mb[0][0] * mb[0][1] + mb[0][1] * mb[1][1]) % MOD;\n            long long nc = (mb[1][0] * mb[0][0] + mb[1][1] * mb[1][0]) % MOD;\n            long long nd = (mb[1][0] * mb[0][1] + mb[1][1] * mb[1][1]) % MOD;\n            mb[0][0] = na; mb[0][1] = nb; mb[1][0] = nc; mb[1][1] = nd;\n            e >>= 1;\n        }\n        long long fn = r[0][0];\n        return (int)((fn * fn) % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

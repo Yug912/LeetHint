@@ -4,36 +4,37 @@
   "difficulty": "Medium",
   "promptVersion": "p9",
   "generatedAt": "2026-11-26",
-  "pattern": "Cycle Detection (Floyd's Tortoise and Hare)",
+  "pattern": "Floyd's Cycle Detection",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- int tortoise, hare, tmp: constant number of integers → O(1)  \n- not counted: input vector `nums`, return value",
-  "approach": "Treat each index as a node and the value at that index as a directed edge to the next node. Because there are n + 1 nodes but only n possible distinct targets, a cycle must exist, and the entry point of that cycle is the duplicate number. Floyd’s Tortoise‑and‑Hare algorithm finds the cycle entry in linear time using only constant extra space.",
+  "spaceBreakdown": "- int slow, fast: two scalars → O(1)\n- no containers, no recursion, no heap allocations\n- not counted: input vector",
+  "approach": "Treat the array as an implicit linked list where node `i` points to node `nums[i]`. Since values are in `[1, n]` and the array has `n+1` elements, the duplicate value creates a cycle in this list. Apply Floyd's tortoise-and-hare algorithm: phase 1 finds a meeting point inside the cycle, then phase 2 resets one pointer to index 0 and advances both one step at a time until they meet at the cycle entry - which is the duplicate. The cycle entry is the node pointed to by two different indices, i.e., the repeated number.",
   "hints": [
-    "If each element tells you the next index to visit, what must happen when you start from index 0 and keep following these jumps?  \nEach `nums[i]` lies in the range [1, n].",
-    "Use Floyd's Tortoise and Hare cycle detection.  \nExample: for `nums = [1,3,4,2,2]` the sequence of visited indices is 0→1→3→2→4→2…, forming a cycle that starts at index 2 (value 2).",
-    "```\ntortoise = nums[0]\nhare = nums[0]\nrepeat\n    tortoise = nums[tortoise]\n    hare = nums[nums[hare]]\nuntil tortoise == hare\n\ntortoise = nums[0]\nwhile tortoise != hare\n    tortoise = nums[tortoise]\n    hare = nums[hare]\nreturn hare\n```",
-    "**Minimum size** - duplicate is the only possible value.  \n`Input: [1,1]` → `Expected: 1`  \n⚠️ Bug: returning `nums[0]` without cycle detection → returns `1` (correct here) but fails larger cases.\n\n**All equal** - every element repeats the same number.  \n`Input: [3,3,3,3,3]` → `Expected: 3`  \n⚠️ Bug: using a set to detect first repeat → uses O(n) extra space, violating the O(1) requirement.\n\n**Duplicate is the maximum value** - appears at the end of the range.  \n`Input: [1,2,3,4,5,5]` → `Expected: 5`  \n⚠️ Bug: binary‑search count loop with `low = mid` instead of `low = mid + 1` → infinite loop.\n\n**Duplicate appears early** - first two positions are the same.  \n`Input: [2,2,3,4,5,1]` → `Expected: 2`  \n⚠️ Bug: stopping the first phase when `tortoise == hare` after only one step → may miss the intersection, returning wrong value."
+    "With n+1 slots indexed 0 through n and every value in [1, n], what structure emerges if you follow the chain i → nums[i] → nums[nums[i]] → … starting from index 0? The constraints guarantee n+1 integers in [1, n], so at least one value repeats.",
+    "Floyd's cycle detection (tortoise and hare) on the implicit linked list where node i points to node nums[i]. On `nums = [1,3,4,2,2]`: starting at 0, the tortoise follows 0→1→3→2→4→2→… and the hare moves two steps at a time until they meet inside the cycle.",
+    "```\nslow = 0, fast = 0\ndo:\n    slow = nums[slow]\n    fast = nums[nums[fast]]\nwhile slow != fast\n\nslow = 0\nwhile slow != fast:\n    slow = nums[slow]\n    fast = nums[fast]\nreturn slow\n```",
+    "**Smallest input** - n = 1, only two elements, both equal to 1.\n`Input: nums = [1,1]` → `Expected: 1`\n⚠️ Bug: `while (slow != fast)` checked before the first step with both at 0 → returns 0\n\n**Meeting point ≠ duplicate** - phase 1 meets inside the cycle, not at the entry.\n`Input: nums = [3,1,3,4,2]` → `Expected: 3`\n⚠️ Bug: returning the phase-1 meeting point (2) without running phase 2 → returns 2\n\n**Two-step fast in phase 2** - phase 2 must advance both pointers one step at a time.\n`Input: nums = [1,3,4,2,2]` → `Expected: 2`\n⚠️ Bug: `fast = nums[nums[fast]]` in phase 2 instead of `fast = nums[fast]` → returns 4\n\n**Duplicate is the largest value n** - cycle entry is at the boundary, multi-node cycle.\n`Input: nums = [4,4,2,3,1]` → `Expected: 4`\n⚠️ Bug: skipping the phase-2 reset, keeping both pointers at the meeting point (1) → returns 1"
   ],
   "followUps": [
     {
-      "q": "What if the array may contain more than one distinct duplicate number?",
-      "a": "Floyd’s algorithm still returns one element that belongs to a cycle, but it is no longer guaranteed to be a duplicate of the whole array. You would need a different approach, such as counting bits or using extra space, which raises the space complexity to O(n) or O(log n) depending on the method."
+      "q": "What if you must find ALL duplicate numbers (not just one), still O(1) extra space?",
+      "a": "If modifying the array is allowed, negate nums[abs(nums[i])-1] for each i; if already negative, abs(nums[i]) is a duplicate. This finds all duplicates in O(n) time and O(1) space. Without modification, binary search on the value range finds one duplicate in O(n log n) but cannot enumerate all duplicates in sublinear space."
     },
     {
-      "q": "How would the solution change if the numbers range from 0 to n‑1 instead of 1 to n?",
-      "a": "The same cycle‑finding idea works; you just start from index 0 and follow `next = nums[next]`. The only adjustment is that the initial pointer can be `nums[0]` (which may be 0), and the algorithm still converges to the duplicate in O(n) time and O(1) space."
+      "q": "What if values range from [0, n] instead of [1, n]?",
+      "a": "Floyd's relies on index 0 never being a target (so starting at 0 is outside any cycle). If 0 is a valid value, a node can point to index 0, and the start may already be inside a cycle. Conceptually shift every value by +1 (or start from a sentinel index) so the starting node is guaranteed outside the cycle. TC stays O(n), SC stays O(1)."
     },
     {
-      "q": "Suppose the array is read‑only and you can only make a single pass over it (streaming input).",
-      "a": "With a single pass and no random access you cannot apply Floyd’s two‑pointer technique because it requires revisiting elements. The problem then requires O(n) extra space (e.g., a hash set) or multiple passes; otherwise it is impossible to guarantee finding the duplicate under the given constraints."
+      "q": "What if the array arrives as a stream and you can only read each element once?",
+      "a": "Floyd's requires multiple passes (two phases, each O(n)), so a single-pass streaming model breaks it. With O(1) space and one pass the problem is not solvable deterministically; you need O(n) space for a hash set or relax to multiple passes."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        int tortoise = nums[0];\n        int hare = nums[0];\n        // Phase 1: find intersection point inside the cycle\n        do {\n            tortoise = nums[tortoise];\n            hare = nums[nums[hare]];\n        } while (tortoise != hare);\n        // Phase 2: find entrance to the cycle (duplicate)\n        tortoise = nums[0];\n        while (tortoise != hare) {\n            tortoise = nums[tortoise];\n            hare = nums[hare];\n        }\n        return hare;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        int slow = 0, fast = 0;\n        do {\n            slow = nums[slow];\n            fast = nums[nums[fast]];\n        } while (slow != fast);\n\n        slow = 0;\n        while (slow != fast) {\n            slow = nums[slow];\n            fast = nums[fast];\n        }\n        return slow;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-convert-number",
+  "title": "Minimum Operations to Convert Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Breadth-First Search",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> dist(1001): 1001 ints → O(1) (constant, independent of n)\n- queue<int> q: at most 1001 ints → O(1)\n- recursion depth: none\n- not counted: input nums, return value",
+  "approach": "The key insight is that x can only be operated on while it stays in [0, 1000], so there are only 1001 possible \"live\" states. We run BFS from `start`: for each dequeued value x, we try x+nums[i], x−nums[i], and x^nums[i] for every i. If any result equals goal, we return the current distance + 1. If a result is in [0, 1000] and unvisited, we enqueue it. Out-of-range results are only checked against goal (they can't be expanded further). If the queue empties without finding goal, return −1.",
+  "hints": [
+    "Once x leaves the range [0, 1000], no further operations can be performed on it. How many distinct values of x can you actually perform an operation from?",
+    "Use BFS over the 1001 possible values of x. From start = 2 with nums = [2, 4, 12], the first level explores 2+2=4, 2−2=0, 2^2=0, 2+12=14, etc.",
+    "```\ndist[start] = 0; queue = {start}\nwhile queue not empty:\n    x = queue.pop()\n    for each num in nums:\n        for v in {x+num, x-num, x^num}:\n            if v == goal: return dist[x]+1\n            if 0<=v<=1000 and dist[v]==-1: dist[v]=dist[x]+1; queue.push(v)\nreturn -1\n```",
+    "**Out-of-range goal, 1 step** - goal is outside [0, 1000] and reachable in a single operation.\n`Input: nums = [5], start = 0, goal = -5` → `Expected: 1`\n⚠️ Bug: checking `v == goal` only inside the `0 <= v <= 1000` branch → returns -1\n\n**XOR is the only path** - goal is reachable only via bitwise XOR, not addition or subtraction.\n`Input: nums = [3], start = 5, goal = 6` → `Expected: 1`\n⚠️ Bug: only computing x+num and x−num, skipping XOR → returns -1\n\n**Negative nums[i]** - an element is negative, and the goal is reached by adding it.\n`Input: nums = [-3], start = 5, goal = 2` → `Expected: 1`\n⚠️ Bug: skipping negative nums[i] values in the loop → returns -1\n\n**DFS instead of BFS** - shortest path matters; DFS may find a longer path first.\n`Input: nums = [1, 2], start = 0, goal = 2` → `Expected: 1`\n⚠️ Bug: using DFS that recurses into 0+1=1 before trying 0+2=2 → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the valid range is [0, 10^6] instead of [0, 1000]?",
+      "a": "BFS still works with a visited array of size 10^6+1. TC becomes O(10^6 · n) and SC becomes O(10^6). For n up to 1000 this is ~10^9 operations, which may TLE; bidirectional BFS from both start and goal would cut the explored states roughly in half."
+    },
+    {
+      "q": "What if you must also return the actual sequence of operations, not just the count?",
+      "a": "Store a parent pointer and the operation type (which nums[i] and +/−/^) for each visited state. After BFS reaches goal, backtrack from goal to start to reconstruct the path. TC and SC remain O(n) and O(1) since the state space is still bounded by 1001."
+    },
+    {
+      "q": "What if a fourth operation x * nums[i] is allowed?",
+      "a": "Add x * nums[i] as a fourth neighbor in the BFS. Use long long for the multiplication to avoid overflow (1000 × 10^9 = 10^12 exceeds int). The state space is still [0, 1000], so TC remains O(n) and SC remains O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumOperations(vector<int>& nums, int start, int goal) {\n        vector<int> dist(1001, -1);\n        queue<int> q;\n        dist[start] = 0;\n        q.push(start);\n        while (!q.empty()) {\n            int x = q.front();\n            q.pop();\n            for (int num : nums) {\n                long long vals[3] = {\n                    (long long)x + num,\n                    (long long)x - num,\n                    (long long)x ^ num\n                };\n                for (long long v : vals) {\n                    if (v == goal) return dist[x] + 1;\n                    if (v >= 0 && v <= 1000 && dist[v] == -1) {\n                        dist[v] = dist[x] + 1;\n                        q.push((int)v);\n                    }\n                }\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-symmetric-integers",
+  "title": "  Count Symmetric Integers",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Digit Extraction / Enumeration",
+  "tc": "O(N · log V)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int digits[6]: fixed-size array (max 5 digits for values ≤ 10^4) → O(1)\n- scalar locals (count, n, temp, half, sum1, sum2, loop index): O(1)\n- no recursion, no heap allocation",
+  "approach": "Since high ≤ 10^4, the range spans at most 10^4 numbers. For each number, extract its decimal digits using repeated `% 10` and `/ 10` into a small fixed-size array, skip it if the digit count is odd, and compare the sum of the first half against the sum of the second half. This avoids any string allocation, using only a fixed array of scalars.",
+  "hints": [
+    "Among the examples, 11, 1203, and 1230 are symmetric while 100 is not - what distinguishes their digit counts? The constraint high ≤ 10^4 means no value in range exceeds 5 digits.",
+    "Extract digits with repeated `% 10` and `/ 10` into a fixed array, then compare the two halves' sums. For 1203: digits (LSB first) are [3,0,2,1]; first-half sum = 3+0 = 3, second-half sum = 2+1 = 3 → symmetric.",
+    "```\ncount = 0\nfor x from low to high:\n    extract digits of x into array d (LSB first), let n = digit count\n    if n is odd: skip\n    half = n / 2\n    if sum(d[0 .. half-1]) == sum(d[half .. n-1]):\n        count = count + 1\nreturn count\n```",
+    "**Single digit** - only one digit, cannot split into two equal halves.\n`Input: low = 1, high = 1` → `Expected: 0`\n⚠️ Bug: not checking digit-count parity, comparing the lone digit to itself → returns 1\n\n**Three-digit palindrome-like** - 3 digits, odd count, outer digits match.\n`Input: low = 101, high = 101` → `Expected: 0`\n⚠️ Bug: not skipping odd digit counts, comparing 1 digit (sum 1) vs 2 digits (sum 0+1=1) → returns 1\n\n**Loop upper bound** - range holds exactly one symmetric number at the edge.\n`Input: low = 11, high = 11` → `Expected: 1`\n⚠️ Bug: using `x < high` instead of `x <= high` → returns 0\n\n**Four-digit all-equal digits** - 1111, every digit is 1.\n`Input: low = 1111, high = 1111` → `Expected: 1`\n⚠️ Bug: computing half as (n−1)/2 = 1 instead of n/2 = 2, comparing 1 digit vs 3 digits → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "If high could reach 10^9, how would you avoid checking every number?",
+      "a": "Use digit DP to count symmetric integers in [0, V] for any V, then return count(high) − count(low−1). The DP tracks position, tight flag, and the running difference between first-half and second-half sums. TC: O(log V · states), SC: O(log V)."
+    },
+    {
+      "q": "If \"symmetric\" meant product of the first half equals product of the second half, what changes?",
+      "a": "Replace the running sum with a running product; products grow fast so cap or use modular arithmetic if only equality matters. TC stays O(N · log V), SC stays O(1)."
+    },
+    {
+      "q": "If the input is a stream of many [low, high] queries, how do you answer each fast?",
+      "a": "Precompute pref[i] = count of symmetric integers in [1, i] in one pass up to 10^4, then answer each query as pref[high] − pref[low−1] in O(1). Precompute TC: O(maxVal · log maxVal), query TC: O(1), SC: O(maxVal)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countSymmetricIntegers(int low, int high) {\n        int count = 0;\n        for (int x = low; x <= high; x++) {\n            int digits[6];\n            int n = 0;\n            int temp = x;\n            while (temp > 0) {\n                digits[n++] = temp % 10;\n                temp /= 10;\n            }\n            if (n % 2 == 1) continue;\n            int half = n / 2;\n            int sum1 = 0, sum2 = 0;\n            for (int i = 0; i < half; i++) sum1 += digits[i];\n            for (int i = half; i < n; i++) sum2 += digits[i];\n            if (sum1 == sum2) count++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

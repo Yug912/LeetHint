@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-of-absolute-value-expression",
+  "title": "Maximum of Absolute Value Expression",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sign Enumeration",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar variables (ans, mx, mn, v, loop counters): constant → O(1)\n- no containers, no recursion, no auxiliary arrays",
+  "approach": "The key identity is |a|+|b|+|c| = max over all 8 sign choices (s1,s2,s3)∈{−1,+1}³ of s1·a + s2·b + s3·c. Substituting a = arr1[i]−arr1[j], b = arr2[i]−arr2[j], c = i−j, each combination yields (s1·arr1[i]+s2·arr2[i]+s3·i) − (s1·arr1[j]+s2·arr2[j]+s3·j). For each combination the maximum over all i,j is max(v)−min(v) where v[k] = s1·arr1[k]+s2·arr2[k]+s3·k. We take the maximum across all 8 combinations in a single pass each.",
+  "hints": [
+    "Each of the three absolute values contains a difference of the form f(i) − f(j). If you could choose the sign of each difference freely, what simpler form would the whole expression take? The array length can reach 40000.",
+    "For each of the 8 sign combinations (s1, s2, s3 ∈ {−1, +1}), the expression becomes (s1·arr1[i] + s2·arr2[i] + s3·i) − (same at j), so track the max and min of that linear combination in one pass. Example 1 with signs (+,+,+): values [0, 7, 10, 13], max − min = 13.",
+    "```\nfor each (s1, s2, s3) in {−1, +1}³:\n    v[k] = s1*arr1[k] + s2*arr2[k] + s3*k  for all k\n    ans = max(ans, max(v) − min(v))\nreturn ans\n```",
+    "**Minimum size** - Only two elements, so the answer comes from a single pair.\n`Input: arr1 = [0,0], arr2 = [0,0]` → `Expected: 1`\n⚠️ Bug: omitting the |i−j| term (s3 always 0) → returns 0\n\n**All equal values** - Every arr1[i] and arr2[i] is identical, so only |i−j| varies.\n`Input: arr1 = [5,5,5], arr2 = [5,5,5]` → `Expected: 2`\n⚠️ Bug: initializing min to 0 instead of the first computed value → returns 12\n\n**Mixed signs required** - The optimal pair is only found by a non-obvious sign combination.\n`Input: arr1 = [0,-1], arr2 = [0,-1]` → `Expected: 3`\n⚠️ Bug: evaluating only the (+,+,+) combination → returns 1\n\n**All negative** - Every value is negative, so max must be initialized below zero.\n`Input: arr1 = [-3,-1], arr2 = [-3,-1]` → `Expected: 5`\n⚠️ Bug: initializing max to 0 instead of the first computed value → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if a third array arr3 is added, making the expression |arr1[i]−arr1[j]| + |arr2[i]−arr2[j]| + |arr3[i]−arr3[j]| + |i−j|?",
+      "a": "The same approach extends to 2⁴ = 16 sign combinations. For each, track max and min of s1·arr1[k] + s2·arr2[k] + s3·arr3[k] + s4·k. TC: O(16n) = O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the arrays arrive as a stream and you can only read each element once?",
+      "a": "Maintain all 8 (max, min) pairs simultaneously in a single pass - update each pair with the current element's 8 linear-combination values. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if i and j must satisfy |i − j| ≥ k for a given k?",
+      "a": "The max−min trick no longer applies directly because valid j's exclude a window around each i. For each sign combination, precompute prefix-max, prefix-min, suffix-max, and suffix-min of v[k] so that for each i you query the best j outside [i−k+1, i+k−1]. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxAbsValExpr(vector<int>& arr1, vector<int>& arr2) {\n        int n = arr1.size();\n        long long ans = 0;\n        for (int s1 = -1; s1 <= 1; s1 += 2) {\n            for (int s2 = -1; s2 <= 1; s2 += 2) {\n                for (int s3 = -1; s3 <= 1; s3 += 2) {\n                    long long v0 = (long long)s1 * arr1[0] + (long long)s2 * arr2[0];\n                    long long mx = v0, mn = v0;\n                    for (int i = 1; i < n; i++) {\n                        long long v = (long long)s1 * arr1[i]\n                                    + (long long)s2 * arr2[i]\n                                    + (long long)s3 * i;\n                        if (v > mx) mx = v;\n                        if (v < mn) mn = v;\n                    }\n                    long long diff = mx - mn;\n                    if (diff > ans) ans = diff;\n                }\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "make-costs-of-paths-equal-in-a-binary-tree",
+  "title": "Make Costs of Paths Equal in a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bottom-up Greedy on Array-based Binary Tree",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- cost array: modified in place (input, not counted)\n- loop variables: O(1)\n- no recursion, no extra containers",
+  "approach": "Process the tree bottom-up. At each internal node, its two children subtrees have some maximum root-to-leaf path cost. Since we can only increment, we must raise the smaller one to match the larger; the cost is their absolute difference. After matching, the node's own path cost becomes its original cost plus the max of the two children's path costs. This greedy choice is optimal because increments applied deep in the tree are automatically \"absorbed\" into the path cost before the parent comparison, so no work is wasted or redone.",
+  "hints": [
+    "When two sibling subtrees must end up with equal path costs and you can only add, what must the shared target for that pair be? The tree has at most 65 535 nodes (n + 1 is a power of 2, n ≤ 10⁵).",
+    "Bottom-up greedy on the array representation. In Example 1, at node index 2 (0-based), children have path costs 3 and 1; add |3−1| = 2 increments, then set node 2's path cost to 2 + max(3,1) = 5.",
+    "```\nans = 0\nfor i from n/2 - 1 down to 0:\n    left  = 2*i + 1\n    right = 2*i + 2\n    ans += |cost[left] - cost[right]|\n    cost[i] += max(cost[left], cost[right])\nreturn ans\n```",
+    "**Minimum input** - smallest valid perfect binary tree.\n`Input: n = 3, cost = [1,2,3]` → `Expected: 1`\n⚠️ Bug: loop starting at `i = n/2` instead of `i = n/2 - 1` → reads `cost[2]` and `cost[3]` (out of bounds) → undefined behavior\n\n**All equal** - every path already has the same cost.\n`Input: n = 7, cost = [5,5,5,5,5,5,5]` → `Expected: 0`\n⚠️ Bug: writing `cost[i] = max(cost[left], cost[right])` instead of `cost[i] += max(...)` → drops the node's own cost → returns 3 instead of 6 on Example 1\n\n**Unbalanced subtrees** - one subtree has much larger path costs.\n`Input: n = 7, cost = [1,1,1,2,2,11,1]` → `Expected: 19`\n⚠️ Bug: processing top-down without accumulating path costs → compares original node costs (|1−1|=0 at root) instead of subtree path costs → returns 10"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could both increment and decrement node costs?",
+      "a": "The target for each sibling pair is no longer forced to be the max. At each internal node you would choose the common value that minimizes total operations across the whole tree, which requires propagating a set of candidate targets upward. TC becomes O(n · h) in the worst case; SC stays O(n) for candidate storage."
+    },
+    {
+      "q": "What if the tree is not perfect (some internal nodes have only one child)?",
+      "a": "A node with one child has no sibling to balance, so its path cost simply propagates upward unchanged. The loop extends to handle variable child counts by checking existence before comparing. TC remains O(n); SC stays O(1)."
+    },
+    {
+      "q": "What if you must also output the final cost of every node?",
+      "a": "Track per-node increments in a separate array: when the left child is smaller, record the difference on the left child node. The final cost of node i is original cost[i] plus its recorded increment. TC stays O(n); SC becomes O(n) for the increments array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minIncrements(int n, vector<int>& cost) {\n        long long ans = 0;\n        for (int i = n / 2 - 1; i >= 0; --i) {\n            int left = 2 * i + 1;\n            int right = 2 * i + 2;\n            ans += abs(cost[left] - cost[right]);\n            cost[i] += max(cost[left], cost[right]);\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

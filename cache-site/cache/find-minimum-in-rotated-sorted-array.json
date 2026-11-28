@@ -3,37 +3,38 @@
   "title": "Find Minimum in Rotated Sorted Array",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
-  "pattern": "Binary Search on Monotonic Array",
-  "tc": "O(log n)",
+  "generatedAt": "2026-11-26",
+  "pattern": "Binary Search on Rotated Array",
+  "tc": "O(log n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- integer variables low, high, mid: constant space → O(1)  \n- not counted: input vector, return value",
-  "approach": "The array is sorted except for a single “break point” where the smallest element appears. By comparing the middle element with the rightmost element we can decide which half still contains the break point and discard the other half. Repeating this binary‑search style reduction yields the minimum in O(log n) time.",
+  "spaceBreakdown": "- no containers/arrays allocated\n- no recursion (iterative loop)\n- not counted: input vector `nums`, returned int",
+  "approach": "The rotated sorted array consists of two increasing segments; the minimum is the only element smaller than its right neighbor (or the first element if no such drop exists). Use binary search comparing `nums[mid]` with `nums[hi]`: if `nums[mid] > nums[hi]`, the drop (and minimum) lies strictly to the right, so set `lo = mid + 1`; otherwise the minimum is at `mid` or to its left, so set `hi = mid`. When `lo == hi`, `nums[lo]` is the minimum. This is correct because the comparison cleanly partitions the array into the \"rotated high part\" and the \"original low part\" containing the minimum.",
   "hints": [
-    "Where does the increasing order stop in a rotated array?  \nThe length of the array never exceeds 5000.",
-    "Apply binary search on the vector.  \nFor nums = [4,5,6,7,0,1,2], compare the middle value 7 with the rightmost value 2 to decide which side to keep.",
-    "low ← 0, high ← n‑1  \nwhile low < high do  \n mid ← low + (high‑low)/2  \n if nums[mid] > nums[high] then low ← mid + 1  \n else high ← mid  \nreturn nums[low]",
-    "**Single element** - the array contains only one value.  \n`Input: [10]` → `Expected: 10`  \n⚠️ Bug: using a loop condition `while (low <= high)` and returning `nums[mid]` may exit with `mid` pointing to the wrong index → returns an undefined value.\n\n**Already sorted (no rotation)** - the minimum is at the front.  \n`Input: [1,2,3,4]` → `Expected: 1`  \n⚠️ Bug: assuming a rotation exists and returning `nums[high]` after the loop → returns `4`.\n\n**Rotation with negative numbers** - the minimum can be negative.  \n`Input: [0,1,-3,-2,-1]` → `Expected: -3`  \n⚠️ Bug: moving `high` to `mid‑1` when `nums[mid] < nums[high]` can skip the true minimum at index 2 → returns `0`."
+    "The array is two increasing runs glued at one \"drop\" point. Where must the minimum element sit relative to that drop? The constraint n ≤ 5000 with a required O(log n) time rules out scanning every element.",
+    "Binary search. Compare the middle element with the rightmost element: in [4,5,6,7,0,1,2], mid value 7 > right value 2, so the minimum must be to the right of mid.",
+    "```\nlo = 0, hi = n - 1\nwhile lo < hi:\n    mid = lo + (hi - lo) / 2\n    if nums[mid] > nums[hi]:\n        lo = mid + 1\n    else:\n        hi = mid\nreturn nums[lo]\n```",
+    "**Single element** - n = 1, the loop body never executes.\n`Input: [5]` → `Expected: 5`\n⚠️ Bug: using `while (lo <= hi)` with `lo = mid + 1` on the equal case → accesses `nums[1]`, out of bounds.\n\n**Two elements, descending** - the drop is between the only two elements.\n`Input: [2,1]` → `Expected: 1`\n⚠️ Bug: writing `lo = mid` instead of `lo = mid + 1` → lo stays 0, hi stays 1, mid stays 0 forever (infinite loop).\n\n**Minimum in the middle** - the minimum is not at either endpoint.\n`Input: [3,1,2]` → `Expected: 1`\n⚠️ Bug: writing `hi = mid - 1` instead of `hi = mid` → lo=0,hi=2,mid=1, nums[1]=1 < nums[2]=2 so hi=0, returns nums[0]=3 instead of 1.\n\n**Already sorted (rotated n times)** - no drop exists, minimum is at index 0.\n`Input: [11,13,15,17]` → `Expected: 11`\n⚠️ Bug: comparing `nums[mid]` with the moving `nums[lo]` and doing `lo = mid + 1` when greater → lo marches past the end, out-of-bounds access."
   ],
   "followUps": [
     {
-      "q": "How would you modify the algorithm if duplicates were allowed in the array?",
-      "a": "When `nums[mid] == nums[high]` we cannot decide which side contains the minimum, so we shrink the search interval by doing `high--`. This degrades the worst‑case time to O(n) but retains O(1) space."
+      "q": "What if duplicates are allowed in the array?",
+      "a": "When `nums[mid] == nums[hi]`, you cannot tell which side holds the minimum, so decrement `hi` by one and continue. Worst case (all elements equal) degrades to O(n) time; space stays O(1)."
     },
     {
-      "q": "What if the array were stored in a read‑only memory‑mapped file and you could only access elements sequentially?",
-      "a": "You would need to fall back to a linear scan, which is O(n) time and O(1) extra space, because binary search requires random access."
+      "q": "Return the index of the minimum (the rotation count) instead of its value.",
+      "a": "Run the identical binary search, but return `lo` rather than `nums[lo]`. Time remains O(log n) and space O(1)."
     },
     {
-      "q": "Suppose the array is extremely large (e.g., 10⁹ elements) and you must answer many minimum‑queries after arbitrary rotations without rebuilding the structure.",
-      "a": "Preprocess the original sorted array to build a segment tree (or sparse table) that can return the minimum of any range in O(log n) (or O(1) for a sparse table). After a rotation, the minimum is the minimum of two contiguous sub‑ranges, so each query is answered in O(log n) time with O(n) preprocessing space."
+      "q": "Search for a specific target value in the rotated array.",
+      "a": "At each step determine which of the two halves `[lo, mid]` and `[mid, hi]` is strictly increasing, then check whether the target lies inside that sorted half to decide which side to keep. Time O(log n), space O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int findMin(vector<int>& nums) {\n        int low = 0, high = (int)nums.size() - 1;\n        while (low < high) {\n            int mid = low + (high - low) / 2;\n            if (nums[mid] > nums[high])\n                low = mid + 1;\n            else\n                high = mid;\n        }\n        return nums[low];\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int findMin(vector<int>& nums) {\n        int lo = 0, hi = (int)nums.size() - 1;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (nums[mid] > nums[hi]) {\n                lo = mid + 1;\n            } else {\n                hi = mid;\n            }\n        }\n        return nums[lo];\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

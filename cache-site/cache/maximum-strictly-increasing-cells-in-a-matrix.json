@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-strictly-increasing-cells-in-a-matrix",
+  "title": "Maximum Strictly Increasing Cells in a Matrix",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Row/Column Aggregation (sorted value sweep)",
+  "tc": "O(mn log(mn))",
+  "sc": "O(mn)",
+  "spaceBreakdown": "- vector<array<int,3>> cells: up to mn entries → O(mn)\n- vector<int> rowMax: m entries → O(m)\n- vector<int> colMax: n entries → O(n)\n- rowUpd/colUpd temporary vectors: at most mn entries per group → O(mn)\n- sort(): O(log(mn)) stack\n- not counted: input matrix, returned int",
+  "approach": "Process cells in increasing order of value. For each cell, the longest path ending there equals 1 plus the best path length previously achieved in its row or column (using only strictly smaller values, which are already finalized). To handle equal values correctly, batch all cells sharing the same value: compute their DP values using the current row/col maxima, then apply the updates afterward so equal-valued cells cannot chain off each other. Track `rowMax[i]` and `colMax[j]` as the best path length ending in row i / column j seen so far.",
+  "hints": [
+    "When you stand on a cell and look along its row and column, which previously visited cells are even eligible to be your immediate predecessor? The matrix can hold up to 10^5 cells.",
+    "Sort all cells by value and sweep upward, maintaining `rowMax[i]` and `colMax[j]` arrays of the best path length ending in that row/column. For cell (1,1)=4 in Example 1, after processing value 1, `rowMax[0]=1`, so its dp becomes 1+max(1,0)=2.",
+    "```\nsort cells by value\nfor each group of equal-valued cells:\n    for each cell (r,c) in group:\n        dp = 1 + max(rowMax[r], colMax[c])\n        record (r,dp) and (c,dp) as pending updates\n    apply all pending updates to rowMax and colMax\nreturn max dp\n```",
+    "**All equal values** - every cell shares one value, so no strictly-increasing move exists.\n`Input: mat = [[5,5],[5,5]]` → `Expected: 1`\n⚠️ Bug: updating rowMax/colMax immediately after each cell instead of batching equal values → returns 3\n\n**Ties spanning a row** - equal values sit in the same row as a larger value.\n`Input: mat = [[2,2],[2,3]]` → `Expected: 2`\n⚠️ Bug: not batching equal values, so (2,0,1) reads rowMax[0]=1 from (2,0,0) → returns 3\n\n**Negatives** - values are all below zero; ordering still must hold.\n`Input: mat = [[-5,-3],[-4,-1]]` → `Expected: 3`\n⚠️ Bug: initializing rowMax/colMax to a large negative sentinel like INT_MIN and adding 1 without overflow guard is fine, but initialising to -1 and treating 0 as \"unset\" → returns 2\n\n**Single cell** - smallest legal matrix.\n`Input: mat = [[7]]` → `Expected: 1`\n⚠️ Bug: returning ans initialised to 0 without updating when the loop runs once → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if moves could be non-strictly increasing (≥ instead of >)?",
+      "a": "Equal-valued cells may now chain, so skip the batching step: update rowMax/colMax immediately after computing each cell's dp. Time and space complexity stay O(mn log(mn)) and O(mn)."
+    },
+    {
+      "q": "What if the matrix is too large to fit in memory and rows arrive one at a time?",
+      "a": "You must buffer rows until all smaller values in earlier rows are finalized, which requires an external sort over (value, row, col) triples and streaming the sorted order while keeping only rowMax/colMax plus a pending-update buffer in memory. Time stays O(mn log(mn)) but space drops to O(m + n + buffer)."
+    },
+    {
+      "q": "What if diagonal moves were also allowed?",
+      "a": "Add two more maxima arrays, `diag1Max` and `diag2Max`, indexed by r−c and r+c, and include them in the max when computing dp. The batching logic is unchanged; time stays O(mn log(mn)) and space becomes O(mn + m + n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxIncreasingCells(vector<vector<int>>& mat) {\n        int m = (int)mat.size();\n        int n = (int)mat[0].size();\n        vector<array<int,3>> cells;\n        cells.reserve((size_t)m * n);\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                cells.push_back({mat[i][j], i, j});\n        sort(cells.begin(), cells.end());\n        vector<int> rowMax(m, 0), colMax(n, 0);\n        int ans = 0;\n        int i = 0;\n        int N = (int)cells.size();\n        while (i < N) {\n            int j = i;\n            while (j < N && cells[j][0] == cells[i][0]) j++;\n            vector<pair<int,int>> rowUpd, colUpd;\n            for (int k = i; k < j; k++) {\n                int r = cells[k][1];\n                int c = cells[k][2];\n                int dp = 1 + max(rowMax[r], colMax[c]);\n                if (dp > ans) ans = dp;\n                rowUpd.push_back({r, dp});\n                colUpd.push_back({c, dp});\n            }\n            for (auto& p : rowUpd)\n                if (p.second > rowMax[p.first]) rowMax[p.first] = p.second;\n            for (auto& p : colUpd)\n                if (p.second > colMax[p.first]) colMax[p.first] = p.second;\n            i = j;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

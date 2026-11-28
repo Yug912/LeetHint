@@ -3,37 +3,38 @@
   "title": "Contains Duplicate",
   "difficulty": "Easy",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-19",
-  "pattern": "Hash Table",
+  "generatedAt": "2026-11-26",
+  "pattern": "Hash Set Lookup",
   "tc": "O(n)",
   "sc": "O(n)",
-  "spaceBreakdown": "- unordered_set<int> seen: up to n entries → O(n)  \n- recursion depth: none  \n- not counted: input vector, return value",
-  "approach": "Scan the array once while remembering every value that has already been seen.  \nIf the current element is already in the memory structure we can immediately answer true; otherwise we insert it and continue.  \nUsing a hash table gives O(1) average lookup/insert, so the whole scan is linear.",
+  "spaceBreakdown": "- unordered_set<int> seen: up to n entries when all distinct → O(n)\n- recursion depth: none\n- not counted: input vector, returned bool",
+  "approach": "Scan the array once while maintaining a hash set of values already encountered. For each element, check membership in the set: if present, a duplicate exists so return true; otherwise insert it. This is correct because the first time we re-encounter a value, that value (by definition) appears at least twice. Average O(n) time, O(n) space.",
   "hints": [
-    "When you walk through the array from left to right, how can you know instantly whether the current number has appeared earlier?  \nThe constraint “n ≤ 10^5” makes checking every pair infeasible.",
-    "Store the numbers you have already visited in an **unordered_set**.  \nExample: for nums = [1,2,3,1] the set becomes {1,2,3} after the third element; the fourth element 1 is already present → duplicate found.",
-    "for each x in nums\n    if x is in seen\n        return true\n    insert x into seen\nreturn false",
-    "**Single element** - an array of length 1 cannot contain a duplicate.  \n`Input: [42]` → `Expected: false`  \n⚠️ Bug: returning true whenever the array is non‑empty → returns true.\n\n**All equal negatives** - duplicates may be negative.  \n`Input: [-5,-5,-5]` → `Expected: true`  \n⚠️ Bug: using a vector<bool> indexed by the value itself (assuming non‑negative) → out‑of‑range access, often yields false.\n\n**Large distinct values** - values can be as large as ±10⁹.  \n`Input: [1000000000, -1000000000]` → `Expected: false`  \n⚠️ Bug: treating the numbers as array indices (size = max+1) → index overflow leads to undefined behaviour, typically false."
+    "As you read each number from left to right, what single fact about the numbers you've already seen would let you stop immediately? Note that n ≤ 10^5, so comparing every pair is too slow.",
+    "Use an unordered_set<int> to record values seen so far. For nums = [1,2,3,1]: after inserting 1, 2, 3 the set is {1,2,3}; the next value 1 is already present, so return true.",
+    "```\nseen = empty set\nfor each x in nums:\n    if x is in seen:\n        return true\n    insert x into seen\nreturn false\n```",
+    "**Smallest input** - only one element, so no duplicate is possible.\n`Input: nums = [42]` → `Expected: false`\n⚠️ Bug: returning true whenever the set is non-empty at the end → returns `true`.\n\n**All elements equal** - every element is a duplicate of the first.\n`Input: nums = [7,7,7,7]` → `Expected: true`\n⚠️ Bug: checking only `nums[i] == nums[i+1]` without sorting first → returns `false` because 7==7 is actually caught; but checking `nums[i] == nums[i+2]` only → returns `false`.\n\n**Negatives** - duplicate negative values must be detected too.\n`Input: nums = [-1,-1]` → `Expected: true`\n⚠️ Bug: using a `bool seen[]` array indexed by value → `seen[-1]` is out-of-bounds / undefined, may return `false`.\n\n**Large values** - values reach ±10^9, far beyond a direct-index array.\n`Input: nums = [1000000000, 1000000000]` → `Expected: true`\n⚠️ Bug: allocating `bool seen[2000000001]` indexed by value → memory limit exceeded or compile failure."
   ],
   "followUps": [
     {
-      "q": "What if the input array must remain unchanged and you are not allowed extra O(n) memory?",
-      "a": "Sort the array in‑place (O(n log n) time) and then scan once checking adjacent elements; this uses only O(1) extra space."
+      "q": "What if the array arrives as an unbounded stream and you cannot store all of it?",
+      "a": "Use a Bloom filter for a probabilistic answer with O(1) memory, accepting false positives; for an exact answer you must keep a hash set, so memory still grows with distinct values seen. Time stays O(n) amortized."
     },
     {
-      "q": "How would you handle a potentially infinite stream of numbers where you cannot store all previously seen values?",
-      "a": "Without storing the whole history you cannot guarantee exact detection; you could use a probabilistic structure like a Bloom filter, which uses limited memory but may produce false positives."
+      "q": "What if you must return the duplicate value itself rather than just true/false?",
+      "a": "Same hash-set scan, but return the value when the membership check succeeds instead of returning true. Time O(n), space O(n)."
     },
     {
-      "q": "Suppose you need to return one of the duplicate values instead of just true/false.",
-      "a": "Keep a hash map counting occurrences; the first key whose count reaches 2 is returned. This still runs in O(n) time and O(n) space."
+      "q": "What if every value is in [1, n] and exactly one value repeats once - can you do it in O(1) extra space?",
+      "a": "Use Floyd's tortoise-and-hare cycle detection treating nums[i] as a pointer to nums[nums[i]]; the repeated value creates a cycle. Time O(n), space O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    bool containsDuplicate(vector<int>& nums) {\n        unordered_set<int> seen;\n        for (int x : nums) {\n            if (seen.find(x) != seen.end()) return true;\n            seen.insert(x);\n        }\n        return false;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    bool containsDuplicate(vector<int>& nums) {\n        unordered_set<int> seen;\n        seen.reserve(nums.size());\n        for (int x : nums) {\n            if (seen.find(x) != seen.end()) {\n                return true;\n            }\n            seen.insert(x);\n        }\n        return false;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

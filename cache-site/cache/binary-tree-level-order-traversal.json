@@ -3,37 +3,38 @@
   "title": "Binary Tree Level Order Traversal",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-25",
-  "pattern": "Breadth‑First Search",
+  "generatedAt": "2026-11-26",
+  "pattern": "BFS Level Order Traversal",
   "tc": "O(n)",
-  "sc": "O(w)",
-  "spaceBreakdown": "- std::queue<TreeNode*> q: up to w nodes → O(w)  \n- vector<int> level (temporary per iteration): up to w elements → O(w)  \n- recursion depth: none  \n- not counted: input tree, returned vector<vector<int>>",
-  "approach": "Traverse the tree breadth‑first, processing all nodes that belong to the same depth before moving deeper. A queue naturally supplies the nodes in this order; by recording the queue size at the start of each iteration we obtain one complete level. Collect the values of each level into a vector and append it to the answer. This yields the required left‑to‑right level order.",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: up to n/2 entries (widest level of a balanced tree) → O(n)\n- vector<int> level: up to n/2 entries, moved into result → part of output, not counted\n- not counted: result (returned output), input tree",
+  "approach": "Use breadth-first search with a queue, processing one tree level per iteration. Before popping any nodes, record the current queue size - this gives the exact count of nodes at the current depth. Pop exactly that many nodes, collect their values, and enqueue their children. This groups nodes by depth and preserves left-to-right order within each level.",
   "hints": [
-    "When you start from the root and repeatedly visit its children, what natural grouping of nodes emerges at each step?  \nThe tree contains at most 2000 nodes.",
-    "Use a **queue** to explore the tree level by level.  \nExample: start with root 3, dequeue it, enqueue 9 and 20 → first level `[3]`, second level `[9,20]`.",
-    "```\nif root is null → return empty list\npush root into queue\nwhile queue not empty:\n    levelSize = queue size\n    create empty list curLevel\n    repeat levelSize times:\n        node = pop front of queue\n        append node.val to curLevel\n        if node.left  → push left\n        if node.right → push right\n    append curLevel to answer\nreturn answer\n```",
-    "**Empty tree** - no nodes at all  \n`Input: []` → `Expected: []`  \n⚠️ Bug: returning `{}` after checking only `if (!root) return {};` but later accessing `root->val` → crash\n\n**Single node** - only the root exists  \n`Input: [1]` → `Expected: [[1]]`  \n⚠️ Bug: forgetting to push the root into the queue → returns `[]`\n\n**Skewed left** - each node has only a left child, forming a line  \n`Input: [1,2,null,3,null,4]` → `Expected: [[1],[2],[3],[4]]`  \n⚠️ Bug: using a stack (LIFO) instead of a queue → returns `[[1],[2],[3],[4]]` in reverse order for deeper levels\n\n**Negative values** - node values can be negative  \n`Input: [0,-1,-2]` → `Expected: [[0],[-1,-2]]`  \n⚠️ Bug: initializing level vector with size 0 but later accessing by index → out‑of‑bounds"
+    "What property is shared by every node that ends up in the same inner list? The tree can have up to 2000 nodes.",
+    "Use a queue for breadth-first traversal. For root [3,9,20,null,null,15,7]: enqueue 3, record queue size (1), pop exactly 1 node, enqueue its children 9 and 20 - that completes level 0.",
+    "```\nq = new queue\nq.push(root)\nwhile q not empty:\n    sz = q.size()\n    level = []\n    for i in 0..sz-1:\n        node = q.pop()\n        level.append(node.val)\n        if node.left: q.push(node.left)\n        if node.right: q.push(node.right)\n    result.append(level)\nreturn result\n```",
+    "**Empty tree** - root is null, the only valid empty input\n`Input: []` → `Expected: []`\n⚠️ Bug: pushing root to queue without a null check, then accessing `node->val` on nullptr → undefined behavior, crash\n\n**Not saving level size** - the queue grows as children are enqueued during iteration\n`Input: [3,9,20,null,null,15,7]` → `Expected: [[3],[9,20],[15,7]]`\n⚠️ Bug: writing `for (int i = 0; i < q.size(); i++)` instead of saving `int sz = q.size()` first → processes children in the same level, returns `[[3,9],[20,15],[7]]`\n\n**Skewed tree** - every node has at most one child, forming a chain of depth n\n`Input: [1,2,null,3,null,4,null]` → `Expected: [[1],[2],[3],[4]]`\n⚠️ Bug: using recursive DFS with `result[depth].push_back(val)` without first ensuring `result.size() > depth` → out-of-bounds access, crash\n\n**All-equal values** - every node has the same value\n`Input: [7,7,7,7]` → `Expected: [[7],[7,7],[7]]`\n⚠️ Bug: using a `set<int>` to deduplicate values within each level → returns `[[7],[7],[7]]`, dropping duplicate values"
   ],
   "followUps": [
     {
-      "q": "How would you modify the solution to return the nodes in “zigzag” order (alternating left‑to‑right and right‑to‑left each level)?",
-      "a": "After obtaining each level, reverse the vector when the level index is odd, or alternatively use a deque and alternate insertion direction. The traversal remains O(n) time, and extra space stays O(w)."
+      "q": "Return the level order traversal from bottom to top (LeetCode 107).",
+      "a": "Run the same BFS and reverse the result vector before returning. TC stays O(n), SC stays O(n)."
     },
     {
-      "q": "If the tree could contain up to 10⁵ nodes, how would you keep the memory usage O(1) besides the output?",
-      "a": "Perform the BFS using the tree’s existing left/right pointers to link nodes of the same level (Morris‑style level order) or use two pointers to the current level’s head and tail, eliminating the explicit queue. Time stays O(n); auxiliary space becomes O(1)."
+      "q": "Return a zigzag traversal where odd levels go right-to-left (LeetCode 103).",
+      "a": "Track a boolean flag that flips each level. When the flag indicates reverse order, reverse the level vector before appending. TC stays O(n), SC stays O(n)."
     },
     {
-      "q": "Suppose the tree is given as a stream of nodes in level order (with “null” placeholders) and you must output each level as soon as it is read, without storing the whole tree.",
-      "a": "Process the stream with a sliding window of the current level’s node count, output the collected values, and compute the next level’s count from the number of non‑null children seen. This yields O(1) additional memory and O(n) time."
+      "q": "The tree is too large to store all levels in memory at once - return one level at a time as a stream.",
+      "a": "The queue already holds only one level at a time. Yield each level vector as soon as it is built, then discard it. TC stays O(n), SC drops to O(w) where w is the maximum width of the tree."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    vector<vector<int>> levelOrder(TreeNode* root) {\n        vector<vector<int>> result;\n        if (!root) return result;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int sz = q.size();\n            vector<int> level;\n            level.reserve(sz);\n            for (int i = 0; i < sz; ++i) {\n                TreeNode* node = q.front();\n                q.pop();\n                level.push_back(node->val);\n                if (node->left)  q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            result.push_back(move(level));\n        }\n        return result;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> levelOrder(TreeNode* root) {\n        vector<vector<int>> result;\n        if (!root) return result;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int sz = q.size();\n            vector<int> level;\n            level.reserve(sz);\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                level.push_back(node->val);\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            result.push_back(move(level));\n        }\n        return result;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

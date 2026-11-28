@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-maximum-length-of-valid-subsequence-ii",
+  "title": "Find the Maximum Length of Valid Subsequence II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with fixed modulus target",
+  "tc": "O(n·k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> dp(k,0): k entries, reused per val iteration → O(k)\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "Fix the common pair-sum `val = (sub[i]+sub[i+1]) % k` from the `k` possible values. For a fixed `val`, if an element has residue `y = x % k`, the previous element in the subsequence must have residue `(val − y) % k`. Use a DP array `dp[r]` = longest valid subsequence ending in residue `r`; for each element update `dp[y] = max(dp[y], dp[(val−y)%k] + 1)`. Try all `k` values of `val` and return the global maximum.",
+  "hints": [
+    "If every consecutive pair in a subsequence has the same sum mod k, what does knowing one element's residue tell you about its neighbor's residue? The array length is at most 10³ and k at most 10³.",
+    "Fix the target sum `val`, then use a DP array where `dp[r]` is the longest valid subsequence ending in residue `r`. For nums = [1,4,2,3,1,4], k=3, val=2: processing residue 1 gives `dp[1] = dp[(2−1)%3]+1 = dp[1]+1 = 2`.",
+    "```\nfor val in 0..k-1:\n    dp = array of k zeros\n    for x in nums:\n        y = x mod k\n        prev = (val - y + k) mod k\n        dp[y] = max(dp[y], dp[prev] + 1)\n        ans = max(ans, dp[y])\nreturn ans\n```",
+    "**Self-pairing residue** - all elements share residue r; only val = 2r mod k works.\n`Input: nums = [3,3,3,3], k = 5` → `Expected: 4`\n⚠️ Bug: only trying val = 0 → returns 1\n\n**k = 1** - every pair sums to 0 mod 1.\n`Input: nums = [7,8,9], k = 1` → `Expected: 3`\n⚠️ Bug: looping val from 1 to k−1 (skipping 0) → returns 0\n\n**Negative modulo** - C++ `(val − y) % k` is negative when val < y.\n`Input: nums = [2,3], k = 5` → `Expected: 2`\n⚠️ Bug: using `(val − y) % k` without `+ k` → out-of-bounds array access\n\n**Large element values** - nums[i] up to 10⁷, but only x % k is used as an index.\n`Input: nums = [10000000,9999999], k = 1000` → `Expected: 2`\n⚠️ Bug: indexing dp with `x` instead of `x % k` → out-of-bounds access"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10⁹?",
+      "a": "You cannot iterate over all k values of val. Instead, observe that val is determined by pairs of residues that actually appear: for each adjacent pair of residues (a, b) in the array, val = (a + b) % k. Collect only the O(n) distinct vals that arise, and run the same DP using a hash map keyed by (val, residue) instead of a size-k array. TC: O(n²) worst case, SC: O(n²)."
+    },
+    {
+      "q": "Return the actual longest subsequence, not just its length.",
+      "a": "Store a backpointer array `parent[val][residue]` recording the index of the predecessor element whenever dp[y] is updated. After finding the maximum, walk the chain of backpointers to reconstruct the subsequence in reverse. TC: O(n·k), SC: O(n·k) for the backpointer table."
+    },
+    {
+      "q": "nums arrives as a stream of unknown length; maintain the answer online.",
+      "a": "Keep a hash map `dp[(val, residue)]` for every val seen so far. When a new element x arrives with residue y, for every active val update `dp[(val, y)] = max(dp[(val, y)], dp[(val, (val−y)%k)] + 1)`. The number of active vals grows by at most one per element. TC: O(n · distinct_vals), SC: O(n · distinct_vals)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumLength(vector<int>& nums, int k) {\n        int ans = 0;\n        for (int val = 0; val < k; val++) {\n            vector<int> dp(k, 0);\n            for (int x : nums) {\n                int y = x % k;\n                int prev = (val - y + k) % k;\n                dp[y] = max(dp[y], dp[prev] + 1);\n                ans = max(ans, dp[y]);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

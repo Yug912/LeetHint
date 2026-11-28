@@ -3,37 +3,38 @@
   "title": "Decode Ways",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-25",
-  "pattern": "Linear DP",
+  "generatedAt": "2026-11-26",
+  "pattern": "Linear DP (Fibonacci-style)",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- two integer variables (`prev`, `prev2`) that store DP values for the last two positions → O(1)  \n- not counted: input string, return value",
-  "approach": "The number of ways to decode a prefix depends only on the ways to decode the two previous prefixes, because a single digit or a valid two‑digit number can be taken as the last step. By scanning the string once and keeping the counts for the last two positions we obtain the answer in linear time.",
+  "spaceBreakdown": "- prev2, prev1, cur, twoDigit, i, n: all scalar integers → O(1)\n- no containers, no recursion\n- not counted: input string s",
+  "approach": "At each position i, the number of ways to decode the prefix s[0..i-1] depends on two choices: decode s[i-1] as a single digit (valid if not '0', contributing dp[i-1] ways) or decode s[i-2..i-1] as a two-digit number (valid if 10-26, contributing dp[i-2] ways). This Fibonacci-like recurrence is computed left-to-right using two rolling variables, giving O(n) time and O(1) space. The base case dp[0]=1 represents the empty prefix, and dp[1]=1 only if s[0]≠'0'.",
   "hints": [
-    "When you look at a digit, which earlier positions can combine with it to form a valid letter?  \nThe string length is at most 100.",
-    "Use two integer variables to remember the counts for the previous two prefixes.  \nFor the input `\"12\"` the first variable holds 1 (for `\"1\"`), the second holds 2 after processing `\"2\"` (for `\"1|2\"` and `\"12\"`).",
-    "```\nif first character is '0' → return 0\nprev2 = 1                     // ways for empty prefix\nprev  = 1                     // ways for first character (non‑zero)\nfor each i from 1 to n‑1\n    cur = 0\n    if s[i] != '0'            // single digit is valid\n        cur += prev\n    if two‑digit number s[i‑1..i] is between 10 and 26\n        cur += prev2\n    prev2 = prev\n    prev  = cur\nreturn prev\n```",
-    "**Leading zero** - the string starts with a ‘0’, which can never be decoded.  \n`Input: \"06\"` → `Expected: 0`  \n⚠️ Bug: treating any non‑empty string as having at least one way → returns `1`  \n\n**Isolated zero** - a ‘0’ that is not part of “10” or “20”.  \n`Input: \"30\"` → `Expected: 0`  \n⚠️ Bug: adding `prev` when `s[i]!='0'` without checking the two‑digit rule → returns `1`  \n\n**Valid two‑digit with trailing zero** - “10” or “20” are the only ways to use a zero.  \n`Input: \"2101\"` → `Expected: 1` (`\"U A\"` → 21|01 is invalid, only 2|10|1)  \n⚠️ Bug: ignoring the two‑digit check for “10”/“20” → returns `0`  \n\n**All ones** - every position can be taken alone or paired, giving Fibonacci growth.  \n`Input: \"111111\"` → `Expected: 13`  \n⚠️ Bug: using only the previous count (`prev`) and never adding `prev2` → returns `1`"
+    "At each position in the string, how many different-sized groups could the current digit belong to, and what earlier part of the string would each choice leave behind?",
+    "Dynamic programming with two rolling variables. For s = \"226\": at position 3, taking '6' alone adds 2 ways (from prefix \"22\"), and taking '26' together adds 1 way (from prefix \"2\"), totaling 3.",
+    "```\nprev2 = 1\nprev1 = 1 if s[0] != '0' else 0\nfor i = 2 to n:\n    cur = 0\n    if s[i-1] != '0': cur += prev1\n    if 10 <= int(s[i-2..i-1]) <= 26: cur += prev2\n    prev2 = prev1\n    prev1 = cur\nreturn prev1\n```",
+    "**Single zero** - the entire string is just \"0\", which has no valid mapping.\n`Input: s = \"0\"` → `Expected: 0`\n⚠️ Bug: initializing prev1 to 1 unconditionally → returns 1\n\n**Double zero** - two consecutive zeros cannot form any valid single or two-digit group.\n`Input: s = \"100\"` → `Expected: 0`\n⚠️ Bug: checking only twoDigit <= 26 without >= 10 → treats \"00\" (value 0) as valid, returns 1\n\n**Zero pairing** - a '0' must combine with the preceding '1' or '2' to form 10 or 20.\n`Input: s = \"10\"` → `Expected: 1`\n⚠️ Bug: skipping the two-digit check entirely when s[i-1] == '0' → returns 0\n\n**Value exceeds 26** - two digits forming a number above 26 cannot be decoded as one letter.\n`Input: s = \"27\"` → `Expected: 1`\n⚠️ Bug: checking twoDigit >= 10 without <= 26 → treats \"27\" as valid, returns 2"
   ],
   "followUps": [
     {
-      "q": "What if the answer must be returned modulo 10⁹+7 because the string length can be up to 10⁵?",
-      "a": "Keep the same recurrence but perform every addition modulo 10⁹+7. Time stays O(n) and space stays O(1)."
+      "q": "Return all possible decoded strings instead of just the count.",
+      "a": "Replace the counting DP with backtracking that branches on single-digit and two-digit groupings at each position. The number of decodings can grow exponentially (e.g., all-ones strings yield Fibonacci-like counts), so the output itself is O(2^n) in the worst case. Time O(2^n · n), space O(n) for the recursion stack."
     },
     {
-      "q": "How would you adapt the solution to also output one possible decoding string?",
-      "a": "In addition to the two counters, store the actual decoding for each prefix (or back‑pointers) and reconstruct the answer after the scan. This adds O(n) extra space while keeping O(n) time."
+      "q": "What if '*' can appear in the string, representing digits 1-9?",
+      "a": "The DP structure stays the same, but each '*' multiplies branching: a lone '*' contributes 9 possibilities, and '*' paired with a digit or another '*' creates additional valid two-digit combinations (e.g., '1*' covers 10-19, '2*' covers 20-26). Use modular arithmetic if the result can overflow. Time O(n), space O(1)."
     },
     {
-      "q": "Suppose the input is provided as a stream of digits that cannot be stored entirely in memory. How can you compute the number of decodings?",
-      "a": "The same two‑variable DP works because each new digit only needs the two previous DP values; you can update them on the fly as the stream arrives, using O(1) memory and O(n) time."
+      "q": "What if the string arrives as a stream and is too long to store entirely?",
+      "a": "The rolling-variable approach already processes one character at a time and retains only the previous two values. Feed characters incrementally, updating prev2 and prev1 per step as each new character arrives. Time O(n), space O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int numDecodings(string s) {\n        int n = s.size();\n        if (n == 0 || s[0] == '0') return 0;\n        int prev2 = 1;          // dp[i-2]\n        int prev  = 1;          // dp[i-1] for i = 1 (first character is non‑zero)\n        for (int i = 1; i < n; ++i) {\n            int cur = 0;\n            if (s[i] != '0')               // single digit decode\n                cur += prev;\n            int two = (s[i-1] - '0') * 10 + (s[i] - '0');\n            if (two >= 10 && two <= 26)    // two‑digit decode\n                cur += prev2;\n            prev2 = prev;\n            prev  = cur;\n            if (prev == 0) return 0;       // early exit if no ways so far\n        }\n        return prev;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int numDecodings(string s) {\n        int n = s.size();\n        if (n == 0) return 0;\n        int prev2 = 1;\n        int prev1 = (s[0] != '0') ? 1 : 0;\n        for (int i = 2; i <= n; i++) {\n            int cur = 0;\n            if (s[i - 1] != '0') cur += prev1;\n            int twoDigit = (s[i - 2] - '0') * 10 + (s[i - 1] - '0');\n            if (twoDigit >= 10 && twoDigit <= 26) cur += prev2;\n            prev2 = prev1;\n            prev1 = cur;\n        }\n        return prev1;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

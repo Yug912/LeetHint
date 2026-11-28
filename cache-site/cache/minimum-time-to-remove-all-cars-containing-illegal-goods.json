@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-time-to-remove-all-cars-containing-illegal-goods",
+  "title": "Minimum Time to Remove All Cars Containing Illegal Goods",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix-Suffix Decomposition",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int pref, minL, best, m, L, R, cand: O(1) scalars\n- input string s: not counted (LeetCode convention)",
+  "approach": "The cars left untouched after all operations form a contiguous subarray s[j..m−1] (possibly empty). Removing the left prefix costs j, the right suffix costs n−m, and each '1' inside the kept block costs 2 to remove, so total cost = j + (n−m) + 2·(pref[m] − pref[j]) = n + (j − 2·pref[j]) + (2·pref[m] − m). The two bracketed terms depend on disjoint variables (j ≤ m), so we sweep m from 0 to n, keep a running minimum of (j − 2·pref[j]) over all j ≤ m, combine it with (2·pref[m] − m), and track the best. Answer = n + best.",
+  "hints": [
+    "If you decide to leave one contiguous block of cars untouched, how does the total cost split into a part depending only on the block's left edge and a part depending only on its right edge? n ≤ 2·10^5, so checking every (left, right) pair is too slow.",
+    "Maintain a running prefix count of '1's and a running minimum of (leftEdge − 2·pref[leftEdge]); combine it with (2·pref[rightEdge] − rightEdge) at each position. For s = \"1100101\" at m = 4: pref = 2, running min = −2, R = 2·2 − 4 = 0, candidate = −2, so answer = 7 + (−2) = 5.",
+    "```\npref = 0, minL = 0, best = 0\nfor m in 0..n:\n    L = m - 2 * pref\n    minL = min(minL, L)\n    R = 2 * pref - m\n    best = min(best, R + minL)\n    if m < n and s[m] == '1':\n        pref = pref + 1\nreturn n + best\n```",
+    "**Smallest input, no illegal goods** - n = 1 with a single '0'; the optimal cost is 0 (do nothing).\n`Input: s = \"0\"` → `Expected: 0`\n⚠️ Bug: looping `for m in 0..n-1` (excluding m = n) → returns 1.\n\n**Single '1' in the middle** - the middle-removal cost factor 2 must appear in both terms.\n`Input: s = \"010\"` → `Expected: 2`\n⚠️ Bug: using factor 1 instead of 2 (L = m − pref, R = pref − m) → returns 1.\n\n**'1' at the first position** - pref must reflect s[0..m−1], not s[0..m], when L and R are computed at m.\n`Input: s = \"1000\"` → `Expected: 1`\n⚠️ Bug: incrementing pref before computing L and R at index m → returns 0.\n\n**All '1's** - end removals are optimal, so the best candidate is 0 and the answer equals n.\n`Input: s = \"11111\"` → `Expected: 5`\n⚠️ Bug: returning `best` instead of `n + best` → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if removing a car from the middle costs k units instead of 2?",
+      "a": "Replace every factor of 2 with k: minimize n + (j − k·pref[j]) + (k·pref[m] − m). The same single forward pass with a running minimum works, giving O(n) time and O(1) space."
+    },
+    {
+      "q": "What if each car has a weight w[i] and removing car i from an end costs w[i]?",
+      "a": "Replace j with the prefix weight sum W[j] = Σ w[0..j−1] and pref with the weighted prefix of '1's. The cost becomes W_total + (W[j] − 2·Wpref[j]) + (2·Wpref[m] − W[m]); still O(n) time, O(1) space with running sums."
+    },
+    {
+      "q": "What if the string arrives character-by-character as a stream and you must output the answer after each new character?",
+      "a": "Keep pref, minL, and best as persistent state; each new character updates pref, then recomputes L, minL, R, and the candidate in O(1). This gives O(1) amortized time per character and O(1) space, fully online."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumTime(string s) {\n        int n = (int)s.size();\n        int pref = 0;   // count of '1's in s[0..m-1]\n        int minL = 0;   // min over j in [0..m] of (j - 2*pref[j])\n        int best = 0;   // min candidate over all m\n        for (int m = 0; m <= n; m++) {\n            int L = m - 2 * pref;\n            if (L < minL) minL = L;\n            int R = 2 * pref - m;\n            int cand = R + minL;\n            if (cand < best) best = cand;\n            if (m < n && s[m] == '1') pref++;\n        }\n        return n + best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "reschedule-meetings-for-maximum-free-time-i",
+  "title": "Reschedule Meetings for Maximum Free Time I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- lambda `gap`: captures by reference, no heap allocation → O(1)\n- scalar locals (n, cur, best, loop index) → O(1)\n- not counted: input vectors startTime/endTime, returned int",
+  "approach": "There are n+1 \"gaps\" of free time: before the first meeting, between consecutive meetings, and after the last. Rescheduling k meetings (keeping order and durations) lets you push those k meetings to one end of any block of k+1 consecutive gaps, merging them into one free block whose length is the sum of those k+1 gaps. So the answer is the maximum sum of any k+1 consecutive gaps. Each gap is computable in O(1) from the input arrays, so a sliding window of size k+1 over the implicit gap sequence gives O(n) time and O(1) extra space.",
+  "hints": [
+    "With k meetings movable, how many of the gaps between meetings can be merged into a single continuous free block? The meetings are non-overlapping and ordered (endTime[i] ≤ startTime[i+1]).",
+    "Use a sliding window of size k+1 over the n+1 gaps. In Example 2 the gaps are [0, 1, 5, 0]; with k=1 the window size is 2, and the best window sum is 1+5 = 6.",
+    "```\ndefine gap(i): startTime[0] if i==0\n              eventTime - endTime[n-1] if i==n\n              startTime[i] - endTime[i-1] otherwise\ncur = sum of gap(0..k)\nbest = cur\nfor i from k+1 to n:\n    cur += gap(i) - gap(i - k - 1)\n    best = max(best, cur)\nreturn best\n```",
+    "**k equals n** - the window must cover all n+1 gaps\n`eventTime=10, k=2, startTime=[1,4], endTime=[3,6]` → `Expected: 6`\n⚠️ Bug: using window size k instead of k+1 → returns 5\n\n**All gaps zero** - meetings fill the entire event\n`eventTime=5, k=2, startTime=[0,1,2,3,4], endTime=[1,2,3,4,5]` → `Expected: 0`\n⚠️ Bug: initializing best to 1 instead of 0 → returns 1\n\n**Single meeting** - n=1, k=1, only two gaps exist\n`eventTime=10, k=1, startTime=[3], endTime=[7]` → `Expected: 6`\n⚠️ Bug: window size k=1 instead of k+1=2 → returns 3\n\n**Largest gap at the boundary** - the last gap dominates\n`eventTime=20, k=1, startTime=[5,6], endTime=[6,7]` → `Expected: 13`\n⚠️ Bug: looping i only up to n-1 (skipping gap(n)) → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be 0, meaning no rescheduling is allowed?",
+      "a": "The window size becomes 1, so the answer is simply the maximum single gap. The same code handles it unchanged in O(n) time and O(1) space."
+    },
+    {
+      "q": "What if you must find the minimum k needed to obtain a free block of length at least X?",
+      "a": "Binary search on k in [0, n]; for each candidate, run the same k+1-sized sliding window and check whether any window sum reaches X. O(n log n) time, O(1) space."
+    },
+    {
+      "q": "What if gaps arrive in a streaming fashion and you must answer \"max free time for current k\" after each new meeting?",
+      "a": "Maintain the running window sum and a monotonic deque of candidate maximums over the last k+1 gaps. Each append/evict is O(1) amortized, giving O(1) per query and O(k) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxFreeTime(int eventTime, int k, vector<int>& startTime, vector<int>& endTime) {\n        int n = startTime.size();\n        auto gap = [&](int i) -> long long {\n            if (i == 0) return startTime[0];\n            if (i == n) return (long long)eventTime - endTime[n - 1];\n            return (long long)startTime[i] - endTime[i - 1];\n        };\n        long long cur = 0;\n        for (int i = 0; i <= k; i++) cur += gap(i);\n        long long best = cur;\n        for (int i = k + 1; i <= n; i++) {\n            cur += gap(i) - gap(i - k - 1);\n            if (cur > best) best = cur;\n        }\n        return (int)best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

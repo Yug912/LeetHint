@@ -1,0 +1,40 @@
+{
+  "slug": "count-subarrays-with-median-k",
+  "title": "Count Subarrays With Median K",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum + Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> cnt: up to p+1 ≤ n entries → O(n)\n- recursion depth: none\n- not counted: input vector (modified in place), returned int",
+  "approach": "Transform each element to +1 if > k, −1 if < k, 0 if = k. A subarray has median k iff it contains k and its transformed sum is 0 (odd length) or 1 (even length, left-middle convention). Find k's position p, build a frequency map of prefix sums for indices 0..p (the valid left boundaries), then for each right endpoint r ≥ p extend the running prefix and count how many stored left-boundary prefixes equal the current prefix (sum 0) or current prefix − 1 (sum 1).",
+  "hints": [
+    "If you replaced every element with only its relationship to k (bigger, smaller, or equal), what would the subarrays whose median is k look like in that simplified array?",
+    "Transform to +1 / −1 / 0 as above; a subarray containing k with sum 0 or 1 has median k. Track prefix sums in a hash map of frequencies. In [3,2,1,4,5] with k=4, the transformed array is [−1,−1,−1,0,1]; subarray [1,4,5] → [−1,0,1] has sum 0.",
+    "```\nfind position p of k\ntransform: >k → 1, <k → −1, =k → 0\nmap[0] = 1          // empty prefix\npref = 0\nfor i in 0..p−1:\n    pref += transformed[i]\n    map[pref]++\nfor r in p..n−1:\n    pref += transformed[r]\n    ans += map[pref]        // subarray sum 0\n    ans += map[pref − 1]    // subarray sum 1\nreturn ans\n```",
+    "**Smallest input** - n = 1, the only element is k.\n`nums = [1], k = 1` → `Expected: 1`\n⚠️ Bug: skipping the single-element subarray by starting the right-endpoint loop at p+1 → returns 0\n\n**k at first position** - no elements precede k, so the only valid left boundary is the empty prefix.\n`nums = [1,2,3], k = 1` → `Expected: 2`\n⚠️ Bug: forgetting to insert map[0] = 1 before the left-boundary loop → returns 1 (misses [1])\n\n**k at last position** - no elements follow k.\n`nums = [1,2,3], k = 3` → `Expected: 1`\n⚠️ Bug: iterating r from p+1 to n−1 instead of p to n−1 → returns 0\n\n**Overflow** - with n = 10⁵ and k near the middle, the answer can reach (n/2)² ≈ 2.5×10⁹ > 2³¹−1.\n⚠️ Bug: accumulating the answer in an `int` → wraps to a negative value"
+  ],
+  "followUps": [
+    {
+      "q": "What if k may appear multiple times in the array?",
+      "a": "Process each occurrence left to right. For each occurrence at position pᵢ, count subarrays where that occurrence is the median, but restrict the left boundary to be strictly after the previous occurrence's position to avoid double-counting subarrays containing two k's. Still O(n) time and O(n) space."
+    },
+    {
+      "q": "What if nums arrives as a stream and you must report the running count after each element?",
+      "a": "You cannot count anything until k appears. Once k is seen at position p, begin maintaining the prefix-sum frequency map from that point onward; for each subsequent element, extend the running prefix and query the map. O(1) amortized per element after k appears; O(n) total."
+    },
+    {
+      "q": "What if the median definition uses the right middle element for even-length arrays?",
+      "a": "The valid transformed-sum set changes from {0, 1} to {0, −1} (even-length subarrays now need one more element below k than above). Query map[pref] and map[pref + 1] instead. Same O(n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countSubarrays(vector<int>& nums, int k) {\n        int n = nums.size();\n        int p = 0;\n        for (int i = 0; i < n; i++) {\n            if (nums[i] == k) { p = i; break; }\n        }\n        for (int i = 0; i < n; i++) {\n            if (nums[i] > k) nums[i] = 1;\n            else if (nums[i] < k) nums[i] = -1;\n            else nums[i] = 0;\n        }\n        unordered_map<int,int> cnt;\n        cnt.reserve(n + 1);\n        int pref = 0;\n        cnt[0] = 1;\n        for (int i = 0; i < p; i++) {\n            pref += nums[i];\n            cnt[pref]++;\n        }\n        long long ans = 0;\n        for (int r = p; r < n; r++) {\n            pref += nums[r];\n            ans += cnt[pref];\n            ans += cnt[pref - 1];\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

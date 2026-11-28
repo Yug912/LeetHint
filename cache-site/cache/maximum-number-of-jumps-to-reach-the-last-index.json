@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-jumps-to-reach-the-last-index",
+  "title": "Maximum Number of Jumps to Reach the Last Index",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Segment Tree with Coordinate Compression",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> coords: up to 3n entries → O(n)\n- vector<int> tree: up to 12n entries → O(n)\n- recursion depth: segment tree depth up to O(log n)\n- not counted: input nums, returned integer",
+  "approach": "Use a segment tree with coordinate compression to efficiently query the maximum `dp[i]` for `nums[i]` in the range `[nums[j] - target, nums[j] + target]`. We process indices from left to right, maintaining the segment tree with `dp` values keyed by `nums[i]`. For each index `j`, we query the maximum `dp` in the valid range, and if it exists, `dp[j] = max_dp + 1`, then update the segment tree with `dp[j]` at `nums[j]`. This ensures we always find the maximum jumps to reach `j` in `O(n log n)` time.",
+  "hints": [
+    "When deciding the best predecessor for index j, what property of nums[i] (not index i) determines whether i can jump to j? The constraint -target <= nums[j] - nums[i] <= target restricts which values of nums[i] are admissible.",
+    "Use a segment tree over coordinate-compressed nums values, storing max dp per value. For j=1 in Example 1 (nums[1]=3, target=2): query range [1,5] over compressed values {1,2,3,4,6}, find max dp=0 at value 1, set dp[1]=1, then insert dp[1] at value 3.",
+    "```\ncompress and sort unique nums values into vals\ninit segment tree (size 4*m) with -1\ndp[0] = 0; update tree at position of nums[0] with 0\nfor j = 1 to n-1:\n    lo = nums[j] - target, hi = nums[j] + target\n    ql = lower_bound(vals, lo)\n    qr = upper_bound(vals, hi) - 1\n    best = range_max_query(ql, qr)\n    if best != -1:\n        dp[j] = best + 1\n        update tree at position of nums[j] with dp[j]\nreturn dp[n-1]\n```",
+    "**Overflow in range bounds** - nums[j] can be -10^9 and target can be 2*10^9, so nums[j]-target = -3*10^9 exceeds int range\n`Input: nums = [1000000000, -1000000000], target = 2000000000` → `Expected: 1`\n⚠️ Bug: computing `int lo = nums[j] - target` → -3*10^9 overflows to ~1.3*10^9, lower_bound returns index past all values, query range is empty → returns -1\n\n**No valid path** - target = 0 with all distinct values means no jump is possible\n`Input: nums = [1, 3, 6, 4, 1, 2], target = 0` → `Expected: -1`\n⚠️ Bug: initializing dp array to 0 instead of -1 → dp[n-1] stays 0, returns 0\n\n**All equal values** - every adjacent pair satisfies the constraint when target >= 0\n`Input: nums = [5, 5, 5, 5], target = 0` → `Expected: 3`\n⚠️ Bug: not inserting dp[0] into the segment tree before the loop → tree is all -1, dp[1] stays -1, returns -1\n\n**Unreachable intermediate index** - an index with no valid predecessor must not propagate a false dp value\n`Input: nums = [1, 100, 200], target = 1` → `Expected: -1`\n⚠️ Bug: setting `dp[j] = best + 1` without checking `best != -1` → dp[j] = 0, inserted into tree as reachable, creates false paths → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need the minimum number of jumps instead of the maximum?",
+      "a": "Replace max with min in the segment tree and initialize tree nodes to a large sentinel (e.g., INT_MAX) instead of -1. dp[j] = min(dp[i]) + 1 for valid predecessors. Skip updates when the query returns the sentinel. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if you also need to reconstruct the actual jumping sequence?",
+      "a": "Store a predecessor array alongside dp: for each j, record the compressed value (or index) that produced the optimal dp[j]. After computing dp[n-1], backtrack from n-1 to 0 by looking up which predecessor value gave the max. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^6?",
+      "a": "The segment tree approach already runs in O(n log n) time. Memory is O(n) for the tree, dp array, and compressed values - roughly 16 MB for n = 10^6, well within typical limits. No algorithmic changes needed. TC: O(n log n), SC: O(n).\n\n---"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<int> tree;\n    int m;\n    \n    void update(int node, int start, int end, int idx, int val) {\n        if (start == end) {\n            tree[node] = max(tree[node], val);\n            return;\n        }\n        int mid = (start + end) / 2;\n        if (idx <= mid) {\n            update(2 * node, start, mid, idx, val);\n        } else {\n            update(2 * node + 1, mid + 1, end, idx, val);\n        }\n        tree[node] = max(tree[2 * node], tree[2 * node + 1]);\n    }\n    \n    int query(int node, int start, int end, int l, int r) {\n        if (r < start || end < l) {\n            return -1;\n        }\n        if (l <= start && end <= r) {\n            return tree[node];\n        }\n        int mid = (start + end) / 2;\n        int p1 = query(2 * node, start, mid, l, r);\n        int p2 = query(2 * node + 1, mid + 1, end, l, r);\n        return max(p1, p2);\n    }\n\npublic:\n    int maximumJumps(vector<int>& nums, int target) {\n        int n = nums.size();\n        vector<long long> coords;\n        for (int i = 0; i < n; ++i) {\n            coords.push_back(nums[i]);\n            coords.push_back((long long)nums[i] - target);\n            coords.push_back((long long)nums[i] + target);\n        }\n        sort(coords.begin(), coords.end());\n        coords.erase(unique(coords.begin(), coords.end()), coords.end());\n        m = coords.size();\n        tree.assign(4 * m, -1);\n        \n        int dp = -1;\n        for (int j = 0; j < n; ++j) {\n            long long L = (long long)nums[j] - target;\n            long long R = (long long)nums[j] + target;\n            \n            int idxL = lower_bound(coords.begin(), coords.end(), L) - coords.begin();\n            int idxR = upper_bound(coords.begin(), coords.end(), R) - coords.begin() - 1;\n            \n            dp = -1;\n            if (j == 0) {\n                dp = 0;\n            } else if (idxL <= idxR) {\n                int max_prev = query(1, 0, m - 1, idxL, idxR);\n                if (max_prev != -1) {\n                    dp = max_prev + 1;\n                }\n            }\n            \n            if (dp != -1) {\n                int pos = lower_bound(coords.begin(), coords.end(), (long long)nums[j]) - coords.begin();\n                update(1, 0, m - 1, pos, dp);\n            }\n        }\n        \n        return dp;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

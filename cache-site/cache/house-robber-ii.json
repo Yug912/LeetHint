@@ -3,37 +3,38 @@
   "title": "House Robber II",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-10",
-  "pattern": "DP on Linear Sequence",
+  "generatedAt": "2026-11-26",
+  "pattern": "Dynamic Programming (linear DP with state reduction)",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- two integer variables `prev` and `curr` for the DP → O(1)  \n- recursion depth: none  \n- not counted: input vector, returned int",
-  "approach": "Because the first and last houses are adjacent, we cannot take them together. The problem therefore splits into two independent linear robber problems: houses [0 … n‑2] and houses [1 … n‑1]. Each linear sub‑problem is solved with the classic two‑variable DP that keeps the best amount when the current house is skipped or taken. The answer is the larger of the two sub‑problem results (or the single house when n = 1).",
+  "spaceBreakdown": "- int variables prev2, prev1, cur, n: constant → O(1)\n- robLinear helper: no containers, no recursion → O(1)\n- not counted: input vector nums",
+  "approach": "Since house 0 and house n−1 are adjacent in the circle, they can never both be robbed. So we split into two independent linear House Robber subproblems: rob houses [0..n−2] (exclude last) or rob houses [1..n−1] (exclude first), then take the maximum. Each linear subproblem uses the classic recurrence dp[i] = max(dp[i−1], dp[i−2] + nums[i]) with two rolling variables. The special case n = 1 returns nums[0] directly.",
   "hints": [
-    "If two houses next to each other cannot both be robbed, which two houses become mutually exclusive when the street forms a circle?  \n1 ≤ nums.length ≤ 100.",
-    "Use the linear “house robber” DP that keeps only the best amount with and without the current house.  \nExample [2,3,2]: after processing 2 → 2, after 3 → max(2,3)=3, after last 2 → max(3,2+2)=4 (but the circle forces us to drop one end).",
-    "```\nif n == 1 return nums[0]\nans1 = linearDP(0, n‑2)\nans2 = linearDP(1, n‑1)\nreturn max(ans1, ans2)\n\nlinearDP(l, r):\n    prev = 0, curr = 0\n    for i from l to r:\n        newCurr = max(curr, prev + nums[i])\n        prev = curr\n        curr = newCurr\n    return curr\n```",
-    "**Single house** - only one house exists, so it must be taken.  \n`Input: [5]` → `Expected: 5`  \n⚠️ Bug: splitting into two sub‑problems and accessing `n‑2` gives out‑of‑bounds → returns undefined.\n\n**Two houses** - both are adjacent, only one can be chosen.  \n`Input: [7,9]` → `Expected: 9`  \n⚠️ Bug: applying linear DP on the whole array allows both houses → returns 16.\n\n**All zeros** - every house contains 0, answer is 0.  \n`Input: [0,0,0,0]` → `Expected: 0`  \n⚠️ Bug: initializing DP with `prev = nums[l]` instead of 0 makes the algorithm think a house was already taken → may return a non‑zero value if later houses are positive."
+    "Which two houses are the only pair whose adjacency exists solely because of the circle, not because of their positions in the array?",
+    "Dynamic programming on a linear array. Since house 0 and house n−1 can't both be robbed, run the linear House Robber twice - once on nums[0..n−2], once on nums[1..n−1] - and take the max. For [2,3,2]: rob [2,3]→3, rob [3,2]→3, answer 3.",
+    "```\nif n == 1: return nums[0]\nfunction linear(l, r):\n    prev2 = 0, prev1 = 0\n    for i from l to r:\n        cur = max(prev1, prev2 + nums[i])\n        prev2 = prev1\n        prev1 = cur\n    return prev1\nreturn max(linear(0, n-2), linear(1, n-1))\n```",
+    "**Single house** - the circle has only one element, so both sub-ranges are empty.\n`Input: [5]` → `Expected: 5`\n⚠️ Bug: skipping the n==1 check and calling linear(0,−1) and linear(1,0), both returning 0 → returns 0\n\n**Forgetting the circle** - running linear DP on the entire array ignores the wrap-around adjacency.\n`Input: [2,3,2]` → `Expected: 3`\n⚠️ Bug: calling linear(0, n−1) on the whole array → returns 4 (robs house 0 and house 2)\n\n**Two houses** - each sub-range contains exactly one house.\n`Input: [2,3]` → `Expected: 3`\n⚠️ Bug: returning only linear(0, n−2) without the second call → returns 2\n\n**All equal values** - every choice looks symmetric, but the count of robbed houses matters.\n`Input: [5,5,5,5]` → `Expected: 10`\n⚠️ Bug: initialising prev1 = nums[l] and starting the loop at l+1 with prev2 = nums[l] instead of 0 → returns 10 on this input but crashes on single-element sub-ranges where nums[l+1] is out of bounds"
   ],
   "followUps": [
     {
-      "q": "What changes are needed if `nums.length` can be up to 10⁵ and each `nums[i]` up to 10⁹?",
-      "a": "Use 64‑bit (`long long`) for the DP variables to avoid overflow; the algorithmic steps stay the same, so time remains O(n) and space O(1)."
+      "q": "What if the houses form a tree instead of a line or circle - maximize robbed money with no two adjacent?",
+      "a": "Run tree DP with two states per node: rob (add node value + children's \"skip\" states) or skip (max of each child's rob/skip). Post-order traversal gives O(V) time and O(h) stack space."
     },
     {
-      "q": "How would you solve the problem if the houses were arranged in a straight line instead of a circle?",
-      "a": "The circle restriction disappears, so a single call to the linear DP on the whole array yields the answer directly, still O(n) time and O(1) space."
+      "q": "What if robbing any k consecutive houses triggers the alarm instead of just 2?",
+      "a": "Track the last k−1 robbed/skipped decisions in the DP state. The recurrence becomes dp[i][mask] = max over valid masks, giving O(n · 2^(k−1)) time and O(2^(k−1)) space with rolling arrays."
     },
     {
-      "q": "Suppose you must also return the list of house indices that achieve the maximum amount. How would you adapt the solution?",
-      "a": "Keep an additional boolean or predecessor array while running the linear DP to record whether each house was taken; after the DP finishes, backtrack from the end to reconstruct the chosen indices. This adds O(n) extra space while keeping O(n) time."
+      "q": "What if nums arrives as a streaming input of unknown length and you can only store O(1) values?",
+      "a": "For the linear variant, keep the last two DP values and update online. For the circular variant you need two simultaneous streams (exclude-first and exclude-last), so maintain two pairs of rolling variables - still O(1) space, but you cannot produce an answer until the stream ends."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int rob(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 1) return nums[0];\n        return max(robLinear(nums, 0, n - 2), robLinear(nums, 1, n - 1));\n    }\nprivate:\n    int robLinear(const vector<int>& nums, int l, int r) {\n        long long prev = 0, curr = 0;\n        for (int i = l; i <= r; ++i) {\n            long long newCurr = max(curr, prev + nums[i]);\n            prev = curr;\n            curr = newCurr;\n        }\n        return static_cast<int>(curr);\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int rob(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 1) return nums[0];\n        return max(robLinear(nums, 0, n - 2), robLinear(nums, 1, n - 1));\n    }\nprivate:\n    int robLinear(vector<int>& nums, int l, int r) {\n        int prev2 = 0, prev1 = 0;\n        for (int i = l; i <= r; i++) {\n            int cur = max(prev1, prev2 + nums[i]);\n            prev2 = prev1;\n            prev1 = cur;\n        }\n        return prev1;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

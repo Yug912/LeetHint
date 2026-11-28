@@ -1,0 +1,40 @@
+{
+  "slug": "zero-array-transformation-iii",
+  "title": "Zero Array Transformation III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Priority Queue",
+  "tc": "O(n + m log m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<int> diff(n+1, 0): up to n+1 entries → O(n)\n- priority_queue<int> pq: up to m entries → O(m)\n- sort(): O(log m) stack for introsort → O(log m)\n- not counted: input nums, input queries (sorted in place), returned int",
+  "approach": "To maximize removable queries, we minimize the queries we must keep. Process indices left to right; at each index, add all queries starting there into a max-heap keyed by end index, discard expired ones (end < current index), then greedily pop the farthest-ending query whenever the running coverage (tracked via a difference array) is below nums[i]. Picking the farthest-ending query first is optimal because it covers the most future indices, leaving shorter queries available for later. If the heap empties before coverage reaches nums[i], return -1.",
+  "hints": [
+    "When you must reduce nums[i] and several available queries all cover index i, what distinguishes the one that also helps most with later indices? Each query can decrement each index in its range by at most 1, chosen independently.",
+    "Sort queries by start index; maintain a max-heap of active queries keyed by end index. For nums=[2,0,2] with queries [[0,2],[0,2],[1,1]], at i=0 both [0,2] queries enter the heap; pop the farthest-ending one twice to cover nums[0]=2.",
+    "```\nsort queries by start index\nfor i from 0 to n-1:\n    push all queries starting at i into max-heap by end\n    coverage += diff[i]\n    discard heap entries with end < i\n    while coverage < nums[i]:\n        if heap empty: return -1\n        pop max-end query, diff[i]++, diff[r+1]--, coverage++, used++\nreturn m - used\n```",
+    "**Already zero** - every element is 0, so no queries are needed.\n`Input: nums = [0,0], queries = [[0,1]]` → `Expected: 1`\n⚠️ Bug: using `coverage <= nums[i]` instead of `coverage < nums[i]` → uses 1 query, returns 0\n\n**Impossible coverage** - a single query cannot provide enough decrements.\n`Input: nums = [2], queries = [[0,0]]` → `Expected: -1`\n⚠️ Bug: returning `m - used` without checking if heap was empty → returns 0\n\n**Diff array bounds** - a query ends at the last index, requiring diff[n].\n`Input: nums = [1,1,1], queries = [[0,2]]` → `Expected: 0`\n⚠️ Bug: allocating diff of size n instead of n+1 → out-of-bounds write at diff[r+1]\n\n**Expired queries** - a query that started earlier but doesn't reach the current index.\n`Input: nums = [1,1], queries = [[0,0],[0,0]]` → `Expected: -1`\n⚠️ Bug: not discarding heap entries with end < i before using them → applies [0,0] at index 1, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also return the indices of the removed queries, not just the count?",
+      "a": "Store (end_index, original_index) pairs in the heap. Maintain a boolean array marking used queries. After processing, collect all unmarked indices. Time O((n+m) log m), space O(n+m)."
+    },
+    {
+      "q": "What if each query can decrement by at most k instead of 1?",
+      "a": "Replace each diff increment/decrement by k instead of 1. Each popped query adds k to coverage. The greedy choice remains identical. Time O((n+m) log m), space O(n+m)."
+    },
+    {
+      "q": "What if queries arrive in a stream and you must irrevocably keep or discard each before seeing the next?",
+      "a": "Maintain the same heap of kept queries. When a new query arrives, push it. At each index, discard shortest-ending queries once coverage is sufficient. This may keep more queries than the offline version since future queries are unknown. Time O((n+m) log m), space O(n+m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxRemoval(vector<int>& nums, vector<vector<int>>& queries) {\n        int n = nums.size();\n        int m = queries.size();\n        \n        sort(queries.begin(), queries.end());\n        \n        vector<int> diff(n + 1, 0);\n        priority_queue<int> pq;\n        int used = 0;\n        int qIdx = 0;\n        int coverage = 0;\n        \n        for (int i = 0; i < n; i++) {\n            while (qIdx < m && queries[qIdx][0] == i) {\n                pq.push(queries[qIdx][1]);\n                qIdx++;\n            }\n            \n            coverage += diff[i];\n            \n            while (!pq.empty() && pq.top() < i) {\n                pq.pop();\n            }\n            \n            while (coverage < nums[i]) {\n                if (pq.empty()) return -1;\n                int r = pq.top();\n                pq.pop();\n                diff[i]++;\n                diff[r + 1]--;\n                coverage++;\n                used++;\n            }\n        }\n        \n        return m - used;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

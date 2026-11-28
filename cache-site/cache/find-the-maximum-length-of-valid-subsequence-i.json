@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-maximum-length-of-valid-subsequence-i",
+  "title": "Find the Maximum Length of Valid Subsequence I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Parity Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few int counters (ans, cnt, expect, loop vars): constant → O(1)\n- no containers, no recursion → O(1)\n- not counted: input vector nums",
+  "approach": "The condition `(sub[i]+sub[i+1])%2` being constant forces `sub[i]` and `sub[i+2]` to share the same parity, so the subsequence's parities follow one of only four patterns: all-even, all-odd, alternating even→odd, or alternating odd→even. For each pattern, greedily scan left-to-right and take the earliest matching element. Return the maximum count over the four patterns.",
+  "hints": [
+    "If `(sub[0]+sub[1])%2 == (sub[1]+sub[2])%2`, what must be true about the parities of `sub[0]` and `sub[2]`? Extend that to every other element of the subsequence.",
+    "Greedy single pass: for a fixed target-parity pattern, scan `nums` once and take each element whose parity matches the next expected slot. In `[1,2,1,1,2,1,2]` with pattern odd,even,odd,even,..., we take 1,2,1,2,1,2 → length 6.",
+    "```\nans = 0\nfor start in {0,1}:\n  for same in {0,1}:\n    cnt = 0; expect = start\n    for x in nums:\n      if parity(x) == expect:\n        cnt++\n        if not same: expect = 1 - expect\n    ans = max(ans, cnt)\nreturn ans\n```",
+    "**Smallest input** - only two elements, both same parity.\n`Input: nums = [1,3]` → `Expected: 2`\n⚠️ Bug: only checking alternating patterns and ignoring the all-same-parity case → returns 1.\n\n**All equal parity** - every element is even.\n`Input: nums = [2,4,6,8]` → `Expected: 4`\n⚠️ Bug: initialising `expect` only to the opposite of `nums[0]`'s parity → returns 1.\n\n**Alternating input** - parities strictly alternate.\n`Input: nums = [1,2,1,2,1,2]` → `Expected: 6`\n⚠️ Bug: flipping `expect` unconditionally after every matched element instead of only when `same==0` → returns 1.\n\n**Large values** - `nums[i]` up to 10^7, but only parity is used.\n`Input: nums = [10000000, 9999999]` → `Expected: 2`\n⚠️ Bug: computing `(a+b)%2` with `a+b` first instead of `a&1` - no overflow here, but using `a%2` on negative-free ints is fine; a real bug is comparing `nums[i]` values directly instead of parities → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if the required constant value of `(sub[i]+sub[i+1])%2` were given as input `k` (0 or 1) instead of being free?",
+      "a": "Keep the same scan, but restrict the four patterns to those whose adjacent-sum parity equals `k`: if `k==0` use all-even or all-odd; if `k==1` use the two alternating patterns. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if the subsequence had to be contiguous (a subarray) instead of any subsequence?",
+      "a": "Use a sliding window / run-length scan: track the current run where consecutive-sum parity is constant, resetting when it changes. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if elements arrive as a stream of unknown length and you must answer the current maximum after each insertion?",
+      "a": "Maintain four running counters (one per pattern) and the current `expect` for each; update only the patterns whose next expected parity matches the new element. Each query is O(1) amortised, space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumLength(vector<int>& nums) {\n        int n = nums.size();\n        int ans = 0;\n        for (int start = 0; start < 2; start++) {\n            for (int same = 0; same < 2; same++) {\n                int cnt = 0;\n                int expect = start;\n                for (int i = 0; i < n; i++) {\n                    int p = nums[i] & 1;\n                    if (p == expect) {\n                        cnt++;\n                        if (!same) expect = 1 - expect;\n                    }\n                }\n                if (cnt > ans) ans = cnt;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

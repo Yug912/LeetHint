@@ -3,37 +3,38 @@
   "title": "Climbing Stairs",
   "difficulty": "Easy",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-25",
-  "pattern": "Iterative DP on Linear Sequence",
-  "tc": "O(n)",
+  "generatedAt": "2026-11-26",
+  "pattern": "Matrix Exponentiation",
+  "tc": "O(log n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- two int variables (prev, curr): O(1)  \n- recursion depth: none  \n- not counted: input, returned int",
-  "approach": "The number of ways to reach step i equals the sum of ways to reach steps i‑1 and i‑2, which forms the Fibonacci sequence. By iterating from 3 to n while keeping only the two previous counts, we compute the answer in linear time with constant extra space. This works because every valid path must end with a 1‑step or a 2‑step move.",
+  "spaceBreakdown": "- long long res[2][2]: constant 4 elements → O(1)\n- long long base[2][2]: constant 4 elements → O(1)\n- not counted: input n, returned int",
+  "approach": "The number of ways to reach step n follows the Fibonacci recurrence, where ways(n) = ways(n-1) + ways(n-2). This linear recurrence can be expressed as a state transition matrix multiplication. By raising this 2x2 transition matrix to the power of n using binary exponentiation, we compute the nth state in logarithmic time. The top-left element of the resulting matrix gives the exact number of distinct ways to climb to the top.",
   "hints": [
-    "When you stand on the nth step, from which earlier step could you have arrived just before?  \nThe constraint guarantees 1 ≤ n ≤ 45.",
-    "Use an iterative DP that stores the results for the two previous steps in two integers.  \nFor n = 3: start with ways[1]=1, ways[2]=2 → ways[3]=1+2=3.",
-    "if n ≤ 2 return n  \nprev ← 1, curr ← 2  \nfor i from 3 to n do  \n next ← prev + curr  \n prev ← curr  \n curr ← next  \nreturn curr",
-    "**Minimum n** - the smallest allowed input.  \n`Input: n = 1` → `Expected: 1`  \n⚠️ Bug: returning 0 for n = 1 → returns 0  \n\n**Two steps** - base case where answer equals n.  \n`Input: n = 2` → `Expected: 2`  \n⚠️ Bug: initializing prev=0, curr=1 and looping from 2 → returns 1  \n\n**Largest n** - ensures no overflow with 32‑bit int.  \n`Input: n = 45` → `Expected: 1836311903`  \n⚠️ Bug: using 16‑bit short for the result → overflows to -...  \n\n**Recursive without memo** - exponential time, will TLE for n = 45.  \n`Input: n = 45` → `Expected: 1836311903`  \n⚠️ Bug: plain recursion → exceeds time limit."
+    "If you are standing on step n, what were the possible steps you could have taken immediately before arriving there? The constraints allow n up to 45.",
+    "Matrix exponentiation. We can represent the transition from the state [ways(n-1), ways(n-2)] to [ways(n), ways(n-1)] as a 2x2 matrix multiplication, and raising this matrix to the nth power gives the answer in O(log n) time.\nExample: For n=3, the matrix [[1,1],[1,0]]^3 has top-left element 3, which is the answer.",
+    "Initialize result as identity matrix, base as [[1, 1], [1, 0]]\nWhile n > 0:\n    If n is odd:\n        result = multiply(result, base)\n    base = multiply(base, base)\n    n = n / 2\nReturn result[0][0]",
+    "**Smallest input** - n = 1 is the minimum allowed value.\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: Returning `res[0][1]` instead of `res[0][0]` → returns 0\n\n**Largest values** - n = 45 produces F(46) = 1836311903.\n`Input: n = 45` → `Expected: 1836311903`\n⚠️ Bug: Using 32-bit `int` for intermediate matrix multiplication results (1836311903 * 1836311903 = 3.37 * 10^18) → returns overflowed garbage value\n\n**Even exponent** - n = 2 skips the odd branch on the first iteration.\n`Input: n = 2` → `Expected: 2`\n⚠️ Bug: Forgetting to square the base matrix when n is even → returns 1"
   ],
   "followUps": [
     {
-      "q": "What if n can be as large as 10^9?",
-      "a": "The recurrence still holds, but iterating O(n) is impossible. Use matrix exponentiation or fast doubling to compute the nth Fibonacci number in O(log n) time while keeping O(1) space."
+      "q": "What if you could climb 1, 2, or 3 steps at a time?",
+      "a": "The state becomes 3-dimensional, tracking ways(n-1), ways(n-2), and ways(n-3). We use a 3x3 transition matrix and raise it to the nth power. The time complexity becomes O(log n) with 27 multiplications per matrix multiply, and space remains O(1)."
     },
     {
-      "q": "How would the solution change if you could climb 1, 2, or 3 steps at a time?",
-      "a": "The recurrence becomes ways[i] = ways[i‑1] + ways[i‑2] + ways[i‑3]. An iterative solution keeps three variables and runs in O(n) time, O(1) space."
+      "q": "What if n can be up to 10^18 and the answer must be modulo 10^9 + 7?",
+      "a": "The matrix exponentiation approach handles this perfectly. We apply the modulo operation during every matrix multiplication to prevent overflow. The time complexity remains O(log n), and space is O(1)."
     },
     {
-      "q": "Suppose the answer must be given modulo 1 000 000 007.",
-      "a": "Perform each addition modulo M (M = 1e9+7). The same O(n) iterative loop works, and intermediate sums stay within 64‑bit range, so the algorithm remains O(n) time and O(1) space."
+      "q": "What if you are given a list of allowed step sizes [1, 3, 5] instead of just 1 and 2?",
+      "a": "The transition matrix size becomes equal to the maximum step size, where each row tracks the previous k states. We build the transition matrix based on the allowed steps and exponentiate it to the nth power. Time complexity is O(k^3 log n) and space is O(k^2)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int climbStairs(int n) {\n        if (n <= 2) return n;\n        int prev = 1;   // ways to reach step 1\n        int curr = 2;   // ways to reach step 2\n        for (int i = 3; i <= n; ++i) {\n            int next = prev + curr;\n            prev = curr;\n            curr = next;\n        }\n        return curr;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int climbStairs(int n) {\n        long long res[2][2] = {{1, 0}, {0, 1}};\n        long long base[2][2] = {{1, 1}, {1, 0}};\n        \n        while (n > 0) {\n            if (n & 1) {\n                long long a = res[0][0] * base[0][0] + res[0][1] * base[1][0];\n                long long b = res[0][0] * base[0][1] + res[0][1] * base[1][1];\n                long long c = res[1][0] * base[0][0] + res[1][1] * base[1][0];\n                long long d = res[1][0] * base[0][1] + res[1][1] * base[1][1];\n                res[0][0] = a; res[0][1] = b; res[1][0] = c; res[1][1] = d;\n            }\n            long long a = base[0][0] * base[0][0] + base[0][1] * base[1][0];\n            long long b = base[0][0] * base[0][1] + base[0][1] * base[1][1];\n            long long c = base[1][0] * base[0][0] + base[1][1] * base[1][0];\n            long long d = base[1][0] * base[0][1] + base[1][1] * base[1][1];\n            base[0][0] = a; base[0][1] = b; base[1][0] = c; base[1][1] = d;\n            \n            n >>= 1;\n        }\n        \n        return res[0][0];\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "2/2"
+    "examples": "2/2",
+    "reviewed": 2
   }
 }

@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-substrings-with-dominant-ones",
+  "title": "Count the Number of Substrings With Dominant Ones",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Square Root Decomposition",
+  "tc": "O(n√n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> zeros: up to n entries → O(n)\n- no recursion, no other containers\n- not counted: input string, returned int",
+  "approach": "A dominant substring with k zeros needs at least k² ones, so k + k² ≤ n, meaning k ≤ √n ≈ 200. For each starting index l, iterate over zero counts k from 0 to √n. Using a precomputed sorted array of zero positions, binary-search the k-th and (k+1)-th zeros at/after l to bound the range of ending indices r that yield exactly k zeros. Within that range, the dominance condition (r−l+1−k ≥ k²) simplifies to r ≥ l+k²+k−1, so the valid count is max(0, rightBound − max(leftBound, l+k²+k−1) + 1).",
+  "hints": [
+    "For a substring with k zeros to be dominant, it needs at least k² ones. Given that the total substring length is at most n = 4×10⁴, what is the maximum possible value of k?",
+    "Store zero positions in a sorted array. For l=2 in \"00011\" with k=1, the 1st zero is at index 2 and the 2nd at end (5), so r ∈ [2,4]; need ones ≥ 1, i.e. r ≥ 3, yielding 2 valid substrings.",
+    "```\nfor each l in 0..n-1:\n    idx = first zero position >= l  (binary search)\n    for k in 0..sqrt(n):\n        pos_k   = k-th zero at/after l  (or l-1 if k=0)\n        pos_k1  = (k+1)-th zero at/after l  (or n)\n        leftBound  = (k==0) ? l : pos_k\n        rightBound = pos_k1 - 1\n        domLeft    = l + k*k + k - 1\n        ans += max(0, rightBound - max(leftBound, domLeft) + 1)\n        if k-th zero doesn't exist: break\n```",
+    "**Single character** - smallest valid input.\n`Input: \"1\"` → `Expected: 1`\n⚠️ Bug: starting the zero-count loop at k=1 instead of k=0 → returns 0\n\n**Exact equality** - ones exactly equals zeros squared.\n`Input: \"01\"` → `Expected: 2`\n⚠️ Bug: using `ones > k*k` instead of `ones >= k*k` → returns 1\n\n**All zeros** - no dominant substrings exist.\n`Input: \"000\"` → `Expected: 0`\n⚠️ Bug: not checking `idx + k - 1 >= z` before accessing `zeros[idx + k - 1]` → out-of-bounds read\n\n**Missing +k term** - formula error in dominant threshold.\n`Input: \"011\"` → `Expected: 5`\n⚠️ Bug: computing domLeft as `l + k*k - 1` instead of `l + k*k + k - 1` → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10⁶, how would you optimize?",
+      "a": "Replace the per-position binary search with a single sliding-window pass per zero count k. For each k from 0 to √n, scan left-to-right maintaining a window with exactly k zeros and track the valid range of right endpoints in O(n). This removes the log factor, giving O(n√n) with a smaller constant, though for n = 10⁶ this is still ~10⁹ operations and may need further pruning."
+    },
+    {
+      "q": "What if the dominance condition is ones ≥ c·zeros for a constant c instead of ones ≥ zeros²?",
+      "a": "The maximum zero count becomes n/(c+1) instead of √n. The same enumeration approach works, but for small c the per-position loop can be O(n), making the total O(n²). In that case a prefix-sum-with-hash-map strategy (tracking ones − c·zeros) would be more efficient at O(n)."
+    },
+    {
+      "q": "What if the condition is ones ≥ zeros³?",
+      "a": "The maximum zero count drops to ∛n ≈ 34 for n = 4×10⁴. The same approach works with O(n·∛n) time, which is even faster. Only the loop bound changes from √n to ∛n and the dominance threshold from k² to k³."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfSubstrings(string s) {\n        int n = s.size();\n        vector<int> zeros;\n        for (int i = 0; i < n; i++) {\n            if (s[i] == '0') zeros.push_back(i);\n        }\n        \n        long long ans = 0;\n        int maxZ = (int)sqrt((double)n) + 2;\n        int z = (int)zeros.size();\n        \n        for (int l = 0; l < n; l++) {\n            int idx = (int)(lower_bound(zeros.begin(), zeros.end(), l) - zeros.begin());\n            \n            for (int k = 0; k <= maxZ; k++) {\n                int pos_k, pos_kp1;\n                if (k == 0) {\n                    pos_k = l - 1;\n                } else {\n                    if (idx + k - 1 >= z) break;\n                    pos_k = zeros[idx + k - 1];\n                }\n                pos_kp1 = (idx + k >= z) ? n : zeros[idx + k];\n                \n                int leftBound = (k == 0) ? l : pos_k;\n                int rightBound = pos_kp1 - 1;\n                long long dominantLeft = (long long)l + (long long)k * k + k - 1;\n                long long effectiveLeft = max((long long)leftBound, dominantLeft);\n                long long count = (long long)rightBound - effectiveLeft + 1;\n                if (count > 0) ans += count;\n            }\n        }\n        \n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

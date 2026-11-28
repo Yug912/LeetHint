@@ -4,36 +4,37 @@
   "difficulty": "Easy",
   "promptVersion": "p9",
   "generatedAt": "2026-11-26",
-  "pattern": "Post‑order DFS",
+  "pattern": "Post-order DFS with Sentinel",
   "tc": "O(n)",
   "sc": "O(h)",
-  "spaceBreakdown": "- recursion depth: up to h → O(h)  \n- no additional containers are allocated",
-  "approach": "A tree is height‑balanced iff for every node the heights of its left and right sub‑trees differ by at most one and both sub‑trees are themselves balanced.  \nWe can obtain the height of each sub‑tree while traversing the tree in post‑order; if a sub‑tree is already unbalanced we propagate a sentinel value (‑1) upward and stop further work.  \nBecause each node is visited once, the algorithm runs in linear time and uses only the recursion stack.",
+  "spaceBreakdown": "- recursion call stack: up to h deep (worst case skewed tree h = n → O(n); balanced tree h = log n)\n- no containers or arrays allocated\n- not counted: input tree",
+  "approach": "A tree is height-balanced when, for every node, the heights of its left and right subtrees differ by at most 1. A post-order DFS computes each subtree's height exactly once: it returns the height if the subtree is balanced, or -1 as a sentinel if it is not. As soon as any child returns -1 or the height gap exceeds 1, the call short-circuits and propagates -1 upward, so every node is visited at most once.",
   "hints": [
-    "What must be true about the height difference between a node’s left and right sub‑trees for the whole tree to be balanced?  \nThe tree may contain up to 5000 nodes.",
-    "Use a post‑order depth‑first traversal that returns the subtree height (or a failure code).  \nFor the root of `[3,9,20,null,null,15,7]` the left child returns height 1, the right child returns height 2, their difference is 1 → balanced.",
-    "function check(node):\n    if node is null: return 0\n    left  = check(node.left)\n    if left == -1: return -1\n    right = check(node.right)\n    if right == -1: return -1\n    if abs(left - right) > 1: return -1\n    return max(left, right) + 1\n\nisBalanced(root):\n    return check(root) != -1",
-    "**Empty tree** - the tree has no nodes.  \n`Input: []` → `Expected: true`  \n⚠️ Bug: returning false for a null root → returns false.\n\n**Single node** - only the root exists.  \n`Input: [1]` → `Expected: true`  \n⚠️ Bug: using “> 0” instead of “> 1” when comparing heights → returns false.\n\n**Skewed tree** - every node has only a left child, forming a linked list of length 3.  \n`Input: [1,2,null,3]` → `Expected: false`  \n⚠️ Bug: recomputing height separately for each node (O(n²) algorithm) still yields the correct answer but may exceed time limits for larger inputs.\n\n**Balanced but deep** - a perfect binary tree of height 4 (15 nodes).  \n`Input: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]` → `Expected: true`  \n⚠️ Bug: using an int to store height is safe, but using a signed 8‑bit type would overflow for deeper trees → would give wrong result."
+    "If you compute the height of each node's subtrees independently from scratch, how many times does the deepest leaf get visited across all those computations?",
+    "Post-order DFS: each call returns the subtree height, or -1 to signal imbalance. In Example 1, node 20's children 15 and 7 each return height 1, so 20 returns 2.",
+    "```\nfunction check(node):\n    if node is null: return 0\n    left = check(node.left)\n    if left == -1: return -1\n    right = check(node.right)\n    if right == -1: return -1\n    if |left - right| > 1: return -1\n    return max(left, right) + 1\n\nreturn check(root) != -1\n```",
+    "**Empty tree** - root is null\n`Input: []` → `Expected: true`\n⚠️ Bug: accessing root->left without a null check → crashes\n\n**Single child** - one child only, height difference of 1 is allowed\n`Input: [1,2]` → `Expected: true`\n⚠️ Bug: using `abs(left - right) >= 1` as the imbalance test instead of `> 1` → returns false\n\n**Skewed tree** - linked-list shape, imbalance detected deep inside\n`Input: [1,2,null,3,null,4]` → `Expected: false`\n⚠️ Bug: not checking whether a child returned -1 before computing `abs(left - right)` → returns true\n\n**Balanced at root, imbalanced in a subtree** - root's subtrees have equal heights but one contains an imbalance\n`Input: [1,2,3,4,5,null,6,7,null,null,null,null,8]` → `Expected: false`\n⚠️ Bug: only checking balance at the root node → returns true"
   ],
   "followUps": [
     {
-      "q": "How would you modify the solution to avoid recursion and thus guarantee O(h) stack space even for a completely skewed tree?",
-      "a": "Perform an explicit post‑order traversal using a manual stack that stores pairs of (node, visited‑flag). The algorithm still computes heights bottom‑up, keeping the same O(n) time while the explicit stack size is bounded by O(h)."
+      "q": "What if the balance threshold is k instead of 1?",
+      "a": "Replace `abs(left - right) > 1` with `abs(left - right) > k` in the same DFS. The sentinel and short-circuit logic stay identical. TC O(n), SC O(h)."
     },
     {
-      "q": "Suppose the tree can contain up to 10⁵ nodes. What change, if any, is needed to keep the algorithm within the time limit?",
-      "a": "The current post‑order approach already visits each node once, so its O(n) time remains optimal. The only adjustment is to ensure the recursion depth does not cause a stack overflow; using the iterative version from the previous follow‑up solves this."
+      "q": "What if you also need to verify the tree is a valid BST (i.e., check if it is an AVL tree)?",
+      "a": "Extend the DFS to carry (minAllowed, maxAllowed) bounds. At each node, check val is within bounds, then recurse left with (minAllowed, val) and right with (val, maxAllowed). Return height or -1 as before. TC O(n), SC O(h)."
     },
     {
-      "q": "If you were asked to report the first node (closest to the root) that makes the tree unbalanced, how would you adapt the code?",
-      "a": "Change the sentinel to return the offending node instead of -1. When a node detects |left‑right|>1, return that node upward; otherwise propagate the first non‑null result from its children. The traversal stays O(n) and uses the same O(h) space."
+      "q": "What if the tree has 10^7 nodes and recursion may overflow the call stack?",
+      "a": "Convert to an iterative post-order traversal using an explicit stack with a visited flag per node. Push node then its children; on second visit compute height from children's stored results. TC O(n), SC O(h) with an explicit stack instead of the system call stack."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    bool isBalanced(TreeNode* root) {\n        return checkHeight(root) != -1;\n    }\nprivate:\n    // Returns height of subtree if balanced, otherwise -1\n    int checkHeight(TreeNode* node) {\n        if (!node) return 0;\n        int left = checkHeight(node->left);\n        if (left == -1) return -1;\n        int right = checkHeight(node->right);\n        if (right == -1) return -1;\n        if (abs(left - right) > 1) return -1;\n        return max(left, right) + 1;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    bool isBalanced(TreeNode* root) {\n        return check(root) != -1;\n    }\nprivate:\n    int check(TreeNode* node) {\n        if (!node) return 0;\n        int left = check(node->left);\n        if (left == -1) return -1;\n        int right = check(node->right);\n        if (right == -1) return -1;\n        if (abs(left - right) > 1) return -1;\n        return max(left, right) + 1;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

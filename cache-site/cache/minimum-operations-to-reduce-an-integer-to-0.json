@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-reduce-an-integer-to-0",
+  "title": "Minimum Operations to Reduce an Integer to 0",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Bit Manipulation",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int ans: single variable → O(1)\n- int n: parameter modified in place → O(1), not counted as auxiliary\n- no containers, no recursion",
+  "approach": "The key insight is that a run of k ≥ 2 consecutive 1-bits can be cleared in 2 operations (add 1 at the top to trigger a carry, subtract 1 at the bottom) instead of k. We scan bits from LSB to MSB: if the current bit is 0, shift right; if it's an isolated 1 (n & 3 == 1), subtract 1; if it's part of a run (n & 3 == 3), add 1 to propagate a carry. Each add or subtract is one operation. This produces the non-adjacent form of n, which has the minimum number of non-zero signed digits.",
+  "hints": [
+    "For n = 54 = 110110 in binary, the answer is 3 but there are four 1-bits. What structure in the bit pattern lets a single add operation clear multiple 1-bits at once?",
+    "Greedy bit manipulation scanning from LSB to MSB. When n ends in …11 (a run of 1s), add 1 to trigger a carry that clears the whole run. For n = 39 = 100111, adding 1 gives 101000 - one operation cleared three 1-bits.",
+    "```\nans = 0\nwhile n > 0:\n    if n is even:\n        n = n >> 1\n    elif n ends in 01:\n        n = n - 1\n        ans = ans + 1\n    else:  # n ends in 11\n        n = n + 1\n        ans = ans + 1\nreturn ans\n```",
+    "**Smallest input** - n = 1, a single power of 2.\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: using `while (n > 1)` instead of `while (n > 0)` → returns 0\n\n**Long run of ones** - n = 15 = 1111, four consecutive 1-bits.\n`Input: n = 15` → `Expected: 2`\n⚠️ Bug: always subtracting 1 for set bits instead of adding when `n & 3 == 3` → returns 4\n\n**Carry merges runs** - n = 54 = 110110, two runs of two 1s that merge via carry propagation.\n`Input: n = 54` → `Expected: 3`\n⚠️ Bug: counting each maximal run of 1s independently as 2 operations → returns 4\n\n**Three consecutive ones** - n = 7 = 111, a run of three 1-bits.\n`Input: n = 7` → `Expected: 2`\n⚠️ Bug: returning popcount(n) as the answer → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Solve the problem with n ≤ 10^18.",
+      "a": "The same greedy bit scan works - each iteration reduces n by at least half, so O(log n) iterations. Use `long long` instead of `int` to avoid overflow when n + 1 exceeds 2^31 - 1."
+    },
+    {
+      "q": "What if you can only subtract powers of 2 (no addition allowed)?",
+      "a": "The answer is simply the popcount of n, since each set bit must be individually subtracted with no way to merge runs. This is O(log n) time and O(1) space."
+    },
+    {
+      "q": "What if you can add or subtract powers of 3 instead of powers of 2?",
+      "a": "Convert n to base 3 and scan digits from least significant. If a digit is 0, skip it; if 1, subtract 3^k; if 2, add 3^(k+1) and subtract 3^k (carry 1 to the next digit). This produces the balanced ternary representation with minimum non-zero digits. Time is O(log_3 n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(int n) {\n        int ans = 0;\n        while (n > 0) {\n            if ((n & 1) == 0) {\n                n >>= 1;\n            } else if ((n & 3) == 1) {\n                n -= 1;\n                ans++;\n            } else {\n                n += 1;\n                ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

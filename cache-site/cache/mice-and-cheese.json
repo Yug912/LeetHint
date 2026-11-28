@@ -1,0 +1,40 @@
+{
+  "slug": "mice-and-cheese",
+  "title": "Mice and Cheese",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Selection",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> gains(n): n integers → O(n)\n- nth_element internal stack: O(log n) → dominated by gains\n- not counted: input arrays reward1, reward2",
+  "approach": "Start by assuming the second mouse eats all n pieces (total = sum of reward2). Switching piece i to the first mouse changes the total by reward1[i] − reward2[i], so we want the k pieces with the largest such gain. Use nth_element to partition the k largest gains in O(n) average time, sum them, and add to the baseline total. This is optimal because every piece contributes reward2[i] by default, and we only swap in the k pieces where the first mouse's reward exceeds the second's by the most.",
+  "hints": [
+    "With n up to 10^5, checking every subset of size k is infeasible. If the second mouse initially eats every piece, what single quantity tells you how much the total changes when you move piece i to the first mouse?",
+    "Use nth_element to partition the k largest values of (reward1[i] − reward2[i]) in O(n) average time. Example: reward1 = [1,1,3,4], reward2 = [4,4,1,1] → gains = [−3,−3,2,3]; top 2 gains are 3 and 2, added to sum(reward2) = 10 gives 15.",
+    "```\ntotal = sum(reward2)\ngains[i] = reward1[i] - reward2[i]\nnth_element(gains, k, descending)\ngainSum = sum of first k gains\nreturn total + gainSum\n```",
+    "**k = 0** - first mouse eats nothing; answer is just sum of reward2.\n`Input: reward1 = [5,3], reward2 = [2,4], k = 0` → `Expected: 6`\n⚠️ Bug: using `i <= k` instead of `i < k` in the summation loop → returns 9\n\n**All negative gains** - reward1[i] < reward2[i] for every i, but k > 0 forces the first mouse to eat some.\n`Input: reward1 = [1,1], reward2 = [5,5], k = 1` → `Expected: 6`\n⚠️ Bug: filtering to only positive gains before selecting top k → returns 10\n\n**Wrong comparator** - selecting the k smallest gains instead of the k largest.\n`Input: reward1 = [1,1,3,4], reward2 = [4,4,1,1], k = 2` → `Expected: 15`\n⚠️ Bug: using default `less<int>()` instead of `greater<int>()` in nth_element → returns 4\n\n**All gains equal** - every reward1[i] − reward2[i] is the same value.\n`Input: reward1 = [2,2,2], reward2 = [1,1,1], k = 2` → `Expected: 5`\n⚠️ Bug: storing gains in a set (deduplicating) before selecting top k → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if reward1 and reward2 arrive as a stream of pairs and k is known upfront - can you maintain the answer without storing all n gains?",
+      "a": "Keep a running sum of reward2 and a min-heap of size k for the top k gains seen so far. For each new pair, add reward2[i] to the total, compute the gain, and push it into the heap (evicting the smallest if the heap exceeds k). This gives O(n log k) time and O(k) space."
+    },
+    {
+      "q": "What if there are three mice, each with a required quota (k1, k2, k3 with k1+k2+k3 = n)?",
+      "a": "This becomes a min-cost assignment problem: assign each piece to one of three mice to maximize total reward subject to quotas. With rewards ≤ 1000, a min-cost max-flow formulation on a bipartite graph (n pieces → 3 mice with capacity constraints) solves it in O(n · max_reward) or O(n^2) depending on the flow algorithm."
+    },
+    {
+      "q": "What if k is not given and you must find the k (0 ≤ k ≤ n) that maximizes the total?",
+      "a": "Compute all gains, sort them descending, and compute prefix sums. The answer for each k is sum(reward2) + prefix_sum[k]; take the maximum over all k. This costs O(n log n) time and O(n) space, dominated by the sort."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int miceAndCheese(vector<int>& reward1, vector<int>& reward2, int k) {\n        int n = reward1.size();\n        int total = 0;\n        for (int i = 0; i < n; i++) {\n            total += reward2[i];\n        }\n        vector<int> gains(n);\n        for (int i = 0; i < n; i++) {\n            gains[i] = reward1[i] - reward2[i];\n        }\n        nth_element(gains.begin(), gains.begin() + k, gains.end(), greater<int>());\n        int gainSum = 0;\n        for (int i = 0; i < k; i++) {\n            gainSum += gains[i];\n        }\n        return total + gainSum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

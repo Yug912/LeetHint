@@ -3,37 +3,38 @@
   "title": "Count Consistent Subarrays I",
   "difficulty": "Easy",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
-  "pattern": "Two‑Pointer Scan (fixed‑left, expanding right)",
-  "tc": "O(n²)",
-  "sc": "O(1)",
-  "spaceBreakdown": "- two integers curMin and curAnd: O(1)  \n- loop counters and answer variable: O(1)  \n- not counted: input vector, returned int",
-  "approach": "The minimum of a subarray can only stay the same or decrease when we extend it, and the bitwise AND can only stay the same or lose bits. By fixing the left endpoint and expanding the right endpoint while keeping the current minimum and current AND, we can test every subarray in O(1) per extension and count those where the two values are equal.",
+  "generatedAt": "2026-11-26",
+  "pattern": "Monotonic Stack + Bit Manipulation",
+  "tc": "O(n log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- leftZero, rightZero, leftMin, rightMin: 4 arrays of n ints → O(n)\n- lastZero, nextZero: 7 ints each → O(1)\n- monotonic stack st: up to n ints → O(n)\n- not counted: input nums",
+  "approach": "Since the minimum is itself one of the subarray's elements, the bitwise AND is always a submask of the minimum; equality holds exactly when every bit set in the minimum is also set in every element of the subarray. For each index i, use a monotonic stack to find the maximal range [L,R] where nums[i] is the designated (rightmost) minimum, and precompute per-bit nearest-zero positions to find the maximal range [L',R'] where every bit of nums[i] is set in all elements. The contribution of index i is (i−max(L,L')+1)·(min(R,R')−i+1); summing over all i gives the answer, with each consistent subarray counted exactly once.",
   "hints": [
-    "When you enlarge a subarray by one element, which two aggregate values can be updated using only the new element?  \nThe array length satisfies n ≤ 100.",
-    "Keep two running integers: the current minimum and the current bitwise AND.  \nFor nums = [5,3,1,2], starting at left = 0 we have curMin = curAnd = 5; after adding 3 we get curMin = 3, curAnd = 5 & 3 = 1.",
-    "for left = 0 … n‑1  \n    curMin = curAnd = nums[left]  \n    if curMin == curAnd add 1 to answer  \n    for right = left+1 … n‑1  \n        curMin = min(curMin, nums[right])  \n        curAnd = curAnd & nums[right]  \n        if curMin == curAnd add 1 to answer",
-    "**Single element** - the only subarray is the element itself.  \n`Input: [0]` → `Expected: 1`  \n⚠️ Bug: returning 0 for all inputs → returns 0.  \n\n**All equal** - every subarray is consistent.  \n`Input: [1,1,1]` → `Expected: 6`  \n⚠️ Bug: counting only singletons → returns 3.  \n\n**Decreasing values** - min changes while AND may stay larger.  \n`Input: [7,3,1]` → `Expected: 4` (subarrays: [7],[3],[1],[3,1])  \n⚠️ Bug: using `curAnd = curAnd | nums[right]` instead of `&` → returns 6.  \n\n**Mixed zeros** - zero forces both min and AND to zero quickly.  \n`Input: [5,0,2]` → `Expected: 5` (subarrays: [5],[0],[2],[5,0],[0,2])  \n⚠️ Bug: stopping the inner loop when curAnd becomes 0 → misses [0,2]."
+    "How does the bitwise AND of a subarray always compare to its minimum value, given that the minimum is itself one of the elements being AND-ed? Constraint: 0 ≤ nums[i] ≤ 100, so each value fits in 7 bits.",
+    "Use a monotonic stack to find each index's maximal range as the rightmost minimum, plus per-bit nearest-zero positions to find the maximal range where every bit of nums[i] is set in all elements. For nums = [5,3,1,2] at i=2 (value 1, only bit 0 set), the min-range is [0,3] but bit 0 is zero at index 3, so the valid range is [0,2], yielding 3 consistent subarrays.",
+    "```\nprecompute leftZero[i], rightZero[i] via per-bit nearest-zero scans\nprecompute leftMin[i], rightMin[i] via monotonic stack (pop >= on left, pop > on right)\nfor each i:\n    L = max(leftMin[i]+1, leftZero[i]+1)\n    R = min(rightMin[i]-1, rightZero[i]-1)\n    if L <= i <= R:\n        ans += (i-L+1) * (R-i+1)\n```",
+    "**Single zero** - value 0 has no set bits, so its bit-valid range is unconstrained [0,n-1].\n`Input: nums = [0]` → `Expected: 1`\n⚠️ Bug: skipping elements where nums[i] == 0 → returns 0\n\n**All equal** - every subarray is consistent; duplicates must be assigned to exactly one minimum.\n`Input: nums = [1,1,1]` → `Expected: 6`\n⚠️ Bug: using pop-while-> on both sides of the monotonic stack → returns 3\n\n**Zero in the middle** - zero's min-range spans the whole array and its AND is always 0.\n`Input: nums = [5,0,5]` → `Expected: 6`\n⚠️ Bug: special-casing nums[i]==0 to bit-valid range [i,i] → returns 3\n\n**Boundary duplicates** - equal values at the array ends.\n`Input: nums = [2,2]` → `Expected: 3`\n⚠️ Bug: using pop-while-> (non-strict) on the left side of the stack → returns 2"
   ],
   "followUps": [
     {
-      "q": "How would you modify the solution if nums.length could be up to 10⁵?",
-      "a": "The O(n²) scan would be too slow, so we would need a monotonic‑stack or segment‑tree technique to jump over ranges where the minimum and AND stay unchanged, achieving O(n log C) or O(n · log max) time."
+      "q": "What if nums[i] can be up to 10^9 instead of 100?",
+      "a": "Replace B=7 with B=30. The per-bit nearest-zero precomputation becomes O(30n), still O(n log V) time and O(n) space. No other change is needed."
     },
     {
-      "q": "What if the definition changed to “bitwise OR equals the maximum” of the subarray?",
-      "a": "The same incremental idea works, but we would maintain the running maximum and running OR while extending the right endpoint; the algorithm remains O(n²) with O(1) extra space."
+      "q": "What if we must answer q queries, each asking how many consistent subarrays lie entirely within nums[l..r]?",
+      "a": "Each index i contributes (i−L+1)(R−i+1) subarrays, but L and R depend on elements outside [l..r], so prefix sums alone don't work. Use Mo's algorithm to maintain the answer while sliding endpoints, recomputing each moved index's contribution in O(log V) time, giving O((n+q)√n log V)."
     },
     {
-      "q": "Suppose the array is streamed and you may only use O(1) extra memory, cannot store the whole array.",
-      "a": "You can still process each left endpoint on the fly by reading the stream once per left, keeping only the current minimum and OR/AND; this requires O(n) passes over the stream, still O(1) auxiliary space but O(n²) time."
+      "q": "What if the array arrives as a stream and we must output the running count after each new element?",
+      "a": "The right-to-left passes for rightMin and rightZero are impossible online. Maintain leftMin and leftZero incrementally via the monotonic stack, but for the right boundaries use a segment tree supporting \"nearest smaller to the right\" queries online, yielding O(n log n · log V) total."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int countConsistent(vector<int>& nums) {\n        int n = nums.size();\n        long long ans = 0;\n        for (int left = 0; left < n; ++left) {\n            int curMin = nums[left];\n            int curAnd = nums[left];\n            if (curMin == curAnd) ++ans;\n            for (int right = left + 1; right < n; ++right) {\n                curMin = min(curMin, nums[right]);\n                curAnd &= nums[right];\n                if (curMin == curAnd) ++ans;\n            }\n        }\n        return (int)ans;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int countConsistent(vector<int>& nums) {\n        int n = (int)nums.size();\n        if (n == 0) return 0;\n        const int B = 7; // nums[i] <= 100 < 128\n        vector<int> leftZero(n), rightZero(n);\n        vector<int> lastZero(B, -1), nextZero(B, n);\n        for (int i = 0; i < n; i++) {\n            int lz = -1;\n            for (int b = 0; b < B; b++) {\n                if ((nums[i] >> b) & 1) lz = max(lz, lastZero[b]);\n            }\n            leftZero[i] = lz;\n            for (int b = 0; b < B; b++) {\n                if (!((nums[i] >> b) & 1)) lastZero[b] = i;\n            }\n        }\n        for (int i = n - 1; i >= 0; i--) {\n            int rz = n;\n            for (int b = 0; b < B; b++) {\n                if ((nums[i] >> b) & 1) rz = min(rz, nextZero[b]);\n            }\n            rightZero[i] = rz;\n            for (int b = 0; b < B; b++) {\n                if (!((nums[i] >> b) & 1)) nextZero[b] = i;\n            }\n        }\n        vector<int> leftMin(n), rightMin(n);\n        vector<int> st;\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && nums[st.back()] >= nums[i]) st.pop_back();\n            leftMin[i] = st.empty() ? -1 : st.back();\n            st.push_back(i);\n        }\n        st.clear();\n        for (int i = n - 1; i >= 0; i--) {\n            while (!st.empty() && nums[st.back()] > nums[i]) st.pop_back();\n            rightMin[i] = st.empty() ? n : st.back();\n            st.push_back(i);\n        }\n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            int L = max(leftMin[i] + 1, leftZero[i] + 1);\n            int R = min(rightMin[i] - 1, rightZero[i] - 1);\n            if (L <= i && i <= R) {\n                ans += (long long)(i - L + 1) * (R - i + 1);\n            }\n        }\n        return (int)ans;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

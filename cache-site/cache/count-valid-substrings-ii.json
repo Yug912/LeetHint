@@ -3,37 +3,38 @@
   "title": "Count Valid Substrings II",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
-  "pattern": "Prefix‑Maximum Tracking",
+  "generatedAt": "2026-11-26",
+  "pattern": "Single-pass state tracking",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- int lastA, bestAB, bestABC: constant number of integers → O(1)  \n- long long ans: constant → O(1)  \n- not counted: input string, returned value",
-  "approach": "For every right end r we need the leftmost position p such that an “abc” subsequence is completely inside s[p…r]. Any substring ending at r that starts after p is valid, so we add r‑p to the answer. While scanning the string we keep three indices: the latest ‘a’, the largest start of any “ab” seen so far, and the largest start of any “abc” seen so far. Updating these three values on each character gives p in O(1) time, yielding an O(n) solution.",
+  "spaceBreakdown": "- int lastA, lastAB, lastABC: three scalars → O(1)\n- long long ans: one scalar → O(1)\n- loop index r: one scalar → O(1)\n- not counted: input string s, returned value",
+  "approach": "For each ending index r, a substring s[l..r] is valid (no \"abc\" subsequence) exactly when l is greater than the largest starting index p of any \"abc\" subsequence fully inside s[0..r]. We maintain three running indices while scanning left to right: the latest 'a' position (lastA), the largest start of any \"ab\" subsequence (lastAB), and the largest start of any \"abc\" subsequence (lastABC). On 'a' we update lastA; on 'b' we update lastAB = max(lastAB, lastA); on 'c' we update lastABC = max(lastABC, lastAB). At each r we add (r − lastABC) to the answer. All three start at −1 so prefixes without a complete \"abc\" contribute all their starting positions.",
   "hints": [
-    "When a substring ends at position r, which earlier positions decide whether the subsequence “abc” already appears inside it?  \nThe string length can be up to 10^5.",
-    "Maintain three integer variables (latest ‘a’, best start of “ab”, best start of “abc”).  \nExample: for s = \"abac\", after processing the first three characters the variables are lastA=2, bestAB=0, bestABC=-1.",
-    "```\nlastA = bestAB = bestABC = -1\nans = 0\nfor i = 0 … n‑1\n    if s[i] == 'a'      lastA = i\n    else if s[i] == 'b' bestAB = max(bestAB, lastA)\n    else                bestABC = max(bestABC, bestAB)\n    ans += i - bestABC\nreturn ans\n```",
-    "**All ‘a’s** - the string contains no ‘b’ or ‘c’, so every substring is valid.  \n`Input: \"aaaaa\"` → `Expected: 15`  \n⚠️ Bug: initializing `bestABC` to 0 would make the first term `i‑0` and give 10 instead of 15.\n\n**Pattern “abcabc”** - multiple overlapping “abc” subsequences shift the forbidden start forward.  \n`Input: \"abcabc\"` → `Expected: 14`  \n⚠️ Bug: updating `bestAB` only when the current ‘b’ follows the *most recent* ‘a’ (using `lastA` without `max`) would keep `bestAB` at 0 and produce 13.\n\n**Reverse order “cba”** - no “abc” can appear, answer equals total substrings.  \n`Input: \"cba\"` → `Expected: 6`  \n⚠️ Bug: treating any ‘c’ as completing “abc” (using `lastA` directly) would incorrectly set `bestABC` to -1 → answer 6 still, but a different buggy rule could give 5."
+    "For a fixed ending index r, what single quantity about the prefix s[0..r] determines how many starting indices l make s[l..r] free of \"abc\" as a subsequence? The string has up to 10^5 characters, so checking every (l, r) pair is too slow.",
+    "Track three running indices: latest 'a', largest start of an \"ab\" subsequence, and largest start of an \"abc\" subsequence. In \"abac\", at r=3 ('c') the \"ab\" starting at index 0 completes, so lastABC becomes 0 and only starts 1..3 are valid → add 3.",
+    "```\nlastA = lastAB = lastABC = -1\nans = 0\nfor r in 0..n-1:\n    if s[r] == 'a': lastA = r\n    elif s[r] == 'b': lastAB = max(lastAB, lastA)\n    else: lastABC = max(lastABC, lastAB)\n    ans += r - lastABC\nreturn ans\n```",
+    "**Single character** - n = 1, no subsequence possible.\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing lastABC to 0 instead of -1 → returns 0\n\n**Update order on 'c'** - the \"abc\" completing at this position must be counted before adding.\n`Input: s = \"abc\"` → `Expected: 5`\n⚠️ Bug: adding r - lastABC to ans before updating lastABC on 'c' → returns 6\n\n**All same characters** - no 'b' or 'c', so every substring is valid.\n`Input: s = \"aaa\"` → `Expected: 6`\n⚠️ Bug: updating lastABC on every character instead of only on 'c' → returns 3\n\n**Overflow** - n = 10^5 all 'a's gives 100000 × 100001 / 2 = 5000050000.\n`Input: s = \"a\" repeated 100000 times` → `Expected: 5000050000`\n⚠️ Bug: using int for ans → returns 705082704 (signed overflow wrap)"
   ],
   "followUps": [
     {
-      "q": "How would you count substrings that do **not** contain the longer forbidden subsequence “abcd”?",
-      "a": "Extend the tracking to four variables: latest ‘a’, best start of “ab”, best start of “abc”, and best start of “abcd”. Each new character updates the next variable using the previous one, still O(n) time and O(1) space."
+      "q": "Generalize the forbidden subsequence to an arbitrary string t of length k over any alphabet. How does the approach scale?",
+      "a": "Maintain k running indices tracking the largest start of each prefix of t as a subsequence. On a character matching t[i], update index i from index i−1. Time O(n·k), space O(k)."
     },
     {
-      "q": "Suppose the string length can be up to 10^6 and the answer must be returned modulo 10^9+7. How does the solution change?",
-      "a": "The same linear scan works; just take `ans = (ans + i - bestABC) % MOD` at each step and store `ans` in a 64‑bit integer before the modulo. Time stays O(n) and extra space stays O(1)."
+      "q": "Instead of counting substrings avoiding \"abc\", count those containing \"abc\" as a subsequence.",
+      "a": "Subtract the valid count from n(n+1)/2. Equivalently, at each r add lastABC + 1 instead of r − lastABC. Time O(n), space O(1)."
     },
     {
-      "q": "If the alphabet were all lowercase letters and the forbidden subsequence could be any length k (≤ 10), can the method be generalized?",
-      "a": "Yes. Keep an array `best[0…k]` where `best[t]` stores the largest start index of a subsequence of the first t characters of the pattern seen so far. When the current character matches the (t+1)‑th character of the pattern, update `best[t+1] = max(best[t+1], best[t])`. The answer at position i is `i - best[k]`. This runs in O(n·k) time and O(k) space."
+      "q": "The string arrives as a stream of unknown length; answer queries asking for the running count after each new character.",
+      "a": "The three indices and running total update in O(1) per character, so emit ans after each append. Time O(1) amortized per query, space O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    long long countValidSubstrings(string s) {\n        long long ans = 0;\n        int lastA = -1;      // latest position of 'a'\n        int bestAB = -1;     // largest start index of any \"ab\" seen so far\n        int bestABC = -1;    // largest start index of any \"abc\" seen so far\n\n        for (int i = 0; i < (int)s.size(); ++i) {\n            char ch = s[i];\n            if (ch == 'a') {\n                lastA = i;\n            } else if (ch == 'b') {\n                if (lastA != -1) {\n                    bestAB = max(bestAB, lastA);\n                }\n            } else { // ch == 'c'\n                if (bestAB != -1) {\n                    bestABC = max(bestABC, bestAB);\n                }\n            }\n            ans += i - bestABC; // all substrings ending at i that start after bestABC are valid\n        }\n        return ans;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    long long countValidSubstrings(string s) {\n        long long ans = 0;\n        int lastA = -1, lastAB = -1, lastABC = -1;\n        int n = (int)s.size();\n        for (int r = 0; r < n; r++) {\n            char c = s[r];\n            if (c == 'a') {\n                lastA = r;\n            } else if (c == 'b') {\n                if (lastA > lastAB) lastAB = lastA;\n            } else {\n                if (lastAB > lastABC) lastABC = lastAB;\n            }\n            ans += (long long)(r - lastABC);\n        }\n        return ans;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

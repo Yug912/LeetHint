@@ -1,0 +1,40 @@
+{
+  "slug": "count-zero-request-servers",
+  "title": "Count Zero Request Servers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window with Offline Queries",
+  "tc": "O(L log L + Q log Q)",
+  "sc": "O(n + Q)",
+  "spaceBreakdown": "- vector<pair<int, int>> sorted_queries: up to Q entries → O(Q)\n- vector<int> freq: up to n + 1 entries → O(n)\n- vector<int> ans: up to Q entries (returned output, but allocated internally) → O(Q)\n- sort(): C++ introsort uses O(log L) stack for logs and O(log Q) for queries → O(log L + log Q)\n- not counted: input logs, input queries",
+  "approach": "The key insight is to process the queries offline by sorting them alongside the logs. By sorting both the queries and logs by time, we can use a sliding window (two pointers) to maintain the count of active servers for the current query's time interval `[q - x, q]`. As we iterate through the sorted queries, we expand the right pointer to include logs that fall within the current query's end time and shrink the left pointer to remove logs that fall before the current query's start time, keeping an accurate count of distinct active servers.",
+  "hints": [
+    "If you could answer the queries in any order you wanted, how would that change how you process the logs? The constraints allow up to 10^5 queries and 10^5 logs.",
+    "Sort the queries and logs by time, then use a sliding window with two pointers over the logs to maintain the active server count for each query's interval. For query 10 with x=5, the window is [5, 10]; expand the right pointer to include logs up to time 10, and shrink the left pointer to remove logs before time 5.",
+    "```\nsort queries by time, keeping original indices\nsort logs by time\ninitialize frequency array and active count\nfor each query (q_time, q_idx):\n    while right pointer log time <= q_time:\n        add log's server to frequency, update active count\n        increment right\n    while left pointer log time < q_time - x:\n        remove log's server from frequency, update active count\n        increment left\n    ans[q_idx] = n - active\n```",
+    "**Out-of-order queries** - Queries are not sorted by time in the input.\n`Input: n = 3, logs = [[1,3],[2,6],[1,5]], x = 5, queries = [11,10]` → `Expected: [2,1]`\n⚠️ Bug: Processing queries in their given order without sorting them first → returns `[1,2]` because the sliding window's left pointer cannot move backwards to shrink the window for an earlier time after expanding for a later time.\n\n**Servers with multiple requests in window** - A server has several requests within the same query window.\n`Input: n = 3, logs = [[1,3],[2,6],[1,5]], x = 5, queries = [10]` → `Expected: [1]`\n⚠️ Bug: Incrementing the active count every time a log is added instead of only when `freq[server]` transitions from 0 to 1 → returns `[0]` because server 1 is counted twice, making `active = 3`.\n\n**Duplicate logs** - The same server has multiple requests at the exact same time.\n`Input: n = 2, logs = [[1,1],[1,2]], x = 2, queries = [3]` → `Expected: [1]`\n⚠️ Bug: Using a set to track active servers and erasing the server ID when the left pointer passes any of its logs → returns `[2]` because server 1 is erased when the log at time 1 leaves the window, despite the log at time 2 still being active."
+  ],
+  "followUps": [
+    {
+      "q": "What if the queries arrive online (one by one) and you must answer each before seeing the next?",
+      "a": "You cannot sort the queries. Instead, sort the logs by time. For each query, use binary search to find the range of logs within [q - x, q], then use a data structure like a Merge Sort Tree or a persistent segment tree to count the number of distinct server IDs in that range. TC: O(Q log^2 L), SC: O(L log L)."
+    },
+    {
+      "q": "What if n is up to 10^9 but logs.length is still up to 10^5?",
+      "a": "Replace the O(n) frequency array with an unordered_map<int, int> to track frequencies only for servers that appear in the logs. The active count logic remains the same. TC: O(L log L + Q log Q) expected, SC: O(L + Q)."
+    },
+    {
+      "q": "What if x is different for each query?",
+      "a": "The sliding window breaks because the window size varies. You would need to sort the queries and use Mo's algorithm to process them in an order that minimizes pointer movement, or use a binary search + distinct count data structure per query. TC: O((L + Q) * sqrt(L)) for Mo's."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> countServers(int n, vector<vector<int>>& logs, int x, vector<int>& queries) {\n        int q = queries.size();\n        vector<pair<int, int>> sorted_queries(q);\n        for (int i = 0; i < q; ++i) {\n            sorted_queries[i] = {queries[i], i};\n        }\n        \n        sort(sorted_queries.begin(), sorted_queries.end());\n        sort(logs.begin(), logs.end(), [](const vector<int>& a, const vector<int>& b) {\n            return a[1] < b[1];\n        });\n        \n        vector<int> freq(n + 1, 0);\n        int active = 0;\n        int left = 0;\n        int right = 0;\n        vector<int> ans(q);\n        \n        for (int i = 0; i < q; ++i) {\n            int q_time = sorted_queries[i].first;\n            int q_idx = sorted_queries[i].second;\n            int start_time = q_time - x;\n            \n            while (right < logs.size() && logs[right][1] <= q_time) {\n                int server = logs[right][0];\n                if (freq[server] == 0) {\n                    active++;\n                }\n                freq[server]++;\n                right++;\n            }\n            \n            while (left < right && logs[left][1] < start_time) {\n                int server = logs[left][0];\n                freq[server]--;\n                if (freq[server] == 0) {\n                    active--;\n                }\n                left++;\n            }\n            \n            ans[q_idx] = n - active;\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-impossible-sequence-of-rolls",
+  "title": "Shortest Impossible Sequence of Rolls",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Set Collection",
+  "tc": "O(n)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- unordered_set<int> seen: up to k entries → O(k)\n- int rounds, loop variable r: O(1)\n- not counted: input vector, returned int",
+  "approach": "The answer equals the number of times we can scan through `rolls` and collect all `k` distinct values in consecutive segments, plus one. Each such \"complete round\" guarantees that every sequence of length equal to the round count can be formed as a subsequence (pick one element per round). The shortest impossible sequence has length (complete rounds) + 1, since we run out of rounds for the last element. We use an `unordered_set` to track distinct values in the current segment, clearing it whenever it reaches size `k`.",
+  "hints": [
+    "What must a prefix of `rolls` contain for every possible length-1 sequence to appear as a subsequence within it? The dice values range from 1 to k.",
+    "Use an `unordered_set` to collect distinct values in the current segment. In Example 1, scanning `[4,2,1,2,3]` fills the set to size 4, completing one round; then `[3,2,4,1]` completes a second.",
+    "```\nseen = empty set\nrounds = 0\nfor each value in rolls:\n    insert value into seen\n    if size(seen) == k:\n        rounds += 1\n        clear seen\nreturn rounds + 1\n```",
+    "**Missing value** - k exceeds the number of distinct values in rolls\n`Input: rolls = [1,1,3,2,2,2,3,3], k = 4` → `Expected: 1`\n⚠️ Bug: returning `rounds` instead of `rounds + 1` → returns 0\n\n**Single element, k=1** - each element completes a round\n`Input: rolls = [1], k = 1` → `Expected: 2`\n⚠️ Bug: using `seen.size() > k` instead of `== k` → returns 1\n\n**Exact partition** - rolls split perfectly into complete rounds\n`Input: rolls = [1,2,3,1,2,3], k = 3` → `Expected: 3`\n⚠️ Bug: not clearing `seen` after each round → returns 5\n\n**All same values** - no round completes when k > 1\n`Input: rolls = [1,1,1,1], k = 2` → `Expected: 1`\n⚠️ Bug: initializing `rounds` to 1 instead of 0 → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^9 (values are sparse)?",
+      "a": "The hash set approach already handles this since it only stores values that actually appear. The set never exceeds min(n, k) entries. TC remains O(n), SC becomes O(min(n, k))."
+    },
+    {
+      "q": "What if rolls arrives as a streaming input too large to store?",
+      "a": "The algorithm processes elements one at a time and only keeps the current round's set and a round counter. No need to store the full array. TC: O(n), SC: O(k) for the set."
+    },
+    {
+      "q": "Return the lexicographically smallest impossible sequence of the shortest length.",
+      "a": "After finding the answer length L = rounds + 1, construct the sequence greedily. For positions 1 through L-1, use value 1 (always available since those rounds are complete). For the last position, scan the suffix after the last complete round and pick the smallest value in 1..k not present there. TC: O(n + k), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int shortestSequence(vector<int>& rolls, int k) {\n        unordered_set<int> seen;\n        int rounds = 0;\n        for (int r : rolls) {\n            seen.insert(r);\n            if ((int)seen.size() == k) {\n                rounds++;\n                seen.clear();\n            }\n        }\n        return rounds + 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

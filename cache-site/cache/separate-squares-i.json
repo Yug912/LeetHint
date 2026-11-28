@@ -1,0 +1,40 @@
+{
+  "slug": "separate-squares-i",
+  "title": "Separate Squares I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total, double half, lo, hi, mid, below: O(1) scalars\n- loop variables i: O(1)\n- not counted: input squares, returned double",
+  "approach": "The total area of all squares is fixed. The area below a horizontal line at height h is a continuous, monotonically non-decreasing piecewise-linear function of h. We binary search on h to find the minimum y where the area below equals half the total area. For each candidate h, each square [x, y, l] contributes l × max(0, min(h − y, l)) to the area below.",
+  "hints": [
+    "The area below a horizontal line is a continuous function of the line's y-coordinate. As you raise the line from y = 0 upward, how does the total area below it change - and is that change monotonic?",
+    "Binary search on the y-coordinate. For a candidate height h, compute the area below by summing each square's contribution: l × max(0, min(h − y_i, l_i)). In Example 2, at h = 7/6, square [0,0,2] contributes 2 × 7/6 = 14/6 and square [1,1,1] contributes 1 × 1/6 = 1/6, totaling 15/6 = 2.5 = half of total area 5.",
+    "```\ntotal = sum of l_i² for all squares\nhalf = total / 2\nlo, hi = 0, 2×10⁹\nrepeat 100 times:\n    mid = (lo + hi) / 2\n    below = sum over squares of l_i × max(0, min(mid − y_i, l_i))\n    if below ≥ half: hi = mid\n    else: lo = mid\nreturn hi\n```",
+    "**Flat region** - multiple valid y values exist; the answer is the minimum\n`Input: [[0,0,1],[2,2,1]]` → `Expected: 1.00000`\n⚠️ Bug: using `below > half` instead of `below >= half` → returns 2.00000\n\n**Overflow** - l_i up to 10⁹, so l_i² up to 10¹⁸ exceeds int range\n`Input: [[0,0,1000000000]]` → `Expected: 500000000.00000`\n⚠️ Bug: computing `total += s[2] * s[2]` with int arithmetic → overflow, returns garbage\n\n**Single square** - the line cuts through the only square\n`Input: [[0,0,4]]` → `Expected: 2.00000`\n⚠️ Bug: only adding full square area when h ≥ y + l, skipping the partial overlap term → returns 4.00000\n\n**Upper bound** - y_i + l_i can reach 2×10⁹\n`Input: [[0,1000000000,1000000000]]` → `Expected: 1500000000.00000`\n⚠️ Bug: setting hi = 1e9 instead of 2e9 → returns 1000000000.00000"
+  ],
+  "followUps": [
+    {
+      "q": "What if the line must split the area in a given ratio r : 1 instead of 1 : 1?",
+      "a": "Replace `half = total / 2` with `target = total * r / (r + 1)` and binary search for the minimum y where area below ≥ target. Everything else stays identical. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if n can be up to 10⁶?",
+      "a": "Collect all 2n breakpoints (each y_i and y_i + l_i), sort them, and sweep left to right maintaining a running slope (sum of active l_i values) and accumulated area. Locate the segment containing the target area, then solve for the exact y linearly within that segment. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if squares arrive one at a time as a stream and you must answer after each insertion?",
+      "a": "Coordinate-compress all possible breakpoints seen so far and maintain a Fenwick tree storing each square's slope contribution (l_i) over its active y-range. Each query runs the binary search, evaluating area below in O(log n) via prefix sums. TC: O(log²n · log(precision)) per query, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double separateSquares(vector<vector<int>>& squares) {\n        long long total = 0;\n        for (auto& s : squares) {\n            long long l = s[2];\n            total += l * l;\n        }\n        double half = total / 2.0;\n        double lo = 0.0, hi = 2e9;\n        for (int i = 0; i < 100; i++) {\n            double mid = (lo + hi) * 0.5;\n            double below = 0.0;\n            for (auto& s : squares) {\n                double y = s[1];\n                double l = s[2];\n                if (mid <= y) continue;\n                if (mid >= y + l) below += l * l;\n                else below += l * (mid - y);\n            }\n            if (below >= half) hi = mid;\n            else lo = mid;\n        }\n        return hi;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

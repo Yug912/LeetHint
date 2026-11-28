@@ -3,37 +3,38 @@
   "title": "Coin Change",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-25",
+  "generatedAt": "2026-11-26",
   "pattern": "Unbounded Knapsack DP",
-  "tc": "O(n · amount)",
+  "tc": "O(amount × n)",
   "sc": "O(amount)",
-  "spaceBreakdown": "- vector<int> dp of size amount+1 → O(amount)  \n- recursion depth: none  \n- not counted: input vectors, returned int",
-  "approach": "The minimum number of coins for a given amount can be built from optimal solutions of smaller amounts because we may add one more coin of any denomination.  \nWe compute, for every value 0…amount, the smallest coin count achievable using a one‑dimensional DP array and update it with each coin (unbounded knapsack).  \nThe answer is the DP entry for *amount*; if it stayed at “infinite” the amount is unreachable.",
+  "spaceBreakdown": "- vector<int> dp: amount + 1 entries → O(amount)\n- no recursion, no other containers\n- not counted: input coins vector, returned int",
+  "approach": "Use bottom-up dynamic programming (unbounded knapsack). Let `dp[i]` be the minimum number of coins needed to make amount `i`. Initialize `dp[0] = 0` and all other entries to a sentinel value (`amount + 1`, which is unreachable since even coin-1 needs at most `amount` coins). For each sub-amount `i` from 1 to `amount`, try every coin: if `coin ≤ i`, then `dp[i] = min(dp[i], dp[i - coin] + 1)`. If `dp[amount]` still exceeds `amount`, no combination exists, so return -1.",
   "hints": [
-    "If you could use any number of each coin, how does the optimal solution for a total X relate to the optimal solutions of smaller totals?  \nThe statement guarantees 0 ≤ amount ≤ 10⁴.",
-    "Use a one‑dimensional array to store the best answer for each sub‑amount.  \nExample: with coins [1,2,5] and amount 11, after processing coin 5 the entry for 10 becomes 2 (5+5).",
-    "dp[0] = 0  \nfor each coin c in coins:  \n for i from c to amount:  \n  dp[i] = min(dp[i], dp[i‑c] + 1)  \nreturn dp[amount] if finite else -1",
-    "**Zero amount** - amount is zero, the answer must be 0.  \n`Input: coins = [2,3], amount = 0` → `Expected: 0`  \n⚠️ Bug: returning -1 because the loop never updates dp[0].\n\n**Coin larger than amount** - all coin values exceed the target, no combination exists.  \n`Input: coins = [5,7], amount = 3` → `Expected: -1`  \n⚠️ Bug: accessing dp[i‑c] with a negative index causes undefined behaviour.\n\n**Duplicate coins** - the list may contain repeats, but they must not affect the result.  \n`Input: coins = [1,2,2], amount = 3` → `Expected: 2` (1+2)  \n⚠️ Bug: removing duplicates before DP can change the iteration order and miss optimal sub‑structures.\n\n**Greedy fails** - picking the largest possible coin each step is not optimal.  \n`Input: coins = [1,3,4], amount = 6` → `Expected: 2` (3+3)  \n⚠️ Bug: greedy algorithm returns 3 (4+1+1).\n\n**Maximum amount with coin 1** - ensures DP handles large counts without overflow.  \n`Input: coins = [1], amount = 10000` → `Expected: 10000`  \n⚠️ Bug: using a 16‑bit integer for dp entries overflows and yields a negative result."
+    "Given amount ≤ 10^4, if you fix the last coin used, what smaller version of the same problem appears?",
+    "Use a 1D array `dp` where `dp[i]` holds the fewest coins for amount `i`. For coins = [1,2,5], amount = 11: `dp[5] = dp[0] + 1 = 1` (using coin 5), then `dp[11] = dp[6] + 1 = 3` (using coin 5).",
+    "```\ndp[0] = 0\ndp[1..amount] = infinity\nfor i from 1 to amount:\n    for each coin c:\n        if c <= i:\n            dp[i] = min(dp[i], dp[i - c] + 1)\nreturn dp[amount] if dp[amount] <= amount else -1\n```",
+    "**Zero amount** - amount is 0, no coins needed\n`Input: coins = [1], amount = 0` → `Expected: 0`\n⚠️ Bug: leaving `dp[0]` at its infinity sentinel instead of setting it to 0 → returns -1\n\n**Impossible amount** - coins cannot sum to the target\n`Input: coins = [2], amount = 3` → `Expected: -1`\n⚠️ Bug: returning `dp[amount]` without checking if it equals the infinity sentinel → returns 4\n\n**Coin exceeds amount** - a coin denomination larger than the target\n`Input: coins = [5], amount = 3` → `Expected: -1`\n⚠️ Bug: accessing `dp[i - coin]` without first checking `coin <= i` → out-of-bounds read at negative index\n\n**Single coin type** - only one denomination available\n`Input: coins = [1], amount = 5` → `Expected: 5`\n⚠️ Bug: initializing `dp` array to 0 instead of a large sentinel → `min(0, ...)` keeps 0 for every `i` → returns 0"
   ],
   "followUps": [
     {
-      "q": "What if amount can be as large as 10⁹ while the number of coin types stays small?",
-      "a": "We can run Dijkstra’s algorithm on a graph of residues modulo the smallest coin value; each edge adds a coin and moves to a new residue with cost +1. This runs in O(minCoin · log minCoin) time and O(minCoin) space."
+      "q": "Return the actual coin combination used, not just the count.",
+      "a": "Maintain a parallel array `prev[i]` recording which coin achieved `dp[i]`. After filling `dp`, backtrack from `amount`: output `prev[amount]`, subtract it, move to `amount - prev[amount]`, repeat until reaching 0. TC unchanged O(amount·n), SC still O(amount) with a second array."
     },
     {
-      "q": "How would you modify the solution to also return one possible set of coins achieving the minimum count?",
-      "a": "Keep a predecessor array prev[i] storing the coin that led to the optimal dp[i]. After DP finishes, backtrack from amount using prev to reconstruct the coin list. Time stays O(n·amount); extra O(amount) space for prev."
+      "q": "Count the number of distinct combinations (order-independent) to make the amount.",
+      "a": "Change `dp[i]` to a count: `dp[0] = 1`, iterate coins in the outer loop and amounts in the inner loop, doing `dp[i] += dp[i - coin]`. The outer-loop-over-coins ordering counts each multiset once instead of counting permutations. TC O(amount·n), SC O(amount)."
     },
     {
-      "q": "Suppose the memory limit only allows O(√amount) extra space. Can the problem still be solved?",
-      "a": "Yes, by applying a BFS on the state space of amounts but pruning to keep only the smallest √amount states (e.g., using a sliding‑window DP that processes amounts in blocks). The time becomes O(n·amount) while the auxiliary memory is reduced to O(√amount)."
+      "q": "Handle amount up to 10^9 with coins.length ≤ 12 - O(amount) space is infeasible.",
+      "a": "Let s be the smallest coin. Build a shortest-path graph on s residue nodes (0 to s−1); each coin c creates an edge from residue r to (r + c) mod s with weight 1. Run Dijkstra from node 0 to find the minimum coins to reach each residue class with the minimum achievable sum. For amount a, combine the result for residue a mod s with s-valued coins to fill the remainder. TC O(s · n · log s), SC O(s), independent of amount."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        const int INF = amount + 1;                 // larger than any possible answer\n        vector<int> dp(amount + 1, INF);\n        dp[0] = 0;\n        for (int c : coins) {\n            if (c > amount) continue;\n            for (int i = c; i <= amount; ++i) {\n                dp[i] = min(dp[i], dp[i - c] + 1);\n            }\n        }\n        return dp[amount] == INF ? -1 : dp[amount];\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        vector<int> dp(amount + 1, amount + 1);\n        dp[0] = 0;\n        for (int i = 1; i <= amount; i++) {\n            for (int coin : coins) {\n                if (coin <= i) {\n                    dp[i] = min(dp[i], dp[i - coin] + 1);\n                }\n            }\n        }\n        return dp[amount] > amount ? -1 : dp[amount];\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

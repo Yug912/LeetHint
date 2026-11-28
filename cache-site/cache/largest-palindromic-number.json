@@ -1,0 +1,40 @@
+{
+  "slug": "largest-palindromic-number",
+  "title": "Largest Palindromic Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[10]: fixed 10 entries → O(1)\n- string res: returned output, not counted\n- no recursion, no other containers",
+  "approach": "Count digit frequencies in a fixed-size array of 10 integers. A palindrome's mirrored positions require pairs of the same digit, so for each digit 9→0 we take floor(count/2) pairs and place them from the outside in (largest first for maximum value). The center position (if any) gets the largest digit with an odd remaining count. To avoid leading zeros, if no non-zero digit has a pair, we return only the middle digit (or \"0\" if none). We precompute the total length and fill the result string directly at both ends, avoiding separate left/right intermediates.",
+  "hints": [
+    "What structural property of a palindrome limits how many digits can appear an odd number of times? The input can contain up to 10^5 digits.",
+    "Count digit frequencies in a fixed array of 10 integers. For \"444947137\", digit 4 appears 4 times (2 pairs), 7 appears 2 times (1 pair), and 9 appears once (middle candidate).",
+    "```\ncount frequency of each digit 0-9\ntotal_pairs = sum of floor(count[d] / 2)\nmiddle = largest d where count[d] is odd, or none\nif no non-zero digit has a pair:\n    return middle digit, or \"0\" if no middle\nresult = string of length 2*total_pairs + (middle exists)\nfill from both ends, largest digit pairs first\nplace middle in center\n```",
+    "**All zeros** - input contains only zeros\n`Input: \"0000\"` → `Expected: \"0\"`\n⚠️ Bug: not checking for leading zeros before building → returns \"0000\"\n\n**Single digit** - smallest valid input\n`Input: \"5\"` → `Expected: \"5\"`\n⚠️ Bug: requiring at least one pair before placing a middle digit → returns \"\" or \"0\"\n\n**Zeros with one non-zero** - all pairs are zeros, middle is non-zero\n`Input: \"00009\"` → `Expected: \"9\"`\n⚠️ Bug: building palindrome with zero pairs around the middle → returns \"00900\"\n\n**All same non-zero, even count** - no middle digit exists\n`Input: \"55\"` → `Expected: \"55\"`\n⚠️ Bug: skipping output when no odd-count digit exists → returns \"\" or \"5\""
+  ],
+  "followUps": [
+    {
+      "q": "What if you must use every digit exactly once?",
+      "a": "First check feasibility - at most one digit can have an odd count. If valid, the same greedy placement works but all pairs are mandatory. If more than one odd count exists, return \"\". TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the input contains lowercase letters and digits (base-36)?",
+      "a": "Expand the count array to size 36. The greedy logic is identical - place larger characters first. The leading-zero check applies only to '0'; letters are always valid leading characters. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the input is a stream of up to 10^9 digits that cannot fit in memory?",
+      "a": "The count array stays O(1). Process the stream in one pass to fill counts, then emit the left half (largest pairs first), the middle, and the right half (reverse of left) as a stream without materializing the full string. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string largestPalindromic(string num) {\n        int cnt[10] = {};\n        for (char c : num) cnt[c - '0']++;\n\n        int pairs = 0;\n        for (int d = 0; d <= 9; d++) pairs += cnt[d] / 2;\n\n        int mid = -1;\n        for (int d = 9; d >= 0; d--) {\n            if (cnt[d] % 2 == 1) { mid = d; break; }\n        }\n\n        bool hasNonZeroPair = false;\n        for (int d = 9; d >= 1; d--) {\n            if (cnt[d] / 2 > 0) { hasNonZeroPair = true; break; }\n        }\n\n        if (!hasNonZeroPair) {\n            if (mid >= 0) return string(1, '0' + mid);\n            return \"0\";\n        }\n\n        int len = 2 * pairs + (mid >= 0 ? 1 : 0);\n        string res(len, '0');\n        int pos = 0;\n        for (int d = 9; d >= 0; d--) {\n            int p = cnt[d] / 2;\n            for (int i = 0; i < p; i++) {\n                res[pos] = '0' + d;\n                res[len - 1 - pos] = '0' + d;\n                pos++;\n            }\n        }\n        if (mid >= 0) {\n            res[pos] = '0' + mid;\n        }\n\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

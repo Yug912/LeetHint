@@ -3,37 +3,38 @@
   "title": "Find Mismatched Segments Between Two Strings",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
-  "pattern": "Linear Scan / Segment Detection",
+  "generatedAt": "2026-11-26",
+  "pattern": "Linear Scan / Run-Length Grouping",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- vector<vector<string>> res: stores at most n/2 segments → O(k) output, not counted  \n- loop indices and temporary ints: O(1)  \n- not counted: input strings, returned vector",
-  "approach": "Scan both strings simultaneously. Whenever characters differ, start a segment and keep moving right until they become equal again (or the end is reached). Record the two substrings for that segment and continue. This greedy linear scan captures every maximal mismatched block, which is exactly what the problem asks for.",
+  "spaceBreakdown": "- vector<vector<string>> res: this is the returned output, not counted\n- local ints i, start, n: O(1)\n- substrings stored only inside the returned vector, not counted\n- no recursion, no auxiliary containers",
+  "approach": "Scan both strings left to right with a single index. Whenever s1[i] != s2[i], mark the start and keep advancing while the characters still differ; when they match again (or the strings end), emit [s1.substr(start, len), s2.substr(start, len)]. Equal characters act as hard boundaries that no mismatched segment can cross, so one linear pass captures every maximal run.",
   "hints": [
-    "When you walk through the two strings from left to right, how do the positions where the characters differ tend to appear together?  \nBoth strings have the same length ≤ 100.",
-    "Use a simple vector (or vector‑of‑vector) to collect each mismatched segment.  \nExample: for s1 = \"earth\", s2 = \"empty\", the scan finds a mismatch from index 1 to 2 and stores [\"ar\",\"mp\"].",
-    "i ← 0  \nwhile i < n do  \n if s1[i] == s2[i] then i ← i+1  \n else  \n  start ← i  \n  while i < n and s1[i] != s2[i] do i ← i+1  \n  add [s1.substr(start,i-start), s2.substr(start,i-start)] to result  \nreturn result",
-    "**Mismatch at start** - first character differs  \n`Input: \"ab\",\"cb\"` → `Expected: [[\"a\",\"c\"]]`  \n⚠️ Bug: initializing the start index after the first check → returns []  \n\n**Mismatch at end** - last character differs  \n`Input: \"ab\",\"ac\"` → `Expected: [[\"b\",\"c\"]]`  \n⚠️ Bug: loop condition stops before processing the final index → returns []  \n\n**All characters differ** - whole string is one segment  \n`Input: \"abc\",\"def\"` → `Expected: [[\"abc\",\"def\"]]`  \n⚠️ Bug: resetting start inside the inner loop splits the segment into many pieces → returns [[\"a\",\"d\"],[\"b\",\"e\"],[\"c\",\"f\"]]  \n\n**Isolated single‑character mismatches** - mismatches separated by matches  \n`Input: \"axcye\",\"abcde\"` → `Expected: [[\"x\",\"b\"],[\"y\",\"d\"]]`  \n⚠️ Bug: using `while i < n && s1[i] != s2[i]` but forgetting to advance i after recording → infinite loop or missing second segment."
+    "When s1[i] and s2[i] are equal at some index, can a single mismatched segment ever include that index? The constraints say both strings have the same length, so every position is comparable one-to-one.",
+    "Use a single linear scan with a start marker. In Example 1 (\"earth\" vs \"empty\"), index 1 differs ('a' vs 'm'), so mark start=1 and extend through index 2; index 3 matches ('t'=='t'), so close the segment and emit s1[1..2]=\"ar\" and s2[1..2]=\"mp\".",
+    "i = 0\nwhile i < n:\n    if s1[i] != s2[i]:\n        start = i\n        while i < n and s1[i] != s2[i]:\n            i = i + 1\n        emit [s1[start..i), s2[start..i)]\n    else:\n        i = i + 1",
+    "**Single character mismatch** - n=1, the only position differs\n`Input: s1 = \"a\", s2 = \"b\"` → `Expected: [[\"a\",\"b\"]]`\n⚠️ Bug: using `while i < n-1` in the inner loop → returns `[]`\n\n**Single character match** - n=1, the only position is equal\n`Input: s1 = \"a\", s2 = \"a\"` → `Expected: []`\n⚠️ Bug: pushing a segment on every iteration without checking the mismatch condition → returns `[[\"a\",\"a\"]]`\n\n**All characters differ** - the whole string is one segment\n`Input: s1 = \"abc\", s2 = \"xyz\"` → `Expected: [[\"abc\",\"xyz\"]]`\n⚠️ Bug: stopping the inner extension at `i < n-1` instead of `i < n` → returns `[[\"ab\",\"xy\"]]`\n\n**Mismatch only at the last index** - segment touches the right boundary\n`Input: s1 = \"aat\", s2 = \"aaz\"` → `Expected: [[\"t\",\"z\"]]`\n⚠️ Bug: checking `i+1 < n` before extending, so the final index is never reached → returns `[]`\n\n**All equal** - no segments at all\n`Input: s1 = \"aaa\", s2 = \"aaa\"` → `Expected: []`\n⚠️ Bug: always pushing at least one (possibly empty) segment at the end → returns `[[\"\",\"\"]]`"
   ],
   "followUps": [
     {
-      "q": "What if the strings can be as long as 10⁵ characters?",
-      "a": "The same linear scan works; time stays O(n) and auxiliary space stays O(1), which easily fits the larger limit."
+      "q": "The strings are up to 10^9 characters long and arrive as two streams you can read once; how do you adapt?",
+      "a": "Keep a running buffer for the current mismatched segment only, flushing [sub1, sub2] whenever a match is seen or the stream ends. Time stays O(n) and auxiliary memory drops to O(L) where L is the longest segment, since you never hold the whole strings."
     },
     {
-      "q": "Suppose we need to return the start and end indices of each mismatched segment instead of the substrings.",
-      "a": "While scanning, store `start` and `i‑1` for each segment; the algorithm is unchanged and still O(n) time, O(k) output space."
+      "q": "Return only mismatched segments whose length is at least k; what changes?",
+      "a": "Add `if (i - start >= k)` before pushing into the result. The scan is unchanged, so time remains O(n) and auxiliary space O(1)."
     },
     {
-      "q": "How would you handle the problem if the strings are provided as streams and cannot be fully stored in memory?",
-      "a": "Process the streams character by character, keeping only the current index and whether we are inside a mismatched block; when a block ends, output its collected characters (or indices). This uses O(1) extra memory and O(n) time."
+      "q": "The strings may have different lengths because of insertions/deletions; find aligned mismatched blocks.",
+      "a": "This becomes an edit-script / diff problem: compute the LCS or run Myers' diff to get matching anchors, then group the gaps between anchors into mismatched blocks. Time rises to O(n*m) for classic LCS or O((n+m)*d) for Myers where d is the edit distance."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    vector<vector<string>> findMismatchedSegments(string s1, string s2) {\n        int n = s1.size();\n        vector<vector<string>> res;\n        int i = 0;\n        while (i < n) {\n            if (s1[i] == s2[i]) {\n                ++i;\n            } else {\n                int start = i;\n                while (i < n && s1[i] != s2[i]) ++i;\n                res.push_back({s1.substr(start, i - start), s2.substr(start, i - start)});\n            }\n        }\n        return res;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    vector<vector<string>> findMismatchedSegments(string s1, string s2) {\n        vector<vector<string>> res;\n        int n = (int)s1.size();\n        int i = 0;\n        while (i < n) {\n            if (s1[i] != s2[i]) {\n                int start = i;\n                while (i < n && s1[i] != s2[i]) {\n                    ++i;\n                }\n                int len = i - start;\n                res.push_back({s1.substr(start, len), s2.substr(start, len)});\n            } else {\n                ++i;\n            }\n        }\n        return res;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

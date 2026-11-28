@@ -3,37 +3,38 @@
   "title": "Count Dominant Elements",
   "difficulty": "Easy",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
+  "generatedAt": "2026-11-26",
   "pattern": "Linear Scan",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- loop index and counters: O(1)  \n- no additional containers",
-  "approach": "For each position we only need to compare the element with its immediate neighbor(s).  \nIf it is at an end, it must be ≥ the single neighbor.  \nIf it is interior, the inequality `nums[i] ≥ (nums[i‑1]+nums[i+1])/2` is equivalent to `2*nums[i] ≥ nums[i‑1]+nums[i+1]`, which avoids floating‑point.  \nScanning the array once and counting the positions that satisfy the appropriate check yields the answer.",
+  "spaceBreakdown": "- no containers/arrays allocated\n- no recursion\n- only a fixed set of scalar locals (sum, cnt, count, loop index)",
+  "approach": "Iterate once through the array. For each index, gather its existing immediate neighbors (left if i>0, right if i<n-1), sum them, and count them. To avoid floating-point issues from division, compare `nums[i] * count >= sum` instead of `nums[i] >= sum/count`. An element with no neighbors (only possible when n==1) is automatically dominant. This is correct because multiplying both sides of `nums[i] >= sum/count` by the positive integer `count` yields an equivalent inequality with no rounding.",
   "hints": [
-    "When an element has two neighbors, how can the “≥ average of neighbors” condition be rewritten using only addition and multiplication?  \nThe array length is at most 100.",
-    "Use the given vector itself and a single `for` loop; no extra data structure is required.  \nExample: for `nums = [1,10,2]` at index 1 we check `2*10 >= 1+2`.",
-    "```\ncnt = 0\nfor i from 0 to n‑1\n    if i == 0\n        if n == 1 or nums[0] >= nums[1]   cnt++\n    else if i == n‑1\n        if nums[i] >= nums[i‑1]            cnt++\n    else\n        if 2*nums[i] >= nums[i‑1] + nums[i+1]   cnt++\nreturn cnt\n```",
-    "**Single element** - the only element has no neighbors.  \n`Input: [7]` → `Expected: 1`  \n⚠️ Bug: treating the element as having two neighbors → out‑of‑range access or wrong result.\n\n**Two elements** - each element has exactly one neighbor.  \n`Input: [5,5]` → `Expected: 2`  \n⚠️ Bug: applying the interior formula to the ends → `2*5 >= 5+5` is false, returns 0.\n\n**All equal** - every element equals the average of its neighbors.  \n`Input: [4,4,4,4]` → `Expected: 4`  \n⚠️ Bug: using `>` instead of `>=` → returns 0.\n\n**Maximum values** - ensure no overflow in the comparison.  \n`Input: [100,100,100]` → `Expected: 3`  \n⚠️ Bug: storing `2*nums[i]` in a 32‑bit int when values could be up to 10⁹ (not the case here) would overflow."
+    "In example 2, nums[1]=4 equals the average of 6 and 2. What relationship between 4 and the pair (6,2) holds true without ever performing the division?",
+    "Linear scan with integer arithmetic: for each index, sum its existing neighbors and compare `nums[i] * neighborCount >= sum`. For nums[1]=10 in [1,10,2]: neighbor sum=3, count=2, check 10*2=20 >= 3 → dominant.",
+    "```\ncount = 0\nfor i from 0 to n-1:\n    sum = 0, k = 0\n    if i > 0: sum += nums[i-1]; k++\n    if i < n-1: sum += nums[i+1]; k++\n    if k == 0 or nums[i] * k >= sum:\n        count++\nreturn count\n```",
+    "**Single element** - array has length 1, so the only element has no neighbors.\n`Input: nums = [7]` → `Expected: 1`\n⚠️ Bug: requiring at least one neighbor before counting as dominant → returns 0\n\n**All equal** - every element equals the average of its neighbors.\n`Input: nums = [5,5,5]` → `Expected: 3`\n⚠️ Bug: using strict `>` instead of `>=` in the comparison → returns 0\n\n**Integer division trap** - the true average of two neighbors can be a non-integer.\n`Input: nums = [3,2,2]` → `Expected: 2`\n⚠️ Bug: computing `(nums[i-1]+nums[i+1])/2` with int division (gives 2) and checking `nums[i] >= 2` → returns 3\n\n**Boundary tie** - the first element equals its only neighbor.\n`Input: nums = [4,4]` → `Expected: 2`\n⚠️ Bug: only checking two-neighbor elements and skipping single-neighbor boundaries → returns 0"
   ],
   "followUps": [
     {
-      "q": "What if the array length can be up to 10⁵ instead of 100?",
-      "a": "The same linear scan works; time stays O(n) and extra space stays O(1), easily handling the larger input."
+      "q": "What if nums.length could be up to 10^7 - does your approach still hold up?",
+      "a": "Yes. The single linear pass is O(n) time and O(1) auxiliary space, so it scales directly with input size. Just keep the loop tight and avoid any per-element allocations."
     },
     {
-      "q": "Suppose the numbers are provided as a stream and you cannot store the whole array. How would you count dominant elements?",
-      "a": "Keep a sliding window of three consecutive values (previous, current, next). As you read the next value you can evaluate the dominance of the middle one, then slide the window. This still uses O(1) memory and O(n) time."
+      "q": "What if \"dominant\" meant greater than or equal to the average of all elements within distance k on each side?",
+      "a": "Build a prefix-sum array once so any window sum is `pref[r+1] - pref[l]` in O(1). Then scan with window half-width k, comparing `nums[i] * windowSize >= windowSum`. Time stays O(n), space becomes O(n) for the prefix sums."
     },
     {
-      "q": "How would the solution change if the definition required the element to be **strictly greater** than the average of its neighbors?",
-      "a": "Replace the `>=` checks with `>` (or `2*nums[i] > nums[i‑1] + nums[i+1]`). The algorithm and complexities remain unchanged."
+      "q": "What if the array arrives as a streaming input and you may only keep O(1) memory, reporting the count at the end?",
+      "a": "Buffer a sliding window of the last 3 values. Each time a new value arrives, you can evaluate the middle of the previous triple; handle the very first and very last elements specially at start and end of stream. Still O(n) time, O(1) space."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int countDominantElements(vector<int>& nums) {\n        int n = nums.size();\n        int cnt = 0;\n        for (int i = 0; i < n; ++i) {\n            if (i == 0) {\n                if (n == 1 || nums[i] >= nums[i + 1]) ++cnt;\n            } else if (i == n - 1) {\n                if (nums[i] >= nums[i - 1]) ++cnt;\n            } else {\n                long long left = nums[i - 1];\n                long long right = nums[i + 1];\n                long long cur = nums[i];\n                if (2LL * cur >= left + right) ++cnt;\n            }\n        }\n        return cnt;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int countDominantElements(vector<int>& nums) {\n        int n = nums.size();\n        int count = 0;\n        for (int i = 0; i < n; i++) {\n            long long sum = 0;\n            int k = 0;\n            if (i > 0) { sum += nums[i - 1]; k++; }\n            if (i < n - 1) { sum += nums[i + 1]; k++; }\n            if (k == 0 || (long long)nums[i] * k >= sum) {\n                count++;\n            }\n        }\n        return count;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

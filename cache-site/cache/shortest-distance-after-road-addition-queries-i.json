@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-distance-after-road-addition-queries-i",
+  "title": "Shortest Distance After Road Addition Queries I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "BFS Shortest Path",
+  "tc": "O(Q(n + Q))",
+  "sc": "O(n + Q)",
+  "spaceBreakdown": "- adj: n lists holding (n-1) + Q edges total → O(n + Q)\n- dist: n ints → O(n)\n- queue bq: at most n entries → O(n)\n- ans: Q ints (returned output, not counted)",
+  "approach": "Since all edges have unit weight, BFS from city 0 gives the shortest path to every city. After each query, add the new edge to the adjacency list and re-run BFS, recording `dist[n-1]`. With n ≤ 500 and at most 500 queries, the total work is O(Q·(n+Q)) ≈ 5×10^5, well within budget. Correctness follows from BFS's guarantee of shortest paths in unweighted graphs.",
+  "hints": [
+    "With n ≤ 500 and at most 500 queries, what is the total cost of recomputing the shortest path from city 0 to city n−1 after every single road addition?",
+    "Use BFS from city 0 after each query, since every edge has weight 1. Example: the line 0→1→2→3→4 plus new road 2→4 yields BFS path 0→1→2→4 of length 3.",
+    "```\nbuild adjacency list with edges i -> i+1\nfor each query (u, v):\n    add edge u -> v\n    run BFS from 0, recording distances\n    append dist[n-1] to answer\nreturn answer\n```",
+    "**Smallest input** - n = 3 with a single query that directly connects the ends.\n`Input: n=3, queries=[[0,2]]` → `Expected: [1]`\n⚠️ Bug: skipping initialization of chain edges i→i+1 → returns [-1]\n\n**Redundant query after direct edge** - a second query cannot beat a path of length 1.\n`Input: n=5, queries=[[0,4],[1,3]]` → `Expected: [1,1]`\n⚠️ Bug: using DFS instead of BFS (original edge 0→1 is explored before 0→4) → returns [4, 4]\n\n**Stale state between queries** - a later query creates a shorter path that must overwrite an old distance.\n`Input: n=5, queries=[[0,2],[0,4]]` → `Expected: [3,1]`\n⚠️ Bug: reusing the dist array across queries without resetting → returns [3, 3]\n\n**Forgotten edge insertion** - the new road is never added to the graph.\n`Input: n=6, queries=[[1,4]]` → `Expected: [3]`\n⚠️ Bug: omitting `adj[q[0]].push_back(q[1])` → returns [5]"
+  ],
+  "followUps": [
+    {
+      "q": "If n and queries can be up to 10^5, how do you avoid O(Q·n) BFS runs?",
+      "a": "Maintain an ordered set of \"alive\" nodes on the path. Initially all n nodes are alive. For each query (u, v), erase every alive node strictly between u and v, since the new road bypasses them. The answer after each query is (alive count) − 1. Each node is erased at most once, so total work is O((n + Q) log n). SC: O(n)."
+    },
+    {
+      "q": "What if roads were bidirectional instead of unidirectional?",
+      "a": "BFS still computes shortest paths since edges remain unweighted; the visited check handles any cycles. The graph is no longer a DAG, but BFS correctness does not require acyclicity. TC and SC are unchanged."
+    },
+    {
+      "q": "What if each road had a positive integer weight?",
+      "a": "Replace BFS with Dijkstra's algorithm (priority queue) after each query. TC becomes O(Q · (n + E) log n) where E = n−1+Q. SC remains O(n + Q) for the adjacency list and distance array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> shortestDistanceAfterQueries(int n, vector<vector<int>>& queries) {\n        vector<vector<int>> adj(n);\n        for (int i = 0; i + 1 < n; ++i) {\n            adj[i].push_back(i + 1);\n        }\n        vector<int> ans;\n        ans.reserve(queries.size());\n        for (auto& q : queries) {\n            adj[q[0]].push_back(q[1]);\n            vector<int> dist(n, -1);\n            queue<int> bq;\n            dist[0] = 0;\n            bq.push(0);\n            while (!bq.empty()) {\n                int u = bq.front();\n                bq.pop();\n                if (u == n - 1) break;\n                for (int v : adj[u]) {\n                    if (dist[v] == -1) {\n                        dist[v] = dist[u] + 1;\n                        bq.push(v);\n                    }\n                }\n            }\n            ans.push_back(dist[n - 1]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-palindrome-with-fixed-length",
+  "title": "Find Palindrome With Fixed Length",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Math / Digit Manipulation",
+  "tc": "O(n * L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<long long> answer: returned output, not counted\n- base, limit, firstHalf, rev, tmp, mul: O(1) scalars\n- no recursion, no additional containers",
+  "approach": "The first ceil(intLength/2) digits uniquely determine a palindrome of length intLength. The k-th smallest palindrome's first half is 10^(half−1) + (k−1). We reverse the digits of that first half arithmetically (dropping the middle digit for odd lengths) to build the second half, then combine via multiplication and addition. If the first half reaches 10^half, the query exceeds the available palindromes and we return −1.",
+  "hints": [
+    "For a palindrome of length L, which digits can you freely choose before the rest are forced by symmetry? The constraint intLength ≤ 15 means every result fits in a 64-bit integer.",
+    "Arithmetic digit reversal: compute the first half as 10^(ceil(L/2)−1) + (q−1), then reverse its digits numerically to build the second half. For intLength=3, q=1: first half = 10, reverse(10/10) = 1, result = 10×10 + 1 = 101.",
+    "```\nhalf = ceil(intLength / 2)\nbase = 10^(half - 1)\nlimit = base * 10\nfor each query q:\n    firstHalf = base + (q - 1)\n    if firstHalf >= limit:\n        append -1\n    else:\n        toReverse = firstHalf if intLength even else firstHalf / 10\n        rev = 0\n        while toReverse > 0:\n            rev = rev * 10 + toReverse % 10\n            toReverse /= 10\n        mul = limit if intLength even else base\n        append firstHalf * mul + rev\n```",
+    "**Boundary query** - q = 91 is one past the last valid palindrome of length 3.\n`Input: queries = [91], intLength = 3` → `Expected: [-1]`\n⚠️ Bug: using `>` instead of `>=` in the bound check → firstHalf = 100, 100 > 100 is false, computes 100×10 + reverse(10) = 1001 instead of -1\n\n**Maximum length overflow** - intLength = 15 produces palindromes up to 999999999999999 (~10^15).\n`Input: queries = [90000000], intLength = 15` → `Expected: [999999999999999]`\n⚠️ Bug: storing the result in `int` → 999999999999999 exceeds 2^31−1, overflow produces garbage\n\n**Even length with odd formula** - intLength = 4 requires mirroring the full first half.\n`Input: queries = [2], intLength = 4` → `Expected: [1111]`\n⚠️ Bug: using the odd-length formula (reversing firstHalf/10, multiplying by base) for even intLength → firstHalf = 11, rev = reverse(1) = 1, returns 11×10 + 1 = 111 instead of 1111\n\n**Odd length full reversal** - intLength = 3 requires dropping the middle digit before reversing.\n`Input: queries = [3], intLength = 3` → `Expected: [121]`\n⚠️ Bug: reversing the full firstHalf (12→21) instead of firstHalf/10 (1→1) → returns 12×10 + 21 = 141 instead of 121"
+  ],
+  "followUps": [
+    {
+      "q": "What if intLength can be up to 10^5?",
+      "a": "The palindrome won't fit in any numeric type. Construct the first half as a string, then append its reverse (dropping the middle digit for odd lengths). Each query costs O(L) time and O(L) space for the string."
+    },
+    {
+      "q": "Given a range [low, high], how many palindromes of length intLength fall within it?",
+      "a": "Compute the rank of the smallest palindrome ≥ low and the largest palindrome ≤ high by reversing their first halves, then subtract the ranks. O(L) time per boundary, O(1) space."
+    },
+    {
+      "q": "What if you must return the k-th palindrome that is also prime?",
+      "a": "There is no closed-form rank-to-palindromic-prime mapping. You would enumerate palindromes in order and test each for primality, costing O(√N) per candidate with no early termination guarantee."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<long long> kthPalindrome(vector<int>& queries, int intLength) {\n        int half = (intLength + 1) / 2;\n        long long base = 1;\n        for (int i = 1; i < half; i++) base *= 10;\n        long long limit = base * 10;\n\n        vector<long long> answer;\n        answer.reserve(queries.size());\n        for (int q : queries) {\n            long long firstHalf = base + (long long)(q - 1);\n            if (firstHalf >= limit) {\n                answer.push_back(-1);\n                continue;\n            }\n            long long rev = 0;\n            long long tmp = (intLength % 2 == 0) ? firstHalf : firstHalf / 10;\n            while (tmp > 0) {\n                rev = rev * 10 + tmp % 10;\n                tmp /= 10;\n            }\n            long long mul = (intLength % 2 == 0) ? limit : base;\n            answer.push_back(firstHalf * mul + rev);\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -3,37 +3,38 @@
   "title": "Bulls and Cows",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-10",
-  "pattern": "Counting with Fixed‑size Frequency Array",
+  "generatedAt": "2026-11-26",
+  "pattern": "Frequency Counting",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- int cntSecret[10]: 10 integers → O(1)  \n- int cntGuess[10]: 10 integers → O(1)  \n- other variables (ints, strings): O(1)  \n- not counted: input strings, returned string",
-  "approach": "First count positions where secret and guess match - those are the bulls. For the remaining positions count how many times each digit appears in secret and in guess; the cows are the sum of the minimum of the two counts for each digit. This single linear scan with a fixed‑size frequency array yields the correct “xAyB” string.",
+  "spaceBreakdown": "- int secretCount[10]: fixed size 10 → O(1)\n- int guessCount[10]: fixed size 10 → O(1)\n- int bulls, cows, n: scalar variables → O(1)\n- not counted: input strings, returned string",
+  "approach": "Count bulls in a single pass by comparing characters at each position. For non-bull positions, build frequency arrays (size 10) for digits in secret and guess separately. Cows for each digit equal the minimum of its frequency in secret vs guess (excluding bulls), because you can only pair up as many as both sides have. Sum these minimums across all 10 digits. This correctly handles duplicates since taking the min prevents overcounting.",
   "hints": [
-    "When the characters at the same index are equal, what definitive information do you obtain about that position?  \nBoth strings have the same length and consist only of digits.",
-    "Use an array of size 10 to store digit frequencies.  \nExample: secret = \"1807\", guess = \"7810\". After skipping the bull at index 2, the remaining digits give cntSecret = {1,0,0,0,0,0,1,0,1,0} and cntGuess = {1,0,0,0,0,0,1,0,1,0}.",
-    "```\nbulls = 0\nfor i in 0..n-1\n    if secret[i] == guess[i] then bulls++\n    else\n        inc freqSecret[secret[i]]\n        inc freqGuess[guess[i]]\ncows = sum over d=0..9 of min(freqSecret[d], freqGuess[d])\nreturn bulls + \"A\" + cows + \"B\"\n```",
-    "**Single character** - the strings contain only one digit.  \n`Input: secret = \"1\", guess = \"0\"` → `Expected: \"0A0B\"`  \n⚠️ Bug: counting cows without excluding bulls → returns `\"0A1B\"`\n\n**All bulls** - every position matches.  \n`Input: secret = \"1234\", guess = \"1234\"` → `Expected: \"4A0B\"`  \n⚠️ Bug: adding min of frequencies after counting all positions → returns `\"4A4B\"`\n\n**Duplicate digits, no bulls** - same multiset but different order.  \n`Input: secret = \"1122\", guess = \"2211\"` → `Expected: \"0A4B\"`  \n⚠️ Bug: using a single counter that increments on secret and decrements on guess → may return `\"0A2B\"`\n\n**Mixed bulls and cows** - typical example from statement.  \n`Input: secret = \"1807\", guess = \"7810\"` → `Expected: \"1A3B\"`  \n⚠️ Bug: forgetting to skip bulls when filling frequency arrays → returns `\"1A4B\"`"
+    "For digits that aren't bulls, what property of the non-bull digits in secret and guess limits how many of a given digit can become cows? Both secret and guess may contain duplicate digits.",
+    "Use two frequency arrays of size 10 (one for secret, one for guess) counting only non-bull digits. For secret=\"1123\", guess=\"0111\": after excluding the bull at index 1, secret non-bull counts are {1:1, 2:1, 3:1} and guess non-bull counts are {0:1, 1:2}; cows = min(1,2) for digit 1 = 1.",
+    "```\nbulls = 0\nfor each position i:\n    if secret[i] == guess[i]:\n        bulls++\n    else:\n        secretCount[secret[i]]++\n        guessCount[guess[i]]++\ncows = 0\nfor each digit d in 0..9:\n    cows += min(secretCount[d], guessCount[d])\nreturn bulls + \"A\" + cows + \"B\"\n```",
+    "**Duplicate digits in guess exceeding secret** - guess has more copies of a digit than secret has non-bull copies\n`Input: secret=\"1123\", guess=\"0111\"` → `Expected: \"1A1B\"`\n⚠️ Bug: using a boolean \"seen\" array for secret digits instead of counting → returns \"1A2B\"\n\n**All positions are bulls** - every digit matches its position\n`Input: secret=\"1234\", guess=\"1234\"` → `Expected: \"4A0B\"`\n⚠️ Bug: counting all digit frequencies including bull positions, then taking min without excluding bulls → returns \"4A4B\"\n\n**Single character** - minimum input size\n`Input: secret=\"1\", guess=\"2\"` → `Expected: \"0A0B\"`\n⚠️ Bug: not initializing frequency arrays to zero → returns \"0A<garbage>B\"\n\n**All cows, no bulls** - no position matches but all digits can be rearranged to match\n`Input: secret=\"1234\", guess=\"4321\"` → `Expected: \"0A4B\"`\n⚠️ Bug: scanning secret only forward from current position for cow matches → returns \"0A2B\""
   ],
   "followUps": [
     {
-      "q": "How would you adapt the solution if the strings are streamed character by character and cannot be stored entirely in memory?",
-      "a": "Process each pair of characters as they arrive, updating the bull count and the two frequency arrays on the fly. The algorithm still runs in O(n) time and uses O(1) extra space because the arrays are of constant size 10."
+      "q": "If the strings could contain any Unicode character instead of just digits, how would the solution change?",
+      "a": "Replace the fixed-size arrays with an unordered_map<char,int>. The algorithm stays identical: count non-bull frequencies and sum the minimums. TC remains O(n), SC becomes O(k) where k is the number of distinct characters."
     },
     {
-      "q": "What changes are needed if the characters are arbitrary ASCII symbols instead of just digits?",
-      "a": "Replace the fixed‑size arrays with an unordered_map<char,int> for both secret and guess frequencies. Time remains O(n) and space becomes O(k) where k is the number of distinct symbols encountered."
+      "q": "Given a fixed secret, how would you efficiently answer Q different guesses?",
+      "a": "Precompute the secret's full frequency count once in O(n). For each query, count bulls in O(n) by comparing positions, then compute cows by iterating over the 10 digits using the precomputed secret counts and the query's non-bull counts. TC: O(n + Q·n), SC: O(1)."
     },
     {
-      "q": "Suppose you must also report the positions of all bulls. How does that affect complexity?",
-      "a": "While scanning, store the index i whenever secret[i]==guess[i] in a vector. This adds O(b) extra space (b = number of bulls) and does not change the O(n) time complexity."
+      "q": "If secret and guess are too large to store and arrive as interleaved streams (one character from each at a time), can you still compute the hint?",
+      "a": "Yes. Process each pair of characters as they arrive: check bulls directly, and maintain two frequency arrays of size 10 for non-bull digits. After the stream ends, compute cows from the arrays. TC: O(n), SC: O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    string getHint(string secret, string guess) {\n        int bulls = 0;\n        int cntS[10] = {0};\n        int cntG[10] = {0};\n        int n = secret.size();\n        for (int i = 0; i < n; ++i) {\n            if (secret[i] == guess[i]) {\n                ++bulls;\n            } else {\n                ++cntS[secret[i] - '0'];\n                ++cntG[guess[i] - '0'];\n            }\n        }\n        int cows = 0;\n        for (int d = 0; d < 10; ++d) {\n            cows += min(cntS[d], cntG[d]);\n        }\n        return to_string(bulls) + \"A\" + to_string(cows) + \"B\";\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    string getHint(string secret, string guess) {\n        int bulls = 0;\n        int secretCount[10] = {0};\n        int guessCount[10] = {0};\n        int n = secret.size();\n        \n        for (int i = 0; i < n; i++) {\n            if (secret[i] == guess[i]) {\n                bulls++;\n            } else {\n                secretCount[secret[i] - '0']++;\n                guessCount[guess[i] - '0']++;\n            }\n        }\n        \n        int cows = 0;\n        for (int i = 0; i < 10; i++) {\n            cows += secretCount[i] < guessCount[i] ? secretCount[i] : guessCount[i];\n        }\n        \n        return to_string(bulls) + \"A\" + to_string(cows) + \"B\";\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "2/2"
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
   }
 }

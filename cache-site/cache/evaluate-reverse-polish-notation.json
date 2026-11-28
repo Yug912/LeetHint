@@ -3,37 +3,38 @@
   "title": "Evaluate Reverse Polish Notation",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-12",
-  "pattern": "Stack Evaluation of RPN",
+  "generatedAt": "2026-11-26",
+  "pattern": "Stack",
   "tc": "O(n)",
   "sc": "O(n)",
-  "spaceBreakdown": "- vector<int> st: up to tokens.size() entries → O(n)  \n- recursion depth: none  \n- not counted: input `tokens`, returned int",
-  "approach": "Scanning the tokens from left to right, every time we see a number we store it, and every time we see an operator we combine the two most recent numbers. A stack naturally provides the “most recent” values, so we push operands and pop the top two for each operator, push the result back, and finally the stack holds the answer. This works because Reverse Polish Notation guarantees that an operator’s operands are exactly the two values that were produced immediately before it.",
+  "spaceBreakdown": "- stack<int> st: up to n entries (worst case: all numbers before any operator) → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Use a stack to evaluate RPN in a single left-to-right pass. Push every number token onto the stack. When an operator is encountered, pop two operands (second-popped is the left operand), apply the operator, and push the result. After processing all tokens, the stack's top element is the answer. C++ integer division truncates toward zero, matching the problem's requirement.",
   "hints": [
-    "When you read the tokens from left to right, what should you do each time you encounter an operator?  \nEach token is either an integer or one of “+”, “-”, “*”, “/”.",
-    "Use a stack to keep intermediate results.  \nExample: for [\"2\",\"1\",\"+\",\"3\",\"*\"], after processing “2”, “1”, and “+” the stack contains 3.",
-    "for each token t in tokens\n    if t is an operator\n        b ← pop()\n        a ← pop()\n        push( a (op) b )\n    else\n        push( integer value of t )\nreturn top of stack",
-    "**Single number** - the expression may consist of only one operand.  \n`Input: [\"-42\"]` → `Expected: -42`  \n⚠️ Bug: treating every token as an operator → returns error or 0.\n\n**Negative division** - division must truncate toward zero, not floor.  \n`Input: [\"-7\",\"3\",\"/\"]` → `Expected: -2`  \n⚠️ Bug: using `floor((double)a/b)` → returns -3.\n\n**All operators** - a long chain of operators tests stack order.  \n`Input: [\"5\",\"1\",\"2\",\"+\",\"4\",\"*\",\"+\",\"3\",\"-\"]` → `Expected: 14`  \n⚠️ Bug: popping only one value for an operator → uses uninitialized operand → wrong result.\n\n**Maximum length** - 10⁴ tokens stresses the O(n) stack size.  \n`Input: (10000 times \"0\")` → `Expected: 0`  \n⚠️ Bug: using recursion instead of an explicit stack → stack overflow."
+    "In reverse Polish notation, when you encounter an operator, which two values should it combine, and where do they sit relative to the operator's position in the token stream?",
+    "Use a stack. Push each number; on an operator, pop two operands, apply it, push the result. For [\"2\",\"1\",\"+\",\"3\",\"*\"]: push 2, push 1, \"+\" pops 1 and 2 → push 3, push 3, \"*\" pops 3 and 3 → push 9.",
+    "```\nstack ← empty\nfor each token:\n    if token is operator:\n        b ← pop\n        a ← pop\n        push(apply(token, a, b))\n    else:\n        push(to_int(token))\nreturn top\n```",
+    "**Single operand** - only one token, no operators at all\n`[\"42\"]` → `Expected: 42`\n⚠️ Bug: returning 0 when the stack has exactly one element → returns 0\n\n**Negative division truncation** - dividing a negative by a positive must truncate toward zero, not floor\n`[\"-13\",\"5\",\"/\"]` → `Expected: -2`\n⚠️ Bug: using floor division (e.g., `floor(a / b)`) → returns -3\n\n**Operand order for subtraction** - the first value popped is the right operand, not the left\n`[\"10\",\"3\",\"-\"]` → `Expected: 7`\n⚠️ Bug: computing `b - a` instead of `a - b` → returns -7\n\n**Division yielding zero** - small dividend divided by a larger divisor\n`[\"6\",\"-132\",\"/\"]` → `Expected: 0`\n⚠️ Bug: rounding to nearest instead of truncating → returns -1"
   ],
   "followUps": [
     {
-      "q": "How would you evaluate the expression if the tokens were given as a stream that cannot be stored entirely in memory?",
-      "a": "Process the stream token by token, maintaining the same stack; the stack size never exceeds the number of operands that have appeared without being consumed, which is O(n) in the worst case but uses only O(k) where k is the current depth. Time remains O(n) and space is O(k) ≤ O(n)."
+      "q": "What if the input is infix notation (e.g., \"2 + 1 * 3\") instead of RPN?",
+      "a": "First convert to RPN using the shunting-yard algorithm with an operator-precedence stack, then evaluate with the same stack approach. TC: O(n), SC: O(n)."
     },
     {
-      "q": "Suppose the operators also included exponentiation “^” with right‑associative semantics. How does that affect the algorithm?",
-      "a": "Exponentiation still consumes the two most recent operands, so the same stack algorithm works; you just add a case for “^” computing `pow(a,b)` (using integer exponentiation). Time stays O(n) and space O(n)."
+      "q": "What if tokens could include variables (e.g., \"x\", \"y\") with a given symbol table?",
+      "a": "Look up each variable in the symbol table before pushing its value onto the stack; all operator logic stays identical. TC: O(n) with O(1) lookup, SC: O(n)."
     },
     {
-      "q": "If the result had to be returned modulo 10⁹+7, what changes are needed?",
-      "a": "After each arithmetic operation, apply the modulo to keep intermediate values within range, taking care to handle negative results (e.g., `(res % MOD + MOD) % MOD`). The algorithmic complexity does not change: O(n) time, O(n) space."
+      "q": "What if intermediate results can exceed 64-bit integers?",
+      "a": "Replace `int` on the stack with a big-integer type and implement string-based addition, subtraction, multiplication, and division. The evaluation logic is unchanged. TC: O(n · M) where M is the cost of big-integer ops, SC: O(n)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int evalRPN(vector<string>& tokens) {\n        vector<int> st;\n        st.reserve(tokens.size());\n        for (const string& t : tokens) {\n            if (t == \"+\" || t == \"-\" || t == \"*\" || t == \"/\") {\n                int b = st.back(); st.pop_back();\n                int a = st.back(); st.pop_back();\n                long long res = 0;\n                if (t == \"+\") res = (long long)a + b;\n                else if (t == \"-\") res = (long long)a - b;\n                else if (t == \"*\") res = (long long)a * b;\n                else /* t == \"/\" */ res = b == 0 ? 0 : (long long)a / b; // truncates toward zero\n                st.push_back((int)res);\n            } else {\n                st.push_back(stoi(t));\n            }\n        }\n        return st.back();\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int evalRPN(vector<string>& tokens) {\n        stack<int> st;\n        for (const string& t : tokens) {\n            if (t == \"+\" || t == \"-\" || t == \"*\" || t == \"/\") {\n                int b = st.top(); st.pop();\n                int a = st.top(); st.pop();\n                if (t == \"+\") st.push(a + b);\n                else if (t == \"-\") st.push(a - b);\n                else if (t == \"*\") st.push(a * b);\n                else st.push(a / b);\n            } else {\n                st.push(stoi(t));\n            }\n        }\n        return st.top();\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

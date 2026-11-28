@@ -3,37 +3,38 @@
   "title": "Count Valid Substrings I",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
-  "pattern": "Sliding Window (maintaining left bound)",
+  "generatedAt": "2026-11-26",
+  "pattern": "Sliding Window (last-occurrence pointer)",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- long long ans: O(1)  \n- int p, n, r: O(1)  \n- string s (input): not counted",
-  "approach": "For each right end r we need the leftmost start that would make the substring contain a full “abc”. Let p be the largest index i such that an occurrence of “abc” starts at i and ends at or before r. Any substring ending at r is valid iff its start > p, so we add r‑p to the answer. While scanning, whenever we see “abc” ending at r we set p = r‑2. This linear scan yields the total count.",
+  "spaceBreakdown": "- int p, int n, int r, long long ans: scalars → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input string s",
+  "approach": "For each ending index r, a substring s[l..r] is invalid exactly when it contains \"abc\". All such invalid substrings ending at r must start at or before the beginning of the most recent \"abc\" occurrence that ends at or before r. So we track p = the starting index of the most recent \"abc\" occurrence (initialized to -1). Whenever s[r-2..r] == \"abc\", we update p = r-2. Then the number of valid substrings ending at r is r - p (start indices from p+1 to r). Summing over all r gives the answer. This is correct because any \"abc\" occurrence ending after r doesn't affect substrings ending at r, and p is the tightest left boundary.",
   "hints": [
-    "What determines the earliest position a substring ending at r can start without including a complete “abc”?  \nThe string length can be up to 10^5.",
-    "Keep a single integer p that stores the start index of the most recent “abc” seen so far.  \nExample: for s = \"ababc\", when r = 4 (the last 'c'), we detect “abc” at positions 2‑4 and set p = 2.",
-    "p ← -1  \nans ← 0  \nfor r = 0 … n‑1  \n if r ≥ 2 and s[r‑2]=='a' and s[r‑1]=='b' and s[r]=='c' then p ← r‑2  \n ans ← ans + (r - p)  \nreturn ans",
-    "**Single character** - length 1, no “abc”.  \n`Input: \"c\"` → `Expected: 1`  \n⚠️ Bug: assuming an occurrence exists when r ≥ 2 without checking characters → returns 0  \n\n**Immediate “abc” at start** - first three characters form “abc”.  \n`Input: \"abcde\"` → `Expected: 12`  \n⚠️ Bug: updating p to r‑1 instead of r‑2 → overcounts, returns 13  \n\n**All ‘a’s, large n** - no “abc” ever appears.  \n`Input: string(100000,'a')` → `Expected: 5000050000`  \n⚠️ Bug: using 32‑bit int for ans → overflow, yields a negative number  \n\n**Overlapping occurrences** - “abcabc”.  \n`Input: \"abcabc\"` → `Expected: 14`  \n⚠️ Bug: resetting p to r‑2 each time without taking the maximum → counts some invalid substrings as valid, returns 15"
+    "For a fixed ending index r, what shape does the set of valid starting indices take? The constraint n ≤ 10^5 rules out checking every substring individually.",
+    "Track p = the starting index of the most recent \"abc\" occurrence ending at or before r (a single sliding pointer). In s = \"abc\", at r = 2 we detect s[0..2] = \"abc\" and set p = 0, so valid substrings ending at r = 2 are those starting at indices 1 and 2, contributing r − p = 2.",
+    "```\np = -1\nans = 0\nfor r in 0 .. n-1:\n    if r >= 2 and s[r-2..r] == \"abc\":\n        p = r - 2\n    ans += r - p\nreturn ans\n```",
+    "**Smallest input** - only one character, so the loop body runs exactly once.\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: starting the loop at r = 1 instead of r = 0 → returns 0.\n\n**Boundary occurrence** - \"abc\" ends at the earliest possible index r = 2.\n`Input: s = \"abc\"` → `Expected: 5`\n⚠️ Bug: checking `r > 2` instead of `r >= 2` → misses the occurrence, p stays -1, returns 6.\n\n**Multiple occurrences** - two \"abc\" patterns require updating p each time.\n`Input: s = \"abcabc\"` → `Expected: 14`\n⚠️ Bug: setting p only once via `if (p == -1) p = r - 2` → at r = 5 p stays 0, adds 5 instead of 2, returns 17.\n\n**Overflow** - all identical characters with n = 10^5 yields 100000 × 100001 / 2 = 5,000,050,000 > 2^31 − 1.\n`Input: s = \"aaa...a\" (10^5 chars)` → `Expected: 5000050000`\n⚠️ Bug: declaring `ans` as `int` → wraps to 705082704."
   ],
   "followUps": [
     {
-      "q": "What if we must avoid any of the three patterns “abc”, “bca”, and “cab” instead of only “abc”?",
-      "a": "Track three left bounds, one for each pattern, and use the maximum of them as p for each position. The scan stays O(n) time and O(1) space."
+      "q": "What if the forbidden pattern is an arbitrary string t of length k instead of \"abc\"?",
+      "a": "Same approach: track p = the start index of the most recent occurrence of t ending at or before r. Checking s[r-k+1..r] == t takes O(k) per step, giving O(nk) time and O(1) space. With a rolling hash or KMP failure function you can reduce the per-step check to O(1) amortized, yielding O(n) time."
     },
     {
-      "q": "If the string length can be up to 10^6 and the answer must be given modulo 10^9+7, how does the solution change?",
-      "a": "The same linear algorithm applies; after each addition compute ans = (ans + (r - p)) % MOD. Time remains O(n) and extra space stays O(1)."
+      "q": "What if there are multiple forbidden patterns and a substring is invalid when it contains any of them?",
+      "a": "Build an Aho-Corasick automaton over all forbidden patterns. As you scan r left to right, follow transitions and track the deepest match end position p (the maximum start index of any matched pattern ending at or before r). Add r − p at each step. Time is O(n + total pattern length), space is O(total pattern length × alphabet)."
     },
     {
-      "q": "Suppose the characters arrive as a stream and we need to output the running total after each new character without storing the whole string.",
-      "a": "Keep the last two characters, the current p, and the cumulative ans. Update p when the new triple forms “abc” and add r‑p to ans. This uses O(1) memory and O(1) work per character."
+      "q": "What if the string arrives as a stream, one character at a time, and you must report the running count with O(1) memory?",
+      "a": "Keep only the last two characters (to detect \"abc\") and the current p. When a new character arrives at position r, check if the last three form \"abc\" and update p = r − 2 if so, then add r − p to the running total. This uses O(1) space and O(1) time per character, identical logic to the batch version."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    long long countValidSubstrings(string s) {\n        long long ans = 0;\n        int p = -1;                     // leftmost forbidden start\n        int n = s.size();\n        for (int r = 0; r < n; ++r) {\n            if (r >= 2 && s[r-2] == 'a' && s[r-1] == 'b' && s[r] == 'c')\n                p = r - 2;\n            ans += (long long)(r - p);\n        }\n        return ans;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    long long countValidSubstrings(string s) {\n        long long ans = 0;\n        int p = -1;\n        int n = (int)s.size();\n        for (int r = 0; r < n; r++) {\n            if (r >= 2 && s[r - 2] == 'a' && s[r - 1] == 'b' && s[r] == 'c') {\n                p = r - 2;\n            }\n            ans += (long long)(r - p);\n        }\n        return ans;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

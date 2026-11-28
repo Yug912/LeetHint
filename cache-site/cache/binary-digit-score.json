@@ -3,40 +3,38 @@
   "title": "Binary Digit Score",
   "difficulty": "Easy",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-09",
-  "pattern": "Bit Counting",
+  "generatedAt": "2026-11-26",
+  "pattern": "Bit Manipulation",
   "tc": "O(1)",
   "sc": "O(1)",
-  "spaceBreakdown": "- two integer variables for the counts → O(1)  \n- no containers, recursion, or dynamic allocation → O(1)  \n- not counted: input parameters, return value",
-  "approach": "The score depends only on how many 1‑bits each integer contains. Count the set bits of a and b, compare the two counts, and apply the given formula directly. Because the numbers are tiny, a constant‑time bit‑count is sufficient and guarantees correctness.",
+  "spaceBreakdown": "- local ints s1, s2: O(1)\n- no containers, no recursion\n- not counted: input scalars a, b, returned int",
+  "approach": "Count the set bits s1 in a and s2 in b using a popcount operation, then apply the problem's rule directly: if s1 >= s2 return s1*s2, else return s2/s1 (integer division). Since a, b ≥ 1, both popcounts are at least 1, so division by zero is impossible. With a, b ≤ 100, popcounts are at most 7, so no overflow is possible.",
   "hints": [
-    "Which part of the two numbers actually determines the score?  \nBoth a and b are ≤ 100.",
-    "Use the built‑in popcount (or a simple loop) to obtain the number of set bits.  \nExample: a = 14 → binary 1110 → popcount = 3.",
-    "```\ncnt1 = popcount(a)\ncnt2 = popcount(b)\nif cnt1 >= cnt2\n    return cnt1 * cnt2\nelse\n    return cnt2 / cnt1   // integer division\n```",
-    "**Minimum values** - both numbers are the smallest possible.  \n`Input: a = 1, b = 1` → `Expected: 1`  \n⚠️ Bug: using `>` instead of `>=` → returns `0` (because it would take the division branch).\n\n**Maximum values** - largest allowed numbers.  \n`Input: a = 100, b = 100` → `Expected: 9` (popcount = 3 for each, 3*3)  \n⚠️ Bug: storing the product in a 16‑bit variable → overflow, yields wrong small number.\n\n**Division truncation** - when s2 is not a multiple of s1.  \n`Input: a = 3, b = 7` → `Expected: 1` (s1=2, s2=3, 3/2 = 1)  \n⚠️ Bug: performing floating‑point division and then casting to int → returns `1` correctly but may introduce rounding errors for other cases; a pure integer division avoids any risk.\n\n**Equal counts** - the branch choice matters.  \n`Input: a = 5, b = 15` → `Expected: 2` (s1=2, s2=4, 4/2)  \n⚠️ Bug: using `<` instead of `<=` for the first condition → would incorrectly take the multiplication branch and return `8`."
+    "With a, b ≤ 100, what two small quantities derived from each input alone are enough to decide both which formula applies and its result?",
+    "Use a popcount operation (or a bit-by-bit loop) to get s1 and s2, then branch on s1 >= s2. For a = 14 = 1110₂, popcount gives s1 = 3.",
+    "s1 = number of set bits in a\ns2 = number of set bits in b\nif s1 >= s2:\n    return s1 * s2\nelse:\n    return s2 / s1   # integer division",
+    "**Tie boundary** - s1 equals s2, so the multiplication branch must fire\n`a = 3, b = 12` → `Expected: 4`\n⚠️ Bug: using `>` instead of `>=` in the comparison → returns 2 / 2 = 1\n\n**Division direction** - s1 < s2, so the quotient s2 / s1 is needed\n`a = 5, b = 15` → `Expected: 2`\n⚠️ Bug: returning `s1 / s2` instead of `s2 / s1` → returns 2 / 4 = 0\n\n**Maximum input** - both inputs at the upper bound 100\n`a = 100, b = 100` → `Expected: 9`\n⚠️ Bug: counting bit-length with `while (x) { count++; x >>= 1; }` instead of set bits → returns 7 * 7 = 49\n\n**Non-divisible quotient** - s2 is not a multiple of s1\n`a = 7, b = 15` → `Expected: 1`\n⚠️ Bug: using ceiling `(s2 + s1 - 1) / s1` instead of floor `s2 / s1` → returns (4 + 2) / 3 = 2"
   ],
   "followUps": [
     {
-      "q": "What if a and b can be as large as 10⁹?",
-      "a": "The same algorithm works because popcount runs in O(number of bits), i.e., at most 30 iterations for 32‑bit integers, still O(1) time and O(1) space."
+      "q": "If a and b could be up to 10^18, how would your approach change?",
+      "a": "Replace the popcount call with its 64-bit version (__builtin_popcountll). The rest is unchanged, since a 64-bit value has at most 64 set bits and 64*64 = 4096 fits in int. TC stays O(1), SC O(1)."
     },
     {
-      "q": "How would you handle up to 10⁵ independent queries of (a, b)?",
-      "a": "Process each query independently with the constant‑time routine above; total time is O(Q) and extra space remains O(1)."
+      "q": "If you had to answer many score queries with a, b ≤ 100, could you precompute anything?",
+      "a": "Precompute popcount for every value 1..100 once into a small array, then each query is an O(1) lookup plus the comparison. TC O(100 + Q), SC O(100)."
     },
     {
-      "q": "Suppose the integers are given as streams of bits and you cannot store the whole value.",
-      "a": "Count the 1‑bits while reading the stream (increment a counter for each ‘1’), then apply the same conditional logic; this uses O(1) additional memory and O(length of stream) time per number."
+      "q": "If a and b were given as bit strings of length up to 10^5 instead of integers, how would you adapt?",
+      "a": "Count the '1' characters in each string in a single pass, then apply the same comparison and formula. TC O(n), SC O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int calculateScore(int a, int b) {\n        // count set bits of a and b\n        int s1 = __builtin_popcount(a);\n        int s2 = __builtin_popcount(b);\n        // apply the definition\n        if (s1 >= s2) {\n            return s1 * s2;\n        } else {\n            return s2 / s1; // integer division\n        }\n    }\n};",
-    "java": "class Solution {\n    public int calculateScore(int a, int b) {\n        // count set bits of a and b\n        int s1 = Integer.bitCount(a);\n        int s2 = Integer.bitCount(b);\n        // apply the definition\n        if (s1 >= s2) {\n            return s1 * s2;\n        } else {\n            return s2 / s1; // integer division\n        }\n    }\n}",
-    "python3": "class Solution:\n    def calculateScore(self, a: int, b: int) -> int:\n        # count set bits of a and b\n        s1 = a.bit_count()\n        s2 = b.bit_count()\n        # apply the definition\n        if s1 >= s2:\n            return s1 * s2\n        else:\n            return s2 // s1  # integer division",
-    "javascript": "/**\n * @param {number} a\n * @param {number} b\n * @return {number}\n */\nvar calculateScore = function(a, b) {\n    // helper to count set bits\n    const popcount = (x) => {\n        let count = 0;\n        while (x > 0) {\n            count += x & 1;\n            x >>>= 1; // unsigned right shift to handle positive ints\n        }\n        return count;\n    };\n\n    const s1 = popcount(a);\n    const s2 = popcount(b);\n\n    if (s1 >= s2) {\n        return s1 * s2;\n    } else {\n        return Math.floor(s2 / s1); // integer division\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int calculateScore(int a, int b) {\n        int s1 = __builtin_popcount(static_cast<unsigned>(a));\n        int s2 = __builtin_popcount(static_cast<unsigned>(b));\n        if (s1 >= s2) {\n            return s1 * s2;\n        }\n        return s2 / s1;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

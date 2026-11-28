@@ -4,36 +4,37 @@
   "difficulty": "Medium",
   "promptVersion": "p9",
   "generatedAt": "2026-11-26",
-  "pattern": "Digit‑wise Linked List Traversal",
-  "tc": "O(n + m)",
+  "pattern": "Linked List Traversal with Carry",
+  "tc": "O(max(n, m))",
   "sc": "O(1)",
-  "spaceBreakdown": "- dummy head and current pointer: O(1)  \n- integer carry variable: O(1)  \n- not counted: input lists, returned result list",
-  "approach": "Because the digits are stored least‑significant first, we can add the two numbers exactly as we do by hand: walk both lists together, add the two digits and a carry, store the unit digit in a new node and propagate the tens digit as the new carry. When one list ends we continue with the remaining list and the carry. A final node is created if a carry remains after both lists are exhausted. This linear scan produces the correct sum list.",
+  "spaceBreakdown": "- ListNode dummy: 1 node → O(1)\n- int carry: 1 integer → O(1)\n- ListNode* tail: 1 pointer → O(1)\n- not counted: input lists l1, l2; returned output list",
+  "approach": "Since digits are stored least-significant-first, we can add the two lists in a single left-to-right pass, exactly like manual column addition. Maintain a carry (0 or 1) and a dummy head; at each step sum the current digits of both lists (if present) plus the carry, append `sum % 10` as a new node, and update `carry = sum / 10`. Continue while either list has nodes or a carry remains, guaranteeing the final carry is never dropped.",
   "hints": [
-    "If the least‑significant digit appears first in each list, which part of the addition can be performed without looking ahead?  \nEach node holds a single digit between 0 and 9.",
-    "Use a singly‑linked list to build the answer while iterating through l1 and l2.  \nExample: l1 = [2,4,3], l2 = [5,6,4] → first step adds 2+5 = 7, creates node 7.",
-    "```\ncarry ← 0\ndummy ← new node\ncur ← dummy\nwhile l1 ≠ null or l2 ≠ null:\n    x ← (l1 ? l1.val : 0)\n    y ← (l2 ? l2.val : 0)\n    sum ← x + y + carry\n    cur.next ← new node(sum % 10)\n    carry ← sum / 10\n    cur ← cur.next\n    if l1 ≠ null: l1 ← l1.next\n    if l2 ≠ null: l2 ← l2.next\nif carry > 0: cur.next ← new node(carry)\nreturn dummy.next\n```",
-    "**Different lengths** - one list ends before the other.  \n`Input: l1 = [1,8], l2 = [0]` → `Expected: [1,8]`  \n⚠️ Bug: stopping the loop when either list is null → returns `[1]`.\n\n**Final carry** - sum creates an extra most‑significant digit.  \n`Input: l1 = [9,9], l2 = [1]` → `Expected: [0,0,1]`  \n⚠️ Bug: forgetting to add a node for remaining carry → returns `[0,0]`.\n\n**Both zeros** - the result should be a single zero node.  \n`Input: l1 = [0], l2 = [0]` → `Expected: [0]`  \n⚠️ Bug: creating an empty list when both inputs are zero → returns `[]`.\n\n**Long carry chain** - many consecutive 9s propagate the carry.  \n`Input: l1 = [9,9,9,9,9], l2 = [1]` → `Expected: [0,0,0,0,0,1]`  \n⚠️ Bug: using `int sum = x + y + carry; carry = sum / 10;` but storing `sum % 10` in a node of type `int` is fine; the bug appears only if the loop condition omits the final carry check → returns `[0,0,0,0,0]`."
+    "The digits are stored least-significant-first. What does this ordering let you do in a single left-to-right pass that would be harder if they were stored most-significant-first?",
+    "Use a dummy head node plus a carry variable, and walk both lists in lockstep. Example: l1=[2,4,3], l2=[5,6,4] - first step: 2+5+0(carry)=7, append node 7, carry stays 0.",
+    "```\ndummy = new Node(0)\ntail = dummy\ncarry = 0\nwhile l1 or l2 or carry:\n    sum = carry\n    if l1: sum += l1.val; l1 = l1.next\n    if l2: sum += l2.val; l2 = l2.next\n    tail.next = new Node(sum % 10)\n    tail = tail.next\n    carry = sum / 10\nreturn dummy.next\n```",
+    "**Final carry** - both lists end but a carry remains\n`Input: l1 = [9,9,9,9,9,9,9], l2 = [9,9,9,9]` → `Expected: [8,9,9,9,0,0,0,1]`\n⚠️ Bug: loop condition `while (l1 || l2)` without `|| carry` → returns `[8,9,9,9,0,0,0]`, dropping the final 1\n\n**Unequal lengths** - one list is shorter\n`Input: l1 = [1,8], l2 = [0]` → `Expected: [1,8]`\n⚠️ Bug: looping only `while (l1 && l2)` → returns `[1]`, dropping the 8 from the longer list\n\n**Carry into longer list** - carry propagates through remaining digits of the longer list\n`Input: l1 = [9,9,9], l2 = [1]` → `Expected: [0,0,0,1]`\n⚠️ Bug: after one list ends, processing the other's digits without adding carry → returns `[0,9,9]`\n\n**Single zero** - both lists contain only 0\n`Input: l1 = [0], l2 = [0]` → `Expected: [0]`\n⚠️ Bug: returning nullptr when the total sum is 0 → returns `[]`"
   ],
   "followUps": [
     {
-      "q": "How would you add the numbers if the digits were stored in forward order (most‑significant digit first)?",
-      "a": "You can either reverse both input lists, apply the same digit‑wise addition, then reverse the result, or use two stacks to process the digits from the end without modifying the inputs. Both approaches keep O(n) time and O(n) auxiliary space for the stacks."
+      "q": "What if the digits are stored in forward order (most-significant first) instead of reverse?",
+      "a": "Reverse both input lists, run the same addition, then reverse the result. Each reversal is O(n), so overall TC is O(max(n, m)) and SC is O(1) auxiliary. Alternatively, push both lists onto stacks to process from the least-significant end without modifying the inputs, using O(n + m) stack space."
     },
     {
-      "q": "What if the input lists could contain up to 10⁵ nodes and recursion depth is limited?",
-      "a": "The iterative solution above already uses O(1) extra space and avoids recursion, so it safely handles the maximum size without risking stack overflow. Its time remains O(n)."
+      "q": "What if you must add k linked lists instead of just 2?",
+      "a": "Generalize the loop to sum all k current digits plus carry at each step. TC is O(k × L) where L is the length of the longest list, and SC stays O(1) auxiliary. You can also fold pairwise using the same function k−1 times, which is simpler but may create larger intermediate lists."
     },
     {
-      "q": "Suppose the numbers are provided as streams of digits (least‑significant first) and you must output the sum as a stream without storing the whole result. How would you adapt the algorithm?",
-      "a": "Process the two input streams element by element, maintaining only the current carry and emitting each resulting digit immediately. This yields O(1) memory usage and O(n) time, matching the original algorithm but operating in a streaming fashion."
+      "q": "What if the lists are so long (millions of nodes) that you cannot hold the full output in memory at once?",
+      "a": "The algorithm already streams: each output node is produced as soon as its input digits are consumed, so you can yield nodes one at a time to a consumer. TC remains O(max(n, m)) and auxiliary SC is O(1); only the caller's storage of the result grows with input size."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {\n        ListNode dummy(0);\n        ListNode* cur = &dummy;\n        int carry = 0;\n        while (l1 != nullptr || l2 != nullptr) {\n            int x = (l1 != nullptr) ? l1->val : 0;\n            int y = (l2 != nullptr) ? l2->val : 0;\n            int sum = x + y + carry;\n            cur->next = new ListNode(sum % 10);\n            cur = cur->next;\n            carry = sum / 10;\n            if (l1 != nullptr) l1 = l1->next;\n            if (l2 != nullptr) l2 = l2->next;\n        }\n        if (carry > 0) {\n            cur->next = new ListNode(carry);\n        }\n        return dummy.next;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {\n        ListNode dummy(0);\n        ListNode* tail = &dummy;\n        int carry = 0;\n        while (l1 || l2 || carry) {\n            int sum = carry;\n            if (l1) {\n                sum += l1->val;\n                l1 = l1->next;\n            }\n            if (l2) {\n                sum += l2->val;\n                l2 = l2->next;\n            }\n            carry = sum / 10;\n            tail->next = new ListNode(sum % 10);\n            tail = tail->next;\n        }\n        return dummy.next;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

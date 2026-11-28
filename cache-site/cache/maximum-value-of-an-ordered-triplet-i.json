@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-value-of-an-ordered-triplet-i",
+  "title": "Maximum Value of an Ordered Triplet I",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Running Maximum (Prefix Maximum)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- maxPrefix, maxDiff, ans (long long), n, k (int): O(1) scalars\n- no containers, no recursion\n- not counted: input vector",
+  "approach": "Sweep left to right in one pass. Maintain `maxPrefix` (the largest `nums[i]` seen before the current index) and `maxDiff` (the largest `nums[i] − nums[j]` over all pairs `i < j` seen before the current index). For each index `k ≥ 2`, the best triplet ending at `k` has value `maxDiff · nums[k]`; update the answer, then extend `maxDiff` with the new pair `(best i < k, k) = maxPrefix − nums[k]` and refresh `maxPrefix`. Initialise `ans = 0` so that all-negative results are clamped to 0 automatically.",
+  "hints": [
+    "As the third index k moves right by one, every newly-eligible pair (i, j) shares the same j. What single value about the elements before that j would identify the best partner i?",
+    "Track a running maximum of `nums[i]` (`maxPrefix`) and a running maximum of `nums[i] − nums[j]` for `i < j` (`maxDiff`), both updated in one left-to-right pass. In `[12,6,1,2,7]`, at k = 4: `maxDiff = 11` (from 12 − 1), so the candidate is `11 · 7 = 77`.",
+    "```\nmaxPrefix = nums[0]\nmaxDiff = nums[0] - nums[1]\nans = 0\nfor k = 2 to n-1:\n    ans = max(ans, maxDiff * nums[k])\n    maxDiff = max(maxDiff, maxPrefix - nums[k])\n    maxPrefix = max(maxPrefix, nums[k])\nreturn ans\n```",
+    "**Smallest input** - n = 3, only one triplet, and its value is negative.\n`Input: nums = [1,2,3]` → `Expected: 0`\n⚠️ Bug: initialising `ans` to `LLONG_MIN` instead of 0 → returns -3.\n\n**Overflow** - (10^6 − 1) × 10^6 = 999999000000 exceeds 2^31 − 1.\n`Input: nums = [1000000,1,1000000]` → `Expected: 999999000000`\n⚠️ Bug: declaring `ans` as `int` → product overflows to a negative wrap, `max(0, negative)` = 0, returns 0.\n\n**Reverse sorted** - the best triplet (0, 2, 3) is non-consecutive.\n`Input: nums = [5,4,3,2,1]` → `Expected: 4`\n⚠️ Bug: only checking consecutive triplets (i, i+1, i+2) → best found is (5−4)·3 = 3, returns 3.\n\n**Already sorted ascending** - every `nums[i] − nums[j]` for `i < j` is ≤ 0.\n`Input: nums = [1,2,3,4,5]` → `Expected: 0`\n⚠️ Bug: computing `maxDiff = max(maxDiff, nums[k] − maxPrefix)` with flipped signs → returns 10 instead of 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if `nums` can contain negative values?",
+      "a": "`(nums[i] − nums[j]) · nums[k]` is maximised by the largest difference when `nums[k] > 0` and by the smallest difference when `nums[k] < 0`. Track both `maxDiff` and `minDiff` in the same pass; for each k pick whichever product is larger. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The O(n) running-maximum approach already handles 10^5 in well under a second - no change needed. Only the O(n^3) brute-force variant would TLE. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if the array arrives as a stream and you can only store O(1) elements?",
+      "a": "The algorithm is already streaming-friendly. When a new element x arrives, first treat it as k (update `ans` with `maxDiff · x`), then as j (update `maxDiff` with `maxPrefix − x`), then as i (update `maxPrefix` with x). Buffer the first two elements to initialise `maxDiff`. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumTripletValue(vector<int>& nums) {\n        int n = nums.size();\n        long long maxPrefix = max(nums[0], nums[1]);\n        long long maxDiff = (long long)nums[0] - nums[1];\n        long long ans = 0;\n        for (int k = 2; k < n; k++) {\n            ans = max(ans, maxDiff * (long long)nums[k]);\n            maxDiff = max(maxDiff, maxPrefix - nums[k]);\n            maxPrefix = max(maxPrefix, (long long)nums[k]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

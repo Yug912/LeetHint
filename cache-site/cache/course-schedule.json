@@ -3,37 +3,38 @@
   "title": "Course Schedule",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-25",
-  "pattern": "Topological Sort (BFS)",
-  "tc": "O(V + E)",
-  "sc": "O(V + E)",
-  "spaceBreakdown": "- vector<vector<int>> adj: up to V + E entries → O(V + E)  \n- vector<int> indeg: V entries → O(V)  \n- queue<int> q: at most V entries → O(V)  \n- not counted: input parameters, return value",
-  "approach": "The prerequisite pairs form a directed graph where a course points to the courses that depend on it.  \nIf the graph contains a directed cycle no topological ordering exists, so we cannot finish all courses.  \nWe compute indegrees, repeatedly remove vertices with indegree 0 (Kahn’s BFS topological sort), and check whether all vertices are removed.",
+  "generatedAt": "2026-11-26",
+  "pattern": "Topological Sort (Kahn's Algorithm)",
+  "tc": "O(V + E)",
+  "sc": "O(V + E)",
+  "spaceBreakdown": "- vector<vector<int>> adj: O(V + E) - adjacency list storing all edges\n- vector<int> indegree: O(V) - one int per course\n- queue<int> q: O(V) - at most all nodes queued simultaneously\n- int count, node, next: O(1)\n- not counted: input prerequisites, return value",
+  "approach": "The prerequisites form a directed graph where edge b→a means \"course b must be taken before course a.\" The problem reduces to cycle detection: if a cycle exists, no valid ordering exists. We use Kahn's algorithm (BFS topological sort): compute in-degrees, enqueue all zero-in-degree nodes, repeatedly dequeue and decrement neighbors' in-degrees, and count how many nodes we process. If the count equals numCourses, the graph is acyclic.",
   "hints": [
-    "If a course must be taken before another, what kind of relationship does that create between the two courses?  \n`numCourses ≤ 2000` limits the size of the structure we can build.",
-    "Use a queue to repeatedly process courses whose indegree (number of remaining prerequisites) is zero.  \nExample: for `numCourses = 2, prerequisites = [[1,0]]` the queue starts with course 0, we remove it, decrease indegree of 1 to 0, then remove 1 - all courses are processed.",
-    "```\nbuild adjacency list and indegree array\npush all vertices with indegree 0 into queue\nwhile queue not empty:\n    v = pop queue\n    for each neighbor u of v:\n        indegree[u]--\n        if indegree[u] == 0: push u\n    count++\nreturn count == numCourses\n```",
-    "**Single course, no edges** - the only course has no prerequisite.  \n`Input: numCourses = 1, prerequisites = []` → `Expected: true`  \n⚠️ Bug: initializing indegree array with size 0 → out‑of‑bounds access → crashes  \n\n**Two‑course mutual dependency** - a simple directed cycle.  \n`Input: numCourses = 2, prerequisites = [[0,1],[1,0]]` → `Expected: false`  \n⚠️ Bug: forgetting to decrement indegree for neighbor 0 → queue never empties → returns true  \n\n**Disconnected graph with a hidden cycle** - one component is a chain, another is a cycle.  \n`Input: numCourses = 4, prerequisites = [[1,0],[2,1],[0,2],[3,2]]` → `Expected: false`  \n⚠️ Bug: processing only the component that starts with indegree 0 (course 3) and then returning true because visited ≠ numCourses is not checked → returns true  \n\n**Long linear chain** - tests that the algorithm works on a skewed graph.  \n`Input: numCourses = 5, prerequisites = [[4,3],[3,2],[2,1],[1,0]]` → `Expected: true`  \n⚠️ Bug: using recursion depth proportional to V (DFS) may hit stack limit for larger V; BFS avoids this."
+    "If you drew each course as a node and each prerequisite pair as a directed arrow from the required course to the dependent one, what structural property of that drawing would make it impossible to ever complete all courses?",
+    "Topological sort via BFS (Kahn's algorithm): repeatedly remove nodes with zero incoming edges. In Example 1 ([[1,0]]), course 0 has in-degree 0, so it's removed first; then course 1's in-degree drops to 0 and it's removed - all nodes removed means no cycle.",
+    "```\nbuild adjacency list and in-degree array from prerequisites\nqueue = all nodes with in-degree 0\ncount = 0\nwhile queue is not empty:\n    node = queue.pop_front()\n    count++\n    for each neighbor of node:\n        decrement neighbor's in-degree\n        if in-degree becomes 0:\n            queue.push(neighbor)\nreturn count == numCourses\n```",
+    "**Single course, no prerequisites** - smallest valid input with zero edges\n`Input: numCourses = 1, prerequisites = []` → `Expected: true`\n⚠️ Bug: initializing the queue only from nodes that appear in prerequisites (not scanning all 0..numCourses-1) → returns false\n\n**Self-loop** - a course that is its own prerequisite forms a trivial cycle\n`Input: numCourses = 1, prerequisites = [[0,0]]` → `Expected: false`\n⚠️ Bug: skipping edges where a_i == b_i → returns true\n\n**Disconnected acyclic components** - multiple independent chains with no shared nodes\n`Input: numCourses = 4, prerequisites = [[1,0],[3,2]]` → `Expected: true`\n⚠️ Bug: only starting BFS from node 0 → processes only {0,1}, count = 2, returns false\n\n**Diamond DAG** - a node reachable via two distinct paths, no cycle\n`Input: numCourses = 3, prerequisites = [[1,0],[2,0],[2,1]]` → `Expected: true`\n⚠️ Bug: DFS with only visited/unvisited states, treating any revisit as a cycle → returns false"
   ],
   "followUps": [
     {
-      "q": "How would you modify the solution to also return one possible order in which to take the courses?",
-      "a": "Keep a vector<int> order and push each course when it is removed from the queue. After the loop, if order.size() == numCourses return order; otherwise return an empty vector. Time stays O(V + E) and extra space becomes O(V + E)."
+      "q": "Return a valid course ordering instead of just true/false (Course Schedule II).",
+      "a": "Same Kahn's algorithm, but append each dequeued node to a result vector. If the result vector's size equals numCourses, return it; otherwise return an empty vector. Time and space complexity unchanged: O(V + E)."
     },
     {
-      "q": "What changes, if any, are needed when `numCourses` and `prerequisites.length` can be as large as 10⁵?",
-      "a": "No changes are required; the BFS topological sort still runs in O(V + E) time and uses O(V + E) memory, which fits the limits for 10⁵ vertices and edges."
+      "q": "Each course has a duration and you can take unlimited courses per semester; find the minimum number of semesters.",
+      "a": "After topological sorting, compute the longest path in the DAG using dynamic processing during the BFS: dist[node] = max(dist[node], dist[prereq] + 1). The answer is the maximum dist value. Time O(V + E), space O(V + E)."
     },
     {
-      "q": "Suppose you must answer the question using only O(V) extra memory (you cannot store the full adjacency list). How could you adapt the algorithm?",
-      "a": "Store only the indegree array (size V) and keep the original edge list. In each iteration, scan the edge list to find outgoing edges of the current zero‑indegree vertex, decrement the corresponding indegrees, and mark those edges as processed (e.g., by a boolean flag). This uses O(V) extra space but increases time to O(V·E) in the worst case."
+      "q": "Prerequisites arrive one at a time in a stream; after each addition, report whether all courses can still be finished.",
+      "a": "Maintain the in-degree array and adjacency list incrementally. After each edge addition, run Kahn's algorithm from scratch - with V ≤ 2000 and E ≤ 5000, each query is O(V + E). For larger constraints, use incremental cycle detection with dynamic topological order maintenance. Time O(Q × (V + E)) per Q queries."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n        vector<vector<int>> adj(numCourses);\n        vector<int> indeg(numCourses, 0);\n        for (const auto& p : prerequisites) {\n            int a = p[0], b = p[1];\n            adj[b].push_back(a);   // b must come before a\n            ++indeg[a];\n        }\n        queue<int> q;\n        for (int i = 0; i < numCourses; ++i)\n            if (indeg[i] == 0) q.push(i);\n        int visited = 0;\n        while (!q.empty()) {\n            int v = q.front(); q.pop();\n            ++visited;\n            for (int u : adj[v]) {\n                if (--indeg[u] == 0) q.push(u);\n            }\n        }\n        return visited == numCourses;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n        vector<vector<int>> adj(numCourses);\n        vector<int> indegree(numCourses, 0);\n        for (auto& p : prerequisites) {\n            adj[p[1]].push_back(p[0]);\n            indegree[p[0]]++;\n        }\n        queue<int> q;\n        for (int i = 0; i < numCourses; i++) {\n            if (indegree[i] == 0) q.push(i);\n        }\n        int count = 0;\n        while (!q.empty()) {\n            int node = q.front();\n            q.pop();\n            count++;\n            for (int next : adj[node]) {\n                if (--indegree[next] == 0) q.push(next);\n            }\n        }\n        return count == numCourses;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "2/2"
+    "examples": "2/2",
+    "reviewed": 2
   }
 }

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-make-binary-array-elements-equal-to-one-i",
+  "title": "Minimum Operations to Make Binary Array Elements Equal to One I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Left-to-Right",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, count, flipPrev2, flipPrev1: each O(1) → O(1)\n- no containers, no recursion, no heap/stack\n- not counted: input vector nums",
+  "approach": "Scan left to right. Once all operations before index i are decided, the only operation that can still change nums[i] is the one starting at i. So if nums[i] (after XOR-ing with the last two flip decisions) is 0, we must flip at i. If i is within the last two positions (i > n-3), flipping is impossible, so return -1. Two integer variables track the last two flip decisions, giving O(1) extra space.",
+  "hints": [
+    "Once you've committed to all operations before index i, what is the only remaining operation that can still change nums[i]?\nThe array length can be up to 10^5.",
+    "Greedy left-to-right scan: if the current element (after XOR-ing with the last two flip decisions) is 0, you must flip starting here. For nums = [0,1,1,1,0,0], position 0 is 0 → flip at index 0, yielding [1,0,0,1,0,0].",
+    "```\ncount = 0, prev2 = 0, prev1 = 0\nfor i from 0 to n-1:\n    current = nums[i] XOR prev2 XOR prev1\n    if current == 0:\n        if i > n - 3: return -1\n        count += 1\n        prev2, prev1 = prev1, 1\n    else:\n        prev2, prev1 = prev1, 0\nreturn count\n```",
+    "**Already all ones** - no operations needed\n`Input: nums = [1,1,1]` → `Expected: 0`\n⚠️ Bug: initializing count to 1 instead of 0 → returns 1\n\n**Minimum size, all zeros** - a single flip fixes all three elements\n`Input: nums = [0,0,0]` → `Expected: 1`\n⚠️ Bug: using `i >= n-3` to block flips instead of `i > n-3` → at i=0 with n=3, 0>=0 is true, returns -1\n\n**Missing second flip tracker** - each element is affected by two prior flips, not one\n`Input: nums = [0,1,1,1,0,0]` → `Expected: 3`\n⚠️ Bug: XOR-ing with only the last 1 flip decision instead of the last 2 → over-flips middle elements, returns -1\n\n**All zeros, even length** - two well-spaced flips solve it\n`Input: nums = [0,0,0,0,0,0]` → `Expected: 2`\n⚠️ Bug: using `i < n-3` as the flip-allowed condition instead of `i <= n-3` → at i=3 with n=6, 3<3 is false, returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the operation flips k consecutive elements instead of 3?",
+      "a": "The same greedy strategy applies - scan left to right, and if the current element is 0 after XOR-ing with the last k-1 flip decisions, flip starting here. Use a circular buffer of size k-1 to track recent flip decisions. TC: O(n), SC: O(k)."
+    },
+    {
+      "q": "What if you need to make all elements 0 instead of 1?",
+      "a": "Flip when the current element is 1 instead of 0. Everything else in the algorithm stays identical. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the array arrives as a stream and you can only store O(1) elements?",
+      "a": "Buffer the last 2 elements and their flip states. Emit each flip decision as soon as you see element i, but the final verdict (success or -1) is only known after the last two elements arrive. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums) {\n        int n = nums.size();\n        int count = 0;\n        int flipPrev2 = 0;\n        int flipPrev1 = 0;\n        \n        for (int i = 0; i < n; i++) {\n            int current = nums[i] ^ flipPrev2 ^ flipPrev1;\n            if (current == 0) {\n                if (i > n - 3) return -1;\n                count++;\n                flipPrev2 = flipPrev1;\n                flipPrev1 = 1;\n            } else {\n                flipPrev2 = flipPrev1;\n                flipPrev1 = 0;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

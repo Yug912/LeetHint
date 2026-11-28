@@ -3,37 +3,38 @@
   "title": "Factorial Trailing Zeroes",
   "difficulty": "Medium",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-12",
-  "pattern": "Counting prime factors (base‑5 decomposition)",
-  "tc": "O(log n)",
+  "generatedAt": "2026-11-26",
+  "pattern": "Mathematical Counting",
+  "tc": "O(log n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- integer variables (count, p, n): O(1)  \n- not counted: input parameter, return value",
-  "approach": "Trailing zeros come from factors of 10, i.e., paired 2‑and‑5 primes. In n! there are far more 2’s than 5’s, so the count of 5’s determines the answer. Count how many multiples of 5, 25, 125, … are ≤ n by repeatedly dividing n by powers of 5 and summing the quotients. This runs in logarithmic time and uses constant extra space.",
+  "spaceBreakdown": "- int count: single variable → O(1)\n- recursion depth: none\n- not counted: input parameter n, returned int",
+  "approach": "Trailing zeroes in n! come from factors of 10 = 2 × 5. Since multiples of 2 are far more frequent than multiples of 5, the bottleneck is the number of factors of 5 in n!. We count these by summing floor(n/5) + floor(n/25) + floor(n/125) + … - each term counts multiples of 5, 25, 125, etc., capturing the extra factors of 5 contributed by powers of 5. The loop divides n by 5 repeatedly until n < 5.",
   "hints": [
-    "When multiplying all numbers from 1 to n, which prime factor determines how many zeros appear at the end of the product?  \nThe constraint allows n up to 10⁴.",
-    "Use repeated division by 5 (count multiples of 5, 25, 125, …).  \nExample: n = 5 → ⌊5/5⌋ = 1 → answer 1.",
-    "```\ncount ← 0\np ← 5\nwhile p ≤ n do\n    count ← count + floor(n / p)\n    p ← p * 5\nreturn count\n```",
-    "**Zero input** - n = 0 gives no factors at all.  \n`Input: 0` → `Expected: 0`  \n⚠️ Bug: returning 1 for n = 0 because loop starts with p = 1 → returns 1.\n\n**Just below a power of 5** - n = 4 has no factor 5.  \n`Input: 4` → `Expected: 0`  \n⚠️ Bug: using `while (p < n)` instead of `≤` → misses n = 5 case, returns 0 for n = 5.\n\n**Multiple powers of 5** - n = 25 contains 5 and 25.  \n`Input: 25` → `Expected: 6` (5 from 5‑multiples + 1 from 25)  \n⚠️ Bug: adding only `n/5` once → returns 5.\n\n**Largest allowed n** - n = 10000.  \n`Input: 10000` → `Expected: 2499` (10000/5=2000, /25=400, /125=80, /625=16, /3125=3, /15625=0)  \n⚠️ Bug: storing the power `p` in a 32‑bit int and doing `p *= 5` without checking overflow can wrap to negative, causing an infinite loop for larger inputs."
+    "A trailing zero needs a factor of 10 = 2 × 5. Between these two prime factors, which one appears fewer times across the numbers 1 through n? The constraint n ≤ 10^4 means the answer is at most a few thousand.",
+    "Count factors of 5 in n! by repeatedly dividing n by 5 and summing the quotients. For n = 5: floor(5/5) = 1, then floor(1/5) = 0, so the answer is 1.",
+    "```\ncount = 0\nwhile n >= 5:\n    n = n / 5\n    count = count + n\nreturn count\n```",
+    "**Smallest input** - n = 0 is the only case where n! = 1, producing no trailing zero.\n`Input: n = 0` → `Expected: 0`\n⚠️ Bug: initializing count to 1 instead of 0 → returns 1\n\n**First factor of 5** - n = 5 is the smallest input that produces a trailing zero.\n`Input: n = 5` → `Expected: 1`\n⚠️ Bug: using `n > 5` instead of `n >= 5` as the loop condition → returns 0\n\n**Powers of 5** - n = 25 contributes two factors of 5 (from 5²), so the answer jumps.\n`Input: n = 25` → `Expected: 6`\n⚠️ Bug: computing only floor(n/5) = 5 without iterating for floor(n/25) → returns 5"
   ],
   "followUps": [
     {
-      "q": "How would you modify the solution if n could be as large as 10¹⁸?",
-      "a": "Use a 64‑bit integer for the power variable and keep dividing n by 5ⁱ until the power exceeds n. The loop still runs O(log₅ n) ≈ 27 iterations, and the algorithm remains O(log n) time and O(1) space."
+      "q": "What if n can be as large as 10^18?",
+      "a": "The algorithm is unchanged - the loop runs at most log₅(10^18) ≈ 26 iterations. Use `long long` for n to handle the large input, though the result still fits in an int. TC: O(log n), SC: O(1)."
     },
     {
-      "q": "Suppose you need to return the exact number of trailing zeros for n! modulo 10⁹+7 for huge n (e.g., up to 10¹²).",
-      "a": "First compute the exponent of 5 as before (still O(log n)). Then compute 5^{exponent} mod M using fast exponentiation and multiply by the appropriate power of 2 (which is abundant) modulo M. The overall complexity stays O(log n) time and O(1) space."
+      "q": "What if you need trailing zeroes in the product n! × m! × k!?",
+      "a": "Trailing zeroes are additive over multiplication, so sum trailingZeroes(n) + trailingZeroes(m) + trailingZeroes(k) using the same function. TC: O(log n + log m + log k), SC: O(1)."
     },
     {
-      "q": "What if the input is given as a stream of numbers and you must output the trailing zero count after each new n without storing previous values?",
-      "a": "Maintain the current count and the next power of 5. When a new n arrives, increase the count by the number of new multiples of each power of 5 that lie between the previous n and the current n. This updates in O(log n) per query and uses O(1) extra memory."
+      "q": "What if you need trailing zeroes of n! in an arbitrary base B?",
+      "a": "Factorize B into prime powers p^e. For each prime p, compute the total power of p in n! using the same floor-division sum, then divide by e. The answer is the minimum across all primes. TC: O(√B + ω(B)·log n) where ω(B) is the number of distinct prime factors, SC: O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int trailingZeroes(int n) {\n        int count = 0;\n        for (long long p = 5; p <= n; p *= 5) {\n            count += n / p;\n        }\n        return count;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int trailingZeroes(int n) {\n        int count = 0;\n        while (n >= 5) {\n            n /= 5;\n            count += n;\n        }\n        return count;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

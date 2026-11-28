@@ -1,0 +1,40 @@
+{
+  "slug": "falling-squares",
+  "title": "Falling Squares",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Segment Tree with Coordinate Compression",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> coords: up to 2n entries → O(n)\n- vector<int> tree: 4*N+10 where N ≤ 2n-1 → O(n)\n- vector<int> lazy: same size as tree → O(n)\n- recursion depth: O(log n) for segment tree operations\n- not counted: input positions, returned ans vector",
+  "approach": "Coordinate compression maps the up-to-10^8 x-range onto O(n) intervals between sorted unique endpoints. A segment tree with lazy propagation supports range-max query and range-max update on these intervals. For each square, query the maximum height over its x-interval, add the side length, and update that interval to the new height. Since the new height always exceeds the current max in the range, a max-update (not assignment) correctly preserves heights of non-overlapping intervals.",
+  "hints": [
+    "The x-coordinates go up to 10^8, but with at most 1000 squares there are at most 2000 distinct endpoints. What property of the intervals between consecutive sorted endpoints lets you represent the entire x-axis with only O(n) pieces?",
+    "Use a segment tree with coordinate compression and lazy propagation (range-max-update, range-max-query). In Example 1, compress endpoints [1,2,3,5,6,7] into 5 intervals; square [1,2] queries intervals [0,2) → max 0, then updates them to height 2.",
+    "```\ncollect all left and left+side endpoints, sort, unique\nbuild segment tree over intervals [i, i+1) for i in 0..M-1\nfor each square [left, side]:\n    l = compressed index of left\n    r = compressed index of left + side\n    h = range_max_query(l, r) + side\n    range_max_update(l, r, h)\n    ans[i] = max(global_max, h)\n```",
+    "**Boundary brushing** - squares touching only at an edge must not stack\n`Input: [[100,100],[200,100]]` → `Expected: [100,100]`\n⚠️ Bug: building the segment tree on coordinate points instead of intervals between coordinates → returns `[100,200]`\n\n**Partial overlap with lazy** - a later square lands on part of an earlier stack\n`Input: [[1,5],[2,3],[4,1]]` → `Expected: [5,8,9]`\n⚠️ Bug: skipping pushDown before recursing in query → returns `[5,3,4]`\n\n**Large coordinates** - left_i up to 10^8\n`Input: [[100000000,1]]` → `Expected: [1]`\n⚠️ Bug: building segment tree over raw coordinate range [0, 10^8] → memory limit exceeded\n\n**Non-overlapping shorter square** - global max must persist when a later square is shorter\n`Input: [[1,5],[10,1]]` → `Expected: [5,5]`\n⚠️ Bug: using `globalMax = h` instead of `globalMax = max(globalMax, h)` → returns `[5,1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if positions.length is up to 10^5 - does the same approach still work?",
+      "a": "Yes. Coordinate compression produces at most 2·10^5 endpoints, and each segment tree operation is O(log n), giving O(n log n) total time with O(n) space. The recursion depth stays O(log n), well within stack limits."
+    },
+    {
+      "q": "What if squares arrive in an online stream and you cannot pre-collect all endpoints?",
+      "a": "Use a dynamic (sparse) segment tree over the full [1, 10^8] range, allocating nodes on demand. Each operation still takes O(log(10^8)) ≈ 27 time, total O(n log C) time and O(n log C) space, with no preprocessing pass needed."
+    },
+    {
+      "q": "What if you must also answer \"what was the tallest stack after drop k?\" for arbitrary historical queries?",
+      "a": "Build a persistent segment tree: each update creates O(log n) new nodes, preserving all prior versions. Querying version k gives the max height after drop k. Time O(n log n), space O(n log n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int N;\n    vector<int> tree, lazy;\n\n    void pushDown(int node) {\n        if (lazy[node] > 0) {\n            tree[2 * node] = max(tree[2 * node], lazy[node]);\n            lazy[2 * node] = max(lazy[2 * node], lazy[node]);\n            tree[2 * node + 1] = max(tree[2 * node + 1], lazy[node]);\n            lazy[2 * node + 1] = max(lazy[2 * node + 1], lazy[node]);\n            lazy[node] = 0;\n        }\n    }\n\n    void update(int node, int lo, int hi, int l, int r, int val) {\n        if (r <= lo || hi <= l) return;\n        if (l <= lo && hi <= r) {\n            tree[node] = max(tree[node], val);\n            lazy[node] = max(lazy[node], val);\n            return;\n        }\n        pushDown(node);\n        int mid = (lo + hi) / 2;\n        update(2 * node, lo, mid, l, r, val);\n        update(2 * node + 1, mid, hi, l, r, val);\n        tree[node] = max(tree[2 * node], tree[2 * node + 1]);\n    }\n\n    int query(int node, int lo, int hi, int l, int r) {\n        if (r <= lo || hi <= l) return 0;\n        if (l <= lo && hi <= r) return tree[node];\n        pushDown(node);\n        int mid = (lo + hi) / 2;\n        return max(query(2 * node, lo, mid, l, r),\n                  query(2 * node + 1, mid, hi, l, r));\n    }\n\npublic:\n    vector<int> fallingSquares(vector<vector<int>>& positions) {\n        vector<int> coords;\n        for (auto& p : positions) {\n            coords.push_back(p[0]);\n            coords.push_back(p[0] + p[1]);\n        }\n        sort(coords.begin(), coords.end());\n        coords.erase(unique(coords.begin(), coords.end()), coords.end());\n        N = (int)coords.size() - 1;\n        tree.assign(4 * N + 10, 0);\n        lazy.assign(4 * N + 10, 0);\n\n        vector<int> ans;\n        ans.reserve(positions.size());\n        int globalMax = 0;\n        for (auto& p : positions) {\n            int l = lower_bound(coords.begin(), coords.end(), p[0]) - coords.begin();\n            int r = lower_bound(coords.begin(), coords.end(), p[0] + p[1]) - coords.begin();\n            int h = query(1, 0, N, l, r) + p[1];\n            update(1, 0, N, l, r, h);\n            globalMax = max(globalMax, h);\n            ans.push_back(globalMax);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

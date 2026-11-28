@@ -3,37 +3,38 @@
   "title": "Difference Between Peaks and Valleys",
   "difficulty": "Easy",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-15",
+  "generatedAt": "2026-11-26",
   "pattern": "Linear Scan",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- long long ans: constant → O(1)  \n- loop index i: constant → O(1)  \n- not counted: input vector",
-  "approach": "We scan every interior index once, checking the two strict comparisons that define a peak or a valley. If it is a peak we add its value, if it is a valley we subtract it; otherwise we ignore it. The accumulated total is exactly (sum of peaks) - (sum of valleys).",
+  "spaceBreakdown": "- int ans: O(1)\n- int n: O(1)\n- loop variable i: O(1)\n- not counted: input vector",
+  "approach": "The problem requires calculating the difference between the sum of peak values and the sum of valley values. A peak is an element strictly greater than its neighbors, while a valley is strictly smaller. We can perform a single linear scan of the array, checking the immediate neighbors of each interior element. If an element is a peak, we add its value to our running total; if it is a valley, we subtract its value.",
   "hints": [
-    "When you examine an interior position, what must its value be relative to the element on its left and the element on its right to influence the final result?  \nThe array length satisfies 3 ≤ n ≤ 100.",
-    "Use a single linear scan (no extra container).  \nFor nums = [1,5,2,4,1,3,0] the scan visits index 1 (5 > 1 && 5 > 2) → add 5, index 2 (2 < 5 && 2 < 4) → subtract 2, …",
-    "ans ← 0  \nfor i from 1 to n‑2  \n if nums[i] > nums[i‑1] and nums[i] > nums[i+1]  \n  ans ← ans + nums[i]  \n else if nums[i] < nums[i‑1] and nums[i] < nums[i+1]  \n  ans ← ans - nums[i]  \nreturn ans",
-    "**All equal** - every interior element equals its neighbours, so no peak or valley.  \n`Input: [7,7,7,7]` → `Expected: 0`  \n⚠️ Bug: using ≥ / ≤ instead of > / < → treats every interior as both peak and valley → returns 0 (still) but wrong logic for other cases.\n\n**Strictly increasing** - never a peak, never a valley.  \n`Input: [1,2,3,4,5]` → `Expected: 0`  \n⚠️ Bug: checking only left neighbour (nums[i] > nums[i‑1]) → would count all interior as peaks → returns 10.\n\n**Strictly decreasing** - never a peak, never a valley.  \n`Input: [5,4,3,2,1]` → `Expected: 0`  \n⚠️ Bug: checking only right neighbour (nums[i] > nums[i+1]) → would count all interior as peaks → returns 9.\n\n**Negative valley** - valleys can be negative, subtraction must handle sign correctly.  \n`Input: [-5,-6,-1,-2,5,3,2]` → `Expected: 12`  \n⚠️ Bug: adding valley values instead of subtracting → returns 2."
+    "What characteristic of an element at index i tells you whether it contributes to the final sum, and with what sign?\nConstraints say n is at most 100, so checking each element individually is cheap.",
+    "Linear scan. Iterate through the array from the second element to the second-to-last element. For `nums = [1,5,2,4,1,3,0]`, at index 1, `5 > 1` and `5 > 2`, so add 5 to the answer.",
+    "ans = 0\nfor i from 1 to n - 2:\n    if nums[i] > nums[i-1] and nums[i] > nums[i+1]:\n        ans = ans + nums[i]\n    if nums[i] < nums[i-1] and nums[i] < nums[i+1]:\n        ans = ans - nums[i]\nreturn ans",
+    "**Plateau (duplicates)** - Adjacent equal values should not count as peaks or valleys.\n`Input: [6,5,2,5,5,3,6]` → `Expected: -5`\n⚠️ Bug: using `>=` instead of `>` in the peak check → returns 5.\n\n**Negatives** - Values can be negative, so subtracting a negative valley increases the answer.\n`Input: [-5,-6,-1,-2,5,3,2]` → `Expected: 12`\n⚠️ Bug: adding valley values to the answer instead of subtracting them → returns -4.\n\n**Boundary indices** - The first and last elements cannot be peaks or valleys.\n`Input: [-1,5,2]` → `Expected: 5`\n⚠️ Bug: treating the out-of-bounds left neighbor of the first element as 0 → returns 6.\n\n**All elements equal** - No element is strictly greater or smaller than its neighbors.\n`Input: [4,4,4,4]` → `Expected: 0`\n⚠️ Bug: using `>=` for peaks and `<=` for valleys with `else if` → returns 8."
   ],
   "followUps": [
     {
-      "q": "What changes are needed if the array length can be up to 10⁵ and each element up to 10⁹?",
-      "a": "The algorithm stays the same, but we must store the accumulator in a 64‑bit integer (long long) to avoid overflow; time remains O(n) and space O(1)."
+      "q": "What if the array is a stream of numbers and you need to maintain the peak-valley difference dynamically as new numbers arrive?",
+      "a": "Keep the last three elements in a sliding window. When a new element arrives, check if the middle element of the previous window is now a peak or valley, and update the running difference accordingly. Time complexity per insertion is O(1), space complexity is O(1)."
     },
     {
-      "q": "How would you modify the solution to return both the sum of peaks and the sum of valleys separately?",
-      "a": "Keep two variables, peakSum and valleySum, update them independently during the same linear scan, and return them as a pair or vector. The complexity stays O(n) time and O(1) extra space."
+      "q": "What if a peak/valley is defined with non-strict inequalities (e.g., nums[i] >= nums[i-1] and nums[i] >= nums[i+1])?",
+      "a": "You would change the strict comparisons to non-strict ones. However, this could cause an element to be both a peak and a valley if all three are equal, so you must decide whether to prioritize one or cancel them out. Time and space complexity remain O(n) and O(1)."
     },
     {
-      "q": "Suppose the numbers arrive as a stream and you cannot store the whole array. Can you still compute the answer?",
-      "a": "Yes. Keep the previous two values while reading the stream; after reading the third value you can decide whether the middle one is a peak or valley, update the answer, then shift the window. This uses O(1) memory and O(n) time."
+      "q": "What if you need to find the maximum possible peak-valley difference by removing at most k elements from the array?",
+      "a": "This becomes a dynamic programming problem where the state tracks the current index, the number of removals used, and whether the last kept element was part of an upward or downward slope. Time complexity would be O(n * k), and space complexity O(n * k) or O(k) with state compression."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int peakValleyDifference(vector<int>& nums) {\n        long long ans = 0;\n        int n = nums.size();\n        for (int i = 1; i + 1 < n; ++i) {\n            if (nums[i] > nums[i - 1] && nums[i] > nums[i + 1]) {\n                ans += nums[i];\n            } else if (nums[i] < nums[i - 1] && nums[i] < nums[i + 1]) {\n                ans -= nums[i];\n            }\n        }\n        return static_cast<int>(ans);\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int peakValleyDifference(vector<int>& nums) {\n        int ans = 0;\n        int n = nums.size();\n        for (int i = 1; i < n - 1; ++i) {\n            if (nums[i] > nums[i - 1] && nums[i] > nums[i + 1]) {\n                ans += nums[i];\n            } else if (nums[i] < nums[i - 1] && nums[i] < nums[i + 1]) {\n                ans -= nums[i];\n            }\n        }\n        return ans;\n    }\n};"
   },
   "verified": {
-    "compiled": false,
-    "examples": "3/3"
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

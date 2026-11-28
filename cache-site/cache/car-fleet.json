@@ -5,35 +5,36 @@
   "promptVersion": "p9",
   "generatedAt": "2026-11-26",
   "pattern": "Monotonic Stack",
-  "tc": "O(n log n)",
+  "tc": "O(n log n)",
   "sc": "O(n)",
-  "spaceBreakdown": "- vector<pair<int,double>> cars: up to n entries → O(n)  \n- recursion depth of std::sort: O(log n) (not counted as extra memory)  \n- not counted: input vectors, returned int",
-  "approach": "The only thing that matters for a car is the time it needs to reach the target.  \nIf we process cars from the one closest to the target backwards, a car can start a new fleet only when its arrival time is larger than any time seen so far; otherwise it will catch up to the fleet ahead.  \nSorting by starting position and then scanning while keeping the maximal time seen yields the fleet count.",
+  "spaceBreakdown": "- vector<pair<int,int>> cars: up to n entries → O(n)\n- sort(): C++ introsort uses O(log n) stack\n- not counted: input vectors position/speed, returned int",
+  "approach": "Sort cars by starting position in descending order (closest to target first). For each car, compute its arrival time = (target − position) / speed. A car forms a new fleet only if its arrival time is strictly greater than the maximum arrival time of all cars ahead of it (closer to target); otherwise it catches up and merges into the fleet ahead. Track the running maximum arrival time and count how many times a car's time exceeds it.",
   "hints": [
-    "When you look at the cars starting nearest to the target and move backwards, what single quantity tells you whether the current car will join the fleet ahead or start a new one?  \nThe problem guarantees n ≤ 10⁵.",
-    "Use a stack‑like scan (a single variable is enough) after sorting the cars by position descending.  \nExample: target = 12, positions = [10,8,0,5,3] → times = [1,1,12,7,3]; scanning gives fleets = 3.",
-    "```\ncompute time[i] = (target - position[i]) / speed[i]   // as double\nsort cars by position descending\nfleets = 0\nmaxTime = -infinity\nfor each car in sorted order:\n    if car.time > maxTime:\n        fleets += 1\n        maxTime = car.time\nreturn fleets\n```",
-    "**Single car** - only one car exists.  \n`Input: target = 10, position = [3], speed = [3]` → `Expected: 1`  \n⚠️ Bug: using integer division for time → returns 0 → `Expected: 1`.\n\n**All cars same speed, decreasing positions** - no car can catch another.  \n`Input: target = 100, position = [90,70,50], speed = [10,10,10]` → `Expected: 3`  \n⚠️ Bug: comparing with `>=` instead of `>` merges equal‑time cars → returns 2.\n\n**Equal arrival times** - cars arriving together must be counted as one fleet.  \n`Input: target = 12, position = [10,8], speed = [2,4]` → `Expected: 1`  \n⚠️ Bug: using `<` instead of `>` treats equal times as new fleet → returns 2."
+    "Among cars ordered by how close they start to the target, what property of a car determines whether it catches the car ahead of it or arrives on its own? Positions are unique and all less than target.",
+    "Sort cars by position descending, then scan arrival times keeping a running maximum - a car starts a new fleet only when its time exceeds that maximum. Example: car at position 10, speed 2 needs (12−10)/2 = 1.0 h; car at position 8, speed 4 also needs 1.0 h, so it merges.",
+    "```\nsort cars by position descending\nfleets = 0\nmaxTime = 0\nfor each car:\n    time = (target - position) / speed\n    if time > maxTime:\n        fleets += 1\n        maxTime = time\nreturn fleets\n```",
+    "**Single car** - only one car in the input.\n`Input: target=10, position=[3], speed=[3]` → `Expected: 1`\n⚠️ Bug: initializing `fleets=1` before the loop and incrementing inside → returns `2`\n\n**Integer division** - two cars whose true arrival times differ but truncate to the same int.\n`Input: target=10, position=[8,9], speed=[5,5]` → `Expected: 2`\n⚠️ Bug: computing `time = (target - pos) / speed` with int division → both times become 0, returns `1`\n\n**Wrong sort direction** - sorting by position ascending instead of descending.\n`Input: target=12, position=[10,8,0,5,3], speed=[2,4,1,1,3]` → `Expected: 3`\n⚠️ Bug: sorting cars by position ascending → returns `1`\n\n**Tie in arrival times** - two cars reach the target at the same time.\n`Input: target=12, position=[10,8], speed=[2,4]` → `Expected: 1`\n⚠️ Bug: using `>=` instead of `>` when comparing time to maxTime → returns `2`"
   ],
   "followUps": [
     {
-      "q": "What if the cars are given in a stream and you cannot store all of them at once?",
-      "a": "Keep only the current maximal arrival time while reading each car, but you still need the cars ordered by position. This forces you to sort offline; with a stream you would need an external sort or a priority queue limited to O(k) memory where k is the number of distinct positions you keep."
+      "q": "What if multiple cars can start at the same position?",
+      "a": "Group cars by position and keep only the slowest speed at each position, since faster cars immediately merge into the slowest one. Then apply the same sort-and-scan approach on the grouped data. TC O(n log n), SC O(n)."
     },
     {
-      "q": "How would the solution change if cars could overtake each other?",
-      "a": "The fleet concept disappears; each car reaches the target independently, so the answer is simply n. The algorithm reduces to O(1) work per car, total O(n) time and O(1) extra space."
+      "q": "What if you must answer many queries, each with a different target?",
+      "a": "Pre-sort cars by position once. For each target query, recompute each car's arrival time and scan for fleets using the running-maximum method. TC O(n log n + q·n) where q is the number of queries; SC O(n)."
     },
     {
-      "q": "Suppose the target distance is up to 10¹⁸ and speeds up to 10⁹, requiring exact rational comparison without floating‑point errors.",
-      "a": "Store each car’s numerator = target − position and denominator = speed, and compare fractions by cross‑multiplication using 128‑bit integers. The rest of the algorithm stays the same, with O(n log n) time and O(n) space."
+      "q": "What if cars arrive in a stream and you must report the fleet count after each insertion?",
+      "a": "Maintain cars in a sorted structure keyed by position. On each insertion, compute the new car's arrival time and query the maximum arrival time among all cars with greater position; if the new time exceeds it, increment the fleet count. A Fenwick tree or segment tree supporting suffix-max queries gives TC O(n log n), SC O(n)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int carFleet(int target, vector<int>& position, vector<int>& speed) {\n        int n = position.size();\n        vector<pair<int, double>> cars;\n        cars.reserve(n);\n        for (int i = 0; i < n; ++i) {\n            double t = static_cast<double>(target - position[i]) / speed[i];\n            cars.emplace_back(position[i], t);\n        }\n        sort(cars.begin(), cars.end(),\n             [](const auto& a, const auto& b) { return a.first > b.first; });\n        \n        int fleets = 0;\n        double maxTime = -1.0;               // no car has negative time\n        for (const auto& car : cars) {\n            if (car.second > maxTime) {\n                ++fleets;\n                maxTime = car.second;\n            }\n        }\n        return fleets;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int carFleet(int target, vector<int>& position, vector<int>& speed) {\n        int n = position.size();\n        vector<pair<int, int>> cars(n);\n        for (int i = 0; i < n; i++) {\n            cars[i] = {position[i], speed[i]};\n        }\n        sort(cars.begin(), cars.end(), [](const auto& a, const auto& b) {\n            return a.first > b.first;\n        });\n        int fleets = 0;\n        double maxTime = 0.0;\n        for (int i = 0; i < n; i++) {\n            double time = (double)(target - cars[i].first) / cars[i].second;\n            if (time > maxTime) {\n                fleets++;\n                maxTime = time;\n            }\n        }\n        return fleets;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "3/3"
+    "examples": "3/3",
+    "reviewed": 2
   }
 }

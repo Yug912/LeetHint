@@ -3,37 +3,38 @@
   "title": "Best Time to Buy and Sell Stock",
   "difficulty": "Easy",
   "promptVersion": "p9",
-  "generatedAt": "2026-11-22",
-  "pattern": "Greedy Scan (track minimum)",
+  "generatedAt": "2026-11-26",
+  "pattern": "Running Minimum (Single Pass)",
   "tc": "O(n)",
   "sc": "O(1)",
-  "spaceBreakdown": "- int minPrice: one variable → O(1)  \n- int maxProfit: one variable → O(1)  \n- recursion depth: none  \n- not counted: input vector, returned int",
-  "approach": "The maximum profit is obtained by buying at the lowest price that appears before a selling day. While scanning the array we keep the smallest price seen so far and the best profit achievable up to the current index. This single‑pass greedy scan yields the optimal answer because any later sell can only improve profit if it is higher than the current best and any earlier buy must be the minimum price before that sell.",
+  "spaceBreakdown": "- int minPrice: single variable → O(1)\n- int best: single variable → O(1)\n- int i (loop counter): single variable → O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Track the minimum price seen so far while scanning left to right. On each day, the best profit if selling today is today's price minus that running minimum. Update the running minimum when a new low appears, and keep the largest profit seen. This works because any valid sell day pairs with the cheapest buy day before it, which is exactly the running minimum.",
   "hints": [
-    "Looking at each day, which earlier day's price would give the largest possible profit if you sold on the current day?  \nThe array length can be up to 10^5.",
-    "Keep a single variable that stores the minimum price seen so far.  \nExample: for prices = [7,1,5,3,6,4] the variable becomes 7 → 1 → stays 1 while profits 5‑1=4, 6‑1=5 are evaluated.",
-    "minPrice ← +∞  \nmaxProfit ← 0  \nfor each price p in prices:  \n if p < minPrice then minPrice ← p  \n else if p - minPrice > maxProfit then maxProfit ← p - minPrice  \nreturn maxProfit",
-    "**Single day** - only one price, no possible sell  \n`Input: [5]` → `Expected: 0`  \n⚠️ Bug: initializing maxProfit to INT_MIN and returning it → returns -2147483648  \n\n**Strictly decreasing** - profit can never be positive  \n`Input: [9,7,4,3,1]` → `Expected: 0`  \n⚠️ Bug: updating maxProfit before updating minPrice → returns 8 (9‑1) incorrectly  \n\n**All equal** - every buy‑sell pair yields zero profit  \n`Input: [4,4,4,4]` → `Expected: 0`  \n⚠️ Bug: starting minPrice at 0 instead of +∞ → returns 4 (4‑0) incorrectly"
+    "For each day you might sell on, what single fact about all the days before it determines the best profit achievable by selling that day? With up to 10^5 days, checking every buy-sell pair is too slow.",
+    "Track the minimum price seen so far in one left-to-right pass. On day 5 of [7,1,5,3,6,4], the minimum so far is 1, so selling at 6 yields profit 5.",
+    "```\nminPrice = prices[0]\nbest = 0\nfor i from 1 to n-1:\n    if prices[i] < minPrice:\n        minPrice = prices[i]\n    else:\n        profit = prices[i] - minPrice\n        if profit > best:\n            best = profit\nreturn best\n```",
+    "**Single day** - only one price, no transaction possible.\n`Input: prices = [5]` → `Expected: 0`\n⚠️ Bug: seeding `best = prices[1] - prices[0]` → reads out of bounds, undefined behavior\n\n**Strictly ascending** - the best buy is day 1, best sell is the last day.\n`Input: prices = [1,2,3,4,5]` → `Expected: 4`\n⚠️ Bug: updating `minPrice` before computing profit (`minPrice = min(minPrice, prices[i]); profit = prices[i] - minPrice`) → profit is always 0, returns 0\n\n**Strictly descending** - no profitable transaction exists.\n`Input: prices = [5,4,3,2,1]` → `Expected: 0`\n⚠️ Bug: initializing `best = prices[1] - prices[0]` = -1 instead of 0 → returns -1\n\n**All equal** - every buy-sell pair gives zero profit.\n`Input: prices = [4,4,4,4]` → `Expected: 0`\n⚠️ Bug: initializing `best = -1` to \"force an update\" → returns -1\n\n**Two elements ascending** - buy first, sell second.\n`Input: prices = [1,5]` → `Expected: 4`\n⚠️ Bug: starting the loop at `i = 2` → skips the only valid pair, returns 0"
   ],
   "followUps": [
     {
-      "q": "What if you are allowed to complete as many transactions as you like (buy‑sell multiple times)?",
-      "a": "Sum all positive differences between consecutive days; each rise can be taken as a separate trade. The algorithm runs in O(n) time and O(1) space."
+      "q": "What if you can complete as many transactions as you want (buy, sell, buy, sell, ...)?",
+      "a": "Sum every positive difference between consecutive days. Each uptick is captured by buying the day before and selling the day after. TC O(n), SC O(1)."
     },
     {
-      "q": "How would you solve the problem if you can make at most k transactions?",
-      "a": "Use DP with states dp[i][j] = max profit up to day i with at most j transactions, which can be optimized to O(k·n) time and O(k) space by keeping the best “buy‑minus‑profit” value for each transaction count."
+      "q": "What if you may complete at most k transactions?",
+      "a": "Use DP tracking two arrays: hold[j] (max profit while holding stock after j buys) and cash[j] (max profit after j complete sells). Update each day from the previous day's values. TC O(n·k), SC O(k)."
     },
     {
-      "q": "Suppose the price stream is too large to store in memory and you must process it online.",
-      "a": "The same greedy scan works online: maintain only the current minimum price and the best profit seen so far, updating them as each new price arrives. Time remains O(n) and auxiliary space stays O(1)."
+      "q": "What if a fixed fee is charged on every sale?",
+      "a": "Track two states: cash (not holding) and hold (holding one share). Each day, cash = max(cash, hold + price − fee) and hold = max(hold, cash − price). TC O(n), SC O(1)."
     }
   ],
   "code": {
-    "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        int minPrice = INT_MAX;\n        int maxProfit = 0;\n        for (int p : prices) {\n            if (p < minPrice) {\n                minPrice = p;\n            } else if (p - minPrice > maxProfit) {\n                maxProfit = p - minPrice;\n            }\n        }\n        return maxProfit;\n    }\n};"
+    "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        int minPrice = prices[0];\n        int best = 0;\n        for (int i = 1; i < (int)prices.size(); i++) {\n            if (prices[i] < minPrice) {\n                minPrice = prices[i];\n            } else {\n                int profit = prices[i] - minPrice;\n                if (profit > best) {\n                    best = profit;\n                }\n            }\n        }\n        return best;\n    }\n};"
   },
   "verified": {
     "compiled": true,
-    "examples": "2/2"
+    "examples": "2/2",
+    "reviewed": 2
   }
 }

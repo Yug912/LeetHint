@@ -1,0 +1,40 @@
+{
+  "slug": "grid-illumination",
+  "title": "Grid Illumination",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Coordinate Counting",
+  "tc": "O(L + Q)",
+  "sc": "O(L)",
+  "spaceBreakdown": "- unordered_map rows: up to L entries → O(L)\n- unordered_map cols: up to L entries → O(L)\n- unordered_map diag1: up to L entries → O(L)\n- unordered_map diag2: up to L entries → O(L)\n- unordered_set lampSet: up to L entries → O(L)\n- recursion depth: none\n- not counted: input vectors, returned vector ans",
+  "approach": "Since n can be up to 10^9, we cannot store the grid. Instead, track illumination using four hash maps that count how many active lamps share each row, column, main diagonal (key = r−c), and anti-diagonal (key = r+c). A cell is illuminated iff any of its four corresponding counts is positive. For each query, check illumination, then scan the 3×3 neighborhood around the query cell; for each neighbor that has an active lamp, erase it and decrement all four maps. A set of active lamp positions handles duplicates and prevents double-counting.",
+  "hints": [
+    "A lamp at (r, c) illuminates exactly one row, one column, and two diagonals - what single number identifies each of those four lines? With n up to 10^9, you cannot allocate the grid.",
+    "Use four hash maps counting active lamps per row, per column, per main diagonal (key = r−c), and per anti-diagonal (key = r+c). Cell (1,1) is lit iff any of rows[1], cols[1], diag1[0], diag2[2] is positive.",
+    "```\nfor each lamp (r,c):\n    if (r,c) not already on:\n        mark on; increment rows[r], cols[c], diag1[r-c], diag2[r+c]\nfor each query (r,c):\n    ans[j] = 1 if any of rows[r], cols[c], diag1[r-c], diag2[r+c] > 0 else 0\n    for each of 9 neighbors (nr,nc) in bounds:\n        if lamp on at (nr,nc): turn off; decrement all four maps\n```",
+    "**Duplicate lamps** - same lamp listed twice in the input\n`Input: n=1, lamps=[[0,0],[0,0]], queries=[[0,0]]` → `Expected: [1]`\n⚠️ Bug: incrementing counts without checking if lamp already on → rows[0]=2, after one turn-off rows[0]=1, a second query at (0,0) returns 1 instead of 0\n\n**Lamp turned off then re-queried** - a lamp extinguished by an earlier query's neighborhood sweep\n`Input: n=2, lamps=[[0,0]], queries=[[0,0],[0,0]]` → `Expected: [1,0]`\n⚠️ Bug: not removing lamp from the on-set when turning off → second query still finds it illuminated, returns [1,1]\n\n**Out-of-bounds neighbors** - query at a corner or edge, so 3×3 sweep leaves the grid\n`Input: n=1, lamps=[[0,0]], queries=[[0,0]]` → `Expected: [1]`\n⚠️ Bug: not bounds-checking the 9 neighbors → accesses negative indices or indices ≥ n, causing undefined behavior\n\n**Negative diagonal key** - r−c can be negative (e.g., lamp at (0,4) gives key −4)\n`Input: n=5, lamps=[[0,4]], queries=[[2,2]]` → `Expected: [1]`\n⚠️ Bug: using an array or unsigned type for the r−c key → negative key wraps to a huge index or crashes"
+  ],
+  "followUps": [
+    {
+      "q": "What if lamps can be turned back on during queries (a \"toggle\" operation interleaved with queries)?",
+      "a": "Add a toggle operation that checks the lamp set: if on, turn off (decrement maps); if off, turn on (increment maps). Time complexity stays O(L + Q) amortized; space unchanged at O(L)."
+    },
+    {
+      "q": "What if n is small (≤ 1000) but lamps and queries are up to 10^6?",
+      "a": "Replace hash maps with fixed-size arrays of length n (for rows/cols) and 2n−1 (for diagonals), giving O(1) worst-case access instead of amortized. Time becomes O(L + Q) worst-case; space becomes O(n) for the arrays."
+    },
+    {
+      "q": "What if queries arrive in a streaming fashion and you cannot store all lamps upfront - only the current lamp set?",
+      "a": "Maintain the four count maps and lamp set incrementally as lamps are added/removed online. Each query still takes O(1) for the check plus O(9) for the neighborhood sweep. Space remains O(L) where L is the maximum number of simultaneously active lamps."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> gridIllumination(int n, vector<vector<int>>& lamps, vector<vector<int>>& queries) {\n        unordered_map<int,int> rows, cols, diag1, diag2;\n        unordered_set<long long> lampSet;\n\n        for (auto& l : lamps) {\n            int r = l[0], c = l[1];\n            long long key = (long long)r * n + c;\n            if (lampSet.count(key)) continue;\n            lampSet.insert(key);\n            rows[r]++;\n            cols[c]++;\n            diag1[r - c]++;\n            diag2[r + c]++;\n        }\n\n        vector<int> ans;\n        int dr[] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};\n        int dc[] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};\n\n        for (auto& q : queries) {\n            int r = q[0], c = q[1];\n            bool illum = rows[r] > 0 || cols[c] > 0 || diag1[r - c] > 0 || diag2[r + c] > 0;\n            ans.push_back(illum ? 1 : 0);\n\n            for (int d = 0; d < 9; d++) {\n                int nr = r + dr[d], nc = c + dc[d];\n                if (nr < 0 || nr >= n || nc < 0 || nc >= n) continue;\n                long long key = (long long)nr * n + nc;\n                if (lampSet.count(key)) {\n                    lampSet.erase(key);\n                    rows[nr]--;\n                    cols[nc]--;\n                    diag1[nr - nc]--;\n                    diag2[nr + nc]--;\n                }\n            }\n        }\n\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

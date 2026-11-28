@@ -1,0 +1,40 @@
+{
+  "slug": "find-latest-group-of-size-m",
+  "title": "Find Latest Group of Size M",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Interval Boundary Tracking",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> length(n + 2, 0): up to n+2 entries → O(n)\n- scalar variables (count_m, result, loop counters): O(1)\n- recursion depth: none\n- not counted: input arr, returned int",
+  "approach": "Process the steps forward. Maintain an array `length` where `length[p]` stores the size of the group of 1s whose boundary is at position `p`. When setting position `p` to 1, read the group lengths ending at `p-1` and starting at `p+1`, merge them with the new bit into one group, and update only the two new boundary positions. Track a running count of groups of size exactly `m`; whenever it is positive, record the current step. Return the latest recorded step.",
+  "hints": [
+    "When a single 0 flips to 1, at most how many existing groups of ones can it affect, and what determines the new group's length?",
+    "Use an array `len[]` where `len[p]` holds the length of the group whose boundary is at position `p`. In Example 1, step 4 sets position 2: `len[1]=1` (left group) and `len[3]=1` (right group) merge into a group of length 3.",
+    "```\nfor each position p in arr (step i):\n    left = len[p-1], right = len[p+1]\n    new_len = left + 1 + right\n    if left == m:  count--\n    if right == m: count--\n    if new_len == m: count++\n    len[p - left] = new_len\n    len[p + right] = new_len\n    if count > 0: result = i\nreturn result\n```",
+    "**No valid group ever** - m never matches any group length throughout all steps.\n`Input: arr = [3,1,5,4,2], m = 2` → `Expected: -1`\n⚠️ Bug: initializing `result = 0` instead of `result = -1` → returns 0\n\n**Group disappears before the end** - a group of size m exists mid-process but not at the final step.\n`Input: arr = [3,5,1,2,4], m = 1` → `Expected: 4`\n⚠️ Bug: checking `count > 0` only after the loop ends instead of recording the step inside the loop → returns -1\n\n**Full string is the answer** - n equals m, so the answer is the last step.\n`Input: arr = [1,2,3], m = 3` → `Expected: 3`\n⚠️ Bug: using `i` (0-indexed) instead of `i + 1` as the step number → returns 2\n\n**Merging two m-length groups** - two groups of size m merge, so count must decrease by 2.\n`Input: arr = [1,3,2], m = 1` → `Expected: 2`\n⚠️ Bug: decrementing count only once when merging instead of checking both left and right lengths → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must answer for multiple values of m after every step?",
+      "a": "Maintain a frequency array `freq[]` where `freq[L]` counts how many groups of length L currently exist. When groups merge, decrement `freq[left_len]` and `freq[right_len]`, increment `freq[new_len]`. Each query for a specific m is then an O(1) lookup into `freq[m]`. TC: O(n) preprocessing, O(1) per query. SC: O(n)."
+    },
+    {
+      "q": "What if the string length can be up to 10^9 but only 10^5 bits are ever set?",
+      "a": "Replace the fixed-size `length` array with a hash map storing only positions that have been set. Each step still performs O(1) expected-time lookups and updates on the map. TC: O(n) expected, O(n log n) worst-case. SC: O(n) where n is the number of set bits."
+    },
+    {
+      "q": "What if after setting all bits you must also support unsetting bits (1 back to 0)?",
+      "a": "Use an ordered map of intervals keyed by start position. Setting a bit merges adjacent intervals; unsetting a bit splits one interval into two. Track the count of m-length groups throughout both operations. TC: O(n log n). SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findLatestStep(vector<int>& arr, int m) {\n        int n = arr.size();\n        if (n == m) return n;\n        \n        vector<int> length(n + 2, 0);\n        int count_m = 0;\n        int result = -1;\n        \n        for (int i = 0; i < n; i++) {\n            int p = arr[i];\n            int left_len = length[p - 1];\n            int right_len = length[p + 1];\n            int new_len = left_len + 1 + right_len;\n            \n            if (left_len == m) count_m--;\n            if (right_len == m) count_m--;\n            if (new_len == m) count_m++;\n            \n            length[p - left_len] = new_len;\n            length[p + right_len] = new_len;\n            \n            if (count_m > 0) result = i + 1;\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

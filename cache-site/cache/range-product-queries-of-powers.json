@@ -1,0 +1,40 @@
+{
+  "slug": "range-product-queries-of-powers",
+  "title": "Range Product Queries of Powers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Products with Modular Inverses",
+  "tc": "O(log n + Q)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- vector<long long> powers: up to 31 elements → O(log n)\n- vector<long long> prefix: up to 32 elements → O(log n)\n- vector<long long> pre: up to 32 elements → O(log n)\n- vector<long long> invPre: up to 32 elements → O(log n)\n- vector<long long> invPrefix: up to 32 elements → O(log n)\n- recursion depth: none\n- not counted: input queries, returned answers vector",
+  "approach": "The powers array is derived from the binary representation of n, containing at most 30 elements. We compute prefix products where prefix[i] is the product of powers[0..i-1] modulo 10^9+7, then batch-compute modular inverses of all prefix values using a single modular exponentiation followed by a backward sweep. Each query [l, r] is answered in O(1) as prefix[r+1] * inv(prefix[l]) mod MOD, since the range product equals the cumulative product up to r divided by the cumulative product up to l-1.",
+  "hints": [
+    "The powers array has at most 30 elements (since n ≤ 10^9 < 2^30). If you knew the total product from index 0 up to index r, what single value would let you recover just the product from index l to index r?",
+    "Use prefix products with batched modular inverses. For n = 15, powers = [1,2,4,8], prefix = [1,1,2,8,64]; query [2,2] gives prefix[3] / prefix[2] = 8/2 = 4.",
+    "```\npowers = bits of n as powers of 2\nprefix[0] = 1\nprefix[i] = prefix[i-1] * powers[i-1] mod MOD\nbatch-compute inverses of all prefix values\nfor each query [l, r]:\n    answer = prefix[r+1] * inv(prefix[l]) mod MOD\n```",
+    "**Smallest input** - n = 1 produces a single-element powers array.\n`Input: n = 1, queries = [[0,0]]` → `Expected: [1]`\n⚠️ Bug: initializing prefix[0] = 0 instead of 1 → returns [0]\n\n**Integer overflow** - the product of all powers for n = 511 is 2^36 = 68719476736, exceeding 2^31 - 1.\n`Input: n = 511, queries = [[0,8]]` → `Expected: [719476260]`\n⚠️ Bug: using `int` for prefix products → prefix[9] overflows to 0, returns [0]\n\n**Off-by-one indexing** - the range [l, r] maps to prefix[r+1] / prefix[l], not prefix[r] / prefix[l].\n`Input: n = 15, queries = [[2,2]]` → `Expected: [4]`\n⚠️ Bug: using prefix[r] instead of prefix[r+1] → computes prefix[2] * inv(prefix[2]) = 2 * inv(2) = 1, returns [1]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the powers array could be modified between queries (point updates)?",
+      "a": "Use a Fenwick tree (BIT) for point updates and range product queries. Each update and query costs O(log k) where k ≤ 30 is the array size. TC: O((U + Q) log k), SC: O(k)."
+    },
+    {
+      "q": "What if n can be up to 10^18?",
+      "a": "The powers array grows to at most 60 elements, but the approach is identical - build prefix products, batch-compute inverses, answer each query in O(1). TC: O(log n + Q), SC: O(log n)."
+    },
+    {
+      "q": "What if MOD is not prime, so modular inverses may not exist?",
+      "a": "Fall back to a segment tree storing range products mod MOD, giving O(log k) per query with no inverse needed. TC: O(k + Q log k), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    long long power(long long base, long long exp, long long mod) {\n        long long result = 1;\n        base %= mod;\n        while (exp > 0) {\n            if (exp & 1) result = result * base % mod;\n            base = base * base % mod;\n            exp >>= 1;\n        }\n        return result;\n    }\npublic:\n    vector<int> productQueries(int n, vector<vector<int>>& queries) {\n        const int MOD = 1e9 + 7;\n        \n        vector<long long> powers;\n        for (int i = 0; i < 31; i++) {\n            if (n & (1LL << i)) {\n                powers.push_back(1LL << i);\n            }\n        }\n        \n        int k = powers.size();\n        \n        vector<long long> prefix(k + 1);\n        prefix[0] = 1;\n        for (int i = 0; i < k; i++) {\n            prefix[i + 1] = prefix[i] * powers[i] % MOD;\n        }\n        \n        int m = k + 1;\n        vector<long long> pre(m), invPre(m), invPrefix(m);\n        \n        pre[0] = prefix[0];\n        for (int i = 1; i < m; i++) {\n            pre[i] = pre[i - 1] * prefix[i] % MOD;\n        }\n        \n        invPre[m - 1] = power(pre[m - 1], MOD - 2, MOD);\n        for (int i = m - 1; i >= 1; i--) {\n            invPre[i - 1] = invPre[i] * prefix[i] % MOD;\n        }\n        \n        for (int i = 0; i < m; i++) {\n            invPrefix[i] = invPre[i] * (i > 0 ? pre[i - 1] : 1LL) % MOD;\n        }\n        \n        vector<int> answers;\n        answers.reserve(queries.size());\n        for (auto& q : queries) {\n            int l = q[0], r = q[1];\n            long long ans = prefix[r + 1] * invPrefix[l] % MOD;\n            answers.push_back((int)ans);\n        }\n        \n        return answers;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

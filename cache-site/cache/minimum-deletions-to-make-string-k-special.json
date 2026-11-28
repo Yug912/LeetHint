@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-deletions-to-make-string-k-special",
+  "title": "Minimum Deletions to Make String K-Special",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Frequency Enumeration",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[26]: 26 ints → O(1)\n- vector<int> f: at most 26 entries → O(1)\n- not counted: input string",
+  "approach": "Count each letter's frequency. For each candidate character c (treated as the one with the smallest final frequency, never deleted), let x = freq[c]. Any letter with frequency y < x must be fully deleted (it can't reach x); any with y > x+k must be reduced to x+k; others stay. Sum deletions per candidate and take the minimum. Correctness: in some optimal solution the smallest-frequency character is untouched, so its final frequency equals its original frequency, which is among the values we try.",
+  "hints": [
+    "Which character's frequency, if assumed to be the smallest in the final string, lets you decide each other character's deletion count independently? The string uses only lowercase English letters.",
+    "Iterate over each distinct frequency x as the candidate minimum; for every other frequency y, add y if y < x, add y−x−k if y > x+k. Example: word \"aabcaba\" (a=4,b=2,c=1), k=0, trying x=2 gives 2 (from a: 4−2) + 1 (c<2) = 3.",
+    "```\ncount freq of each letter\nf = list of nonzero frequencies\nans = INF\nfor x in f:\n    del = 0\n    for y in f:\n        if y < x:       del += y\n        else if y > x+k: del += y - x - k\n    ans = min(ans, del)\nreturn ans\n```",
+    "**Single distinct letter** - frequency list has one entry, nothing to balance.\n`Input: word = \"a\", k = 0` → `Expected: 0`\n⚠️ Bug: returning INT_MAX when the frequency list has size 1 without running the inner loop → returns 2147483647\n\n**All equal frequencies** - every letter already appears the same number of times.\n`Input: word = \"abc\", k = 0` → `Expected: 0`\n⚠️ Bug: using `y <= x` instead of `y < x` in the \"delete all\" branch → for x=1 deletes each y=1, returns 3\n\n**Only trying the minimum frequency** - the optimal anchor is not always the smallest frequency.\n`Input: word = \"aabcaba\", k = 0` → `Expected: 3`\n⚠️ Bug: only trying x = min(f) → returns 4\n\n**k exceeds all gaps** - all frequencies already within k of each other.\n`Input: word = \"aaab\", k = 5` → `Expected: 0`\n⚠️ Bug: only trying x = max(f) and unconditionally deleting chars below x → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet were all Unicode code points (up to 10^5 distinct symbols)?",
+      "a": "Counting stays O(n), but the double loop over distinct frequencies becomes O(D²) with D up to n. Sort the frequencies and use prefix sums: for each x, the sum of y<x is a prefix and the sum of y>x+k is a suffix, both located by binary search. Total O(n log n)."
+    },
+    {
+      "q": "What if you may also insert characters instead of only deleting?",
+      "a": "For each candidate minimum x, raise letters below x up to x (insertions) and reduce letters above x+k down to x+k (deletions), minimizing total operations. Same enumeration structure, O(n) with 26 letters."
+    },
+    {
+      "q": "What if characters arrive in a stream and you must report the answer after each one?",
+      "a": "Maintain the frequency counts incrementally. With 26 letters, recomputing the answer is O(26²)=O(1) per character, so O(n) total. For a large alphabet, keep a sorted structure of frequencies with prefix sums to recompute in O(log n) per update."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumDeletions(string word, int k) {\n        int freq[26] = {0};\n        for (char c : word) freq[c - 'a']++;\n        vector<int> f;\n        for (int i = 0; i < 26; i++) if (freq[i] > 0) f.push_back(freq[i]);\n        int ans = INT_MAX;\n        for (int x : f) {\n            int del = 0;\n            for (int y : f) {\n                if (y < x) del += y;\n                else if (y > x + k) del += y - x - k;\n            }\n            ans = min(ans, del);\n        }\n        return ans == INT_MAX ? 0 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
