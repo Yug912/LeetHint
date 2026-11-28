@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-money-required-before-transactions",
+  "title": "Minimum Money Required Before Transactions",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- total_loss, max_cashback_losing, max_cost_winning: three scalar long longs → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input vector",
+  "approach": "Split transactions into \"losing\" (cashback < cost) and \"winning\" (cashback ≥ cost). The worst-case ordering is all losing transactions sorted by cashback ascending, then all winning sorted by cost descending. For losing transactions, the peak requirement equals total_loss + max_cashback (proven because each transaction i requires L_i + b_i, maximized at the last). For winning transactions after losing, we need M − total_loss ≥ max_cost_winning. The answer is total_loss + max(max_cashback_losing, max_cost_winning), computable in a single pass without sorting.",
+  "hints": [
+    "If you must survive every possible ordering, what distinguishes transactions that always drain your wallet from those that never do? The array can have up to 10^5 transactions with values up to 10^9.",
+    "Greedy: split into \"losing\" (cashback < cost) and \"winning\" (cashback ≥ cost) groups, then find the worst-case ordering. For [[2,1],[5,0],[4,2]], all are losing with total loss 8 and max cashback 2, giving 8 + 2 = 10.",
+    "```\ntotal_loss = 0, max_cb = 0, max_cost = 0\nfor each transaction (cost, cashback):\n    if cashback < cost:\n        total_loss += cost - cashback\n        max_cb = max(max_cb, cashback)\n    else:\n        max_cost = max(max_cost, cost)\nreturn total_loss + max(max_cb, max_cost)\n```",
+    "**Overflow** - 10^5 transactions each [10^9, 0] produce total_loss = 10^14.\n`Input: [[1000000000,0]] × 10^5` → `Expected: 100000000000000`\n⚠️ Bug: using `int` for total_loss → overflow returns garbage value\n\n**All winning** - no losing transactions exist, so total_loss is 0.\n`Input: [[1,2],[3,4],[5,6]]` → `Expected: 5`\n⚠️ Bug: returning total_loss without adding max_cost_winning → returns 0\n\n**Both groups non-empty** - must take max of the two peaks, not sum them.\n`Input: [[5,2],[3,4]]` → `Expected: 6`\n⚠️ Bug: returning total_loss + max_cb + max_cost (summing instead of max) → returns 8\n\n**Single losing transaction** - smallest input, must add cashback to loss.\n`Input: [[7,3]]` → `Expected: 7`\n⚠️ Bug: returning total_loss only (4) without adding max_cashback → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "Output the actual worst-case ordering of transactions, not just the money.",
+      "a": "Sort losing transactions by cashback ascending, then append winning transactions sorted by cost descending. This produces the permutation requiring the most starting money. O(n log n) time, O(n) space for the sorted output."
+    },
+    {
+      "q": "If you can choose the order, what is the minimum starting money?",
+      "a": "Do winning transactions first (sorted by cost ascending), then losing transactions sorted by cashback descending. The peak requirement is computed by simulating this ordering. O(n log n) time due to sorting, O(n) space."
+    },
+    {
+      "q": "Transactions arrive in a stream of unknown length; after each arrival, report the current answer.",
+      "a": "Maintain total_loss, max_cashback_losing, and max_cost_winning incrementally - each new transaction updates at most one of the three values. Answer after each step is total_loss + max(max_cb, max_cost). O(1) per update, O(1) auxiliary space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimumMoney(vector<vector<int>>& transactions) {\n        long long total_loss = 0;\n        long long max_cashback_losing = 0;\n        long long max_cost_winning = 0;\n        \n        for (const auto& t : transactions) {\n            long long cost = t[0];\n            long long cashback = t[1];\n            if (cashback < cost) {\n                total_loss += cost - cashback;\n                max_cashback_losing = max(max_cashback_losing, cashback);\n            } else {\n                max_cost_winning = max(max_cost_winning, cost);\n            }\n        }\n        \n        return total_loss + max(max_cashback_losing, max_cost_winning);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

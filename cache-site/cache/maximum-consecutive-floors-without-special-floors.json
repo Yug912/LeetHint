@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-consecutive-floors-without-special-floors",
+  "title": "Maximum Consecutive Floors Without Special Floors",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bucket Maximum Gap",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> bmin, bmax: n entries each → O(n)\n- sort/introsort stack: none (no sorting)\n- not counted: input vector special",
+  "approach": "The answer is the largest gap between consecutive \"boundaries\": bottom, the sorted special floors, and top. Instead of sorting (O(n log n)), use the maximum-gap bucket trick: with n special floors spread over range R = top−bottom+1, split [bottom, top] into n equal-width buckets; the biggest gap must appear between the max of one occupied bucket and the min of the next occupied bucket (or at the edges), so one linear pass over buckets suffices. Track per-bucket min/max, then scan buckets in order accumulating gaps.",
+  "hints": [
+    "The special floors cut the rented range into pieces - what determines the size of the largest piece, and do the special floors' exact order matter, or only how they split the range? With up to 10^5 special floors and floors up to 10^9, what is the least work you can get away with per floor?",
+    "Use buckets (maximum-gap technique): with n special floors, make n equal-width buckets over [bottom, top] and record each bucket's min and max floor. Example 1: bottom=2, top=9, special=[4,6] → width 4, floor 4 lands in bucket 0, floor 6 in bucket 1; the answer comes from comparing bucket boundaries.",
+    "```\nn = length(special)\nwidth = ceil((top - bottom + 1) / n)\nfor each floor f in special:\n    i = (f - bottom) / width\n    update bucket i's min and max with f\nprev = bottom - 1\nans = 0\nfor each bucket i in order:\n    if bucket i is empty: skip\n    ans = max(ans, bucketMin[i] - prev - 1)\n    prev = bucketMax[i]\nans = max(ans, top - prev)\nreturn ans\n```",
+    "**All floors special** - every rented floor is special, so all gaps are zero.\n`Input: bottom = 6, top = 8, special = [7,6,8]` → `Expected: 0`\n⚠️ Bug: computing the gap as bucketMin − prev without subtracting 1 for the special floor itself → returns 1.\n\n**Single special floor at an edge** - n = 1, the only special floor is the bottom floor.\n`Input: bottom = 5, top = 1000000000, special = [5]` → `Expected: 999999999`\n⚠️ Bug: ignoring the trailing segment top − lastMax and only checking gaps between special floors → returns 0.\n\n**Single special floor at the top** - n = 1, the special floor equals top.\n`Input: bottom = 1, top = 1000000000, special = [1000000000]` → `Expected: 999999999`\n⚠️ Bug: initialising prev to bottom instead of bottom − 1, losing the leading segment → returns 999999998.\n\n**Bucket index out of intended range** - range not divisible by n, so the last bucket is wider.\n`Input: bottom = 2, top = 9, special = [4,6]` → `Expected: 3`\n⚠️ Bug: computing width as (top−bottom+1)/n with integer division (4/2 is fine here, but with R=7, n=2 width becomes 3 and floor 9 maps to index (9−2)/3 = 2, out of bounds for 2 buckets) → runtime error or wrong answer; use ceiling division."
+  ],
+  "followUps": [
+    {
+      "q": "What if special could contain up to 10^7 floors but memory is capped at O(1) extra?",
+      "a": "You cannot hold buckets, so sort is also out; instead stream the values if they arrive sorted (or use an external sort) and track only the previous special floor and the running best gap - O(n) time, O(1) space."
+    },
+    {
+      "q": "What if special floors are given already sorted?",
+      "a": "Skip bucketing entirely: one linear scan computing special[i] − special[i−1] − 1 plus the two edge gaps gives O(n) time and O(1) space."
+    },
+    {
+      "q": "What if you must answer many queries \"largest gap-free run within [l, r]\" for different l, r?",
+      "a": "Preprocess the sorted special floors into an array and build a sparse table over the consecutive-gap values; each query is then O(1) after O(n log n) preprocessing and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxConsecutive(int bottom, int top, vector<int>& special) {\n        int n = special.size();\n        long long R = (long long)top - bottom + 1;\n        long long w = (R + n - 1) / n;  // ceiling division\n        vector<long long> bmin(n, LLONG_MAX), bmax(n, LLONG_MIN);\n        for (int f : special) {\n            int i = (int)(((long long)f - bottom) / w);\n            bmin[i] = min(bmin[i], (long long)f);\n            bmax[i] = max(bmax[i], (long long)f);\n        }\n        long long ans = 0, prev = (long long)bottom - 1;\n        for (int i = 0; i < n; i++) {\n            if (bmin[i] == LLONG_MAX) continue;\n            ans = max(ans, bmin[i] - prev - 1);\n            prev = bmax[i];\n        }\n        ans = max(ans, (long long)top - prev);\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

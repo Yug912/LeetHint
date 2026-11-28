@@ -1,0 +1,40 @@
+{
+  "slug": "can-convert-string-in-k-moves",
+  "title": "Can Convert String in K Moves",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Modular Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26]: fixed 26 entries → O(1)\n- no recursion, no heap, no dynamic containers\n- not counted: input strings s, t",
+  "approach": "For each position, compute the required shift `r = (t[i] - s[i] + 26) % 26`. If `r == 0`, no move is needed. Otherwise, the position must be shifted during a move `i` where `i % 26 == r`. Multiple positions needing the same remainder `r` consume moves `r, r+26, r+52, …`; the `c`-th such position needs move `r + 26*(c-1)`, which must be `≤ k`. We count frequencies of each remainder 1-25 and verify the largest required move for each remainder fits within `k`.",
+  "hints": [
+    "If a character needs to shift by `r` positions, which move numbers `i` (1 ≤ i ≤ k) can accomplish that shift, given that shifting by 26 is the same as shifting by 0?",
+    "Use a fixed array of 26 counters tracking how many positions need each remainder. For `s = \"abc\"`, `t = \"bcd\"`: all three positions need remainder 1, so they consume moves 1, 27, 53 - the last exceeds `k = 10`.",
+    "```\nif lengths differ: return false\nfor each index i:\n    r = (t[i] - s[i] + 26) mod 26\n    if r > 0: count[r]++\nfor r in 1..25:\n    if count[r] > 0:\n        needed = r + 26 * (count[r] - 1)\n        if needed > k: return false\nreturn true\n```",
+    "**Different lengths** - s and t have unequal lengths\n`Input: s = \"a\", t = \"ab\", k = 5` → `Expected: false`\n⚠️ Bug: skipping the length check and iterating min length → returns true\n\n**No shifts needed** - s already equals t with k = 0\n`Input: s = \"abc\", t = \"abc\", k = 0` → `Expected: true`\n⚠️ Bug: returning false whenever k == 0 without checking if any shift is required → returns false\n\n**Duplicate remainders** - multiple positions need the same shift amount\n`Input: s = \"aaa\", t = \"bbb\", k = 27` → `Expected: false`\n⚠️ Bug: checking only `r <= k` instead of `r + 26*(count[r]-1) <= k` → returns true\n\n**Exact boundary on k** - the needed move equals k exactly\n`Input: s = \"a\", t = \"b\", k = 1` → `Expected: true`\n⚠️ Bug: using `needed < k` instead of `needed <= k` → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if each index can be shifted multiple times across different moves (not just once)?",
+      "a": "Then every position independently needs total shift `r` achievable as a sum of distinct move numbers ≤ k. This becomes a subset-sum / partition feasibility problem per remainder group, which is NP-hard in general but tractable for small k via DP over move numbers."
+    },
+    {
+      "q": "What if k can be up to 10^18?",
+      "a": "The algorithm is unchanged - `needed = r + 26*(count[r]-1)` is at most ~2.6×10^6, so comparing against a 10^18 k still works with `long long`. No structural change; just ensure the comparison uses 64-bit integers."
+    },
+    {
+      "q": "What if you must also minimize the total number of moves used (not just check feasibility)?",
+      "a": "For each remainder r with count c, you use exactly c moves: r, r+26, …, r+26*(c-1). Sum all counts for r > 0. The answer is the total count of positions needing a nonzero shift, since each consumes exactly one move. TC stays O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canConvertString(string s, string t, int k) {\n        if (s.size() != t.size()) return false;\n        int cnt[26] = {0};\n        int n = (int)s.size();\n        for (int i = 0; i < n; i++) {\n            int r = ((t[i] - s[i]) % 26 + 26) % 26;\n            if (r > 0) cnt[r]++;\n        }\n        for (int r = 1; r < 26; r++) {\n            if (cnt[r] > 0) {\n                long long needed = (long long)r + 26LL * (cnt[r] - 1);\n                if (needed > k) return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

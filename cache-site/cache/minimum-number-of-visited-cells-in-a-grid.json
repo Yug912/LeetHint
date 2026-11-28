@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-visited-cells-in-a-grid",
+  "title": "Minimum Number of Visited Cells in a Grid",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "BFS with Union-Find skipping",
+  "tc": "O(mn·α(mn))",
+  "sc": "O(mn)",
+  "spaceBreakdown": "- dist array: m*n ints → O(mn)\n- row DSU parent arrays: m*(n+1) ints → O(mn)\n- column DSU parent arrays: n*(m+1) ints → O(mn)\n- BFS queue (vector of pairs): up to m*n entries → O(mn)\n- recursion depth: none (iterative find)\n- not counted: input grid",
+  "approach": "BFS from (0,0) gives minimum visited cells since each edge costs one visited cell. To avoid scanning the whole jump range of every cell (O(mn·(m+n)) worst case), keep a union-find \"next unvisited index\" pointer per row (over columns) and per column (over rows); when a cell is visited it is unioned away, so each cell is claimed exactly once. Total time O(mn·α(mn)), space O(mn).",
+  "hints": [
+    "When you expand a cell, many of the cells in its jump range were already reached earlier by another cell - how much of that range do you actually need to look at again?\nWith m, n up to 10^5 and m·n ≤ 10^5, even O(mn) range scans per cell is far too slow.",
+    "BFS where each row and each column keeps a union-find over indices, so \"find the next not-yet-visited cell at or after k\" is near O(1); a visited index is merged into the next one. In Example 2, from (0,0) with grid[0][0]=3 you claim (0,1),(0,2),(1,0) at distance 2 in three finds, never rescanning them later.",
+    "for each popped cell (i,j) with distance d:\n  for direction in {row i, column j}:\n    k = find(next unvisited index after j or i)\n    while k is within the jump range:\n      if unvisited: set dist = d+1, push (i,k) or (k,j), check if target\n      union k with k+1  (mark visited)\n      k = find(k+1)\nreturn dist of last cell, or -1",
+    "**Smallest input** - a 1×1 grid needs no move at all.\n`Input: [[0]]` → `Expected: 1`\n⚠️ Bug: returning 0 steps or checking dist of start as 0 → returns 0.\n\n**Unreachable target** - zeros can block every path even though jumps look long.\n`Input: [[2,1,0],[1,0,0]]` → `Expected: -1`\n⚠️ Bug: a DFS that allows landing on a cell with value 0 and moving again, or forgetting the -1 default, → returns 5 or crashes.\n\n**Jump overshoots the border** - grid[i][j] can exceed the remaining columns/rows.\n`Input: [[5,0],[0,0]]` → `Expected: 2`\n⚠️ Bug: indexing k up to j+grid[i][j] without clamping to n-1 (or m-1) → out-of-bounds read.\n\n**Same cell offered by both a row and a column expansion** - a cell can be in the range of two different frontier cells at the same level.\n`Input: [[2,2],[2,0]]` → `Expected: 2`\n⚠️ Bug: pushing a cell twice because the row pass and column pass both see it before the dist check → wrong counts / duplicate work (must check dist == -1 before claiming)."
+  ],
+  "followUps": [
+    {
+      "q": "What if moves also allowed leftward and upward?",
+      "a": "BFS still works but the union-find skip must be bidirectional (two DSU chains per row/column, one for each direction), or use a balanced structure / monotonic deques per line. Time becomes O(mn log(mn)) with sorted sets, space still O(mn)."
+    },
+    {
+      "q": "What if each cell also had a cost and we minimize total cost instead of cell count?",
+      "a": "Replace BFS with Dijkstra using a per-row/per-column structure that supports \"cheapest reachable frontier cell covering index k\" (e.g. a segment tree over columns storing min dist). Time O(mn log(mn)), space O(mn)."
+    },
+    {
+      "q": "What if the grid is given as a stream and m·n exceeds memory?",
+      "a": "Process in row blocks: column DSUs and per-column frontier info must persist (O(n) state), while row DSUs only need the current row; distances for past rows can be discarded if only the answer is needed. Time stays O(mn·α), space drops to O(n) plus the block."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumVisitedCells(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        if (m == 1 && n == 1) return 1;\n        vector<int> dist(m * n, -1);\n        // row DSU: for each row, parent over column indices 0..n (n = sentinel)\n        vector<vector<int>> rp(m, vector<int>(n + 1));\n        // column DSU: for each column, parent over row indices 0..m (m = sentinel)\n        vector<vector<int>> cp(n, vector<int>(m + 1));\n        for (int i = 0; i < m; ++i)\n            for (int j = 0; j <= n; ++j) rp[i][j] = j;\n        for (int j = 0; j < n; ++j)\n            for (int i = 0; i <= m; ++i) cp[j][i] = i;\n\n        auto find = [](vector<int>& p, int x) {\n            while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; }\n            return x;\n        };\n\n        vector<pair<int,int>> q;\n        q.reserve(m * n);\n        dist[0] = 1;\n        q.push_back({0, 0});\n        for (size_t h = 0; h < q.size(); ++h) {\n            int i = q[h].first, j = q[h].second;\n            int d = dist[i * n + j];\n            int g = grid[i][j];\n            // rightward moves in row i: columns j+1 .. j+g\n            for (int k = find(rp[i], j + 1); k <= j + g && k < n; k = find(rp[i], k + 1)) {\n                rp[i][k] = k + 1;\n                if (dist[i * n + k] == -1) {\n                    dist[i * n + k] = d + 1;\n                    if (i == m - 1 && k == n - 1) return d + 1;\n                    q.push_back({i, k});\n                }\n            }\n            // downward moves in column j: rows i+1 .. i+g\n            for (int k = find(cp[j], i + 1); k <= i + g && k < m; k = find(cp[j], k + 1)) {\n                cp[j][k] = k + 1;\n                if (dist[k * n + j] == -1) {\n                    dist[k * n + j] = d + 1;\n                    if (k == m - 1 && j == n - 1) return d + 1;\n                    q.push_back({k, j});\n                }\n            }\n        }\n        return dist[m * n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

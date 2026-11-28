@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-missing-integer-greater-than-sequential-prefix-sum",
+  "title": "Smallest Missing Integer Greater Than Sequential Prefix Sum",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Set Lookup",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> seen: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Scan left to right to find the longest sequential prefix (where each element equals the previous plus one), accumulating the sum as you go. Once the sequence breaks, stop. Then build a hash set of all array elements and increment from the prefix sum until you find a value not in the set. This works because the answer is at most sum + n (at most n values can block candidates), so the search terminates quickly.",
+  "hints": [
+    "As you scan from left to right, what relationship between consecutive elements signals the end of the sequential prefix? Each value in nums is between 1 and 50.",
+    "Use a hash set. For nums = [1,2,3,2,5], the sequential prefix is [1,2,3] with sum 6; store all elements in a set, then increment from 6 until you find a value not in the set.",
+    "```\nsum = nums[0]\nfor i from 1 to n-1:\n    if nums[i] == nums[i-1] + 1:\n        sum += nums[i]\n    else:\n        break\nadd all nums to a set\nwhile sum is in set:\n    sum += 1\nreturn sum\n```",
+    "**Single element** - The prefix is just one element, so the sum equals that element.\n`Input: [5]` → `Expected: 6`\n⚠️ Bug: initializing sum to 0 instead of nums[0] → returns 0\n\n**All duplicates** - No sequential progression beyond the first element.\n`Input: [3,3,3]` → `Expected: 4`\n⚠️ Bug: checking `nums[i] == nums[i-1]` instead of `nums[i] == nums[i-1] + 1` → returns 9\n\n**Sum present later in array** - The prefix sum appears as a non-sequential element after the prefix.\n`Input: [1,2,3,6]` → `Expected: 7`\n⚠️ Bug: returning the sum directly without checking set membership → returns 6\n\n**Large single value** - The sum equals the maximum allowed element value.\n`Input: [50]` → `Expected: 51`\n⚠️ Bug: using a fixed-size boolean array of size 51 → out-of-bounds access at index 51"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums can contain up to 10^5 elements, each up to 10^9?",
+      "a": "The approach is unchanged - O(n) time with a hash set. The prefix sum can reach ~10^14, so use `long long` for the sum. The hash set lookup remains O(1) amortized, and the while loop runs at most n times since at most n values can block candidates."
+    },
+    {
+      "q": "What if you must answer many queries on the same array, each specifying a different starting index for the sequential prefix?",
+      "a": "Precompute prefix sums for every index and store all elements in a hash set once. For each query, scan forward from the given start to find where the sequence breaks (O(n) per query), use the precomputed prefix sum, then search for the missing integer using the shared set. Preprocessing is O(n), each query is O(n)."
+    },
+    {
+      "q": "What if the array arrives as a stream and cannot fit entirely in memory?",
+      "a": "First pass: find the sequential prefix and its sum, stopping as soon as the sequence breaks. Then for each candidate starting from the sum, do a full streaming pass to check membership - increment the candidate if found. Worst case O(n²) time, O(1) space, since at most n candidates need checking and each check is one full pass."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int missingInteger(vector<int>& nums) {\n        int n = nums.size();\n        int sum = nums[0];\n        for (int i = 1; i < n; i++) {\n            if (nums[i] == nums[i - 1] + 1) {\n                sum += nums[i];\n            } else {\n                break;\n            }\n        }\n        unordered_set<int> seen(nums.begin(), nums.end());\n        while (seen.count(sum)) {\n            sum++;\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

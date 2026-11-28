@@ -1,0 +1,40 @@
+{
+  "slug": "find-substring-with-given-hash-value",
+  "title": "Find Substring With Given Hash Value",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Rolling Hash (reverse-direction sliding window)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long h, pk and int ans: O(1)\n- returned s.substr(ans, k): output, not counted\n- recursion/containers: none",
+  "approach": "Compute the hash with the smallest power attached to the LAST character of the window, so a right-to-left scan updates the hash as h = h*power + val(new left char) − val(dropped right char)*power^k, all mod m - no modular inverse needed. Scan i from n−k down to 0, and since we want the FIRST (leftmost) match, keep overwriting the answer index on every match while moving left. One pass, O(1) extra space.",
+  "hints": [
+    "If you slide the window one step, which character's contribution changes the most - and could you orient the hash formula so that adding the new character is a single multiply-and-add?\n(Constraint: s.length up to 2·10^4 with k up to n, so recomputing each window from scratch is O(n·k) - up to 4·10^8 operations.)",
+    "Use a rolling hash maintained with modular arithmetic, scanning windows from right to left. Example 1: window \"ee\" has hash (5·1 + 5·7) mod 20 = 0; when the window shifts left to \"le\", the new left char 'l' enters with a multiply by 7 and the char leaving on the right is removed via 5·7² mod 20.",
+    "```\npk = power^k mod m\nh = hash of window s[n-k .. n-1]   (val(s[n-k])·p^0 + ... )\nans = n-k\nfor i from n-k down to 0:\n    if h == hashValue: ans = i\n    if i > 0:\n        h = (h·p + val(s[i-1]) − val(s[i+k-1])·pk) mod m\nreturn s[ans .. ans+k-1]\n```",
+    "**Smallest input** - k = n = 1, the whole string is the only window.\n`Input: s = \"a\", power = 1, modulo = 5, k = 1, hashValue = 1` → `Expected: \"a\"`\n⚠️ Bug: initializing the window hash at index n−k but updating before checking at i = 0 → returns \"\" or crashes on substr.\n\n**Overflow in h·power** - modulo up to 10^9, so h < 10^9 and h·power reaches 10^18, past 2^31−1 (≈2.1·10^9).\n`Input: s = \"zz...z\" (k z's), power = 10^9, modulo = 10^9, k = 3, hashValue = (26 + 26·10^9 + 26·10^18) mod 10^9` → `Expected: \"zzz\"`\n⚠️ Bug: using int for h or the product h·power → wrong hash, wrong substring returned.\n\n**Negative after subtraction** - removing the right char's term can make the value negative before the mod.\n`Input: s = \"ba\", power = 7, modulo = 20, k = 1, hashValue = 1` → `Expected: \"a\"` (hash(\"a\") = 1; hash(\"b\") = 2)\n⚠️ Bug: computing (h·p + val(left) − val(right)·pk) % m in signed arithmetic without adding back a multiple of m → negative index/hash, wrong answer.\n\n**Leftmost tie** - two windows share the same hash; the earlier one must win.\n`Input: s = \"fbxzaad\", power = 31, modulo = 100, k = 3, hashValue = 32` → `Expected: \"fbx\"` (not \"bxz\")\n⚠️ Bug: scanning left-to-right and returning on the first match computed with a right-anchored formula, or breaking early in a right-to-left scan without overwriting → returns \"bxz\"."
+  ],
+  "followUps": [
+    {
+      "q": "What if the answer is guaranteed to exist but you must stream the string and cannot store it all?",
+      "a": "Keep the same right-to-left rolling hash but buffer only the current window of k characters (a circular buffer of size k), updating the hash as each new character arrives. Time O(n), extra space O(k) instead of O(n)."
+    },
+    {
+      "q": "What if modulo is not guaranteed to fit in 64-bit multiplication (e.g., modulo up to 10^18)?",
+      "a": "Replace h·power with mulmod via __int128 (or repeated doubling), keeping everything mod m; the recurrence structure is unchanged. Time stays O(n) with a larger constant factor, space O(1)."
+    },
+    {
+      "q": "What if you must return ALL starting indices whose hash equals hashValue, in increasing order?",
+      "a": "Run the same right-to-left pass, collect every i with h == hashValue into a vector, then reverse it (or scan left-to-right using a modular inverse of power^k to remove the left char). Time O(n + output), space O(number of matches)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string subStrHash(string s, int power, int modulo, int k, int hashValue) {\n        long long p = power, m = modulo, h = 0, pk = 1;\n        int n = s.size();\n        for (int i = 0; i < k; i++) pk = pk * p % m;\n        // Initialize G_{n-k} = val(s[n-k])*p^0 + val(s[n-k+1])*p^1 + ... + val(s[n-1])*p^(k-1)\n        long long pp = 1;\n        for (int i = n - k; i < n; i++) {\n            h = (h + (long long)(s[i] - 'a' + 1) * pp) % m;\n            pp = pp * p % m;\n        }\n        int ans = n - k;\n        for (int i = n - k; i >= 0; i--) {\n            if (h == hashValue) ans = i;\n            if (i > 0) {\n                // G_{i-1} = val(s[i-1]) + p*G_i - val(s[i+k-1])*p^k\n                h = (h * p + (long long)(s[i - 1] - 'a' + 1)\n                     - (long long)(s[i + k - 1] - 'a' + 1) * pk % m\n                     + m * 27) % m;\n            }\n        }\n        return s.substr(ans, k);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

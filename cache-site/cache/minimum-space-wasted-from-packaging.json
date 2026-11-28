@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-space-wasted-from-packaging",
+  "title": "Minimum Space Wasted From Packaging",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting + Binary Search + Prefix Sum",
+  "tc": "O(n log n + S log S + S log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> prefix: n+1 entries → O(n)\n- sort() introsort stack: O(log n) for packages, O(log S) total for boxes → O(log n)\n- not counted: input packages and boxes (modified in place)",
+  "approach": "Sort packages and compute prefix sums. For each supplier, sort their box sizes ascending and iterate through them; for each box size, use binary search (upper_bound) to find how many remaining packages fit, then compute waste as count × boxSize − sum of those packages (via prefix sums). Track the minimum total waste across all suppliers; skip any supplier whose largest box is smaller than the largest package. Return -1 if no supplier works, else the minimum mod 10^9+7.",
+  "hints": [
+    "If you sorted the packages, what would be true about the set of packages that fit into a box of a particular size?",
+    "Sort the packages and compute prefix sums. For each supplier, sort their box sizes and use binary search (upper_bound) to find how many remaining packages each box covers. Example: packages [2,3,5] with box size 4 → upper_bound gives index 2, so packages [2,3] fit, waste = 2×4 − (2+3) = 3.",
+    "```\nsort packages; compute prefix sums\nans = INF\nfor each supplier:\n    sort boxes; if max_box < max_package: continue\n    total = 0; prev = 0\n    for box in sorted boxes:\n        idx = upper_bound(packages[prev:], box)\n        total += (idx-prev)*box - (prefix[idx]-prefix[prev])\n        prev = idx\n    if prev == n: ans = min(ans, total)\nreturn ans == INF ? -1 : ans % MOD\n```",
+    "**Impossible fit** - no supplier's largest box fits the largest package\n`Input: packages = [2,3,5], boxes = [[1,4],[2,3],[3,4]]` → `Expected: -1`\n⚠️ Bug: updating ans without checking `prev == n` → returns 3 (partial waste from supplier 0 covering only packages [2,3])\n\n**Overflow** - total waste exceeds 2^31 - 1 (10^5 × 10^5 = 10^10)\n`Input: packages = [1]*100000, boxes = [[100000]]` → `Expected: 999989937`\n⚠️ Bug: using `int` for total → 9999900000 overflows signed 32-bit → returns negative or truncated value\n\n**Exact fit** - package size equals box size\n`Input: packages = [5], boxes = [[5]]` → `Expected: 0`\n⚠️ Bug: using `lower_bound` instead of `upper_bound` → idx=0, package never assigned → returns -1\n\n**Unsorted boxes** - supplier lists boxes in descending order\n`Input: packages = [2,3,5], boxes = [[8,4]]` → `Expected: 6`\n⚠️ Bug: not sorting supplier's boxes → processes box 8 first, covers all packages, waste = 3×8−10 = 14 → returns 14"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could mix boxes from different suppliers instead of choosing one?",
+      "a": "Merge all box sizes from all suppliers into one sorted array. For each package in sorted order, find the smallest box that fits via binary search. Each package uses the tightest box, minimizing waste globally. Time O((n + S) log S), space O(S) for the merged box list."
+    },
+    {
+      "q": "What if package and box sizes can be up to 10^9?",
+      "a": "The approach is unchanged - sorting, prefix sums, and binary search all work with larger values. Use long long for prefix sums and waste accumulation (already done). Time and space complexity remain O((n + S) log n) and O(n)."
+    },
+    {
+      "q": "What if you must report the minimum waste for each supplier individually, not just the global minimum?",
+      "a": "Store each supplier's total waste in a result array instead of only tracking the global minimum. The per-supplier computation is identical. Time O((n + S) log n), space O(n + m) for the prefix array and results."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minWastedSpace(vector<int>& packages, vector<vector<int>>& boxes) {\n        const long long MOD = 1000000007;\n        sort(packages.begin(), packages.end());\n        int n = packages.size();\n        vector<long long> prefix(n + 1, 0);\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + packages[i];\n        \n        long long ans = LLONG_MAX;\n        for (auto& supplier : boxes) {\n            sort(supplier.begin(), supplier.end());\n            if (supplier.back() < packages.back()) continue;\n            \n            long long total = 0;\n            int prev = 0;\n            for (int boxSize : supplier) {\n                if (prev >= n) break;\n                int idx = upper_bound(packages.begin() + prev, packages.end(), boxSize) - packages.begin();\n                if (idx > prev) {\n                    long long sumRange = prefix[idx] - prefix[prev];\n                    total += (long long)(idx - prev) * boxSize - sumRange;\n                    prev = idx;\n                }\n            }\n            if (prev == n) ans = min(ans, total);\n        }\n        \n        if (ans == LLONG_MAX) return -1;\n        return (int)(ans % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

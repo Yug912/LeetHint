@@ -1,0 +1,40 @@
+{
+  "slug": "longest-common-suffix-queries",
+  "title": "Longest Common Suffix Queries",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Trie",
+  "tc": "O(S + Q)",
+  "sc": "O(S)",
+  "spaceBreakdown": "- vector<Node> trie: up to S+1 nodes, each with 26-int children array + 2 ints → O(26·S) = O(S)\n- vector<int> ans: returned output, not counted\n- recursion depth: none (iterative)",
+  "approach": "Reverse every string so \"longest common suffix\" becomes \"longest common prefix.\" Build a trie from the reversed `wordsContainer` strings; at each node store the best container index (shortest word length, ties broken by earliest index) among all words passing through that node. For each query, reverse it and walk the trie as deep as possible - the best index at the deepest reachable node is the answer. This works because every word sharing a prefix of length k in the reversed trie shares a suffix of length k in the original strings, and the node at depth k already holds the optimal candidate.",
+  "hints": [
+    "If you reverse every string, what does \"longest common suffix\" become? The total length of all container strings is at most 5×10^5, so a structure proportional to that total is affordable.",
+    "Build a trie of the reversed container strings; store at each node the best container index (shortest word, then earliest). For query \"cd\" reversed to \"dc\", walk root→'d'→'c' and read the stored index at that node.",
+    "```\nfor each word in wordsContainer (index i):\n    reverse word, walk/create trie path\n    at every node on path, update best = i if word is shorter\n      (or same length and earlier - handled by in-order insertion with strict <)\nfor each query:\n    reverse query, walk trie as far as possible\n    answer = best index at deepest node reached\n```",
+    "**No common suffix** - query shares zero characters with every container word\n`wordsContainer = [\"abc\"], wordsQuery = [\"xyz\"]` → `Expected: [0]`\n⚠️ Bug: leaving root.bestIdx uninitialized → returns [-1]\n\n**Tie broken by shortest length** - two words share the same suffix, different lengths\n`wordsContainer = [\"abcd\",\"bcd\"], wordsQuery = [\"cd\"]` → `Expected: [1]`\n⚠️ Bug: storing first-seen index without length comparison → returns [0]\n\n**Tie in both suffix and length** - two words same suffix, same length, must pick earliest\n`wordsContainer = [\"abcd\",\"xbcd\"], wordsQuery = [\"bcd\"]` → `Expected: [0]`\n⚠️ Bug: using `len <= bestLen` instead of `len < bestLen` → returns [1]\n\n**Query longer than matching container word** - query extends past the trie path\n`wordsContainer = [\"cd\"], wordsQuery = [\"abcd\"]` → `Expected: [0]`\n⚠️ Bug: walking query length instead of stopping when trie child is missing → returns [-1] or crashes"
+  ],
+  "followUps": [
+    {
+      "q": "What if wordsContainer supports insertions and deletions between query batches?",
+      "a": "Add a reference count per node. On insert, walk the path and update bestIdx. On delete, decrement counts; if a node's count hits zero, remove it and recompute the parent's bestIdx from remaining children. Each operation is O(L·26) where L is the word length."
+    },
+    {
+      "q": "What if the alphabet were full Unicode (up to 10^5 distinct characters)?",
+      "a": "Replace the fixed `int children[26]` array with an `unordered_map<int,int>` per node. Time complexity stays O(S + Q) but with a higher constant; space drops from O(26·S) to O(S) since only used edges are stored."
+    },
+    {
+      "q": "What if you must return the top-k container indices ranked by suffix length (then length, then index)?",
+      "a": "Store a size-k sorted list at each node instead of a single bestIdx. Each node update costs O(k) to insert and trim. Total time becomes O(S·k + Q·k) and space O(S·k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> stringIndices(vector<string>& wordsContainer, vector<string>& wordsQuery) {\n        struct Node {\n            int children[26];\n            int bestIdx;\n            int bestLen;\n            Node() : bestIdx(-1), bestLen(-1) {\n                for (int i = 0; i < 26; i++) children[i] = -1;\n            }\n        };\n        vector<Node> trie;\n        trie.reserve(500001);\n        trie.emplace_back();\n\n        for (int i = 0; i < (int)wordsContainer.size(); i++) {\n            const string& w = wordsContainer[i];\n            int len = (int)w.size();\n            int node = 0;\n            if (trie[node].bestIdx == -1 || len < trie[node].bestLen) {\n                trie[node].bestIdx = i;\n                trie[node].bestLen = len;\n            }\n            for (int j = len - 1; j >= 0; j--) {\n                int c = w[j] - 'a';\n                if (trie[node].children[c] == -1) {\n                    trie[node].children[c] = (int)trie.size();\n                    trie.emplace_back();\n                }\n                node = trie[node].children[c];\n                if (trie[node].bestIdx == -1 || len < trie[node].bestLen) {\n                    trie[node].bestIdx = i;\n                    trie[node].bestLen = len;\n                }\n            }\n        }\n\n        vector<int> ans;\n        ans.reserve(wordsQuery.size());\n        for (const string& q : wordsQuery) {\n            int node = 0;\n            for (int j = (int)q.size() - 1; j >= 0; j--) {\n                int c = q[j] - 'a';\n                if (trie[node].children[c] == -1) break;\n                node = trie[node].children[c];\n            }\n            ans.push_back(trie[node].bestIdx);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

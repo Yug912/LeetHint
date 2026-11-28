@@ -1,0 +1,40 @@
+{
+  "slug": "construct-the-minimum-bitwise-array-i",
+  "title": "Construct the Minimum Bitwise Array I",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bit Manipulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> ans: n entries → returned output, not counted\n- no other containers, no recursion, no auxiliary structures\n- not counted: input vector, returned vector",
+  "approach": "The key insight is that `x OR (x+1)` always produces an odd number: when you add 1 to x, the carry chain flips a run of trailing 1-bits to 0 and the first 0-bit to 1, so the OR fills everything from bit 0 up to that first 0-bit with 1s. For odd `nums[i]`, the lowest 0-bit sits at some position q; the minimum valid x is `nums[i]` with bit (q−1) cleared, computed via `lowestZero = (nums[i]+1) & -(nums[i]+1)` then `ans = nums[i] ^ (lowestZero >> 1)`. Even `nums[i]` (only the prime 2) has no solution since the OR is always odd.",
+  "hints": [
+    "Looking at the examples, what do all the valid nums[i] values (3, 5, 7, 11, 13, 31) share in their binary representation that the invalid value 2 does not?",
+    "Bit manipulation: for odd nums[i], isolate the lowest 0-bit via `z = (nums[i]+1) & -(nums[i]+1)`, then clear the bit just below it: `ans = nums[i] ^ (z >> 1)`. For nums[i]=7 (111₂), z=8, ans = 7 ^ 4 = 3.",
+    "```\nfor each nums[i]:\n    if nums[i] is even:\n        ans[i] = -1\n    else:\n        z = (nums[i] + 1) & -(nums[i] + 1)\n        ans[i] = nums[i] ^ (z >> 1)\n```",
+    "**Only even prime** - nums = [2], the sole even prime, has no valid answer.\n`Input: [2]` → `Expected: [-1]`\n⚠️ Bug: skipping the evenness check and applying the formula → lowestZero = 3 & -3 = 1, ans = 2 ^ 0 = 2, returns `[2]`\n\n**Smallest odd prime** - nums = [3], the smallest odd prime.\n`Input: [3]` → `Expected: [1]`\n⚠️ Bug: using `nums[i] & -nums[i]` (lowest set bit of nums[i]) instead of `(nums[i]+1) & -(nums[i]+1)` → 3 & -3 = 1, ans = 3 ^ 0 = 3, returns `[3]`\n\n**All equal** - every element is the same prime.\n`Input: [7,7,7]` → `Expected: [3,3,3]`\n⚠️ Bug: clearing the lowest 0-bit itself (`ans = nums[i] ^ z`) instead of the bit below → 7 ^ 8 = 15, returns `[15,15,15]`\n\n**Non-minimal valid answer** - nums[i]−1 is always valid for odd nums[i] but not always minimal.\n`Input: [7]` → `Expected: [3]`\n⚠️ Bug: returning `nums[i] - 1` for odd nums[i] → returns `[6]`, which satisfies 6 OR 7 = 7 but is not the minimum"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be any integer up to 10^9 (not just primes)?",
+      "a": "The same bit trick applies unchanged. Even numbers still yield -1; odd numbers use (nums[i]+1) & -(nums[i]+1) to find the lowest 0-bit. The primality constraint only guaranteed 2 was the sole even case. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if nums[i] can be up to 10^18?",
+      "a": "Switch to long long to avoid overflow in nums[i]+1. The bit trick (nums[i]+1) & -(nums[i]+1) works identically with 64-bit integers. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if nums arrives as a stream and you must output each ans[i] immediately?",
+      "a": "Each answer depends only on its own nums[i] with no cross-element dependency, so process elements one at a time with O(1) state and emit immediately. No buffering needed. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> minBitwiseArray(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> ans(n);\n        for (int i = 0; i < n; i++) {\n            if (nums[i] % 2 == 0) {\n                ans[i] = -1;\n            } else {\n                int lowestZero = (nums[i] + 1) & (-(nums[i] + 1));\n                ans[i] = nums[i] ^ (lowestZero >> 1);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

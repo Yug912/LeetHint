@@ -1,0 +1,51 @@
+{
+  "slug": "group-the-people-given-the-group-size-they-belong-to",
+  "title": "Group the People Given the Group Size They Belong To",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Bucketing",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> buckets: at most n people stored across all buckets at any instant → O(n)\n- vector<vector<int>> result: not counted (returned output)\n- input vector: not counted",
+  "approach": "People needing the same group size s can only sit with others who also need size s, so collect them into a bucket keyed by s. The moment a bucket holds exactly s people, those s people form a complete valid group: emit it and clear the bucket. Because the input is guaranteed solvable, every bucket ends empty and every person lands in exactly one group of the required size.",
+  "hints": [
+    "For a person whose required group size is s, what must be true of every other member of that person's group? The constraint 1 ≤ groupSizes[i] ≤ n means a group can be as small as one person.",
+    "Use a hash map from required size to a list of person IDs. In example 1, person 5 (size 1) fills its bucket instantly and is emitted as [5]; persons 0,1,2 (size 3) fill their bucket and are emitted as [0,1,2].",
+    "buckets = map from size -> list of IDs\nresult = []\nfor i, s in enumerate(groupSizes):\n    buckets[s].append(i)\n    if len(buckets[s]) == s:\n        result.append(buckets[s])\n        buckets[s] = []\nreturn result",
+    "**Single person** - n = 1, the only person needs a group of size 1\n`Input: [1]` → `Expected: [[0]]`\n⚠️ Bug: checking `buckets[s].size() > s` instead of `== s` → never emits, returns `[]`\n\n**All same size** - every person needs the same group size, requiring multiple groups of that size\n`Input: [2,2,2,2]` → `Expected: [[0,1],[2,3]]`\n⚠️ Bug: not clearing the bucket after emitting → returns `[[0,1]]`, losing persons 2 and 3\n\n**Size-1 person mixed in** - one person needs a solo group while others form a larger group\n`Input: [1,3,3,3]` → `Expected: [[0],[1,2,3]]`\n⚠️ Bug: skipping entries where s == 1 (assuming a group needs ≥2 people) → returns `[[1,2,3]]`, dropping person 0\n\n**Multiple groups of one size** - six people all needing size 3 must split into two groups\n`Input: [3,3,3,3,3,3]` → `Expected: [[0,1,2],[3,4,5]]`\n⚠️ Bug: storing only one group per size (map from size to a single vector, overwritten) → returns `[[3,4,5]]`, dropping persons 0,1,2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input is not guaranteed solvable (e.g., groupSizes = [2,2,2])? How do you detect it?",
+      "a": "After the single pass, scan every bucket; if any bucket is non-empty, the leftover count was not a multiple of its size, so no valid grouping exists. Return an empty result or signal failure. TC stays O(n), SC O(n)."
+    },
+    {
+      "q": "What if people arrive in an online stream and you must assign each to a group before seeing the next person?",
+      "a": "The current algorithm is already online: append each arrival to its size bucket and emit a group the instant the bucket reaches its size. No lookahead is needed. TC O(1) amortized per arrival, SC O(n) for open buckets."
+    },
+    {
+      "q": "What if each person also has a friend list and you must maximize the number of groups whose members are all mutual friends?",
+      "a": "This becomes a clique-partition problem, which is NP-hard in general. For small n you could model it as graph coloring on the complement graph or use branch-and-bound; the size-bucketing greedy no longer suffices."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> groupThePeople(vector<int>& groupSizes) {\n        unordered_map<int, vector<int>> buckets;\n        vector<vector<int>> result;\n        int n = (int)groupSizes.size();\n        result.reserve(n);\n        for (int i = 0; i < n; i++) {\n            int s = groupSizes[i];\n            vector<int>& bucket = buckets[s];\n            bucket.push_back(i);\n            if ((int)bucket.size() == s) {\n                result.push_back(bucket);\n                bucket.clear();\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

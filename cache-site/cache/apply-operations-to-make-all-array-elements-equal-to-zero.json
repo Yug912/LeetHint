@@ -1,0 +1,40 @@
+{
+  "slug": "apply-operations-to-make-all-array-elements-equal-to-zero",
+  "title": "Apply Operations to Make All Array Elements Equal to Zero",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy + Difference Array",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> d of size n+1 → O(n)\n- running scalar cur → O(1)\n- not counted: input nums",
+  "approach": "Greedy left-to-right: the leftmost nonzero element forces exactly nums[i] operations starting at i (any earlier window can no longer cover it). Track how many active operations currently cover index i using a difference array; if the required count is negative or a needed operation would extend past the array end, return false.",
+  "hints": [
+    "Once you process the array from left to right, what decides how many operations must begin exactly at the current index? Note n can be 10^5, so simulating each decrement one by one is out of the question.",
+    "Use a difference array to track how many chosen windows currently cover each index. E.g. in [2,2,3,1,1,0], k=3: at index 0 you start 2 windows, so indices 0-2 each feel 2 extra decrements.",
+    "cur = 0, d = array of zeros\nfor i in 0..n-1:\n    cur -= d[i]\n    need = nums[i] - cur\n    if need < 0: return false\n    if i + k > n and need > 0: return false\n    d[i+k] += need, cur += need\nreturn true",
+    "**Single element** - n=1, k=1 forces exactly nums[0] operations on that one spot.\n`Input: nums = [5], k = 1` → `Expected: true`\n⚠️ Bug: checking `i + k > n` with `>=` instead of `>` rejects the last valid window → returns false.\n\n**Zero element already done** - a 0 in the middle must not trigger any operation.\n`Input: nums = [0,0,0], k = 2` → `Expected: true`\n⚠️ Bug: unconditionally starting max(0,…) windows without the need>0 guard still works here, but starting 1 window when need=0 makes later indices negative → returns false on `nums=[0,1,0], k=2` (expected true).\n\n**Window overruns the end** - a needed operation starting near the end cannot fit.\n`Input: nums = [1,3,1,1], k = 2` → `Expected: false`\n⚠️ Bug: ignoring the i+k>n boundary and clamping windows → returns true.\n\n**Negative running coverage** - an index covered by more active windows than its value.\n`Input: nums = [1,0,1], k = 3` → `Expected: false`\n⚠️ Bug: skipping the `need < 0` check (only checking i+k>n) → returns true."
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the minimum number of operations instead of feasibility?",
+      "a": "The greedy already performs the minimum: each operation is forced by the leftmost uncovered deficit, so the answer is the sum of all `need` values computed. Same O(n) time, O(n) space (O(1) with a rolling window trick)."
+    },
+    {
+      "q": "What if the operation adds 1 to a window of size exactly k instead of subtracting, with a target array?",
+      "a": "Symmetric: greedily match the target left to right, using the same difference-array coverage count; feasibility fails when a needed increment would start past n−k. Still O(n) time and space."
+    },
+    {
+      "q": "Can you do it in O(1) auxiliary space?",
+      "a": "Yes - instead of a difference array, keep a queue-free running sum and subtract the operation count that started at i−k (store it back into nums[i−k] before overwriting, or keep a small circular buffer of size k). Time stays O(n), space drops to O(1) (or O(k) with the buffer)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkArray(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> d(n + 1, 0);\n        long long cur = 0;\n        for (int i = 0; i < n; i++) {\n            cur -= d[i];\n            long long need = (long long)nums[i] - cur;\n            if (need < 0) return false;\n            if (i + k > n) {\n                if (need != 0) return false;\n            } else {\n                d[i + k] += need;\n                cur += need;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

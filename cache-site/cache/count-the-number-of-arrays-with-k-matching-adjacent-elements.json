@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-arrays-with-k-matching-adjacent-elements",
+  "title": "Count the Number of Arrays with K Matching Adjacent Elements",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Combinatorics with Modular Inverses",
+  "tc": "O(n + log MOD)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar variables (fact, factK, factNK, i, comb, etc.): constant count → O(1)\n- no containers, arrays, or recursion allocated\n- not counted: input parameters, returned int",
+  "approach": "The first element has m choices. Among the n−1 adjacent pairs, we choose exactly k to be \"equal\" gaps (binomial coefficient C(n−1, k)); each of the remaining n−1−k gaps must differ from its predecessor, giving (m−1) choices each. The answer is m · C(n−1, k) · (m−1)^(n−1−k) mod 1e9+7. We compute (n−1)! in a single pass while recording k! and (n−1−k)! at the appropriate loop indices, then use Fermat's little theorem (fast exponentiation to MOD−2) for the modular inverses - no factorial arrays needed.",
+  "hints": [
+    "The first element has m choices. For each of the remaining n−1 positions, you either repeat the previous value or pick a different one. With n up to 10^5, how would you count the ways to choose exactly which positions repeat?",
+    "Combinatorics with modular inverses via Fermat's little theorem. Choose k of the n−1 gaps to be \"equal\" gaps: C(n−1, k); each remaining gap has (m−1) choices. Example 1: m=2, C(2,1)=2, (m−1)^1=1, times m=2 → 4.",
+    "```\nfact = 1, factK = 1, factNK = 1\nfor i = 1 to n-1:\n    fact = fact * i mod MOD\n    if i == k:  factK = fact\n    if i == n-1-k:  factNK = fact\ncomb = fact * pow(factK, MOD-2) * pow(factNK, MOD-2) mod MOD\nans = m * comb * pow(m-1, n-1-k) mod MOD\n```",
+    "**Smallest input** - n=1 means no adjacent pairs; k must be 0 and the answer is just m.\n`Input: n=1, m=5, k=0` → `Expected: 5`\n⚠️ Bug: factorial loop starting at i=0 (fact *= 0) → fact=0, comb=0, returns 0.\n\n**Zero base (m=1)** - every element is forced to 1, so all n−1 pairs are equal; k < n−1 is impossible.\n`Input: n=3, m=1, k=1` → `Expected: 0`\n⚠️ Bug: using max(1, m−1) as the power base → base=1, returns 1·C(2,1)·1=2.\n\n**All equal (k=n−1)** - every gap is an \"equal\" gap; the (m−1) exponent is 0 and must yield 1.\n`Input: n=4, m=3, k=3` → `Expected: 3`\n⚠️ Bug: power function returning 0 when exponent is 0 → returns 3·1·0=0.\n\n**Boundary k=0** - no matching adjacent pairs; every gap must differ.\n`Input: n=3, m=3, k=0` → `Expected: 12`\n⚠️ Bug: exponent off-by-one, using (m−1)^(n−k) instead of (m−1)^(n−1−k) → 2^3=8, returns 3·1·8=24."
+  ],
+  "followUps": [
+    {
+      "q": "What if m can be up to 10^9 instead of 10^5?",
+      "a": "The formula is unchanged. Take m mod MOD at the start; the factorial loop depends only on n, not m. Time remains O(n + log MOD), space O(1)."
+    },
+    {
+      "q": "What if there are multiple queries with different (n, k) pairs but the same m?",
+      "a": "Precompute factorials and inverse factorials up to the maximum n in arrays. Each query then costs O(log MOD) for the single (m−1)^(n−1−k) exponentiation. Precomputation is O(N + log MOD) time, O(N) space."
+    },
+    {
+      "q": "What if n can be up to 10^18 but k stays small (≤ 10^6)?",
+      "a": "Compute C(n−1, k) as the product (n−1)(n−2)…(n−k) / k! using k modular multiplications and one inverse of k!. The (m−1)^(n−1−k) term uses fast exponentiation with the large exponent. Time becomes O(k + log n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    long long MOD = 1000000007;\n\n    long long power(long long base, long long exp) {\n        long long result = 1;\n        base %= MOD;\n        while (exp > 0) {\n            if (exp & 1) result = result * base % MOD;\n            base = base * base % MOD;\n            exp >>= 1;\n        }\n        return result;\n    }\n\npublic:\n    int countGoodArrays(int n, int m, int k) {\n        long long N = n - 1;\n        long long K = k;\n\n        long long fact = 1;\n        long long factK = 1;\n        long long factNK = 1;\n\n        for (long long i = 1; i <= N; i++) {\n            fact = fact * i % MOD;\n            if (i == K) factK = fact;\n            if (i == N - K) factNK = fact;\n        }\n\n        long long invFactK = power(factK, MOD - 2);\n        long long invFactNK = power(factNK, MOD - 2);\n        long long comb = fact * invFactK % MOD * invFactNK % MOD;\n\n        long long powM1 = power(m - 1, N - K);\n\n        long long ans = (long long)m % MOD * comb % MOD * powM1 % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

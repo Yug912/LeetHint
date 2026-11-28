@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-operations-to-make-arrays-similar",
+  "title": "Minimum Number of Operations to Make Arrays Similar",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting / Greedy Matching",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> nums_even, nums_odd, target_even, target_odd: up to n elements total → O(n)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "The operation adds 2 to one element and subtracts 2 from another, preserving the parity of every element. Thus, even numbers in `nums` must be matched to even numbers in `target`, and odd to odd. To minimize operations, we sort the even and odd numbers separately for both arrays and greedily match the i-th smallest number in `nums` to the i-th smallest in `target`. The number of operations is the sum of positive differences divided by 2, as each operation resolves a difference of 2.",
+  "hints": [
+    "An operation adds 2 to one element and subtracts 2 from another. What invariant does this create regarding the parity of the elements?\nConstraints: n <= 10^5, nums[i], target[i] <= 10^6.",
+    "Sort the even numbers from `nums` and `target` separately, and do the same for the odd numbers. For Example 1, even `nums` are [6, 8, 12] and even `target` are [2, 10, 14].",
+    "```\nseparate nums and target into evens and odds\nsort all four arrays\nans = 0\nfor each parity group:\n    for i from 0 to size:\n        if target[i] > nums[i]:\n            ans += (target[i] - nums[i]) / 2\nreturn ans\n```",
+    "**Overflow** - The sum of positive differences can reach 10^5 × 10^6 / 2 = 5 × 10^10.\n`Input: nums = [2, 2, ..., 2, 1000000, ..., 1000000] (10^5 elements), target = [500000, ..., 500002]` → `Expected: 12499950000`\n⚠️ Bug: using `int` for `ans` → returns garbage or negative value due to overflow.\n\n**Symmetric differences** - Positive and negative differences cancel out.\n`Input: nums = [2, 6], target = [4, 4]` → `Expected: 1`\n⚠️ Bug: summing `abs(diff) / 2` for all elements → returns 2.\n\n**Mixed parity** - Evens and odds must be processed separately.\n`Input: nums = [1, 4], target = [3, 2]` → `Expected: 1`\n⚠️ Bug: sorting `nums` and `target` without separating by parity → matches 1 with 2 and 4 with 3, returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if the operation allowed adding/subtracting 1 instead of 2?",
+      "a": "Parity would no longer be preserved. We would simply sort both arrays directly and match the i-th element of `nums` to the i-th element of `target`. The answer would be the sum of positive differences. Time complexity remains O(n log n), space O(1) if sorting in place."
+    },
+    {
+      "q": "What if `nums` and `target` are streamed and cannot fit in memory?",
+      "a": "Since we must match the i-th smallest even of `nums` to the i-th smallest even of `target`, we need them sorted. We would use an external sorting algorithm (e.g., external merge sort) to sort the even and odd streams separately, then compute the differences in a streaming fashion. Time complexity O(n log n), space O(B) where B is the block size that fits in memory."
+    },
+    {
+      "q": "What if we want to track the sequence of operations, not just the count?",
+      "a": "We can simulate the process using two min-heaps: one for elements that need to be increased and one for elements that need to be decreased. In each step, pop the smallest element to increase and the smallest to decrease, apply the operation, and push back if they haven't reached their target. Time complexity O(n log n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long makeSimilar(vector<int>& nums, vector<int>& target) {\n        vector<int> nums_even, nums_odd, target_even, target_odd;\n        for (int x : nums) {\n            if (x % 2 == 0) nums_even.push_back(x);\n            else nums_odd.push_back(x);\n        }\n        for (int x : target) {\n            if (x % 2 == 0) target_even.push_back(x);\n            else target_odd.push_back(x);\n        }\n        \n        sort(nums_even.begin(), nums_even.end());\n        sort(nums_odd.begin(), nums_odd.end());\n        sort(target_even.begin(), target_even.end());\n        sort(target_odd.begin(), target_odd.end());\n        \n        long long ans = 0;\n        for (int i = 0; i < nums_even.size(); i++) {\n            long long diff = target_even[i] - nums_even[i];\n            if (diff > 0) ans += diff / 2;\n        }\n        for (int i = 0; i < nums_odd.size(); i++) {\n            long long diff = target_odd[i] - nums_odd[i];\n            if (diff > 0) ans += diff / 2;\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-covered-buildings",
+  "title": "Count Covered Buildings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Grouping",
+  "tc": "O(B)",
+  "sc": "O(B)",
+  "spaceBreakdown": "- unordered_map<int,int> minY: up to B entries → O(B)\n- unordered_map<int,int> maxY: up to B entries → O(B)\n- unordered_map<int,int> minX: up to B entries → O(B)\n- unordered_map<int,int> maxX: up to B entries → O(B)\n- recursion depth: none\n- not counted: input buildings, returned int",
+  "approach": "For each building (x, y), it is covered iff there exists another building with the same x and a smaller y (left), same x and a larger y (right), same y and a smaller x (above), and same y and a larger x (below). Instead of checking every pair, we group buildings by x and by y, tracking only the minimum and maximum coordinate in each group. A building is covered iff its y is strictly between minY[x] and maxY[x] AND its x is strictly between minX[y] and maxX[y]. Two linear passes over the buildings array give the answer.",
+  "hints": [
+    "For a building at (x, y) to have a neighbor to its left, what must be true about other buildings that share the same x-coordinate? With up to 10^5 buildings, checking every pair is too slow.",
+    "Use hash maps to track, for each x-coordinate, the minimum and maximum y among buildings with that x (and vice versa for each y-coordinate). In Example 1, buildings with x=2 span y from 1 to 3, so building [2,2] has both left and right neighbors.",
+    "```\nfor each building (x, y):\n    update min_y[x], max_y[x], min_x[y], max_x[y]\nfor each building (x, y):\n    if y > min_y[x] and y < max_y[x] and x > min_x[y] and x < max_x[y]:\n        count++\nreturn count\n```",
+    "**Single building** - only one building exists, no neighbors in any direction\n`Input: n = 2, buildings = [[1,1]]` → `Expected: 0`\n⚠️ Bug: using >= instead of > for boundary comparison → returns 1\n\n**All same row** - all buildings share x-coordinate, none can have above/below\n`Input: n = 3, buildings = [[2,1],[2,2],[2,3]]` → `Expected: 0`\n⚠️ Bug: only checking left/right conditions, skipping above/below → returns 1\n\n**All same column** - all buildings share y-coordinate, none can have left/right\n`Input: n = 3, buildings = [[1,2],[2,2],[3,2]]` → `Expected: 0`\n⚠️ Bug: only checking above/below conditions, skipping left/right → returns 1\n\n**Corner buildings** - buildings only at rectangle corners, each at an extreme in both groups\n`Input: n = 3, buildings = [[1,1],[1,3],[3,1],[3,3]]` → `Expected: 0`\n⚠️ Bug: checking only that min != max for a group exists, not that the building is strictly between them → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if \"covered\" requires at least k buildings in each direction instead of just one?",
+      "a": "Replace min/max tracking with sorted containers per group. For each x-group, keep a sorted structure of y-values; a building has ≥k left neighbors if its rank is ≥k and ≥k right neighbors if rank ≤ size−k−1. Use order-statistics trees or sorted arrays with binary search. TC: O(m log m), SC: O(m)."
+    },
+    {
+      "q": "What if buildings can be dynamically added and removed, with coverage queries after each update?",
+      "a": "Maintain a balanced BST (e.g., std::set) of y-values for each x-group and x-values for each y-group. Adding or removing a building updates the BST in O(log m). For coverage, check if the building's y is not the min or max in its x-group's BST and its x is not the min or max in its y-group's BST. TC: O(log m) per update/query, SC: O(m)."
+    },
+    {
+      "q": "What if n can be up to 10^9 (very sparse grid)?",
+      "a": "The algorithm already uses hash maps keyed by coordinate values, so it handles sparse coordinates without change. The grid size n never appears in the computation since we only iterate over actual buildings. TC: O(m), SC: O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countCoveredBuildings(int n, vector<vector<int>>& buildings) {\n        unordered_map<int, int> minY, maxY, minX, maxX;\n        \n        for (auto& b : buildings) {\n            int x = b[0], y = b[1];\n            if (minY.count(x)) {\n                minY[x] = min(minY[x], y);\n                maxY[x] = max(maxY[x], y);\n            } else {\n                minY[x] = maxY[x] = y;\n            }\n            if (minX.count(y)) {\n                minX[y] = min(minX[y], x);\n                maxX[y] = max(maxX[y], x);\n            } else {\n                minX[y] = maxX[y] = x;\n            }\n        }\n        \n        int count = 0;\n        for (auto& b : buildings) {\n            int x = b[0], y = b[1];\n            if (y > minY[x] && y < maxY[x] && x > minX[y] && x < maxX[y]) {\n                count++;\n            }\n        }\n        \n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

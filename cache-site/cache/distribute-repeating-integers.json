@@ -1,0 +1,40 @@
+{
+  "slug": "distribute-repeating-integers",
+  "title": "Distribute Repeating Integers",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP over subsets",
+  "tc": "O(n + U·3^m)",
+  "sc": "O(2^m + U)",
+  "spaceBreakdown": "- unordered_map cnt: up to 50 entries → O(1) (bounded by distinct values ≤ 50)\n- freq vector: ≤ 50 ints → O(1)\n- dp array: 2^m chars (≤ 1024) → O(2^m)\n- sm subset-sum array: 2^m ints (≤ 1024) → O(2^m)\n- recursion depth: none (iterative)\n- not counted: input vectors nums, quantity",
+  "approach": "Count frequencies of the ≤50 distinct values. Since m ≤ 10, do subset-DP over customer bitmasks: dp[mask] = the customers in mask can all be satisfied using the frequencies processed so far. For each frequency f, every submask of the complement with total quantity ≤ f can be newly served by that one value. Sorting both lists descending makes failures happen fast; total work is O(50 · 3^m) ≈ 3·10^6.",
+  "hints": [
+    "Only the counts of each value matter, never the values themselves - what does the tiny number of customers (m ≤ 10) let you enumerate completely?\nA value can feed several customers at once as long as their total fits in its count.",
+    "Bitmask DP: dp[mask] = customers in mask are all satisfiable. Example 3: freqs [2,2], quantity [2,2] - first 2 sets dp[{0}]=dp[{1}]=1, second 2 combines them into dp[{0,1}]=1 → true.",
+    "count frequencies of nums\nsort frequencies and quantities in descending order\nprecompute sm[mask] = sum of quantities in mask\ndp[0] = true\nfor each frequency f:\n    for each mask with dp[mask] true:\n        for each submask sub of the complement of mask:\n            if sm[sub] <= f: dp[mask | sub] = true\nreturn dp[full mask]",
+    "**Single customer, no value repeats** - all frequencies are 1 but one customer wants 2.\n`Input: nums = [1,2,3,4], quantity = [2]` → `Expected: false`\n⚠️ Bug: checking only whether some frequency ≥ max(quantity) without the DP over subsets → returns true here.\n\n**One value serves several customers** - a single frequency must cover multiple orders.\n`Input: nums = [1,1,1,1,1,1,1], quantity = [3,4]` → `Expected: true`\n⚠️ Bug: assigning each frequency to at most one customer (no submask enumeration) → returns false.\n\n**In-place DP chaining** - using the same frequency twice in one round.\n`Input: nums = [1,1,1], quantity = [2,1]` → `Expected: true` (freq 3 serves both)\n⚠️ Bug: iterating masks ascending in-place lets freq 3 serve {2} then reuse freq 3 for {1} as if it were a second fresh 3 - on nums = [1,1], quantity = [1,1] it would wrongly still work, but on nums = [1,1,1], quantity = [2,2] it wrongly returns true (3 < 2+2) when the correct answer is false.\n\n**Exact fit boundary** - submask sum must be ≤ f, equality allowed.\n`Input: nums = [1,1,2], quantity = [1,2]` → `Expected: true`\n⚠️ Bug: using strict `<` in the comparison sm[sub] < f → returns false."
+  ],
+  "followUps": [
+    {
+      "q": "What if m could be up to 20?",
+      "a": "2^20 = 10^6 masks with 3^m submask enumeration is too slow; instead meet-in-the-middle or DP over frequencies with greedy matching of largest quantities to largest frequencies first. Sorting both descending and greedily assigning is a good heuristic but the exact answer still needs subset DP, so m ≤ ~15 stays practical."
+    },
+    {
+      "q": "What if customers could receive values from more than one distinct number (just any k integers)?",
+      "a": "The problem collapses: sort frequencies descending, sort quantities descending, and greedily check each quantity fits into the remaining pool - O(n + m log m) time, O(1) extra space beyond counts."
+    },
+    {
+      "q": "What if nums is streamed and cannot be stored (n up to 10^9)?",
+      "a": "Only the ≤50 frequency counts are needed, so keep a hash map of at most 50 counters (values bounded by 1000, or use a 50-entry structure if distinctness is guaranteed) - O(1) space, O(1) amortized per element, then run the same DP."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canDistribute(vector<int>& nums, vector<int>& quantity) {\n        unordered_map<int,int> cnt;\n        for (int x : nums) cnt[x]++;\n        vector<int> freq;\n        freq.reserve(cnt.size());\n        for (auto& p : cnt) freq.push_back(p.second);\n        sort(freq.rbegin(), freq.rend());\n        sort(quantity.rbegin(), quantity.rend());\n        int m = quantity.size();\n        int full = (1 << m) - 1;\n        vector<int> sm(full + 1, 0);\n        for (int mask = 1; mask <= full; mask++)\n            sm[mask] = sm[mask & (mask - 1)] + quantity[__builtin_ctz(mask)];\n        vector<char> dp(full + 1, 0);\n        dp[0] = 1;\n        for (int f : freq) {\n            for (int mask = full; mask >= 0; mask--) {\n                if (!dp[mask]) continue;\n                int rem = full & ~mask;\n                for (int sub = rem; ; sub = (sub - 1) & rem) {\n                    if (sm[sub] <= f) dp[mask | sub] = 1;\n                    if (sub == 0) break;\n                }\n            }\n            if (dp[full]) return true;\n        }\n        return dp[full] != 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

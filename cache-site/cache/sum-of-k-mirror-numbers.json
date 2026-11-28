@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-k-mirror-numbers",
+  "title": "Sum of k-Mirror Numbers",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Palindrome Enumeration (generate-and-test)",
+  "tc": "O(P · d)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- only scalar variables (root, palindrome p, reversed base-k value): O(1)\n- no containers, no recursion\n- not counted: input, returned sum",
+  "approach": "Instead of testing every integer, enumerate base-10 palindromes in strictly increasing order by taking a \"root\" and mirroring its digits (even and odd lengths). For each generated palindrome, check whether its base-k representation is also a palindrome; collect the first n. Since palindromes of a fixed length are generated in increasing order and lengths grow, the enumeration order is globally increasing, so the first n hits are the n smallest k-mirror numbers.",
+  "hints": [
+    "Checking every integer up to the answer is hopeless - but a number that reads the same forwards and backwards in base 10 is heavily constrained in its digits. What if you could produce candidate numbers that are *already* base-10 palindromes, one by one, in increasing order?",
+    "Generate palindromes from their left half: root 12 → 1221 (even length), root 12 → 121 (odd length). For k=3, n=7: after 1, 2, 4, 8 the length-2 palindromes 11…99 all fail in base 3, then 121 = 11111₃ succeeds.",
+    "for len = 1, 2, 3, ...\n    half = (len + 1) / 2\n    for root = 10^(half-1) .. 10^half - 1\n        p = root with digits of (root, dropping middle digit if len odd) appended reversed\n        if p is a palindrome in base k:\n            sum += p\n            count += 1\n            if count == n: return sum",
+    "**Smallest input** - n = 1 must return 1 for every k, since 1 is a palindrome in every base.\n`Input: k = 2, n = 1` → `Expected: 1`\n⚠️ Bug: starting the root loop at 0 or skipping length 1 → returns 4 (first odd-length hit past 1) or wrong value.\n\n**Odd/even length handling** - the middle digit must not be duplicated when mirroring an odd-length root.\n`Input: k = 3, n = 7` → `Expected: 499`\n⚠️ Bug: mirroring the full root for odd lengths turns 121 into 12121 too early and yields 1+2+4+8+121+151+171 = 357 instead of 499.\n\n**Larger k needs longer palindromes** - for k = 7 the answer only completes at 7-digit palindromes like 2137312.\n`Input: k = 7, n = 17` → `Expected: 20379000`\n⚠️ Bug: only generating even-length palindromes → never finds 121/171/242 and returns a wrong partial sum.\n\n**Overflow of the sum** - with n = 30 the accumulated sum exceeds 2^31 − 1 (e.g. k = 2, n = 30 sums past 10^9).\n`Input: k = 2, n = 30` → `Expected: 3251813431`\n⚠️ Bug: accumulating into `int` → overflows past 2^31 − 1 and returns a negative/garbage value; use `long long`."
+  ],
+  "followUps": [
+    {
+      "q": "What if n could be up to 10^5 and answers could require 18-digit palindromes?",
+      "a": "The same generate-and-test works but you may enumerate far more palindromes; the base-k palindrome check stays O(d). Total time becomes O(P·d) with P potentially ~10^9, so you would need smarter pruning (e.g. generating palindromes in base k too and intersecting), still O(1) extra space."
+    },
+    {
+      "q": "Can you return the k-mirror numbers themselves instead of the sum, as a streaming generator?",
+      "a": "Yes - turn the enumeration into a generator that yields the next base-10 palindrome and filters by the base-k check; memory stays O(1) and each next() call costs O(d) amortized over the palindrome scan."
+    },
+    {
+      "q": "What if we needed mirror numbers in two arbitrary bases a and b (not base 10)?",
+      "a": "Generate palindromes in the base with the sparser palindrome density (smaller base) and test the other base, since smaller bases have proportionally more palindromes below a bound; complexity is O(P_min · d) where P_min is the palindrome count in the denser base."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    bool isPal(long long x, int k) {\n        long long r = 0, t = x;\n        while (t > 0) { r = r * k + t % k; t /= k; }\n        return r == x;\n    }\npublic:\n    long long kMirror(int k, int n) {\n        long long sum = 0;\n        for (int len = 1; n > 0; ++len) {\n            int half = (len + 1) / 2;\n            long long lo = 1;\n            for (int i = 1; i < half; ++i) lo *= 10;\n            long long hi = lo * 10;\n            for (long long root = lo; root < hi && n > 0; ++root) {\n                long long p = root;\n                long long t = (len % 2 == 1) ? root / 10 : root;\n                while (t > 0) { p = p * 10 + t % 10; t /= 10; }\n                if (isPal(p, k)) { sum += p; --n; }\n            }\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-x-sum-of-all-k-long-subarrays-ii",
+  "title": "Find X-Sum of All K-Long Subarrays II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window with Ordered Sets",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map cnt: up to n distinct values → O(n)\n- set top + set rest: together at most n pairs → O(n)\n- answer vector: not counted (output)\n- recursion depth: none",
+  "approach": "Slide the window one step at a time; only one element enters and one leaves, so only two frequency pairs change per step. Keep two ordered sets of (frequency, value) pairs - a \"top\" set holding the x best pairs and a \"rest\" set - plus a running sum of freq*val over the top set. After each count change, rebalance between the sets (fill top from rest's max, drain top's min to rest, swap if rest's max beats top's min), which keeps the invariant \"top = x largest pairs\" in O(log n) per step.",
+  "hints": [
+    "Between answer[i] and answer[i+1] the window loses one element and gains one - how many frequency entries actually differ? With n ≤ 10^5, what happens if you recompute every window's counts from scratch?",
+    "Keep two ordered sets of (frequency, value) pairs: the top x pairs, and everything else, plus a running sum of freq×value over the top set. In [1,1,2,2,3,4] with x=2 the top set holds (2,2) and (2,1), so the sum is 6.",
+    "for each right end of the window:\n    increment count of entering value:\n        erase its old (freq, value) pair from whichever set holds it\n        insert the new pair into the rest set, then rebalance\n    if window size exceeds k, decrement count of leaving value the same way\n    rebalance = fill top from rest's largest while top < x;\n                move top's smallest to rest while top > x;\n                while rest's largest > top's smallest, swap them (fixing the sum)\n    when the window is full, record the sum",
+    "**Single element window** - n = k = x = 1.\n`Input: nums = [5], k = 1, x = 1` → `Expected: [5]`\n⚠️ Bug: pushing the sum before the window reaches size k (off-by-one on i ≥ k-1) → returns [] or an extra leading value.\n\n**Frequency tie broken by value** - equal counts must keep the bigger value.\n`Input: nums = [2,1,1], k = 2, x = 1` → `Expected: [2,2]`\n⚠️ Bug: ordering pairs as (freq, value) ascending and taking the smallest as \"best\" → first answer is 1 instead of 2.\n\n**Count dropping to zero** - a value can leave the window entirely.\n`Input: nums = [1,2,1], k = 2, x = 2` → `Expected: [3,3]`\n⚠️ Bug: leaving a (0, value) pair in a set after the count hits 0 → a zero-frequency pair competes in the top set and corrupts later answers.\n\n**Overflow** - freq × value summed over the window exceeds 2^31 − 1.\n`Input: nums = [1000000000] * 100000, k = 100000, x = 1` → `Expected: [100000000000000]`\n⚠️ Bug: accumulating the top-set sum in int → 10^5 × 10^9 = 10^14 wraps around and returns a garbage value."
+  ],
+  "followUps": [
+    {
+      "q": "What if x changes for every query on a fixed array?",
+      "a": "Precompute nothing per-x; instead keep all (freq, value) pairs in one order-statistics tree / BIT over compressed frequencies with prefix sums of freq×value, so each query \"sum of top x\" is a prefix query in O(log n). Total O((n + q) log n) time, O(n) space."
+    },
+    {
+      "q": "What if the stream is too large to store (streaming, k and x given up front)?",
+      "a": "Keep only the last k elements (a deque) plus the same two-set structure over the current window - memory O(k) instead of O(n), and each new element is processed in O(log k) with the identical rebalance logic."
+    },
+    {
+      "q": "What if values can be up to 10^14 or negative?",
+      "a": "The (freq, value) pair ordering still works since set compares pairs directly, but the running sum must be a wider type (e.g. __int128 if freq×value can overflow long long: 10^5 × 10^14 = 10^19 fits, but larger values would not). Time stays O(n log n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<long long> findXSum(vector<int>& nums, int k, int x) {\n        int n = nums.size();\n        unordered_map<int, int> cnt;\n        cnt.reserve(2 * n);\n        set<pair<int, int>> top, rest; // (frequency, value)\n        long long sum = 0;\n\n        auto fillTop = [&]() {\n            while ((int)top.size() < x && !rest.empty()) {\n                auto it = prev(rest.end());\n                sum += (long long)it->first * it->second;\n                top.insert(*it);\n                rest.erase(it);\n            }\n        };\n        auto addPair = [&](pair<int, int> p) {\n            rest.insert(p);\n            fillTop();\n            while (!rest.empty() && *prev(rest.end()) > *top.begin()) {\n                pair<int, int> a = *prev(rest.end()), b = *top.begin();\n                sum += (long long)a.first * a.second - (long long)b.first * b.second;\n                rest.erase(prev(rest.end()));\n                top.erase(top.begin());\n                top.insert(a);\n                rest.insert(b);\n            }\n        };\n        auto removePair = [&](pair<int, int> p) {\n            if (top.erase(p)) sum -= (long long)p.first * p.second;\n            else rest.erase(p);\n            fillTop();\n        };\n\n        vector<long long> ans;\n        for (int i = 0; i < n; i++) {\n            int v = nums[i];\n            int c = cnt[v]++;\n            if (c > 0) removePair({c, v});\n            addPair({c + 1, v});\n            if (i >= k) {\n                int u = nums[i - k];\n                int c2 = cnt[u]--;\n                removePair({c2, u});\n                if (c2 > 1) addPair({c2 - 1, u});\n            }\n            if (i >= k - 1) ans.push_back(sum);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

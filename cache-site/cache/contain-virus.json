@@ -1,0 +1,40 @@
+{
+  "slug": "contain-virus",
+  "title": "Contain Virus",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation with Connected Components (DFS per round)",
+  "tc": "O((m·n)²)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- grid copy g: m·n ints → O(m·n)\n- visited bool grid per round: O(m·n)\n- mark/stamp grid (frontier dedup): O(m·n)\n- per-round region/frontier cell lists: O(m·n) total cells across all regions\n- DFS recursion stack: up to m·n frames → O(m·n)\n- not counted: input grid, returned integer",
+  "approach": "Simulate day by day. Each day, find every connected infected region (DFS), and for each record its frontier (distinct uninfected neighbor cells) and its wall count (number of shared boundaries with uninfected cells). Quarantine the region with the largest frontier (mark its cells permanently contained, add its wall count to the answer), then set every frontier cell of the remaining regions to infected. Repeat until no region threatens new cells; correctness follows directly from the greedy rule stated in the problem (there is never a tie).",
+  "hints": [
+    "Each infected \"island\" endangers some set of healthy cells around it - but two different islands may endanger the same healthy cell. If you can only save one island's surroundings per day, what single number per island tells you which one to spend today's walls on?",
+    "Use DFS to enumerate each connected component; for each, collect the set of adjacent 0-cells (frontier) and count boundary edges (walls). In Example 1, the left region's frontier is {(0,0),(1,0),(2,1),(0,2),(1,2)} - size 5 - beating the right region's size 4, so it gets 5 walls first.",
+    "loop:\n  find all infected components (DFS), for each record:\n    frontier = distinct adjacent 0-cells, walls = count of infected→0 boundary edges\n  pick region with largest frontier; if none threatens anything, stop\n  answer += its walls; mark its cells as quarantined (never touch again)\n  set every other region's frontier cells to infected",
+    "**Single cell center** - one region fully surrounding one 0-cell: walls are counted per boundary edge, not per threatened cell.\n`Input: [[1,1,1],[1,0,1],[1,1,1]]` → `Expected: 4`\n⚠️ Bug: returning frontier size (1) instead of boundary-edge count → returns 1.\n\n**Shared frontier cells** - two regions touching the same 0-cell: that cell appears in both frontiers and gets infected once.\n`Input: [[1,0,1]]` → `Expected: 2`\n⚠️ Bug: spreading by re-scanning the grid and infecting neighbors of the *quarantined* region too → returns 4 instead of 2.\n\n**Quarantined cells must leave the game** - after walling a region, its cells must never again count as frontier or spread.\n`Input: [[1,1,1,0,0,0,0,0,0],[1,0,1,0,1,1,1,1,1],[1,1,1,0,0,0,0,0,0]]` → `Expected: 13`\n⚠️ Bug: leaving quarantined cells as value 1 so the walled side still counts as frontier next round → returns 15 instead of 13.\n\n**Already contained region** - a region whose frontier is empty (fully walled by grid edges/other regions) threatens 0 cells.\n`Input: [[1]]` → `Expected: 0`\n⚠️ Bug: looping forever or adding walls for a 0-threat region → wrong output / TLE."
+  ],
+  "followUps": [
+    {
+      "q": "What if ties are possible and you must quarantine all tied regions' walls summed but still only one per day?",
+      "a": "The statement guarantees no ties, but if ties existed you'd break them by a deterministic rule (e.g., lexicographically smallest cell); the simulation structure is unchanged, still O((mn)²) time and O(mn) space."
+    },
+    {
+      "q": "Can you avoid copying the grid and mutating the input?",
+      "a": "Yes - keep an overlay byte grid of states (infected/quarantined) alongside the read-only input; same O((mn)²) time, still O(mn) extra space, and the caller's grid stays intact."
+    },
+    {
+      "q": "What if the grid is huge (10⁹ cells) but has few infected regions, given as boundary lists?",
+      "a": "Run the same per-day loop on a coordinate-compressed representation where each region is a set of rectangles; each day costs O(R²) in the number of regions R, and total work is O(D·R²) for D days instead of depending on the cell count."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int m, n;\n    vector<vector<int>> g;\n    int dx[4] = {1, -1, 0, 0}, dy[4] = {0, 0, 1, -1};\n\n    void dfs(int i, int j, vector<vector<bool>>& vis,\n             vector<pair<int,int>>& cells, vector<vector<int>>& mark,\n             int stamp, int& walls, vector<pair<int,int>>& front) {\n        vis[i][j] = true;\n        cells.push_back({i, j});\n        for (int d = 0; d < 4; d++) {\n            int x = i + dx[d], y = j + dy[d];\n            if (x < 0 || x >= m || y < 0 || y >= n) continue;\n            if (g[x][y] == 0) {\n                walls++;\n                if (mark[x][y] != stamp) {\n                    mark[x][y] = stamp;\n                    front.push_back({x, y});\n                }\n            } else if (g[x][y] == 1 && !vis[x][y]) {\n                dfs(x, y, vis, cells, mark, stamp, walls, front);\n            }\n        }\n    }\n\npublic:\n    int containVirus(vector<vector<int>>& isInfected) {\n        g = isInfected;\n        m = g.size();\n        n = g[0].size();\n        vector<vector<int>> mark(m, vector<int>(n, 0));\n        int stamp = 0, ans = 0;\n        while (true) {\n            vector<vector<bool>> vis(m, vector<bool>(n, false));\n            vector<vector<pair<int,int>>> regs, fronts;\n            vector<int> wl;\n            for (int i = 0; i < m; i++)\n                for (int j = 0; j < n; j++)\n                    if (g[i][j] == 1 && !vis[i][j]) {\n                        stamp++;\n                        vector<pair<int,int>> cells, front;\n                        int walls = 0;\n                        dfs(i, j, vis, cells, mark, stamp, walls, front);\n                        regs.push_back(move(cells));\n                        fronts.push_back(move(front));\n                        wl.push_back(walls);\n                    }\n            int best = 0, bi = -1;\n            for (int r = 0; r < (int)regs.size(); r++)\n                if ((int)fronts[r].size() > best) {\n                    best = fronts[r].size();\n                    bi = r;\n                }\n            if (bi < 0 || best == 0) break;\n            ans += wl[bi];\n            for (auto& p : regs[bi]) g[p.first][p.second] = 2;\n            for (int r = 0; r < (int)regs.size(); r++)\n                if (r != bi)\n                    for (auto& p : fronts[r]) g[p.first][p.second] = 1;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

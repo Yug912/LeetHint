@@ -1,0 +1,40 @@
+{
+  "slug": "subsequence-with-the-minimum-score",
+  "title": "Subsequence With the Minimum Score",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers on Precomputed Match Arrays",
+  "tc": "O(n + m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- vector<int> left: m+1 ints → O(m)\n- vector<int> right: m+1 ints → O(m)\n- two-pointer state: O(1)\n- not counted: input strings s, t",
+  "approach": "Any optimal deletion is a single contiguous block t[i..j-1] of t, so the score is simply j-i; the only question is feasibility. Precompute left[i] = the earliest ending index in s of a greedy match of t[0..i-1], and right[j] = the latest starting index in s of a greedy match of t[j..m-1]; the split (i,j) is feasible iff left[i] < right[j] (kept parts occupy disjoint positions). Both arrays are monotone, so a two-pointer sweep over i finds the smallest feasible j for each i in O(n+m) total, minimizing j-i (removing everything gives m via i=0, j=m).",
+  "hints": [
+    "A deletion from t is fully described by the first and last removed index - every character between them goes too. With n, m ≤ 10^5, checking every (first, last) pair directly is too slow, so what fewer things would you need to know about where the kept characters can sit inside s?",
+    "Precompute, for every split point, the greedy match of t's prefix in s (earliest end index) and the greedy match of t's suffix scanned from s's end (latest start index). E.g. for s=\"abacaba\", t=\"bzaa\": prefix \"b\" ends at index 1, suffix \"aa\" starts at index 4, and 1 < 4 makes that split work with score 1.",
+    "left[0] = -1; for i = 1..m: left[i] = first index > left[i-1] in s with s[index] = t[i-1], else n\nright[m] = n; for j = m-1..0: right[j] = last index < right[j+1] with s[index] = t[j], else -2\nans = m, j = 0\nfor i = 0..m:\n    j = max(j, i)\n    while j <= m and left[i] >= right[j]: j++\n    if j <= m: ans = min(ans, j - i)\nreturn ans",
+    "**No removal needed** - t is already a subsequence, answer must be 0.\n`Input: s = \"a\", t = \"a\"` → `Expected: 0`\n⚠️ Bug: initializing ans to a positive value or forcing at least one removal → returns 1\n\n**Nothing matches** - no character of t appears in s, must remove all of t.\n`Input: s = \"a\", t = \"b\"` → `Expected: 1`\n⚠️ Bug: treating an unmatchable suffix as feasible (sentinel not smaller than every real value) → returns 0\n\n**Cross match** - best split keeps one char from each end, not the whole string.\n`Input: s = \"ab\", t = \"ba\"` → `Expected: 1`\n⚠️ Bug: only testing \"remove a prefix\" or \"remove a suffix\" of t → returns 2\n\n**t longer than s** - prefix of t may become unmatchable; left[i] sentinel must fail the strict comparison.\n`Input: s = \"a\", t = \"bb\"` → `Expected: 2`\n⚠️ Bug: using left[i] = n but comparing with <= instead of < against right[m] = n → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the removed characters did NOT need to be contiguous in t?",
+      "a": "Then the score would still be (last removed − first removed + 1), but the kept parts interleave, so the simple split feasibility breaks; you would need a DP over positions of s and t, roughly O(n·m), which is too slow for 10^5 - a different formulation (e.g. binary search on the answer with a greedy check) would be needed."
+    },
+    {
+      "q": "What if you must remove exactly one contiguous block of length exactly k?",
+      "a": "Keep the same left/right arrays and slide a fixed-width window: for each i, the block is t[i..i+k-1] and feasibility is left[i] < right[i+k], answer min over valid i, still O(n+m) time and O(m) space."
+    },
+    {
+      "q": "What if s is given as a stream too large to store, while t fits in memory?",
+      "a": "The left array can be computed streaming left-to-right in O(m) space, but right requires a right-to-left pass; with one pass you can instead binary-search the answer and check feasibility with a single greedy forward pass per check, giving O((n+m) log m) time and O(m) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumScore(string s, string t) {\n        int n = s.size(), m = t.size();\n        vector<int> L(m + 1), R(m + 1);\n        L[0] = -1;\n        for (int i = 1; i <= m; i++) {\n            if (L[i - 1] >= n) { L[i] = n; continue; }\n            int k = L[i - 1] + 1;\n            while (k < n && s[k] != t[i - 1]) k++;\n            L[i] = (k < n) ? k : n;\n        }\n        R[m] = n;\n        for (int j = m - 1; j >= 0; j--) {\n            if (R[j + 1] <= -1) { R[j] = -2; continue; }\n            int k = R[j + 1] - 1;\n            while (k >= 0 && s[k] != t[j]) k--;\n            R[j] = (k >= 0) ? k : -2;\n        }\n        int ans = m;\n        int j = 0;\n        for (int i = 0; i <= m; i++) {\n            if (j < i) j = i;\n            while (j <= m && L[i] >= R[j]) j++;\n            if (j <= m) ans = min(ans, j - i);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

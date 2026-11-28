@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-pair-removal-to-sort-array-ii",
+  "title": "Minimum Pair Removal to Sort Array II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Doubly-Linked List + Ordered Set Simulation",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vals array (long long): n entries → O(n)\n- prev/next/alive arrays: n entries each → O(n)\n- ordered set of pair sums: at most n entries → O(n)\n- no recursion\n- not counted: input vector",
+  "approach": "Simulate the merges, but each merge only touches O(1) neighbors, so keep a doubly linked list (prev/next arrays), an ordered set of (adjacent pair sum, left index) to fetch the minimum-sum leftmost pair in O(log n), and a running counter of adjacent \"inversions\" (val[i] > val[next[i]]). The answer is the number of merges performed until the inversion counter hits 0; since each operation shrinks the array by one, at most n-1 merges occur, giving O(n log n).",
+  "hints": [
+    "Every operation replaces two neighbors with their sum - after a merge, which parts of the array actually change, and how many positions can that be? With n up to 10^5, a full rescan of all adjacent pairs after each operation is far too slow, so what is the smallest set of information you must refresh per operation?",
+    "Use a doubly linked list plus an ordered set keyed by (pair sum, left index) and a counter of adjacent descents. In [5,2,3,1]: the set holds (7,0),(5,1),(4,2); pop (4,2), merge indices 2 and 3 into value 4, then only the pairs (2,4) and its neighbor need updating - the set now holds (7,0),(6,1).",
+    "```\nbuild prev/next arrays, set of (val[i]+val[i+1], i), bad = count of val[i] > val[next[i]]\nops = 0\nwhile bad > 0:\n    pop (s, i) = smallest entry from set\n    if entry stale: continue\n    p = prev[i], r = next[i], nn = next[r]\n    subtract bad(p), bad(i), bad(r) from bad; erase affected set entries\n    val[i] += val[r]; kill r; next[i] = nn; prev[nn] = i\n    add bad(p), bad(i) to bad; insert new pair entries\n    ops += 1\nreturn ops\n```",
+    "**Single element** - no pairs exist, so the loop must not run.\n`Input: nums = [1]` → `Expected: 0`\n⚠️ Bug: assuming at least one pair exists and dereferencing next[0] → runtime error.\n\n**Overflow of pair sums** - with n = 10^5 elements of 10^9, repeated merging reaches 10^5 × 10^9 = 10^14, far past 2^31 − 1.\n`Input: nums = [1000000000, 1000000000, ..., 1000000000] (10^5 times)` → `Expected: 99999`\n⚠️ Bug: storing values or set keys as int → wrong sums/order, returns a wrong count.\n\n**Ties must pick leftmost** - two pairs can share the minimum sum.\n`Input: nums = [3, 1, 3, 1]` → `Expected: 3`\n⚠️ Bug: breaking ties by rightmost index merges (3,1) at index 2 first → produces 4 operations instead of 3.\n\n**All equal values** - already non-decreasing, zero operations despite many pairs.\n`Input: nums = [2, 2, 2]` → `Expected: 0`\n⚠️ Bug: using strict \">\" vs correct comparison inverted (counting equal neighbors as bad) → returns 2.\n\n**Stale set entries after merges** - a pair's sum changes when a neighbor merges into it.\n`Input: nums = [5, 2, 3, 1]` → `Expected: 2`\n⚠️ Bug: not erasing the old (sum, index) entry when val[left] changes → pops a stale pair and merges the wrong indices, returning 3."
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual sequence of merged values instead of the count.",
+      "a": "Record val[left] after each merge in a result vector; the simulation is unchanged. Time stays O(n log n), extra space becomes O(n) for the output."
+    },
+    {
+      "q": "What if you must pick the maximum-sum pair instead of the minimum?",
+      "a": "The same linked-list + ordered-set simulation works - key the set so the largest (sum, leftmost) pops first. Still O(n log n) time and O(n) space; only the tie-break and pop direction change."
+    },
+    {
+      "q": "Can this be done in O(n) space beyond the linked list, streaming with only forward access?",
+      "a": "No - each merge can revive a needed pair with the left neighbor, so backward links (or an equivalent ordered structure over indices) are required. The O(n) auxiliary structures are already optimal up to constants; total remains O(n log n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumPairRemoval(vector<int>& nums) {\n        int n = nums.size();\n        if (n <= 1) return 0;\n        vector<long long> val(n);\n        for (int i = 0; i < n; i++) val[i] = nums[i];\n        vector<int> prv(n), nxt(n);\n        vector<char> alive(n, 1);\n        for (int i = 0; i < n; i++) { prv[i] = i - 1; nxt[i] = (i + 1 < n) ? i + 1 : -1; }\n        set<pair<long long,int>> s;\n        for (int i = 0; i + 1 < n; i++) s.insert({val[i] + val[i + 1], i});\n        int bad = 0;\n        for (int i = 0; i + 1 < n; i++) if (val[i] > val[i + 1]) bad++;\n        auto isBad = [&](int i) -> bool {\n            return i >= 0 && alive[i] && nxt[i] != -1 && val[i] > val[nxt[i]];\n        };\n        int ops = 0;\n        while (bad > 0) {\n            auto it = s.begin();\n            long long sum = it->first;\n            int l = it->second;\n            s.erase(it);\n            if (!alive[l] || nxt[l] == -1 || val[l] + val[nxt[l]] != sum) continue;\n            int r = nxt[l], p = prv[l], nn = nxt[r];\n            if (p != -1) {\n                s.erase({val[p] + val[l], p});\n                if (isBad(p)) bad--;\n            }\n            if (isBad(l)) bad--;\n            if (isBad(r)) bad--;\n            if (nn != -1) s.erase({val[r] + val[nn], r});\n            val[l] += val[r];\n            alive[r] = 0;\n            nxt[l] = nn;\n            if (nn != -1) prv[nn] = l;\n            if (p != -1) {\n                s.insert({val[p] + val[l], p});\n                if (isBad(p)) bad++;\n            }\n            if (isBad(l)) bad++;\n            if (nn != -1) s.insert({val[l] + val[nn], l});\n            ops++;\n        }\n        return ops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-make-array-equal-ii",
+  "title": "Minimum Operations to Make Array Equal II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n: single variable → O(1)\n- long long posSum, totalDiff, diff: three scalars → O(1)\n- loop index i: single int → O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input vectors nums1, nums2",
+  "approach": "Each operation transfers k from one index to another, so the total sum of nums1 is invariant and each element can only change by multiples of k. For each index, compute diff = nums2[i] − nums1[i]; if any diff is not divisible by k (or k is 0 and the arrays already differ), return −1. The sum of all diffs must be zero, meaning positive diffs exactly balance negative diffs. The minimum operations equal the sum of positive diffs divided by k, since each operation resolves k units of surplus and k units of deficit simultaneously.",
+  "hints": [
+    "Each operation adds k to one element and subtracts k from another. What does this imply about which values each element can reach and what stays invariant? The constraint 0 ≤ k ≤ 10^5 means k can be zero.",
+    "Greedy counting with a single pass. For Example 1, the per-index differences are [−3, 0, 6, −3]; the sum of positive differences is 6, and 6 / k = 6 / 3 = 2 operations.",
+    "```\nif k == 0:\n    return 0 if nums1 == nums2 else -1\npos = 0, total = 0\nfor each index i:\n    diff = nums2[i] - nums1[i]\n    if diff mod k != 0: return -1\n    total += diff\n    if diff > 0: pos += diff\nif total != 0: return -1\nreturn pos / k\n```",
+    "**k equals zero, arrays already equal** - k=0 means every operation is a no-op\n`nums1 = [1,2], nums2 = [1,2], k = 0` → `Expected: 0`\n⚠️ Bug: computing diff % k without checking k==0 first → division by zero → crash\n\n**k equals zero, arrays differ** - no operation can change any element\n`nums1 = [1,2], nums2 = [1,3], k = 0` → `Expected: -1`\n⚠️ Bug: computing diff % k without checking k==0 first → division by zero → crash\n\n**Overflow in difference sum** - n up to 10^5, each diff up to 10^9, sum up to 10^14\n`nums1 = [0,0,0,1000000000,1000000000,1000000000], nums2 = [1000000000,1000000000,1000000000,0,0,0], k = 1` → `Expected: 3000000000`\n⚠️ Bug: using int for posSum → 3×10^9 overflows 32-bit int to −1294967296 → returns −1294967296\n\n**Divisible differences but nonzero total** - divisibility alone is insufficient\n`nums1 = [3,8,5,2], nums2 = [2,4,1,6], k = 1` → `Expected: -1`\n⚠️ Bug: skipping the total==0 check → returns posSum/k = 4/1 = 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if each operation lets you choose any positive integer x (not just k) to add to one index and subtract from another?",
+      "a": "Then the only constraint is sum(nums1) == sum(nums2). If sums match, the answer is the total positive difference (no division needed). If sums differ, return −1. TC stays O(n), SC O(1)."
+    },
+    {
+      "q": "What if each index can participate in at most one operation across the entire process?",
+      "a": "You must pair surplus indices with deficit indices in a one-to-one matching. Sort surpluses and deficits independently, greedily pair them, and verify each pair's difference is divisible by k. TC O(n log n), SC O(n) for the sorted lists."
+    },
+    {
+      "q": "What if k can be different for each pair of indices, given as an n×n matrix?",
+      "a": "This becomes a minimum-cost flow problem: route excess from surplus nodes to deficit nodes along edges with per-unit cost 1 and capacity k[i][j]. Standard min-cost max-flow gives TC O(n^2 log n) with successive shortest path augmentations."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minOperations(vector<int>& nums1, vector<int>& nums2, int k) {\n        int n = nums1.size();\n        if (k == 0) {\n            for (int i = 0; i < n; i++) {\n                if (nums1[i] != nums2[i]) return -1;\n            }\n            return 0;\n        }\n        long long posSum = 0;\n        long long totalDiff = 0;\n        for (int i = 0; i < n; i++) {\n            long long diff = (long long)nums2[i] - nums1[i];\n            if (diff % k != 0) return -1;\n            totalDiff += diff;\n            if (diff > 0) posSum += diff;\n        }\n        if (totalDiff != 0) return -1;\n        return posSum / k;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

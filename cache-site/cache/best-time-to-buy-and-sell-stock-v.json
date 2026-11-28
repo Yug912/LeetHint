@@ -1,0 +1,40 @@
+{
+  "slug": "best-time-to-buy-and-sell-stock-v",
+  "title": "Best Time to Buy and Sell Stock V",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "State Machine DP",
+  "tc": "O(n·k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- three vectors f, l, s of size k+1 each (rolling, rebuilt per day but reused via swap) → O(k)\n- per-day temporaries nf, nl, ns of size k+1 → O(k)\n- no recursion\n- not counted: input prices",
+  "approach": "Track three states per number of completed transactions: free, holding a long position, holding a short position. Each day you either start a transaction (pay/receive the price), close one (collect the price), or do nothing. Since each completed transaction consumes one of the k slots, iterating days × k with rolling arrays gives O(n·k), which fits n ≤ 10^3, k ≤ n/2 easily.",
+  "hints": [
+    "At any moment you are either idle, mid-way through a buy-then-sell, or mid-way through a sell-then-buy-back - and each finished deal eats one of your k chances. How would you describe the best outcome using only \"days so far, deals finished, and current position\"?",
+    "Use DP with three states per transaction count (free / long / short). On prices=[1,7,9,8,2], k=2: after day 2 (price 9), free-with-1-deal becomes 8 (buy 1, sell 9), and short-with-1-deal becomes 15 (sell 7, pending buy-back).",
+    "free[j] = best profit idle with j deals done\nlong[j] = holding bought stock, j deals done\nshort[j] = holding sold stock, j deals done\nfor each price p:\n    for j in 0..k:\n        newFree[j] = max(free[j], long[j]+p, short[j]-p)   # close a deal (j+1 slot used via index shift)\n        newLong[j] = max(long[j], free[j]-p)\n        newShort[j] = max(short[j], free[j]+p)\nreturn free[k]",
+    "**Overflow** - k = 500 deals each earning up to ~10^9 gives ~5×10^11 total.\n`Input: prices = [1,1000000000,1,1000000000], k = 2` → `Expected: 1999999998`\n⚠️ Bug: storing dp values in int → overflows past 2^31−1, returns a wrapped negative value.\n\n**All equal prices** - no deal can profit, answer is 0.\n`Input: prices = [5,5,5,5], k = 2` → `Expected: 0`\n⚠️ Bug: forcing exactly k deals instead of at most k → returns 0 only by luck here, but on [5,5,4,4] it would return −2 instead of 2.\n\n**Strictly decreasing** - only short selling helps.\n`Input: prices = [9,7,5,3], k = 1` → `Expected: 6`\n⚠️ Bug: only modeling normal buy/sell transactions → returns 0.\n\n**Smallest input** - n = 2, one day pair only.\n`Input: prices = [3,10], k = 1` → `Expected: 7`\n⚠️ Bug: allowing buy and sell on the same day or off-by-one in the day loop → returns 13 (3+10) instead of 7."
+  ],
+  "followUps": [
+    {
+      "q": "What if k is unlimited (at most n/2 transactions anyway)?",
+      "a": "The k dimension collapses; you can also show the optimal solution only trades on local extrema, giving an O(n) time, O(1) space greedy over peaks and valleys, handling both long and short directions."
+    },
+    {
+      "q": "What if a fee f is charged per completed transaction?",
+      "a": "Subtract f from the profit when closing a deal in the free-state transition; the same O(n·k) state machine works unchanged, and the unlimited-k variant becomes the classic fee-greedy with O(n) time."
+    },
+    {
+      "q": "What if you must process prices as a stream and cannot store them all?",
+      "a": "Keep only the rolling arrays over k states (O(k) memory) and update them as each price arrives - the DP is already streaming-friendly, so memory drops from O(n·k) to O(k) with the same O(n·k) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumProfit(vector<int>& prices, int k) {\n        int n = prices.size();\n        const long long NEG = LLONG_MIN / 4;\n        vector<long long> f(k + 1, 0), l(k + 1, NEG), s(k + 1, NEG);\n        for (int i = 0; i < n; i++) {\n            long long p = prices[i];\n            vector<long long> nf(k + 1), nl(k + 1), ns(k + 1);\n            for (int j = 0; j <= k; j++) {\n                nf[j] = f[j];\n                if (j > 0) {\n                    long long closeL = (l[j - 1] == NEG) ? NEG : l[j - 1] + p;\n                    long long closeS = (s[j - 1] == NEG) ? NEG : s[j - 1] - p;\n                    nf[j] = max(nf[j], max(closeL, closeS));\n                }\n                nl[j] = (f[j] == NEG) ? NEG : max(l[j], f[j] - p);\n                ns[j] = (f[j] == NEG) ? NEG : max(s[j], f[j] + p);\n            }\n            f.swap(nf);\n            l.swap(nl);\n            s.swap(ns);\n        }\n        return f[k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

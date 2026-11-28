@@ -1,0 +1,40 @@
+{
+  "slug": "process-string-with-special-operations-ii",
+  "title": "Process String with Special Operations II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Backward Simulation / Index Tracing",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> len: n+1 entries → O(n)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "Building the result is impossible (up to 10^15 chars), but each operation's effect on a single index is invertible. First do a forward pass recording the string length after every character of s. Then walk backwards: a letter means the kth char either IS that letter (k was the last position) or keeps its index; '%' mirrors k across the midpoint; '#' maps k into the first or second half; '*' and empty-string cases only update the tracked length. If the final length is 0 or k exceeds it, return '.'.",
+  "hints": [
+    "The final string can reach 10^15 characters while s has at most 10^5 characters - so most of the result is copied, not typed. If you only care about one position k, what does each operation in s tell you about where that position's character came from just before it?",
+    "Store the string length after every prefix of s, then trace k from the end of s back to the start. Example 2, at the final '#': length goes 3 → 6, and k = 3 falls in the second half, so it maps to k = 3 − 3 = 0 in the string before the '#'.",
+    "```\nlen[0] = 0\nfor each char c in s:\n    update len[i] from len[i-1] (append +1, * −1 unless empty, # ×2, % same)\nif k >= len[n]: return '.'\nfor i from n down to 1:\n    if c is a letter and k == len[i] - 1: return c\n    if c is a letter: (k unchanged)\n    if c == '%': k = len[i-1] - 1 - k\n    if c == '#' and k >= len[i-1]: k = k - len[i-1]\n    if c == '*': (k unchanged)\nreturn '.'   # unreachable when k < len[n]\n```",
+    "**Empty result** - '*' can empty the string and a later '#' keeps it empty.\n`Input: s = \"z*#\", k = 0` → `Expected: '.'`\n⚠️ Bug: blindly undoing '*' as \"previous length = current + 1\" when the string was already empty → returns 'z' instead of '.'\n\n**k out of bounds** - k can equal or exceed the final length.\n`Input: s = \"ab\", k = 2` → `Expected: '.'`\n⚠️ Bug: skipping the final length check and walking backward anyway → returns 'b' instead of '.'\n\n**Reversal mirroring** - '%' maps index i to len−1−i, not len−i.\n`Input: s = \"ab%\", k = 0` → `Expected: 'b'`\n⚠️ Bug: using k = len − k for the mirror → returns 'a' instead of 'b'\n\n**Duplicate second half** - after '#', indices ≥ half map to k − half.\n`Input: s = \"abc#\", k = 4` → `Expected: 'b'`\n⚠️ Bug: mapping the second half with k − half − 1 (off by one) → returns 'a' instead of 'b'\n\n**Overflow** - each '#' doubles the length; 50 doublings from 1 letter reach ~10^15.\n`Input: s = \"a\" + \"#\"×50, k = 10^15 − 1` → `Expected: 'a'`\n⚠️ Bug: tracking lengths in int (2^31−1 ≈ 2.1×10^9) → lengths wrap and the wrong character is returned"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must answer many queries k1, k2, ... for the same s?",
+      "a": "The backward trace is independent per query, so run the same O(n) trace for each k, or precompute the length array once and answer each query in O(n) - O(n + q·n) total, O(n) space. Grouping identical suffixes of s can amortize repeated work."
+    },
+    {
+      "q": "What if s can be up to 10^7 characters but memory is limited to O(1) extra?",
+      "a": "Do two passes without the array: first pass computes only the final length, second pass walks backward recomputing the length before each position by rescanning - that is O(n²). Better: store lengths implicitly by re-deriving them in a single backward pass that also tracks the current length from the end, which requires knowing the final length first, so keep the two-pass O(n) time, O(1) space variant by recomputing prefix lengths on the fly with a second forward scan per step only if operations are invertible in length (they are: +1, −1, ×2, identity)."
+    },
+    {
+      "q": "What if '*' could delete a '#' block's worth of characters, or a new op deleted the first character?",
+      "a": "Deleting the first character breaks the simple index mapping because every index shifts; you would need a balanced BST / order-statistic tree over live positions, giving O(n log n) build and O(log n) per query. Block deletions similarly require interval bookkeeping (e.g., a treap of segments) instead of the O(1) per-step index arithmetic."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    char processStr(string s, long long k) {\n        int n = s.size();\n        vector<long long> len(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            char c = s[i];\n            if (c == '*') len[i + 1] = len[i] > 0 ? len[i] - 1 : 0;\n            else if (c == '#') len[i + 1] = len[i] * 2;\n            else if (c == '%') len[i + 1] = len[i];\n            else len[i + 1] = len[i] + 1;\n        }\n        if (k >= len[n]) return '.';\n        for (int i = n - 1; i >= 0; i--) {\n            char c = s[i];\n            long long prev = len[i];\n            if (c == '*') {\n                // removal of last char: index k unchanged\n            } else if (c == '%') {\n                k = prev - 1 - k;\n            } else if (c == '#') {\n                if (k >= prev) k -= prev;\n            } else {\n                if (k == prev) return c;\n            }\n        }\n        return '.';\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

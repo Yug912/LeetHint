@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-string-with-lcp",
+  "title": "Find the String with LCP",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find + Greedy Assignment + Matrix Verification",
+  "tc": "O(n² + 26n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- DSU parent array: n ints → O(n)\n- col (letter per index): n ints → O(n)\n- occ (26 index lists): total n entries → O(n)\n- two rolling rows cur/nxt for verification: O(n) each → O(n)\n- not counted: input matrix, returned string",
+  "approach": "If lcp[i][j] > 0 then word[i] == word[j], so all such pairs merge into groups (union-find); assign letters greedily, giving the smallest free letter to the group with the smallest unassigned index (a letter is forbidden for index i if some earlier index j with the same letter has lcp[j][i] == 0). Then rebuild the LCP matrix of the constructed word bottom-up (lcp'[i][j] = word[i]==word[j] ? 1 + lcp'[i+1][j+1] : 0) and compare with the input; any mismatch means no valid string exists. This is correct because the greedy letter choice yields the lexicographically smallest candidate, and the final check is an exact equivalence test.",
+  "hints": [
+    "When lcp[i][j] is positive, what single fact does that force about the letters at positions i and j - and what does a 0 force? With n ≤ 1000, is there enough budget to test a candidate word against the whole matrix afterwards?",
+    "Use union-find: merge i and j whenever lcp[i][j] > 0 (e.g. in example 1, lcp[0][2]=2 merges {0,2}, lcp[1][3]=1 merges {1,3}). Then give each group, in order of its smallest index, the smallest letter not contradicted by any lcp[j][i] == 0 against an earlier same-letter index.",
+    "```\ncheck lcp[i][i] == n-i and symmetry, else fail\nunion(i,j) for all i<j with lcp[i][j] > 0\nfor each i in order:\n    if unassigned: pick smallest letter c such that every earlier j with letter c has lcp[j][i] == 0; assign\n    if no letter fits: fail\nrebuild LCP of the word row by row from the bottom:\n    L[i][j] = word[i]==word[j] ? 1 + L[i+1][j+1] : 0\nif any L[i][j] != lcp[i][j]: return \"\"\nreturn word\n```",
+    "**n = 1** - the only entry is lcp[0][0]; it must equal 1.\n`Input: [[1]]` → `Expected: \"a\"`\n⚠️ Bug: skipping the diagonal check and only looking at off-diagonal cells → returns \"a\" even for `[[0]]` or `[[5]]` instead of \"\".\n\n**Asymmetric matrix** - a valid LCP matrix must satisfy lcp[i][j] == lcp[j][i].\n`Input: [[2,1],[1,1]]` → `Expected: \"\"`\n⚠️ Bug: reading only the upper triangle and never checking symmetry → returns \"aa\" instead of \"\".\n\n**Zero entry inside a merged group** - lcp[i][j] == 0 forbids equal letters even if greedy assignment ignores it.\n`Input: [[2,0],[0,2]]` → `Expected: \"ab\"`\n⚠️ Bug: assigning letters without checking that earlier same-letter indices have lcp > 0 → returns \"aa\" instead of \"ab\".\n\n**Value larger than suffix length** - lcp[i][j] cannot exceed n - min(i,j).\n`Input: [[1,2],[2,1]]` → `Expected: \"\"`\n⚠️ Bug: trusting lcp[0][1] = 2 and merging/assigning without rebuilding the matrix → returns \"aa\" instead of \"\".\n\n**All equal** - every off-diagonal entry positive forces one group.\n`Input: [[3,3,3],[3,3,3],[3,3,3]]` → `Expected: \"aaa\"`\n⚠️ Bug: a verification that compares only the upper triangle against the rebuilt matrix misses mismatches in mirrored cells → can accept a wrong word."
+  ],
+  "followUps": [
+    {
+      "q": "Can you verify the candidate without storing the full n×n rebuilt matrix?",
+      "a": "Yes - compute the rebuilt LCP row by row from the bottom, keeping only the current and next row, exactly as in this solution. Verification stays O(n²) time but drops to O(n) extra space."
+    },
+    {
+      "q": "What if the matrix entries can be inconsistent only in a few cells and we must return the string matching the maximum number of cells?",
+      "a": "The exact-feasibility structure breaks; you would need to search over letter assignments (still group-driven) with a scoring pass per candidate, roughly O(26·n²) worst case. This becomes an optimization problem rather than a constructive one."
+    },
+    {
+      "q": "What if n can be 10^5 and the LCP matrix is given implicitly (e.g. via the word's suffix structure)?",
+      "a": "An n×n matrix cannot be materialized, so grouping must be derived from the implicit representation (e.g. suffix-array LCP information) in near-linear time, and verification must be done with random sampling or suffix-automaton checks. Target O(n log n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int find(vector<int>& p, int x){ while(p[x]!=x){ p[x]=p[p[x]]; x=p[x]; } return x; }\n    void unite(vector<int>& p, int a, int b){ a=find(p,a); b=find(p,b); if(a!=b) p[a]=b; }\npublic:\n    string findTheString(vector<vector<int>>& lcp) {\n        int n = lcp.size();\n        for(int i=0;i<n;i++){\n            if(lcp[i][i] != n-i) return \"\";\n            for(int j=0;j<i;j++) if(lcp[i][j] != lcp[j][i]) return \"\";\n        }\n        vector<int> p(n);\n        for(int i=0;i<n;i++) p[i]=i;\n        for(int i=0;i<n;i++)\n            for(int j=i+1;j<n;j++)\n                if(lcp[i][j] > 0) unite(p, i, j);\n        vector<int> col(n, -1);\n        vector<vector<int>> occ(26);\n        for(int i=0;i<n;i++){\n            if(col[i] == -1){\n                for(int c=0;c<26;c++){\n                    bool ok = true;\n                    for(int j : occ[c])\n                        if(lcp[j][i] == 0){ ok=false; break; }\n                    if(ok){ col[i]=c; occ[c].push_back(i); break; }\n                }\n                if(col[i] == -1) return \"\";\n            } else {\n                occ[col[i]].push_back(i);\n            }\n        }\n        string w(n, 'a');\n        for(int i=0;i<n;i++) w[i] = 'a' + col[i];\n        vector<int> cur(n+1, 0), nxt(n+1, 0);\n        for(int i=n-1;i>=0;i--){\n            for(int j=n-1;j>=0;j--){\n                int v;\n                if(w[i] != w[j]) v = 0;\n                else v = (i+1 < n && j+1 < n) ? nxt[j+1] + 1 : 1;\n                if(v != lcp[i][j]) return \"\";\n                cur[j] = v;\n            }\n            swap(cur, nxt);\n        }\n        return w;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

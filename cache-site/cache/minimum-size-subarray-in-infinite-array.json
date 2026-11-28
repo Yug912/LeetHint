@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-size-subarray-in-infinite-array",
+  "title": "Minimum Size Subarray in Infinite Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- running prefix/window sums and counters: O(1)\n- no extra containers allocated (window indexes into the input cyclically)\n- not counted: input nums",
+  "approach": "Every element is positive, so a shortest subarray with sum = target consists of q full copies of nums plus a \"remainder\" part with sum r = target mod sum(nums), and that remainder part has length < n (it can't contain a full copy since its sum is smaller). So compute q = target / S, r = target % S where S = sum(nums); if r == 0 the answer is q*n, otherwise slide a window over nums concatenated with itself (2n elements) to find the shortest subarray with sum r, and add q*n. Correctness: any subarray with sum r has length ≤ n (positivity), so it appears fully within two consecutive copies.",
+  "hints": [
+    "target can be up to 10^9 while each element is at most 10^5 - when a shortest subarray is very long, what does it look like relative to one full copy of nums, and what \"leftover\" sum is left beyond the whole copies?",
+    "Use a sliding window over two concatenated copies of nums to find the shortest subarray with the leftover sum. For nums = [1,2,3], target = 5: leftover sum is 5, and the window [2,3] (length 2) matches.",
+    "S = sum of nums\nq = target / S, r = target % S\nif r == 0: answer is q * n\nslide window left→right over nums[i % n] for i in 0..2n-1:\n    shrink from left while window sum > r\n    if window sum == r: record window length as candidate\nif no candidate: return -1\nanswer = q * n + best candidate",
+    "**Target is a multiple of the total sum** - r = 0, so no window search can succeed.\n`Input: nums = [1], target = 5` → `Expected: 5`\n⚠️ Bug: skipping the r == 0 branch and only running the window search → returns -1.\n\n**Window crossing the copy boundary** - the remainder subarray wraps from the end of one copy into the next.\n`Input: nums = [3,1], target = 4` → `Expected: 2`\n⚠️ Bug: sliding the window over only one copy of nums → returns -1.\n\n**No valid subarray** - leftover sum is unreachable.\n`Input: nums = [2,4,6,8], target = 3` → `Expected: -1`\n⚠️ Bug: assuming q full copies alone give an answer when r ≠ 0 → returns q*n = 0 instead of -1.\n\n**Overflow of the total sum** - 10^5 elements × 10^5 each = 10^10 > 2^31 - 1.\n`Input: nums = [100000]*100000, target = 1000000000` → `Expected: 10000`\n⚠️ Bug: storing sum(nums) in an int → overflow corrupts q and r → wrong answer.\n\n**Single element** - smallest input, window of length 1.\n`Input: nums = [1], target = 1` → `Expected: 1`\n⚠️ Bug: window loop that never checks a length-1 window (e.g. starting j after i) → returns -1."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums could contain zeros or negative numbers?",
+      "a": "Positivity breaks both the \"remainder length < n\" bound and the sliding window's shrink logic; instead build prefix sums of two copies and use a hash map from prefix value to its latest index, giving O(n) time and O(n) space. Full copies still contribute q*S, but the remainder part must be found by hash lookup rather than a window."
+    },
+    {
+      "q": "What if nums is given as a stream and cannot be stored (n unknown)?",
+      "a": "You can still compute S and the shortest window with sum r in one pass using a sliding window over a doubled logical stream (read the cycle twice), keeping only O(1) window state. The answer remains q*n + best, with O(1) space and two passes over the stream."
+    },
+    {
+      "q": "Return the number of shortest subarrays with sum equal to target, not just the length?",
+      "a": "Count, for the remainder sum r, all windows of the minimal length found in two copies (sliding window with a second pointer counting matches), then multiply by the number of ways to place the q full copies, which is infinite - so instead count within a bounded range [0, L) of infinite_nums. Time stays O(n) per bounded query with O(1) extra space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSizeSubarray(vector<int>& nums, int target) {\n        long long S = 0;\n        for (int x : nums) S += x;\n        int n = nums.size();\n        long long q = target / S;\n        long long r = target % S;\n        if (r == 0) return (int)(q * n);\n        int best = INT_MAX;\n        long long cur = 0;\n        int j = 0;\n        for (int i = 0; i < 2 * n; i++) {\n            cur += nums[i % n];\n            while (cur > r) {\n                cur -= nums[j % n];\n                j++;\n            }\n            if (cur == r) best = min(best, i - j + 1);\n        }\n        if (best == INT_MAX) return -1;\n        return (int)(q * n + best);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

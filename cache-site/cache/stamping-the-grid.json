@@ -1,0 +1,40 @@
+{
+  "slug": "stamping-the-grid",
+  "title": "Stamping the Grid",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "2D Prefix Sum",
+  "tc": "O(m*n)",
+  "sc": "O(m*n)",
+  "spaceBreakdown": "- P: (m+1)×(n+1) int prefix of occupied cells → O(m·n)\n- F: (m+1)×(n+1) int prefix of fitting top-left marks → O(m·n)\n- recursion depth: none\n- not counted: input grid",
+  "approach": "Use a 2D prefix sum of occupied cells so that in O(1) we can test whether any h×w stamp placement with top-left (a,b) is fully empty. Mark every valid top-left position where a stamp fits, build a second 2D prefix sum over those marks, and then every empty cell (i,j) is coverable iff some fitting top-left exists in the window [i-h+1..i]×[j-w+1..j]. If every empty cell passes, return true - this is exact because stamps may overlap arbitrarily, so per-cell coverability is independent.",
+  "hints": [
+    "For a single empty cell, what decides whether some stamp can be placed so that it covers that cell? With m·n up to 2·10^5, how would you answer that question for every empty cell without scanning the whole stamp area each time?",
+    "Build a 2D prefix sum over occupied cells: a stamp with top-left (a,b) fits iff its rectangle sum is 0. In example 1 (h=4, w=3), the only fitting top-lefts are (0,1) and (1,1), since any window touching column 0 hits an occupied cell.",
+    "```\nbuild prefix P of occupied cells\nfor each empty cell (i,j):\n    if a stamp with top-left (i,j) fits (rectangle sum == 0 and inside grid):\n        mark (i,j)\nbuild prefix F of marks\nfor each empty cell (i,j):\n    if no mark in window rows [i-h+1..i], cols [j-w+1..j] (clamped to grid):\n        return false\nreturn true\n```",
+    "**Stamp larger than grid** - h > m or w > n means no stamp fits anywhere.\n`Input: grid = [[0]], stampHeight = 2, stampWidth = 1` → `Expected: false`\n⚠️ Bug: clamping the window without also requiring i ≥ h-1 and j ≥ w-1 before marking a fit → marks (0,0) as fitting → returns true.\n\n**Single cell, stamp 1×1** - smallest dimensions, every empty cell is its own stamp.\n`Input: grid = [[0]], stampHeight = 1, stampWidth = 1` → `Expected: true`\n⚠️ Bug: querying the coverage window with off-by-one bounds (using i-h instead of i-h+1) → empty window → returns false.\n\n**Occupied cell at the border** - occupied cells need no coverage but block nearby fits.\n`Input: grid = [[1,0],[0,0]], stampHeight = 2, stampWidth = 2` → `Expected: false`\n⚠️ Bug: skipping the fit check for windows that include occupied cells (only checking the cell itself) → wrongly marks (0,1) or (1,0) as fitting → returns true.\n\n**All occupied** - no empty cells to cover.\n`Input: grid = [[1,1],[1,1]], stampHeight = 5, stampWidth = 5` → `Expected: true`\n⚠️ Bug: returning false when no stamp fits instead of checking that there are no empty cells → returns false."
+  ],
+  "followUps": [
+    {
+      "q": "What if stamps could not overlap?",
+      "a": "Overlap only helps coverage, so forbidding it changes the problem: you would need an exact cover/tiling argument, typically solved with DP over rows in O(m·n·2^w) for small w, far worse than the O(m·n) prefix-sum approach."
+    },
+    {
+      "q": "What if you must also return the minimum number of stamps?",
+      "a": "With overlaps allowed the minimum is not simply per-cell; a greedy/flow argument on maximal fitting rectangles is needed, and the check itself stays O(m·n) while the optimization becomes a separate rectangle-cover problem."
+    },
+    {
+      "q": "What if the grid is given as a stream and m·n cannot fit in memory?",
+      "a": "The two prefix arrays need full-grid random access, so exact answering needs O(n) rolling rows only if h and w fit in the kept window; otherwise you must process in blocks, trading space for multiple passes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool possibleToStamp(vector<vector<int>>& grid, int stampHeight, int stampWidth) {\n        int m = grid.size(), n = grid[0].size();\n        int h = stampHeight, w = stampWidth;\n        vector<vector<int>> P(m + 1, vector<int>(n + 1, 0));\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                P[i + 1][j + 1] = P[i][j + 1] + P[i + 1][j] - P[i][j] + grid[i][j];\n        vector<vector<int>> F(m + 1, vector<int>(n + 1, 0));\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j]) continue;\n                if (i >= h - 1 && j >= w - 1) {\n                    int a = i - h + 1, b = j - w + 1;\n                    int cnt = P[i + 1][j + 1] - P[a][j + 1] - P[i + 1][b] + P[a][b];\n                    if (cnt == 0) F[i + 1][j + 1] = 1;\n                }\n            }\n        }\n        for (int i = 0; i <= m; i++)\n            for (int j = 0; j < n; j++)\n                F[i][j + 1] += F[i][j];\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j <= n; j++)\n                F[i + 1][j] += F[i][j];\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j]) continue;\n                int r2 = min(m, i + h), c2 = min(n, j + w);\n                int c = F[r2][c2] - F[i][c2] - F[r2][j] + F[i][j];\n                if (c == 0) return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

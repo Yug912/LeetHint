@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-different-subsequences-gcds",
+  "title": "Number of Different Subsequences GCDs",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Number Theory / Sieve-like Iteration",
+  "tc": "O(M log M log M)",
+  "sc": "O(M)",
+  "spaceBreakdown": "- vector<bool> present: up to M+1 elements → O(M)\n- maxVal, ans, g, x, j: primitive variables → O(1)\n- recursion depth: none\n- not counted: input nums, returned integer",
+  "approach": "The key insight is that if a number $x$ is the GCD of some subsequence, then the GCD of ALL elements in `nums` that are multiples of $x$ must also be exactly $x$. This is because adding more multiples of $x$ to a subsequence cannot increase its GCD above $x$, and since a valid subsequence exists, the overall GCD cannot be greater than $x$. Thus, we can iterate through all possible GCD values $x$ from 1 to $\\max(nums)$, collect all multiples of $x$ present in `nums`, and check if their overall GCD equals $x$.",
+  "hints": [
+    "If a number $x$ is the GCD of some subsequence, what must be true about the GCD of ALL elements in the array that are multiples of $x$? The maximum value in `nums` is $2 \\cdot 10^5$.",
+    "Use a boolean array to mark which numbers are present, then for each candidate $x$ from 1 to $\\max(nums)$, compute the GCD of all present multiples of $x$. For `nums = [6, 10, 3]`, the multiples of 2 are 6 and 10, and their GCD is 2, so 2 is valid.",
+    "```\nmax_val = max(nums)\npresent = boolean array of size max_val + 1\nfor num in nums: present[num] = true\nans = 0\nfor x = 1 to max_val:\n    g = 0\n    for j = x to max_val step x:\n        if present[j]:\n            g = gcd(g, j)\n    if g == x:\n        ans = ans + 1\nreturn ans\n```",
+    "**Smallest input** - The array has only one element.\n`Input: nums = [7]` → `Expected: 1`\n⚠️ Bug: Initializing `g` to 1 instead of 0 → returns 0 because `gcd(1, 7)` is 1, which is not equal to 7.\n\n**All elements equal** - The array consists of the same number repeated.\n`Input: nums = [5, 5, 5]` → `Expected: 1`\n⚠️ Bug: Counting all divisors of present elements instead of checking if their overall GCD is exactly $x$ → returns 2 (1 and 5) instead of 1.\n\n**Boundary indices** - The maximum value in the array is much larger than the array size.\n`Input: nums = [6, 10, 3]` → `Expected: 5`\n⚠️ Bug: Iterating $j$ up to `nums.size()` (3) instead of `max(nums)` (10) → returns 1 because for $x=1$, $j$ only goes up to 3, missing 6 and 10, so `g` becomes 3, and no $x$ matches."
+  ],
+  "followUps": [
+    {
+      "q": "What if `nums[i]` can be up to $10^9$?",
+      "a": "We cannot allocate an array of size $10^9$. Instead, we could sort the array and for each element, maintain the set of GCDs of subsequences ending at that element. The number of distinct GCDs for subsequences ending at any element is bounded by $\\log(\\max(nums))$, so the total time complexity would be $O(n \\log M \\log M)$ and space $O(\\log M)$."
+    },
+    {
+      "q": "What if we need to return the actual GCDs instead of just the count?",
+      "a": "The algorithm remains the same, but instead of incrementing a counter when `g == x`, we add $x$ to a result list. The time and space complexity would be $O(M \\log M \\log M)$ and $O(M)$ respectively, with the output list taking $O(M)$ space."
+    },
+    {
+      "q": "What if the array is a stream and we cannot store all elements?",
+      "a": "We would need to maintain the set of all possible GCDs of subsequences seen so far. For each new element, we compute its GCD with all existing GCDs in the set, add the element itself, and keep the unique values. The set size is bounded by $\\log(\\max(nums))$, so time per element is $O(\\log M \\log M)$ and space is $O(\\log M)$."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int gcd(int a, int b) {\n        while (b) {\n            int t = b;\n            b = a % b;\n            a = t;\n        }\n        return a;\n    }\n    \n    int countDifferentSubsequenceGCDs(vector<int>& nums) {\n        int maxVal = 0;\n        for (int num : nums) {\n            if (num > maxVal) {\n                maxVal = num;\n            }\n        }\n        vector<bool> present(maxVal + 1, false);\n        for (int num : nums) {\n            present[num] = true;\n        }\n        int ans = 0;\n        for (int x = 1; x <= maxVal; x++) {\n            int g = 0;\n            for (int j = x; j <= maxVal; j += x) {\n                if (present[j]) {\n                    g = gcd(g, j);\n                }\n            }\n            if (g == x) {\n                ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

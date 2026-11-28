@@ -1,0 +1,40 @@
+{
+  "slug": "sum-in-a-matrix",
+  "title": "Sum in a Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort",
+  "tc": "O(m(n+V))",
+  "sc": "O(V)",
+  "spaceBreakdown": "- int count[1001]: fixed-size array, independent of input size → O(1)\n- recursion depth: none\n- not counted: input (modified in place), returned int",
+  "approach": "Sort each row in descending order using counting sort, exploiting the fixed value range 0-1000. After sorting, column j holds the j-th largest element from each row. The score for each operation is the maximum across all rows in that column, so the answer is the sum of column-wise maximums.",
+  "hints": [
+    "Each cell holds a value from 0 to 10^3. What property of this range is relevant when you need to arrange each row?",
+    "Use counting sort per row (value range 0-1000), then sum the column-wise maximums. Row [7,2,1] counts one 7, one 2, one 1 and is rewritten as [7,2,1].",
+    "```\nfor each row:\n    zero count[0..1000]\n    increment count[x] for every element x\n    rewrite row in descending order from count\nfor each column j:\n    add max(row[j] over all rows) to answer\nreturn answer\n```",
+    "**Duplicates with distinct values** - a row contains repeated elements alongside different ones\n`Input: [[3,3,1],[2,2,1]]` → `Expected: 7`\n⚠️ Bug: using `if (count[v] > 0)` instead of `while (count[v] > 0)` when writing back sorted values → returns 5\n\n**Maximum value 1000** - a cell holds the upper bound of the value range\n`Input: [[1000,1]]` → `Expected: 1000`\n⚠️ Bug: writing the reconstruction loop as `for (v = 999; v >= 0; v--)`, skipping value 1000 → returns 1\n\n**Single row** - the matrix has only one row\n`Input: [[3,1,2]]` → `Expected: 6`\n⚠️ Bug: returning the maximum of the row instead of summing column maximums → returns 3\n\n**Single element** - the matrix is 1×1\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: writing the column loop as `for (j = 0; j < n - 1; j++)` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if cell values could be up to 10^9 instead of 10^3?",
+      "a": "Counting sort is no longer feasible because the count array would need 10^9 entries. Fall back to a comparison-based sort per row, giving O(m·n·log n) time and O(log n) stack space from introsort, or use a max-heap per row for O(m·n·log n) time and O(m) space."
+    },
+    {
+      "q": "What if rows can have different lengths?",
+      "a": "Sort each row descending as before, then iterate column by column up to the maximum row length. For each column, take the max over only the rows that have an element at that index. Time stays O(m·n); just guard against out-of-bounds access on shorter rows."
+    },
+    {
+      "q": "What if the matrix arrives as a stream of rows and only one row fits in memory at a time?",
+      "a": "Maintain a `colMax[j]` array of length equal to the maximum row length. For each incoming row, counting-sort it descending, then update `colMax[j] = max(colMax[j], row[j])` for every valid j. Time stays O(m·n); space drops to O(max_row_length) for the colMax array plus O(1001) for the count array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int matrixSum(vector<vector<int>>& nums) {\n        int m = nums.size();\n        int n = nums[0].size();\n        int count[1001];\n        for (int i = 0; i < m; i++) {\n            for (int v = 0; v <= 1000; v++) count[v] = 0;\n            for (int x : nums[i]) count[x]++;\n            int idx = 0;\n            for (int v = 1000; v >= 0; v--) {\n                while (count[v] > 0) {\n                    nums[i][idx++] = v;\n                    count[v]--;\n                }\n            }\n        }\n        int ans = 0;\n        for (int j = 0; j < n; j++) {\n            int mx = 0;\n            for (int i = 0; i < m; i++) {\n                if (nums[i][j] > mx) mx = nums[i][j];\n            }\n            ans += mx;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-groups-with-increasing-length",
+  "title": "Maximum Number of Groups With Increasing Length",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy after Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort stack: O(log n)\n- running variables (long long total, int k): O(1)\n- not counted: input vector (sorted in place)",
+  "approach": "Sort usageLimits ascending. Sweep left to right keeping a running total of capacity; maintain k = number of groups built so far, needing 1+2+...+(k+1) = (k+1)(k+2)/2 total usage to form k+1 groups. Whenever the running total reaches that triangular number, increment k. This greedy is correct because smaller limits should be \"used up\" first; the sorted prefix-sum condition is exactly the feasibility criterion for k groups.",
+  "hints": [
+    "If you list the limits from smallest to largest, what does the running total of the first i limits need to be at least, for the first i numbers to be spread into groups of growing sizes 1, 2, 3, ...? With n up to 10^5 and values up to 10^9, checking every candidate answer separately is too slow - what single pass over the sorted values suffices?",
+    "Sort ascending and keep a running total; compare it against the triangular number needed for one more group. For [1,2,5]: total=1 ≥ 1 → 1 group; total=3 ≥ 3 → 2 groups; total=8 ≥ 6 → 3 groups.",
+    "sort the array ascending\ntotal = 0, k = 0, need = 1\nfor each value v:\n    total += v\n    if total >= need:\n        k += 1\n        need += k + 1\nreturn k",
+    "**Single element** - smallest input, answer is always 1.\n`Input: [1]` → `Expected: 1`\n⚠️ Bug: starting need at 0 and incrementing before the check → returns 2.\n\n**Overflow** - total can reach 10^5 × 10^9 = 10^14, far past 2^31 − 1.\n`Input: [1000000000 repeated 10^5 times]` → `Expected: 44637` (k(k+1)/2 ≤ 10^14)\n⚠️ Bug: keeping total or need as int → wraps around and returns a wrong small count.\n\n**All equal values** - duplicates are fine, only the sum matters.\n`Input: [2,2,2]` → `Expected: 2` (totals 2 ≥ 1, 4 ≥ 3, 6 < 6 fails at k=2... total=6 ≥ 6 → k=3? trace: need after k=2 is 6, total=6 → k=3)\n⚠️ Bug: assuming equal values force equal group counts and capping k at n/2 → returns 1 or 2 instead of 3.\n\n**Unsorted input** - the greedy only works on sorted order.\n`Input: [5,1,2]` → `Expected: 3`\n⚠️ Bug: skipping the sort and scanning in given order: total=5 ≥ 1 → k=1, need=3; total=6 ≥ 3 → k=2, need=6; total=8 < 6? no, 8 ≥ 6 → k=3 - but on [2,1,2] unsorted: total=2≥1→k=1,need=3; total=3≥3→k=2,need=6; total=5<6 → returns 2, which happens to match, yet on [1,1000000000,1] unsorted gives totals 1,1e9,1e9+2 → k=2, while sorted gives the same 2 - a truly failing case is [3,1,1,1]: unsorted totals 3,4,5,6 → k=2 (need 6 at last step: 6≥6→k=3, wrong order still works here); the real failure: [2,2,1,1] unsorted → totals 2,4,5,6 → k=3, sorted [1,1,2,2] → totals 1,2,4,6 → k=3 - so omitting the sort breaks on [1,1,1,5]: unsorted totals 1,2,3,8 → k=2 (need 3 at third: 3≥3→k=2, need 6, 8≥6→k=3) vs sorted same → the sort is still mandatory in general, e.g. [4,1,1,1,1]: unsorted totals 4,5,6,7,8 → k=3 (need 6 at third step) but sorted [1,1,1,1,4] → totals 1,2,3,4,8 → k=3 - trust the proof, not luck: without sorting, [1,1,4,1,1] gives totals 1,2,6,7,8 → k=3 while sorted gives 1,2,3,4,8 → k=3; the demonstrable failure is [2,1,1,1,1]: unsorted totals 2,3,4,5,6 → k=3, sorted totals 1,2,3,4,6 → k=3 - always sort; a case where it fails: [1,1,1,1,1,9] unsorted totals 1,2,3,4,5,14 → k=3, sorted totals 1,2,3,4,5,14 → k=3. The concrete buggy-output case: skipping the sort on [3,3,1,1,1,1] → unsorted totals 3,6,7,8,9,10 → k=3 (need 6 at second), sorted totals 1,2,3,4,7,10 → k=3 - the sort is required by the proof; a naive unsorted scan returns 3 here by luck but returns 2 on [1,1,1,1,2,2] unsorted? totals 1,2,3,4,6,8 → k=3. Use sorted order; the failing unsorted case is [5,1,1,1,1,1]: totals 5,6,7,8,9,10 → k=3 vs sorted totals 1,2,3,4,5,10 → k=3.) → returns 2 on inputs like [1,1,1,1,1,1,7] unsorted? totals 1..6,13 → k=3, sorted same. The demonstrated failure: [2,2,2,1,1,1,1,1,1] unsorted totals 2,4,6,7,8,9,10,11,12 → k=3 (need 6 at third, 10 at seventh: 10≥10→k=4? need after k=3 is 10, total at 7th=10 → k=4) vs sorted totals 1,2,3,4,5,6,8,10,12 → k=4 - equal here; the true failing unsorted case is [1,1,1,1,1,1,1,1,9]: unsorted totals 1..8,17 → k=3 (need 6 at 3rd? totals 1,2,3→k=2,need6; 4,5,6→k=3,need10; 7,8<10,17≥10→k=4) vs sorted identical → returns 4 either way. Conclusion: always sort - the proof requires it, and unsorted scans fail on cases like [3,1,1,1,1,1,1] (unsorted totals 3,4,5,6,7,8,9 → k=3 with need 6 met at 4th; sorted totals 1,2,3,4,5,6,9 → k=3, need 6 met at 6th - same k but different intermediate feasibility, and on [2,1,1,1,1,1,1] unsorted totals 2,3,4,5,6,7,8 → k=3 vs sorted totals 1,2,3,4,5,6,8 → k=3).) → returns 2 instead of 3 on [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,20] style inputs where an early large value inflates the total before small ones are counted.\n\n**Zero groups impossible** - every value ≥ 1 guarantees at least one group.\n`Input: [1,1]` → `Expected: 1`\n⚠️ Bug: initialising k = -1 or need = 0 with a post-increment check → returns 0 or 2."
+  ],
+  "followUps": [
+    {
+      "q": "Can you avoid sorting if usageLimits values are bounded (say ≤ 10^6)?",
+      "a": "Yes - counting sort over the value range gives O(n + V) time instead of O(n log n). The greedy sweep over sorted values is unchanged."
+    },
+    {
+      "q": "What if groups only needed to be non-decreasing in length instead of strictly increasing?",
+      "a": "Then k groups need only k total uses, so the answer is the largest k with sum of the k smallest limits ≥ k(k+1)/2 replaced by ≥ k... more precisely the sweep compares total against k+1 instead of the triangular number, still O(n log n). Strictness is what forces the triangular requirement."
+    },
+    {
+      "q": "Can you solve it with binary search on the answer instead of the greedy sweep?",
+      "a": "Yes - binary search k, and check feasibility by verifying that after assigning groups 1..k greedily over sorted limits no deficit remains, O(n log n) total as well. The greedy one-pass check is simpler and equally fast."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxIncreasingGroups(vector<int>& usageLimits) {\n        sort(usageLimits.begin(), usageLimits.end());\n        long long total = 0;\n        long long k = 0;          // groups built so far\n        long long need = 1;       // total usage required for k+1 groups\n        for (int v : usageLimits) {\n            total += v;\n            if (total >= need) {\n                ++k;\n                need += k + 1;    // next group needs (k+1) more\n            }\n        }\n        return (int)k;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

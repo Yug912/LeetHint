@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-largest-area-of-square-inside-two-rectangles",
+  "title": "Find the Largest Area of Square Inside Two Rectangles",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Pairwise Intersection",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long maxSide: single scalar → O(1)\n- loop variables i, j: scalars → O(1)\n- not counted: input vectors bottomLeft, topRight",
+  "approach": "For each pair of rectangles, compute their intersection rectangle by taking the max of the two left edges and min of the two right edges (same for bottom/top). If the intersection is non-empty (left < right and bottom < top), the largest square that fits inside has side length equal to the smaller of the intersection's width and height. Track the maximum side across all pairs and return its square. Checking all pairs suffices because any square fitting in the intersection of k ≥ 2 rectangles also fits in the intersection of any two of those rectangles.",
+  "hints": [
+    "If you draw two overlapping axis-aligned rectangles, what shape is their overlapping region, and what single property of that shape limits the largest square you can place inside it? n ≤ 10³, so checking every pair is at most about 500,000 pairs.",
+    "Brute-force all O(n²) pairs. For each pair, the intersection rectangle has left = max of both lefts, right = min of both rights (same for y). The square side is min(width, height). Example: rectangles [1,1]-[5,5] and [1,3]-[5,7] intersect at [1,3]-[5,5], giving width 4, height 2, so side = 2, area = 4.",
+    "```\nmaxSide = 0\nfor i in 0..n-1:\n    for j in i+1..n-1:\n        left = max(bl[i].x, bl[j].x)\n        right = min(tr[i].x, tr[j].x)\n        bottom = max(bl[i].y, bl[j].y)\n        top = min(tr[i].y, tr[j].y)\n        if left < right and bottom < top:\n            maxSide = max(maxSide, min(right-left, top-bottom))\nreturn maxSide * maxSide\n```",
+    "**No intersection** - all rectangle pairs are disjoint\n`Input: bottomLeft = [[1,1],[3,3],[3,1]], topRight = [[2,2],[4,4],[4,2]]` → `Expected: 0`\n⚠️ Bug: computing `side = min(right - left, top - bottom)` without checking `left < right && bottom < top` first → returns 1 (negative width and height multiply to positive area)\n\n**Overflow** - coordinates up to 10^7, area up to (10^7)² = 10^14\n`Input: bottomLeft = [[1,1],[1,1]], topRight = [[10000000,10000000],[10000000,10000000]]` → `Expected: 99999980000001`\n⚠️ Bug: storing `maxSide` as `int` → 9999999 fits in int but 9999999 × 9999999 = 99999980000001 overflows to a wrong value\n\n**Self-pairing** - n = 2, one rectangle much larger than the other\n`Input: bottomLeft = [[1,1],[1,1]], topRight = [[10,10],[2,2]]` → `Expected: 1`\n⚠️ Bug: inner loop starting at `j = i` instead of `j = i + 1` → returns 81 (rectangle 0 intersected with itself)\n\n**Wrong dimension** - intersection is wider than tall\n`Input: bottomLeft = [[1,1],[1,3]], topRight = [[5,5],[5,7]]` → `Expected: 4`\n⚠️ Bug: using `max(width, height)` instead of `min(width, height)` for the square side → returns 16"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "Binary search on the side length s. For a fixed s, shrink each rectangle inward by s/2 on each side and check whether any two shrunken rectangles overlap using a sweep line with an interval tree on the y-axis. This gives O(n log n log(maxCoord))."
+    },
+    {
+      "q": "What if rectangles can be rotated (not axis-aligned)?",
+      "a": "The intersection of two rotated rectangles is a convex polygon, not necessarily a rectangle. You would compute the polygon intersection via Sutherland-Hodgman clipping, then find the largest inscribed square in that polygon, which is a harder computational geometry problem with no simple closed form."
+    },
+    {
+      "q": "What if you need the largest square fitting in the intersection of at least k rectangles (k ≥ 2)?",
+      "a": "Binary search on side length s. For each s, shrink every rectangle by s/2 on each side, then check whether any point is covered by at least k shrunken rectangles using a 2D sweep line with a Fenwick tree for range counting. This gives O(n log n) per check."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long largestSquareArea(vector<vector<int>>& bottomLeft, vector<vector<int>>& topRight) {\n        int n = bottomLeft.size();\n        long long maxSide = 0;\n        \n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                long long left = max(bottomLeft[i][0], bottomLeft[j][0]);\n                long long right = min(topRight[i][0], topRight[j][0]);\n                long long bottom = max(bottomLeft[i][1], bottomLeft[j][1]);\n                long long top = min(topRight[i][1], topRight[j][1]);\n                \n                if (left < right && bottom < top) {\n                    long long width = right - left;\n                    long long height = top - bottom;\n                    long long side = min(width, height);\n                    maxSide = max(maxSide, side);\n                }\n            }\n        }\n        \n        return maxSide * maxSide;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

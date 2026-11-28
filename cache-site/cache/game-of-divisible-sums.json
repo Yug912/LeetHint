@@ -1,0 +1,52 @@
+{
+  "slug": "game-of-divisible-sums",
+  "title": "Game of Divisible Sums",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Suffix DP",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long dp1, dp2: two rolling scalars → O(1)\n- loop variable i: O(1)\n- not counted: input vector nums",
+  "approach": "The total sum of all elements is fixed, so maximizing your own score is equivalent to maximizing your lead over the opponent. Define dp[i] as the best lead the player about to move can achieve from the suffix nums[i..n-1], with dp[n] = 0. At each position, try taking one or two leftmost elements: if the taken sum is divisible by 3 the turn passes and your lead is s − dp[j], otherwise you keep moving and your lead is s + dp[j]. Take the maximum over both options, computing dp backward from n to 0; the answer is dp[0].",
+  "hints": [
+    "Once some prefix of the array has been consumed, only the remaining suffix affects all future play. What single number defined on a suffix would let the player about to move compare taking one element versus two?",
+    "Suffix dynamic programming: dp[i] = largest lead the player to move can achieve from nums[i..]. For nums = [3,6,4]: dp[2] = 4, dp[1] = max(6−dp[2], 10+dp[3]) = 10, dp[0] = max(3−dp[1], 9−dp[2]) = 5.",
+    "```\ndp[n] = 0\nfor i from n-1 down to 0:\n    s1 = nums[i]\n    best = (s1 % 3 == 0) ? s1 - dp[i+1] : s1 + dp[i+1]\n    if i+1 < n:\n        s2 = nums[i] + nums[i+1]\n        cand = (s2 % 3 == 0) ? s2 - dp[i+2] : s2 + dp[i+2]\n        best = max(best, cand)\n    dp[i] = best\nreturn dp[0]\n```",
+    "**Single element** - only one move is legal.\n`Input: [5]` → `Expected: 5`\n⚠️ Bug: accessing nums[i+1] without checking i+1 < n → out-of-bounds read\n\n**Large values overflow int** - three elements of 10^9 sum to 3×10^9.\n`Input: [1000000000, 1000000000, 1000000000]` → `Expected: 3000000000`\n⚠️ Bug: storing dp in int instead of long long → overflow, returns -1294967296\n\n**All elements divisible by 3** - every move passes the turn.\n`Input: [3,3,3,3]` → `Expected: 0`\n⚠️ Bug: always adding dp[j] instead of subtracting when the sum is divisible by 3 → returns 12\n\n**Must consider two-element move** - taking both can be strictly better.\n`Input: [3,6,4]` → `Expected: 5`\n⚠️ Bug: only considering single-element moves → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if a player could take 1 to k leftmost elements per turn instead of just 1 or 2?",
+      "a": "Each state now has up to k candidate moves, each checking divisibility of the prefix sum of length 1..k. Time becomes O(n·k) and space O(k) for the rolling window of dp values. For k up to 10^5 this is O(n²) and may need a smarter prefix-sum structure."
+    },
+    {
+      "q": "What if nums can contain negative values?",
+      "a": "The recurrence is unchanged - s can be negative and the divisibility check still applies. A player might optimally take negative elements to pass the turn and force the opponent into a worse suffix. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if you must answer the game result for every prefix nums[0..i] for i from 0 to n-1?",
+      "a": "Each prefix is an independent game requiring a backward pass, giving O(n²) total. The backward dependency on two future values prevents a simple left-to-right incremental update, so without additional algebraic structure you must recompute per prefix."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxDifference(vector<int>& nums) {\n        int n = nums.size();\n        long long dp1 = 0; // dp[i+1]\n        long long dp2 = 0; // dp[i+2]\n        for (int i = n - 1; i >= 0; i--) {\n            long long s1 = nums[i];\n            long long best = (s1 % 3 == 0) ? (s1 - dp1) : (s1 + dp1);\n            if (i + 1 < n) {\n                long long s2 = (long long)nums[i] + nums[i + 1];\n                long long cand = (s2 % 3 == 0) ? (s2 - dp2) : (s2 + dp2);\n                if (cand > best) best = cand;\n            }\n            dp2 = dp1;\n            dp1 = best;\n        }\n        return dp1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": true,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

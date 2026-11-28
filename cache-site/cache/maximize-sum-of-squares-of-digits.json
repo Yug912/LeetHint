@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-sum-of-squares-of-digits",
+  "title": "Maximize Sum of Squares of Digits",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy",
+  "tc": "O(num)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: up to num characters, but this is the returned output (not counted per LeetCode convention)\n- no other containers, no recursion, no auxiliary data structures",
+  "approach": "The sum of squares is a convex function of the digits, so to maximize it given a fixed digit sum, we concentrate the sum into as many 9s as possible. The optimal digit multiset is: floor(sum/9) nines, one digit equal to sum mod 9 (if nonzero), and the rest zeros. To maximize the integer value among same-score candidates, arrange digits in descending order. If sum exceeds 9*num, no valid integer exists.",
+  "hints": [
+    "Given a fixed digit sum, how does concentrating it into fewer, larger digits affect the sum of squares compared to spreading it evenly? The constraints allow num up to 2×10^5 and sum up to 2×10^6.",
+    "Greedy: fill digits with 9s as much as possible, then the remainder, then 0s. For num=2, sum=17: 17 = 9×1 + 8, so the digits are 9 and 8, giving \"98\".",
+    "```\nif sum > 9 * num: return \"\"\nk = sum / 9\nr = sum % 9\nresult = k copies of '9'\nif r > 0: append r as a digit\nappend remaining positions with '0'\nreturn result\n```",
+    "**Infeasible sum** - sum exceeds 9×num, no valid integer exists\n`Input: num=1, sum=10` → `Expected: \"\"`\n⚠️ Bug: skipping feasibility check and clamping negative zero-count with max(0, ...) → returns \"91\" (2 digits, invalid)\n\n**All nines** - sum equals 9×num, remainder is 0\n`Input: num=2, sum=18` → `Expected: \"99\"`\n⚠️ Bug: always appending remainder digit even when r=0 without adjusting zero count → returns \"990\" (3 digits)\n\n**Tie-breaking** - multiple integers with the same maximum score\n`Input: num=2, sum=17` → `Expected: \"98\"`\n⚠️ Bug: placing smaller digits first → returns \"89\" (same score 145, but not the maximum integer)\n\n**Single digit** - num=1, smallest non-trivial case\n`Input: num=1, sum=5` → `Expected: \"5\"`\n⚠️ Bug: computing zeros = num - k without subtracting for remainder → returns \"50\" (2 digits)"
+  ],
+  "followUps": [
+    {
+      "q": "What if we want to minimize the sum of squares instead of maximize it?",
+      "a": "By convexity, spreading the digit sum evenly minimizes the sum of squares. Give each digit floor(sum/num), then distribute the remainder 1 at a time to the leftmost digits. To maximize the integer, place larger digits first. TC: O(num), SC: O(1)."
+    },
+    {
+      "q": "What if the number can have leading zeros (treat as a digit string, not a positive integer)?",
+      "a": "The leading digit constraint disappears, so sum=0 becomes valid (all zeros). The optimal multiset is unchanged: concentrate into 9s. The answer is still 9s first, then remainder, then 0s. TC: O(num), SC: O(1)."
+    },
+    {
+      "q": "What if num can be up to 10^9 and you must output the answer as a stream?",
+      "a": "The answer has a simple structure: k nines, one remainder digit, then zeros. Stream k copies of '9', then the remainder (if nonzero), then (num - k - has_remainder) copies of '0'. TC: O(num) to stream, SC: O(1) auxiliary."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string maxSumOfSquares(int num, int sum) {\n        if (sum > 9 * num || sum < 1) return \"\";\n        \n        int k = sum / 9;\n        int r = sum % 9;\n        int zeros = num - k - (r > 0 ? 1 : 0);\n        \n        string result;\n        result.reserve(num);\n        result.append(k, '9');\n        if (r > 0) result.push_back('0' + r);\n        result.append(zeros, '0');\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

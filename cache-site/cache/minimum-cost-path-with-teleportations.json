@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-path-with-teleportations",
+  "title": "Minimum Cost Path with Teleportations",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Layered DP with value-compressed suffix minimum",
+  "tc": "O(m·n·log(m·n) + k·m·n)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- vals (sorted unique values): up to m·n entries → O(m·n)\n- rk (rank per cell): m·n ints → O(m·n)\n- dp and nd (two DP layers): 2·m·n ints → O(m·n)\n- mn (suffix-min per rank): up to m·n ints → O(m·n)\n- sort() stack: O(log(m·n))\n- not counted: input grid",
+  "approach": "A path uses at most k teleports, so it splits into k+1 \"layers\": dp[t][i][j] = min cost to reach (i,j) using at most t teleports. Layer t first takes, for each cell, the minimum of dp[t-1] over all cells whose value is ≥ its own value (teleport-in, cost 0), then relaxes with right/down moves in one forward sweep. Grid values are coordinate-compressed to at most m·n ranks so the per-layer \"min over values ≥ v\" is a suffix minimum over ranks, giving O(m·n·log(m·n) + k·m·n) time and O(m·n) space.",
+  "hints": [
+    "With k ≤ 10, any path is at most k+1 stretches of right/down moves joined by teleports. For a fixed number of teleports already spent, what single piece of information about ALL cells with a given grid value would let you price the next stretch everywhere at once?",
+    "Layered DP: dp[t][i][j] = min cost to reach (i,j) with ≤ t teleports; per layer, take a suffix minimum of the previous layer over compressed values, then one forward right/down sweep. Example 1: dp[1][2][2] (value 5) = min dp[0] over cells with value ≥ 5 = dp[0][1][1] = 7.",
+    "compress all grid values to ranks\ndp[0][0] = 0; fill dp[0] with right/down moves (cost = destination value)\nfor t = 1..k:\n    best[r] = min dp[t-1] over cells of rank r\n    best[r] = min(best[r], best[r+1])   # suffix min: cells with value ≥ v\n    nd[i][j] = min(dp[t-1][i][j], best[rank(i,j)])\n    sweep i,j forward: nd[i][j] = min(nd[i][j], min(nd[i-1][j], nd[i][j-1]) + grid[i][j])\n    dp = nd\nreturn dp[m-1][n-1]",
+    "**Teleport direction reversed** - teleport goes from a cell to a cell of value ≤ source, so the lookup needs cells with value ≥ target's value.\n`Input: grid = [[3,1],[2,4]], k = 1` → `Expected: 5`\n⚠️ Bug: taking min over cells with value ≤ target instead of ≥ → dp[1][1] becomes 0 → returns 0 instead of 5.\n\n**All values equal** - teleport condition is ≤, so equal values are teleportable.\n`Input: grid = [[2,2],[2,2]], k = 1` → `Expected: 0`\n⚠️ Bug: using strict < for the teleport comparison → no teleport source exists → returns 4 instead of 0.\n\n**k = 0** - no teleport layer may run.\n`Input: grid = [[1,3,3],[2,5,4],[4,3,5]], k = 0` → `Expected: 14`\n⚠️ Bug: running the teleport layer once even when k = 0 → returns 7 instead of 14.\n\n**Start cell cost** - starting cell costs nothing; only destination cells add cost.\n`Input: grid = [[1,2],[2,3]], k = 0` → `Expected: 4`\n⚠️ Bug: initializing dp[0][0] = grid[0][0] → returns 5 instead of 4."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^5?",
+      "a": "Layers beyond the number of distinct \"useful\" teleport thresholds stop changing, so cap k at the number of distinct compressed values (or detect when a layer equals the previous and stop). Time becomes O(m·n·log(m·n) + min(k, m·n)·m·n)."
+    },
+    {
+      "q": "What if each teleport costs its destination cell's value instead of 0?",
+      "a": "The teleport-in step becomes best[rank] + grid[i][j] instead of best[rank]; the layered structure and suffix-minimum trick are unchanged. Time and space stay O(m·n·log(m·n) + k·m·n) and O(m·n)."
+    },
+    {
+      "q": "What if moves in all four directions are allowed?",
+      "a": "Right/down DP no longer works; each layer becomes a shortest-path computation (e.g., Dijkstra with a per-value teleport source), giving O(k·m·n·log(m·n)) time. Space stays O(m·n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCost(vector<vector<int>>& grid, int k) {\n        int m = grid.size(), n = grid[0].size();\n        vector<int> vals;\n        vals.reserve((size_t)m * n);\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                vals.push_back(grid[i][j]);\n        sort(vals.begin(), vals.end());\n        vals.erase(unique(vals.begin(), vals.end()), vals.end());\n        int U = vals.size();\n\n        vector<vector<int>> rk(m, vector<int>(n));\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                rk[i][j] = lower_bound(vals.begin(), vals.end(), grid[i][j]) - vals.begin();\n\n        const int INF = INT_MAX / 2;\n        vector<vector<int>> dp(m, vector<int>(n, INF));\n        dp[0][0] = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (i == 0 && j == 0) continue;\n                int b = INF;\n                if (i > 0) b = min(b, dp[i - 1][j]);\n                if (j > 0) b = min(b, dp[i][j - 1]);\n                dp[i][j] = b + grid[i][j];\n            }\n        }\n\n        for (int t = 1; t <= k; t++) {\n            vector<int> mn(U, INF);\n            for (int i = 0; i < m; i++)\n                for (int j = 0; j < n; j++)\n                    mn[rk[i][j]] = min(mn[rk[i][j]], dp[i][j]);\n            for (int r = U - 2; r >= 0; r--)\n                mn[r] = min(mn[r], mn[r + 1]);\n\n            vector<vector<int>> nd(m, vector<int>(n));\n            for (int i = 0; i < m; i++)\n                for (int j = 0; j < n; j++)\n                    nd[i][j] = min(dp[i][j], mn[rk[i][j]]);\n\n            for (int i = 0; i < m; i++) {\n                for (int j = 0; j < n; j++) {\n                    if (i == 0 && j == 0) continue;\n                    int b = INF;\n                    if (i > 0) b = min(b, nd[i - 1][j]);\n                    if (j > 0) b = min(b, nd[i][j - 1]);\n                    nd[i][j] = min(nd[i][j], b + grid[i][j]);\n                }\n            }\n            dp = move(nd);\n        }\n        return dp[m - 1][n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-items-from-sale-ii",
+  "title": "Maximum Number of Items From Sale II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Marginal Units + Harmonic Sieve",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> cnt: n+1 ints → O(n)\n- vector<long long> mult: n+1 long longs → O(n)\n- vector<pair<int,long long>> batches: up to n entries → O(n)\n- sort(batches): introsort O(log n) stack\n- not counted: input items, returned int",
+  "approach": "For each item type i, gain[i] = (number of items whose factor is a multiple of factor_i) − 1, computed by a harmonic-series sieve over factor counts. Buying c copies of item i yields c + min(c, gain[i]) copies, so purchases decompose into marginal units: the first gain[i] copies are \"boosted\" (worth 2 copies each at price_i), all further copies are worth 1 each at the global minimum price m. Since boosted marginal costs are non-increasing when batches are sorted by price, the optimum is a prefix of boosted units plus plain units at price m; scan batches in price order, evaluating the answer at each batch boundary and at the budget-limited partial take (the per-k objective 2k + (B−f(k))/m is concave, so these candidates suffice).",
+  "hints": [
+    "Each purchased copy can unlock at most one free copy, but only for distinct ordered type pairs - so what determines how many purchased copies of one type are actually \"worth double\"? With factor_i ≤ n = 10^5 and n up to 10^5, how would you count, for every factor f, how many items' factors are multiples of f without checking all pairs?",
+    "Think of purchases as marginal units: item i's first gain[i] copies each yield 2 copies, later copies yield 1. In Example 1 (items [[1,6],[2,4],[3,5]]), item 0 has gain 2, so its two copies at price 6 each return 2 copies, while extra copies anywhere cost the minimum price 4 and return 1 - sort the doubled units by price and sweep.",
+    "count cnt[f] for each factor\nfor each f, mult[f] = sum of cnt over multiples of f  (harmonic sieve)\ngain of item with factor f = mult[f] − 1\ncollect batches (price, gain) with gain > 0, sort by price, m = min price\nans = B / m; k = 0; cum = 0\nfor each batch (p, g) in price order:\n    record candidate 2*k + (B − cum) / m\n    t = min(g, (B − cum) / p)\n    record candidate 2*(k+t) + (B − cum − t*p) / m\n    k += t; cum += t*p; if t < g: break\nreturn max candidate",
+    "**Single item, self-division excluded**\nOnly one type exists; it cannot gift itself, so no copy is worth double.\n`Input: items = [[1,5]], budget = 5` → `Expected: 1`\n⚠️ Bug: computing gain as mult[f] instead of mult[f] − 1 (counting the item itself) → treats the copy as boosted → returns 2.\n\n**Duplicates with equal factors**\nTwo types sharing factor 1 can still gift each other (i ≠ j holds), so each has gain 1.\n`Input: items = [[1,3],[1,3]], budget = 6` → `Expected: 4`\n⚠️ Bug: skipping pairs with equal factors when counting multiples → gains become 0 → returns 2.\n\n**Partial batch under budget**\nThe budget cuts a boosted batch mid-way; taking the affordable prefix beats skipping it.\n`Input: items = [[1,6],[2,4],[3,5]], budget = 11` → `Expected: 3`\n⚠️ Bug: taking a batch only if the whole batch fits the budget → takes 0 boosted units → returns floor(11/4) = 2.\n\n**Overflow in the total**\nWith price 1 and budget 10^9, the total 2k + plain copies can reach about 2×10^9 > 2^31 − 1 (e.g. many factor-1 types give gain ≈ 10^5 each, k up to 10^9).\n`Input: items = [[1,1],[1,1]], budget = 1000000000` → `Expected: 1000000002`\n⚠️ Bug: accumulating the answer in int → 2*k + (B − cum) overflows past 2^31 − 1 → wrong/negative result.\n\n**No free copies possible**\nNo factor divides another (all distinct, none is 1), so every copy is worth 1.\n`Input: items = [[6,6],[4,12],[5,20]], budget = 7` → `Expected: 1`\n⚠️ Bug: assuming factor 1 always exists and dividing by a wrong minimum \"boosted\" price → returns 0 or crashes on empty batch list."
+  ],
+  "followUps": [
+    {
+      "q": "What if each item type j could be received for free at most once in total (not once per source)?",
+      "a": "Then free copies form a matching-like cap per target; a greedy over cheapest boosted units no longer works directly - you would process targets and sources with a flow/assignment argument or a priority-queue exchange, raising the complexity to roughly O(n log n) with a heap but with a different cap structure."
+    },
+    {
+      "q": "What if the budget were up to 10^14 and prices up to 10^9?",
+      "a": "The algorithm is unchanged - it never iterates per copy, only per batch - so it stays O(n log n) time; just keep all cost/count arithmetic in 64-bit (the answer itself may then need 64-bit return type)."
+    },
+    {
+      "q": "What if items arrived as a stream and memory was limited to O(1) auxiliary besides the factor sieve?",
+      "a": "The harmonic sieve needs O(n) counters, so exact gains are impossible in O(1); you could instead answer approximately by only tracking the minimum price and the cheapest few boosted candidates, giving a greedy over visible batches in O(1) space with a loss bounded by the ignored gains."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumSaleItems(vector<vector<int>>& items, int budget) {\n        int n = items.size();\n        vector<int> cnt(n + 1, 0);\n        for (auto& it : items) cnt[it[0]]++;\n\n        vector<long long> mult(n + 1, 0);\n        for (int f = 1; f <= n; f++) {\n            if (cnt[f] == 0) continue;\n            for (int j = f; j <= n; j += f) mult[f] += cnt[j];\n        }\n\n        long long m = LLONG_MAX;\n        vector<pair<int, long long>> batches;\n        batches.reserve(n);\n        for (auto& it : items) {\n            m = min(m, (long long)it[1]);\n            long long g = mult[it[0]] - 1;\n            if (g > 0) batches.push_back({it[1], g});\n        }\n        sort(batches.begin(), batches.end());\n\n        long long B = budget;\n        long long ans = B / m;\n        long long k = 0, cum = 0;\n        for (auto& pr : batches) {\n            int p = pr.first;\n            long long g = pr.second;\n            ans = max(ans, 2 * k + (B - cum) / m);\n            if (cum + (long long)p > B) break;\n            long long t = min(g, (B - cum) / p);\n            ans = max(ans, 2 * (k + t) + (B - cum - t * p) / m);\n            k += t;\n            cum += t * p;\n            if (t < g) break;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

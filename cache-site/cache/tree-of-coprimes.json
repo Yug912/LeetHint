@@ -1,0 +1,40 @@
+{
+  "slug": "tree-of-coprimes",
+  "title": "Tree of Coprimes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DFS with Per-Value Ancestor Stacks",
+  "tc": "O(n*V + V^2*log V)",
+  "sc": "O(n + V^2)",
+  "spaceBreakdown": "- vector<vector<int>> adj: n vectors with 2(n-1) total ints → O(n)\n- bool cop[51][51]: fixed 2601 bools → O(1)\n- vector<int> ans: n ints (returned output, not counted)\n- vector<vector<pair<int,int>>> stacks: 50 vectors, total entries ≤ tree height h at any time → O(h) ≤ O(n)\n- vector<array<int,4>> stk (explicit DFS stack): worst case O(n) entries (e.g., star graph) → O(n)\n- not counted: input nums/edges, returned ans",
+  "approach": "Since values are ≤ 50, keep one stack per value holding (depth, node) of ancestors currently on the root path. During DFS, when entering a node, scan all 50 values coprime with its value and take the deepest stack top - that is the closest coprime ancestor. Push the node onto its value's stack on entry and pop it on exit, so stacks always mirror the current root-to-node path. Correctness: for each value only the deepest (closest) ancestor on the path can be the answer, and the coprime table is precomputed once.",
+  "hints": [
+    "A node can have up to 10^5 ancestors, yet each value is between 1 and 50. Along the root path, among ancestors sharing the same value, which one is the only candidate worth comparing?",
+    "Keep one stack per value (1-50) of (depth, node) for ancestors on the current root path. In Example 1, when node 3 (value 2) is entered, the value-3 stack top is (depth 1, node 1) and gcd(2,3)=1, so the answer is node 1, beating the deeper... shallower value-2 entry (depth 0, node 0).",
+    "precompute cop[a][b] = (gcd(a,b)==1) for a,b in 1..50\niterative DFS from root, frames carry (node, parent, depth, exitFlag)\non enter u:\n    best = deepest top among stacks v with cop[nums[u]][v] and stack nonempty\n    ans[u] = best's node (or -1)\n    push (depth, u) onto stack[nums[u]]\n    push exit frame; push children with depth+1\non exit u:\n    pop stack[nums[u]]",
+    "Single node - no edges at all, no ancestors exist.\n`Input: nums = [7], edges = []` → `Expected: [-1]`\n⚠️ Bug: assuming edges has at least one element or returning 0 for the root → returns [0] instead of [-1].\n\nAll values equal and > 1 - no node is coprime with its own value repeated down the path.\n`Input: nums = [2,2,2], edges = [[0,1],[1,2]]` → `Expected: [-1,-1,-1]`\n⚠️ Bug: skipping the gcd check for equal values (assuming same value means \"already handled\") → returns [-1,0,0].\n\nChain of value 1 - gcd(1,1)=1, so every node's parent is a valid answer.\n`Input: nums = [1,1,1], edges = [[0,1],[1,2]]` → `Expected: [-1,0,1]`\n⚠️ Bug: a coprime table that marks cop[1][1] = false → returns [-1,-1,0].\n\nSkewed tree of 10^5 nodes - recursion depth hits 10^5.\n`Input: nums = [1]*100000, edges = [[i,i+1] for i in 0..99998]` → `Expected: [-1,0,1,...,99998]`\n⚠️ Bug: recursive DFS without raising the stack limit → stack overflow / runtime error; use an explicit stack.\n\nSibling subtrees must not see each other - a finished subtree's entries must be popped before an uncle node is processed.\n`Input: nums = [5,6,10,3], edges = [[0,1],[0,2],[1,3]]` → `Expected: [-1,0,-1,0]`\n⚠️ Bug: pushing ancestor entries without popping on exit → node 2 (value 10) wrongly sees node 3 (value 3) and returns 3 instead of -1."
+  ],
+  "followUps": [
+    {
+      "q": "What if values could be up to 10^9 instead of 50?",
+      "a": "The per-value stack trick dies; instead factor each value and keep, for each prime, the deepest ancestor divisible by it. A node's answer is the closest ancestor sharing no prime factor, found by taking the maximum depth over primes NOT dividing it - still O(n log V) per query overall with O(n · ω(V)) space."
+    },
+    {
+      "q": "What if you must answer queries \"closest coprime ancestor of node u with value constraint\" online after the tree is built?",
+      "a": "Preprocess with the same DFS, but persist the 50 stacks as persistent arrays (one version per root-path prefix), giving O(1) query per node after O(50·n) preprocessing and O(50·n) space. Alternatively use binary lifting with per-value jump tables for O(log n) queries."
+    },
+    {
+      "q": "What if memory is limited to O(50) beyond the tree and recursion?",
+      "a": "You cannot store per-node answers during one pass, but you can still answer everything in O(50·n) time with O(h) extra space: the per-value stacks themselves only hold the current path (≤ h entries across all 50 stacks), so the algorithm above already achieves this if you drop the adjacency list in favor of a parent array plus child iteration by edge index."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getCoprimes(vector<int>& nums, vector<vector<int>>& edges) {\n        int n = nums.size();\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        auto gcd = [](int a, int b) {\n            while (b) { int t = a % b; a = b; b = t; }\n            return a;\n        };\n        bool cop[51][51];\n        for (int a = 1; a <= 50; a++)\n            for (int b = 1; b <= 50; b++)\n                cop[a][b] = (gcd(a, b) == 1);\n\n        vector<int> ans(n, -1);\n        // stacks[v] holds (depth, node) for ancestors with value v on current path\n        vector<vector<pair<int,int>>> stacks(51);\n        // explicit DFS: {node, parent, depth, exitFlag}\n        vector<array<int,4>> stk;\n        stk.push_back({0, -1, 0, 0});\n        while (!stk.empty()) {\n            auto fr = stk.back(); stk.pop_back();\n            int u = fr[0], p = fr[1], d = fr[2], exitFlag = fr[3];\n            if (exitFlag) {\n                stacks[nums[u]].pop_back();\n                continue;\n            }\n            int best = -1, bestDepth = -1;\n            for (int v = 1; v <= 50; v++) {\n                if (!cop[nums[u]][v] || stacks[v].empty()) continue;\n                auto& top = stacks[v].back();\n                if (top.first > bestDepth) {\n                    bestDepth = top.first;\n                    best = top.second;\n                }\n            }\n            ans[u] = best;\n            stacks[nums[u]].push_back({d, u});\n            stk.push_back({u, p, d, 1});\n            for (int w : adj[u])\n                if (w != p)\n                    stk.push_back({w, u, d + 1, 0});\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-distinct-averages",
+  "title": "Number of Distinct Averages",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort + Two Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- freq[101] int array: fixed size → O(1)\n- seen[201] boolean array: fixed size → O(1)\n- not counted: input vector",
+  "approach": "Values are bounded to [0,100], so use counting sort: a frequency array of size 101 lets us walk min from 0 upward and max from 100 downward, pairing one min occurrence with one max occurrence each step. Each pair's sum (a+b) uniquely determines the average, so count distinct sums in a boolean array of size 201. This runs in O(n + 101) time with O(1) auxiliary space.",
+  "hints": [
+    "The values in the array are limited to a small range - how could you find the smallest and largest remaining values repeatedly without ever re-scanning or re-ordering the whole array?\nConstraints: the array has even length and every value is between 0 and 100.",
+    "Use a counting sort: a frequency array of size 101. For nums = [4,1,4,0,3,5], the frequency array lets you pull 0 and 5 first (sum 5), then 1 and 4 (sum 5), then 3 and 4 (sum 7) - count distinct sums.",
+    "```\nbuild freq array of size 101 from nums\nlo = 0, hi = 100\nwhile pairs remain:\n    advance lo until freq[lo] > 0\n    advance hi until freq[hi] > 0\n    mark seen[lo + hi] as true\n    freq[lo]--, freq[hi]--\nreturn count of true entries in seen\n```",
+    "**Smallest input** - exactly two elements, one pair only.\n`Input: nums = [1,100]` → `Expected: 1`\n⚠️ Bug: dividing (1+100)/2 with integer division and comparing floats/ints inconsistently → returns 0 instead of 1.\n\n**All elements equal** - every pair has the same sum.\n`Input: nums = [7,7,7,7]` → `Expected: 1`\n⚠️ Bug: counting each pair as a new average instead of deduplicating → returns 2.\n\n**Duplicates with different pairings** - repeated values still pair min-with-max.\n`Input: nums = [4,1,4,0,3,5]` → `Expected: 2`\n⚠️ Bug: pairing elements by index order (0&1, 2&3, 4&5) instead of min-with-max → sums 5, 5, 8 → returns 3.\n\n**Zero values** - minimum can be 0, sums start at 0.\n`Input: nums = [0,0]` → `Expected: 1`\n⚠️ Bug: initializing the distinct-sum marker array assuming sums start at 1 and skipping sum 0 → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if values could be up to 10^9 instead of 100?",
+      "a": "Counting sort no longer fits in O(1) space, so sort the array normally (O(n log n)) and use two pointers from both ends, storing sums in a hash set. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if the array is streamed and you must process each removal online?",
+      "a": "Maintain two heaps (min-heap and max-heap) with lazy deletion or balanced counts, popping one from each per round and inserting each sum into a hash set. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if you must return the distinct averages themselves, not just the count?",
+      "a": "Collect the distinct sums into a vector instead of a boolean array, then divide each by 2 when returning. Time stays O(n) with counting sort, space becomes O(number of distinct sums) ≤ O(101)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int distinctAverages(vector<int>& nums) {\n        int freq[101] = {0};\n        for (int x : nums) freq[x]++;\n        bool seen[201] = {false};\n        int lo = 0, hi = 100, count = 0;\n        int pairs = (int)nums.size() / 2;\n        while (pairs--) {\n            while (freq[lo] == 0) lo++;\n            while (freq[hi] == 0) hi--;\n            int s = lo + hi;\n            if (!seen[s]) { seen[s] = true; count++; }\n            freq[lo]--; freq[hi]--;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

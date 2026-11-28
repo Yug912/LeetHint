@@ -1,0 +1,40 @@
+{
+  "slug": "count-submatrices-with-equal-frequency-of-x-and-y",
+  "title": "Count Submatrices With Equal Frequency of X and Y",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "2D Prefix Sum",
+  "tc": "O(m * n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> sum: n entries → O(n)\n- vector<int> xCount: n entries → O(n)\n- not counted: input grid, returned int",
+  "approach": "Since every valid submatrix must contain grid[0][0], each candidate is uniquely defined by its bottom-right corner (r, c). Replace 'X' with 1, 'Y' with -1, and '.' with 0. A submatrix from (0,0) to (r,c) has equal X and Y counts exactly when its 2D prefix sum is 0. Track X count separately with another prefix sum to enforce the \"at least one X\" constraint. Process row by row, maintaining O(n) space by keeping only the previous row's prefix sums.",
+  "hints": [
+    "Every valid submatrix must contain grid[0][0]. Given that constraint, what shape do all candidate submatrices share, and what uniquely identifies each one?",
+    "Use a 2D prefix sum where 'X'=1, 'Y'=-1, '.'=0. For grid = [[\"X\",\"Y\",\".\"],[\"Y\",\".\",\".\"]], the prefix sum at (0,1) is 1+(-1)=0 with one X, so it counts.",
+    "```\nfor each row i:\n    rowPrefix = 0, rowXPrefix = 0\n    for each col j:\n        rowPrefix += value(grid[i][j])\n        rowXPrefix += (grid[i][j] == 'X')\n        curSum = prevSum[j] + rowPrefix\n        curX = prevX[j] + rowXPrefix\n        if curSum == 0 and curX >= 1:\n            result++\n        prevSum[j] = curSum\n        prevX[j] = curX\n```",
+    "**All dots** - sum is 0 at every cell but no X exists.\n`Input: [[\".\",\".\"],[\".\",\".\"]]` → `Expected: 0`\n⚠️ Bug: checking only `curSum == 0` without requiring `curX >= 1` → returns 4\n\n**X and Y in single row** - smallest valid submatrix with equal counts.\n`Input: [[\"X\",\"Y\"]]` → `Expected: 1`\n⚠️ Bug: using `xCount[j]` instead of `xCount[j] + rowXPrefix` for curX → returns 0\n\n**All X except one Y** - sum never reaches 0.\n`Input: [[\"X\",\"X\"],[\"X\",\"Y\"]]` → `Expected: 0`\n⚠️ Bug: using `sum[j] + val` instead of `sum[j] + rowPrefix` for curSum → returns 1\n\n**X, Y, X in single row** - sum is positive, zero, then positive again.\n`Input: [[\"X\",\"Y\",\"X\"]]` → `Expected: 1`\n⚠️ Bug: checking `curSum >= 0` instead of `curSum == 0` → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Count all submatrices with equal X and Y frequency and at least one X, not just those containing grid[0][0].",
+      "a": "Fix top and bottom rows, compute column-wise prefix sums between them, then for each column range use a hash map to count subarrays with sum 0. Track X presence with a separate prefix. Time O(m²·n), space O(n)."
+    },
+    {
+      "q": "The grid arrives as a stream of rows, one at a time, and you must output the running count after each row.",
+      "a": "Our solution already processes row by row with O(n) auxiliary space. After processing each row, output the accumulated result. Time O(m·n) total, space O(n)."
+    },
+    {
+      "q": "Find the area of the largest valid submatrix containing grid[0][0].",
+      "a": "Iterate over all (r,c) as before. Track the maximum (r+1)·(c+1) among cells where the prefix sum is 0 and xCount ≥ 1. Time O(m·n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfSubmatrices(vector<vector<char>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        \n        vector<int> sum(n, 0);\n        vector<int> xCount(n, 0);\n        \n        int result = 0;\n        \n        for (int i = 0; i < m; i++) {\n            int rowPrefix = 0;\n            int rowXPrefix = 0;\n            for (int j = 0; j < n; j++) {\n                int val = (grid[i][j] == 'X') ? 1 : (grid[i][j] == 'Y') ? -1 : 0;\n                int xVal = (grid[i][j] == 'X') ? 1 : 0;\n                \n                rowPrefix += val;\n                rowXPrefix += xVal;\n                \n                int curSum = sum[j] + rowPrefix;\n                int curX = xCount[j] + rowXPrefix;\n                \n                if (curSum == 0 && curX >= 1) {\n                    result++;\n                }\n                \n                sum[j] = curSum;\n                xCount[j] = curX;\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

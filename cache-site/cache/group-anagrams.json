@@ -1,0 +1,52 @@
+{
+  "slug": "group-anagrams",
+  "title": "Group Anagrams",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Hash Map with Count Key",
+  "tc": "O(n * k)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<string, vector<string>> groups: up to n entries, each key is 26 bytes (O(1)); string data moved to output (not counted) → O(n)\n- string key: 26 bytes, reused per iteration → O(1)\n- not counted: input vector<string>& strs, returned vector<vector<string>>",
+  "approach": "Two strings are anagrams if and only if they contain the same characters in the same quantities. Since the alphabet is limited to 26 lowercase letters, we represent this multiset as a 26-byte string where each byte is the count of the corresponding letter. We use this signature as the key in a hash map, appending each string to its matching group. Each string is processed in O(k) time to compute its key, giving O(n*k) total time with O(1)-size keys and at most n map entries.",
+  "hints": [
+    "What property, other than the exact order of characters, is shared by every pair of anagram strings? Each string uses only the 26 lowercase English letters.",
+    "Use an unordered_map keyed by a 26-byte character-count signature. For \"eat\", the key encodes a=1, e=1, t=1 (all others zero); \"tea\" and \"ate\" produce the same key, so they land in the same group.",
+    "```\nfor each string s in strs:\n    key = array of 26 zeros\n    for each char c in s:\n        key[c - 'a'] += 1\n    append s to map[key]\nreturn all values of map as list of lists\n```",
+    "**Empty string** - a zero-length string is valid input\n`Input: [\"\"]` → `Expected: [[\"\"]]`\n⚠️ Bug: skipping strings with length 0 → returns `[]`\n\n**Single string** - minimum input size n=1\n`Input: [\"a\"]` → `Expected: [[\"a\"]]`\n⚠️ Bug: only returning groups with 2+ members → returns `[]`\n\n**All identical strings** - duplicates must be preserved\n`Input: [\"abc\",\"abc\",\"abc\"]` → `Expected: [[\"abc\",\"abc\",\"abc\"]]`\n⚠️ Bug: inserting into a set before grouping → returns `[[\"abc\"]]`\n\n**Same character sum, different letters** - sum-based keys collide\n`Input: [\"abc\",\"aad\"]` → `Expected: [[\"abc\"],[\"aad\"]]`\n⚠️ Bug: using sum of ASCII values as key (97+98+99 = 97+97+100 = 294) → returns `[[\"abc\",\"aad\"]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if strings can contain any Unicode characters instead of just lowercase English letters?",
+      "a": "The 26-element count array no longer works since the alphabet is unbounded. Fall back to sorting each string as the key, changing the time complexity to O(n * k log k) and the key size to O(k)."
+    },
+    {
+      "q": "What if the input is a stream too large to fit in memory?",
+      "a": "Process strings in fixed-size batches, persisting each batch's groups to disk keyed by their count signature. Merge groups with matching signatures across batches in a second pass. Time stays O(n * k) but memory drops to O(B) where B is the batch size."
+    },
+    {
+      "q": "What if you must return groups sorted by size (largest first), breaking ties by the lexicographically smallest string in each group?",
+      "a": "After collecting all groups, sort the result vector with a custom comparator: primary key is group size descending, secondary key is the minimum string in the group ascending. This adds O(n log n) to the time complexity."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<string>> groupAnagrams(vector<string>& strs) {\n        unordered_map<string, vector<string>> groups;\n        for (const string& s : strs) {\n            string key(26, 0);\n            for (char c : s) {\n                key[c - 'a']++;\n            }\n            groups[key].push_back(s);\n        }\n        vector<vector<string>> result;\n        result.reserve(groups.size());\n        for (auto& [key, group] : groups) {\n            result.push_back(move(group));\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": true,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 1,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

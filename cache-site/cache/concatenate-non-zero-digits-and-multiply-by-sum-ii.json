@@ -1,0 +1,40 @@
+{
+  "slug": "concatenate-non-zero-digits-and-multiply-by-sum-ii",
+  "title": "Concatenate Non-Zero Digits and Multiply by Sum II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Decomposition",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vectors cnt, digSum, P, pw: each n+1 long longs → O(n)\n- recursion depth: none\n- not counted: input s, queries, returned vector",
+  "approach": "Precompute for each prefix index: count of nonzero digits, their digit sum, the concatenated value P mod 1e9+7, and pow10 = 10^count mod 1e9+7. For a query [l,r], the compressed number x = P[r+1] − P[l]·10^k where k is the number of nonzero digits in the range (mod arithmetic), and sum = digitSum[r+1] − digitSum[l]. Answer is x·sum mod 1e9+7, or 0 if k = 0. Each query is O(1), total O(n + q).",
+  "hints": [
+    "The substring can hold up to 10^5 digits, so the concatenated number is astronomically large - yet the answer only needs it modulo 10^9+7. What if you could describe the concatenation of any range using only values attached to prefixes of s?",
+    "Build prefix arrays: P[i] = concatenation of nonzero digits in s[0..i-1] (mod M), pw[i] = 10^(count of nonzero so far) mod M. For s = \"10203004\", P after index 6 is 1234 with pw = 10^4; query [0,7] reads x = 1234 directly.",
+    "precompute for i in 0..n:\n    cnt[i], sum[i], P[i], pw[i]  (P = P*10+d if digit nonzero, pw = pw*10)\nfor each query [l, r]:\n    k = cnt[r+1] - cnt[l]\n    if k == 0: answer 0\n    x = (P[r+1] - P[l] * pw[k]) mod M\n    answer = x * (sum[r+1] - sum[l]) mod M",
+    "**All zeros in range** - a query over only '0' digits has no nonzero digits at all.\n`Input: s = \"1000\", queries = [[1,1]]` → `Expected: [0]`\n⚠️ Bug: computing x = P[r+1] − P[l]·pw[k] without the k = 0 check → returns 0·0 = 0 here by luck, but on s = \"10\", query [1,1] gives x = 1−1·1 = 0 then 0·1 = 0 - fine, but skipping the check with pw[0] misuse returns garbage like (P diff)·sum ≠ 0.\n\n**Overflow in x·sum** - x < 10^9+7 and sum ≤ 9·10^5, product ≈ 9·10^14 exceeds 2^31−1.\n`Input: s = \"9876543210\", queries = [[0,9]]` → `Expected: [444444137]`\n⚠️ Bug: multiplying as int (x·45 = 44444444445 > 2^31−1) → returns 444444137 only if long long used; with int it wraps to a wrong value.\n\n**Negative modular value** - P[l]·pw[k] can exceed P[r+1] before the mod subtraction.\n`Input: s = \"10203004\", queries = [[4,6]]` → `Expected: [9]`\n⚠️ Bug: computing (P[r+1] − P[l]·pw[k]) % M without adding M after a negative intermediate → returns a negative number like −6 instead of 9.\n\n**Single nonzero digit at range start** - the first digit of the substring is nonzero, so P[l] must be subtracted correctly.\n`Input: s = \"300\", queries = [[0,0]]` → `Expected: [9]`\n⚠️ Bug: forgetting to multiply P[l] by pw[k] (using x = P[r+1] − P[l]) → returns 3·3 = 9 here coincidentally, but on s = \"123\", query [1,2] gives x = 23−1 = 22 instead of 23 → wrong answer 110 instead of 115."
+  ],
+  "followUps": [
+    {
+      "q": "What if answers must be returned exactly, without modulo?",
+      "a": "The concatenated number can have up to 10^5 digits, so use big integers; building each answer costs O(range length), giving O(n·q) worst case, or O(n + q·k) with the prefix structure kept for digit sums."
+    },
+    {
+      "q": "What if queries arrive online (streaming) with s also updatable (single digit changes)?",
+      "a": "Replace prefix arrays with a segment tree storing (count, P, pw) per node, merging as (P1·pw2 + P2, cnt1+cnt2); each update and query is O(log n) time and space stays O(n)."
+    },
+    {
+      "q": "What if instead of concatenation you needed the sum of x over all q queries without modulo overflow in intermediate big-int form?",
+      "a": "Keep the same O(1)-per-query modular decomposition but accumulate the total as a running modular sum, still O(n + q) time and O(n) space - no big integers needed since modular addition is closed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> sumAndMultiply(string s, vector<vector<int>>& queries) {\n        const long long MOD = 1000000007LL;\n        int n = s.size();\n        vector<long long> cnt(n + 1, 0), digSum(n + 1, 0), P(n + 1, 0), pw(n + 1, 1);\n        for (int i = 0; i < n; i++) {\n            cnt[i + 1] = cnt[i];\n            digSum[i + 1] = digSum[i];\n            P[i + 1] = P[i];\n            pw[i + 1] = pw[i];\n            int d = s[i] - '0';\n            if (d != 0) {\n                cnt[i + 1]++;\n                digSum[i + 1] += d;\n                P[i + 1] = (P[i] * 10 + d) % MOD;\n                pw[i + 1] = (pw[i] * 10) % MOD;\n            }\n        }\n        vector<int> ans;\n        ans.reserve(queries.size());\n        for (auto& q : queries) {\n            int l = q[0], r = q[1];\n            long long k = cnt[r + 1] - cnt[l];\n            if (k == 0) { ans.push_back(0); continue; }\n            long long x = (P[r + 1] - P[l] * pw[k] % MOD + MOD) % MOD;\n            long long sum = digSum[r + 1] - digSum[l];\n            ans.push_back((int)(x * sum % MOD));\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

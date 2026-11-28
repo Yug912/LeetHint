@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-the-number-of-target-nodes-after-connecting-trees-i",
+  "title": "Maximize the Number of Target Nodes After Connecting Trees I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "BFS on Trees",
+  "tc": "O(n² + m²)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<vector<int>> adj1: 2(n−1) entries → O(n)\n- vector<vector<int>> adj2: 2(m−1) entries → O(m)\n- vector<int> cnt1: n entries → O(n)\n- vector<int> cnt2: m entries → O(m)\n- vector<int> dist + queue<int> q inside countWithin: at most max(n,m) entries, reused per BFS call → O(max(n,m))\n- recursion depth: none (BFS is iterative)\n- not counted: input edges1/edges2, returned vector<int> answer",
+  "approach": "For each node i in tree 1, the nodes it can target split into two independent groups: nodes in tree 1 within distance k (fixed, independent of the connection) and nodes in tree 2 within distance k−1 of the chosen connection point v (since one edge is spent crossing to tree 2). The best v in tree 2 is the same for all queries, so we precompute the maximum count over all v in tree 2 at distance k−1, then add it to each tree-1 node's count. We use BFS from every node in both trees.",
+  "hints": [
+    "For a node i in tree 1, the nodes it can target split into two groups: those in tree 1 and those in tree 2. Which group's size is fixed regardless of the connection point, and which depends on it?",
+    "Use BFS from each node. For tree 1, count nodes within distance k; for tree 2, count nodes within distance k−1 and take the maximum. Example: in tree 2 of Example 1 with k=2, BFS from node 0 finds 4 nodes within distance 1 (nodes 0,1,2,3).",
+    "```\nfor each node u in tree1:\n    cnt1[u] = BFS_count(tree1, u, k)\nfor each node v in tree2:\n    cnt2[v] = BFS_count(tree2, v, k-1)\nbest2 = max(cnt2)\nfor each node u in tree1:\n    answer[u] = cnt1[u] + best2\n```",
+    "**k = 0** - crossing to tree 2 costs 1 edge, leaving no budget\n`Input: edges1 = [[0,1]], edges2 = [[0,1]], k = 0` → `Expected: [1, 1]`\n⚠️ Bug: using k instead of k-1 for tree 2 → returns [2, 2]\n\n**Minimum trees** - both trees have exactly 2 nodes, k = 1\n`Input: edges1 = [[0,1]], edges2 = [[0,1]], k = 1` → `Expected: [3, 3]`\n⚠️ Bug: returning 0 for tree 2 when k-1 = 0 → returns [2, 2]\n\n**Star tree** - center node has many neighbors at distance 1\n`Input: edges1 = [[0,1],[0,2],[0,3],[0,4]], edges2 = [[0,1],[1,2],[2,3]], k = 1` → `Expected: [6, 3, 3, 3, 3]`\n⚠️ Bug: not counting the starting node itself in BFS → returns [5, 2, 2, 2, 2]\n\n**k equals diameter** - farthest node is exactly at distance k\n`Input: edges1 = [[0,1],[1,2],[2,3]], edges2 = [[0,1]], k = 3` → `Expected: [6, 6, 6, 6]`\n⚠️ Bug: using `dist >= maxDist` to skip counting instead of `dist > maxDist` → returns [5, 6, 6, 5]"
+  ],
+  "followUps": [
+    {
+      "q": "What if n and m are up to 10^5 instead of 1000?",
+      "a": "BFS from every node is O(n^2), too slow. Use centroid decomposition to count nodes within distance k for all nodes in O(n log n), then apply the same tree-1 plus best-tree-2 logic. TC: O((n + m) log(n + m)), SC: O(n + m)."
+    },
+    {
+      "q": "What if edges have positive integer weights and k is a total weight budget?",
+      "a": "Replace BFS with Dijkstra's algorithm from each node, pruning when accumulated weight exceeds k. The structure is identical: count tree-1 nodes within weight k, find the best tree-2 node within weight k−1. TC: O(n² log n + m² log m)."
+    },
+    {
+      "q": "What if you must answer each query online with only O(n) extra memory?",
+      "a": "Precompute only the best tree-2 value in O(m²) time and O(m) space. For each query, run BFS from node i in tree 1 on the fly in O(n) time and space, then add the precomputed best tree-2 value. TC: O(m² + q·n) time, O(n + m) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maxTargetNodes(vector<vector<int>>& edges1, vector<vector<int>>& edges2, int k) {\n        int n = edges1.size() + 1;\n        int m = edges2.size() + 1;\n        \n        vector<vector<int>> adj1(n), adj2(m);\n        for (auto& e : edges1) {\n            adj1[e[0]].push_back(e[1]);\n            adj1[e[1]].push_back(e[0]);\n        }\n        for (auto& e : edges2) {\n            adj2[e[0]].push_back(e[1]);\n            adj2[e[1]].push_back(e[0]);\n        }\n        \n        auto countWithin = [&](vector<vector<int>>& adj, int nodes, int maxDist) -> vector<int> {\n            vector<int> result(nodes, 0);\n            if (maxDist < 0) return result;\n            for (int start = 0; start < nodes; start++) {\n                vector<int> dist(nodes, -1);\n                queue<int> q;\n                q.push(start);\n                dist[start] = 0;\n                int cnt = 0;\n                while (!q.empty()) {\n                    int u = q.front(); q.pop();\n                    if (dist[u] > maxDist) continue;\n                    cnt++;\n                    for (int v : adj[u]) {\n                        if (dist[v] == -1) {\n                            dist[v] = dist[u] + 1;\n                            q.push(v);\n                        }\n                    }\n                }\n                result[start] = cnt;\n            }\n            return result;\n        };\n        \n        vector<int> cnt1 = countWithin(adj1, n, k);\n        \n        int max2 = 0;\n        if (k >= 1) {\n            vector<int> cnt2 = countWithin(adj2, m, k - 1);\n            for (int x : cnt2) max2 = max(max2, x);\n        }\n        \n        vector<int> answer(n);\n        for (int i = 0; i < n; i++) {\n            answer[i] = cnt1[i] + max2;\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-array-length-after-pair-removals",
+  "title": "Minimum Array Length After Pair Removals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting / Frequency Argument",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- run-length scan over sorted nums: no extra container, only scalars → O(1)\n- recursion depth: none\n- not counted: input array",
+  "approach": "Each operation removes one element from the \"small\" half and one from the \"large\" half; the best strategy pairs the smallest k values with the largest k values, which works iff no value's frequency exceeds half the array. If the maximum frequency is f, at most n−f elements can be paired away, leaving max(n mod 2, 2f − n). Since the array is sorted, f is found by a single run-length scan.",
+  "hints": [
+    "If one value appears many times, those copies can never pair with each other - how does the single most frequent value bound how many pairs you can remove? (n ≤ 10^5, so a linear pass is fine.)",
+    "Counting: one pass over the sorted array tracking the longest run of equal values. For [2,3,4,4,4] the longest run is 3, and the leftover count formula gives 2·3 − 5 = 1.",
+    "scan sorted nums, track maxFreq = longest run of equal values\nleft = max(n mod 2, 2 * maxFreq - n)\nreturn left",
+    "**Single element** - no operation is possible.\n`Input: nums = [7]` → `Expected: 1`\n⚠️ Bug: returning 2·maxFreq − n without the parity term → returns −1.\n\n**All equal** - nothing can pair.\n`Input: nums = [1000000000,1000000000]` → `Expected: 2`\n⚠️ Bug: pairing equal values (using ≤ instead of <) → returns 0.\n\n**Even split, all distinct** - everything pairs away.\n`Input: nums = [1,2,3,4]` → `Expected: 0`\n⚠️ Bug: initializing the leftover as maxFreq instead of the formula → returns 1.\n\n**Odd length, dominant value** - one copy of the majority value must remain.\n`Input: nums = [2,3,4,4,4]` → `Expected: 1`\n⚠️ Bug: computing leftover as n − 2·(n − maxFreq) with int truncation issues or forgetting max with parity → returns 0 or wrong sign.\n\n**No overflow risk** - values up to 10^9 but only compared, and 2·maxFreq ≤ 2·10^5 fits in int.\n`Input: nums = [1,1,1,2]` → `Expected: 2`\n⚠️ Bug: none needed; a long long is unnecessary here since 2·maxFreq ≤ 2·10^5."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array were NOT sorted?",
+      "a": "Sorting first costs O(n log n), then the same run-length scan applies; or use a hash map to count frequencies in O(n) time and O(n) space, and the answer formula is unchanged."
+    },
+    {
+      "q": "What if you must return the actual maximum number of operations instead of the leftover length?",
+      "a": "It is floor((n − leftover) / 2) = min(n/2, n − maxFreq) operations, computed in the same O(n) pass with O(1) space."
+    },
+    {
+      "q": "What if the array arrives as a stream and n can be huge (memory limit)?",
+      "a": "Since only the maximum run length and total count matter, keep two counters (current run, max run) - O(1) memory, O(n) time, but this only works while the stream is sorted; for unsorted streams you need O(distinct values) space with a hash map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minLengthAfterRemovals(vector<int>& nums) {\n        int n = nums.size();\n        int maxFreq = 1, cur = 1;\n        for (int i = 1; i < n; ++i) {\n            if (nums[i] == nums[i - 1]) {\n                ++cur;\n                if (cur > maxFreq) maxFreq = cur;\n            } else {\n                cur = 1;\n            }\n        }\n        return max(n % 2, 2 * maxFreq - n);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

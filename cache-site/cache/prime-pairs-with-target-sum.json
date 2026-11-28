@@ -1,0 +1,40 @@
+{
+  "slug": "prime-pairs-with-target-sum",
+  "title": "Prime Pairs With Target Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sieve + Enumeration",
+  "tc": "O(n log log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> isPrime: n+1 entries → O(n)\n- vector<vector<int>> result: not counted (returned output)\n- recursion depth: none",
+  "approach": "Use the Sieve of Eratosthenes to precompute all primes up to n in O(n log log n) time. Then iterate x from 2 to n/2, checking in O(1) whether both x and n−x are prime using the sieve. Since y = n − x is fully determined by x, every valid pair is found exactly once, and iterating x in increasing order naturally produces the sorted output.",
+  "hints": [
+    "Since y = n − x is determined once you pick x, you only need to verify one property for each candidate x in [2, n/2]. With n up to 10^6, how could you determine that property for all candidates without checking each one independently?",
+    "Use a Sieve of Eratosthenes to mark all primes up to n in a boolean array, giving O(1) primality checks. For n = 10: sieve marks 2, 3, 5, 7 as prime; then x = 3 gives y = 7 (both prime → [3, 7]) and x = 5 gives y = 5 (both prime → [5, 5]).",
+    "```\nsieve = [true] * (n + 1)\nsieve[0] = sieve[1] = false\nfor i = 2 to sqrt(n):\n    if sieve[i]:\n        for j = i*i to n step i:\n            sieve[j] = false\nfor x = 2 to n/2:\n    y = n - x\n    if sieve[x] and sieve[y]:\n        append [x, y] to result\nreturn result\n```",
+    "**Smallest valid pair** - n=4, the only pair where x equals y\n`Input: n=4` → `Expected: [[2,2]]`\n⚠️ Bug: sieve inner loop starting at `j = i` instead of `j = i * i` → marks 2 as composite → returns `[]`\n\n**Odd n needs even prime** - n=9, requires x=2 (the only even prime)\n`Input: n=9` → `Expected: [[2,7]]`\n⚠️ Bug: skipping even x values → x=2 skipped → returns `[]`\n\n**Self-pair excluded** - n=10, pair [5,5] where x==y\n`Input: n=10` → `Expected: [[3,7],[5,5]]`\n⚠️ Bug: using `x < n/2` instead of `x <= n/2` → x=5 excluded → returns `[[3,7]]`\n\n**Below minimum prime** - n=1, no primes exist below 2\n`Input: n=1` → `Expected: []`\n⚠️ Bug: allocating `isPrime` of size `n` instead of `n+1` → isPrime[1] out of bounds → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of returning all pairs, count how many prime pairs sum to n. What changes?",
+      "a": "Same sieve precomputation. Replace the result vector with a counter, incrementing whenever both x and n−x are prime. TC remains O(n log log n); SC drops to O(n) for the sieve only, with no result storage."
+    },
+    {
+      "q": "If n can be up to 10^9, the full sieve won't fit in memory. How do you adapt?",
+      "a": "Use a segmented sieve over [2, n/2] to find primes in that range, then for each prime x check if n−x is prime using the Miller-Rabin probabilistic test. TC: O(n/2 · log³ n) for the primality checks; SC: O(√n) for the segmented sieve base primes."
+    },
+    {
+      "q": "If you must use O(1) extra space (no sieve array), what is the trade-off?",
+      "a": "For each x in [2, n/2], check primality of x and n−x by trial division up to √value. TC: O(n · √n), SC: O(1). For n = 10^6 this is roughly 10^9 operations, which risks TLE."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> findPrimePairs(int n) {\n        vector<vector<int>> result;\n        if (n < 4) return result;\n        \n        vector<bool> isPrime(n + 1, true);\n        isPrime[0] = isPrime[1] = false;\n        for (int i = 2; (long long)i * i <= n; i++) {\n            if (isPrime[i]) {\n                for (int j = i * i; j <= n; j += i) {\n                    isPrime[j] = false;\n                }\n            }\n        }\n        \n        for (int x = 2; x <= n / 2; x++) {\n            int y = n - x;\n            if (isPrime[x] && isPrime[y]) {\n                result.push_back({x, y});\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

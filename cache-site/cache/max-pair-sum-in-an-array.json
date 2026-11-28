@@ -1,0 +1,40 @@
+{
+  "slug": "max-pair-sum-in-an-array",
+  "title": "Max Pair Sum in an Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bucket by Key",
+  "tc": "O(n log V)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int top1[10]: fixed 10 ints → O(1)\n- int top2[10]: fixed 10 ints → O(1)\n- not counted: input vector, returned int",
+  "approach": "For each number, compute its largest digit (1-9). Group numbers by this digit and track only the two largest values per group. For any group with at least two members, the best pair sum is the sum of its top two. Return the maximum such sum across all groups, or -1 if no group has two members. Since the largest digit ranges over just 9 values, a fixed-size array of 10 slots suffices.",
+  "hints": [
+    "What single property of a number determines every valid pairing partner for it? The largest digit of any number in the array is between 1 and 9.",
+    "Use a fixed array of 10 buckets indexed by largest digit (1-9), each tracking the two largest values seen. For 2536, the largest digit is 6, so it updates bucket 6.",
+    "```\nfor each x in nums:\n    d = largest digit of x\n    if x > top1[d]:\n        top2[d] = top1[d]\n        top1[d] = x\n    else if x > top2[d]:\n        top2[d] = x\nans = -1\nfor d in 1..9:\n    if top2[d] > 0:\n        ans = max(ans, top1[d] + top2[d])\nreturn ans\n```",
+    "**No valid pair** - every number has a different largest digit\n`Input: [112,131,411]` → `Expected: -1`\n⚠️ Bug: initializing ans to 0 instead of -1 → returns 0\n\n**Single-digit numbers** - numbers with only one digit\n`Input: [5,5]` → `Expected: 10`\n⚠️ Bug: extracting digits with `while (t >= 10)` instead of `while (t > 0)` → largest digit computed as 0, final loop over d=1..9 finds no pair, returns -1\n\n**Larger number appears first** - top2 must update even when x < top1\n`Input: [3366,2536]` → `Expected: 5902`\n⚠️ Bug: only updating top2 inside the `if (x > top1[d])` branch without an `else if (x > top2[d])` → top2[6] stays 0, returns -1\n\n**Multiple valid pairs** - several buckets each have two members\n`Input: [51,71,17,24,42]` → `Expected: 88`\n⚠️ Bug: returning the first valid pair's sum instead of tracking the maximum across all buckets → returns 66 (from bucket 4) instead of 88 (from bucket 7)"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^18?",
+      "a": "The digit-extraction loop runs at most 19 iterations per number instead of 5. The bucket structure stays the same. TC remains O(n), SC stays O(1)."
+    },
+    {
+      "q": "What if you must find the maximum sum of exactly k numbers sharing the same largest digit?",
+      "a": "Track the top k values per bucket instead of top 2. For each bucket with at least k values, sum the top k. TC: O(n·k) for maintaining each bucket's top-k, SC: O(9·k) = O(k)."
+    },
+    {
+      "q": "What if nums arrives as an unbounded stream and you must answer queries at any time?",
+      "a": "Maintain the top-2 structure per bucket incrementally as each number arrives - each insertion is O(1). A query scans the 9 buckets in O(1). TC: O(1) per element and O(1) per query, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSum(vector<int>& nums) {\n        int top1[10] = {0}, top2[10] = {0};\n        for (int x : nums) {\n            int d = 0, t = x;\n            while (t > 0) {\n                d = max(d, t % 10);\n                t /= 10;\n            }\n            if (x > top1[d]) {\n                top2[d] = top1[d];\n                top1[d] = x;\n            } else if (x > top2[d]) {\n                top2[d] = x;\n            }\n        }\n        int ans = -1;\n        for (int d = 1; d <= 9; d++) {\n            if (top2[d] > 0) {\n                ans = max(ans, top1[d] + top2[d]);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

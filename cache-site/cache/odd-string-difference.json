@@ -1,0 +1,40 @@
+{
+  "slug": "odd-string-difference",
+  "title": "Odd String Difference",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Majority Reference Scan",
+  "tc": "O(m·n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- lambdas `diff` and `same`: capture by reference, no heap allocation → O(1)\n- scalar locals m, n, i, j: O(1)\n- recursion: none\n- not counted: input `words`, returned string",
+  "approach": "Since exactly one word has a different difference array, among the first three words at least two share the same difference array - that shared array is the majority. Compare diff(words[0]) with diff(words[1]): if they match, the majority is established and we scan the rest for the mismatch; if they differ, one of them is the odd one, and comparing diff(words[0]) with diff(words[2]) tells us which. Each comparison is O(n), done at most O(m) times.",
+  "hints": [
+    "Since exactly one word differs from all the others, what must be true about the difference arrays of any three words you pick from the list?",
+    "Compare the difference arrays of the first three words pairwise - at least two match, giving the majority pattern. Example: \"adc\" and \"wzy\" both yield [3, -1], so [3, -1] is the majority; \"abc\" with [1, 1] is the odd one.",
+    "```\nif diff(words[0]) != diff(words[1]):\n    if diff(words[0]) == diff(words[2]):\n        return words[1]\n    else:\n        return words[0]\nfor i from 2 to m-1:\n    if diff(words[i]) != diff(words[0]):\n        return words[i]\n```",
+    "**Odd word is first** - the differing word sits at index 0.\n`Input: [\"abc\",\"adc\",\"wzy\"]` → `Expected: \"abc\"`\n⚠️ Bug: using words[0] as the majority reference and returning the first word that differs from it → returns \"adc\"\n\n**Odd word is second** - the differing word sits at index 1, so the first two differ.\n`Input: [\"adc\",\"abc\",\"wzy\"]` → `Expected: \"abc\"`\n⚠️ Bug: when diff(words[0]) ≠ diff(words[1]), always return words[0] → returns \"adc\"\n\n**Minimum string length n=2** - each difference array has length 1.\n`Input: [\"ab\",\"cd\",\"aa\"]` → `Expected: \"aa\"`\n⚠️ Bug: comparing characters of the words directly instead of their difference arrays → returns \"ab\"\n\n**Odd word is last** - the odd word appears at the final index.\n`Input: [\"adc\",\"wzy\",\"bed\",\"cfe\",\"abc\"]` → `Expected: \"abc\"`\n⚠️ Bug: loop bound `i < m-1` instead of `i < m` → returns \"\""
+  ],
+  "followUps": [
+    {
+      "q": "What if more than one string could have a different difference array (k odd strings, k ≥ 1)?",
+      "a": "Group words by their difference array using a hash map from a diff-array signature to a list of indices. Return all strings whose group has size 1. Time O(m·n), space O(m·n) for the map."
+    },
+    {
+      "q": "What if n can be up to 10^5, making each full difference comparison expensive?",
+      "a": "Compute a rolling hash of each difference array in O(n), then compare hashes in O(1). Total time stays O(m·n) but each later comparison is O(1). Space O(n) for the majority diff array and its hash."
+    },
+    {
+      "q": "What if words arrive as a stream and you cannot store them all?",
+      "a": "Buffer the first three words to identify the majority difference array (O(n) space), then for each subsequent word compare its diff against the majority and emit it if different. If the odd word is among the first three, it is identified once the majority is confirmed. Time O(m·n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string oddString(vector<string>& words) {\n        int m = (int)words.size();\n        int n = (int)words[0].size();\n        auto diff = [&](int i, int j) -> int {\n            return words[i][j + 1] - words[i][j];\n        };\n        auto same = [&](int a, int b) -> bool {\n            for (int j = 0; j < n - 1; j++) {\n                if (diff(a, j) != diff(b, j)) return false;\n            }\n            return true;\n        };\n        if (!same(0, 1)) {\n            if (same(0, 2)) return words[1];\n            return words[0];\n        }\n        for (int i = 2; i < m; i++) {\n            if (!same(0, i)) return words[i];\n        }\n        return \"\";\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

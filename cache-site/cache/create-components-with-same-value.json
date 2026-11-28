@@ -1,0 +1,40 @@
+{
+  "slug": "create-components-with-same-value",
+  "title": "Create Components With Same Value",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Divisor Enumeration + Tree Post-order Traversal",
+  "tc": "O(√S + n·D)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- adj: adjacency list, up to 2(n−1) entries → O(n)\n- par: parent array, n ints → O(n)\n- order: traversal order, n ints → O(n)\n- sum: subtree sums, n long longs → O(n)\n- divs: divisors of S, ≤ 240 entries → O(1) relative to n\n- stk: DFS stack, up to n ints → O(n)\n- not counted: input nums, edges, returned int",
+  "approach": "If the tree is split into k components each of value t, then k·t = S (the total sum), so t must be a divisor of S. We enumerate all divisors of S in O(√S), sort them ascending, and for each candidate t perform a post-order traversal: accumulate subtree sums, \"cut\" (return 0 to parent) whenever a subtree sums exactly to t, and reject t if any subtree exceeds t. The smallest valid t gives the most components (k = S/t), hence the most deleted edges (k−1). We use an iterative traversal (BFS/DFS for parent ordering, then reverse processing) to avoid stack overflow on skewed trees.",
+  "hints": [
+    "If every component has the same value t and there are k components, what relates t, k, and the total sum S? The total sum S is at most 2·10⁴ × 50 = 10⁶.",
+    "Enumerate the divisors of S in O(√S) and test each as a candidate component value via post-order traversal. For Example 1, S = 18; trying t = 6, the DFS cuts node 4 (sum 6), node 1's subtree (sum 6), then the root (sum 6) - 3 components, 2 edges deleted.",
+    "```\nS = sum(nums)\ndivs = sorted divisors of S   // O(sqrt(S))\nbuild parent[] and order[] via BFS/DFS from root\nfor d in divs (ascending):\n    cuts = 0\n    for u in reverse(order):       // post-order\n        s = nums[u]\n        for each child v of u:\n            s += sum[v]\n            if s > d: fail\n        if s == d: cuts++, sum[u] = 0\n        else: sum[u] = s\n    if ok and cuts == S/d:\n        return S/d - 1\nreturn 0\n```",
+    "**Smallest input** - n = 1, no edges to delete.\n`Input: nums=[2], edges=[]` → `Expected: 0`\n⚠️ Bug: returning `S/d` instead of `S/d − 1` when valid → returns 1.\n\n**Skewed tree** - path of 2·10⁴ nodes causes O(n) recursion depth.\n`Input: nums=[1,1,…,1] (2·10⁴ nodes), edges=[[0,1],[1,2],…,[19998,19999]]` → `Expected: 19999`\n⚠️ Bug: recursive post-order DFS → stack overflow, segfault.\n\n**Unsorted divisors** - multiple valid targets exist; must pick the smallest.\n`Input: nums=[6,2,2,2,6], edges=[[0,1],[1,2],[1,3],[3,4]]` → `Expected: 2`\n⚠️ Bug: iterating divisors in enumeration order without sorting ascending → returns d=18 first, answer 0.\n\n**Root must form a complete component** - the root's subtree must also sum to the target.\n`Input: nums=[1,1,1,3], edges=[[0,1],[1,2],[1,3]]` → `Expected: 1`\n⚠️ Bug: only incrementing cuts for non-root nodes → d=3 gives cuts=1 (node 3 only), 1≠2, skips; d=6 root cut also uncounted → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10⁹?",
+      "a": "S can reach 2·10¹³, so √S ≈ 4.5·10⁶ - still feasible for divisor enumeration. Use `long long` throughout. TC becomes O(√S + n·D) where D may grow but stays small for typical inputs."
+    },
+    {
+      "q": "What if we want to minimize edges deleted (fewest components)?",
+      "a": "Iterate divisors in descending order and return the first valid t. The largest valid t gives k = S/t = 2 (if possible), deleting just 1 edge. Same TC and SC."
+    },
+    {
+      "q": "What if the tree is given as a parent array instead of an edge list?",
+      "a": "Skip the BFS/DFS parent-building step - use the parent array directly. Process nodes in reverse topological order (children before parents) by sorting on depth or using a precomputed post-order. Reduces one O(n) pass; SC stays O(n) for the sum array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int componentValue(vector<int>& nums, vector<vector<int>>& edges) {\n        int n = nums.size();\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        long long S = 0;\n        for (int x : nums) S += x;\n\n        // Enumerate divisors of S in O(sqrt(S))\n        vector<long long> divs;\n        for (long long i = 1; i * i <= S; i++) {\n            if (S % i == 0) {\n                divs.push_back(i);\n                if (i != S / i) divs.push_back(S / i);\n            }\n        }\n        sort(divs.begin(), divs.end());\n\n        // Build parent[] and order[] via iterative DFS (avoids stack overflow)\n        vector<int> par(n, -1), order;\n        order.reserve(n);\n        vector<int> stk;\n        stk.push_back(0);\n        par[0] = -2; // mark root visited\n        while (!stk.empty()) {\n            int u = stk.back();\n            stk.pop_back();\n            order.push_back(u);\n            for (int v : adj[u]) {\n                if (par[v] == -1) {\n                    par[v] = u;\n                    stk.push_back(v);\n                }\n            }\n        }\n\n        vector<long long> sum(n, 0);\n        for (long long d : divs) {\n            bool ok = true;\n            int cuts = 0;\n            for (int i = n - 1; i >= 0; i--) {\n                int u = order[i];\n                long long s = nums[u];\n                for (int v : adj[u]) {\n                    if (par[v] == u) {\n                        s += sum[v];\n                        if (s > d) {\n                            ok = false;\n                            break;\n                        }\n                    }\n                }\n                if (!ok) break;\n                if (s == d) {\n                    cuts++;\n                    sum[u] = 0;\n                } else {\n                    sum[u] = s;\n                }\n            }\n            if (ok && cuts == S / d) {\n                return (int)(S / d - 1);\n            }\n        }\n        return 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

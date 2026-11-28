@@ -1,0 +1,40 @@
+{
+  "slug": "make-the-xor-of-all-segments-equal-to-zero",
+  "title": "Make the XOR of All Segments Equal to Zero",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitwise DP over residue groups (XOR-state DP)",
+  "tc": "O(n · 1024)",
+  "sc": "O(1024)",
+  "spaceBreakdown": "- vector<int> dp: 1024 ints → O(1024)\n- vector<int> tmp: 1024 ints → O(1024)\n- vector<int> cnt: 1024 ints → O(1024)\n- vector<pair<int,int>> pv: at most m ≤ n entries per group, reused → O(n)\n- recursion depth: none\n- not counted: input array",
+  "approach": "Every length-k window XORs to 0 iff nums[i] == nums[i+k] for all i, i.e. all k residue classes (indices mod k) must become constant and their k values must XOR to 0. Run a DP over the k groups where dp[x] = minimum changes so far with XOR of chosen group values = x (x < 2^10). For a new group of size m, dp_new[x] = min(minAll + m, min over values v present in this group of dp[x^v] + m - cnt[v]) - iterating only over present values keeps it O(n·1024). The answer is dp[0] after the last group.",
+  "hints": [
+    "Every window of k consecutive elements shares k-1 elements with the next window - if both windows XOR to 0, what relationship does that force between nums[i] and nums[i+k]?\nNote the values are tiny: 0 <= nums[i] < 2^10, and k <= n <= 2000.",
+    "DP over the k residue classes, with an array of size 1024 indexed by the XOR of the values chosen so far. For [3,4,5,2,1,7,3,4,7], k=3: after groups {3,2,3} and {4,1,4}, state x=7 (3^4) costs 2, which feeds the last group {5,7,7}.",
+    "group j = indices j, j+k, j+2k, ...\ncount occurrences of each value in the group\nif first group:\n    dp[x] = m for all x; dp[v] = m - count[v] for present v\nelse:\n    for each present value v:\n        for x in 0..1023:\n            tmp[x] = min(tmp[x], dp[x XOR v] - count[v])\n    dp[x] = min(minAll, tmp[x]) + m\n    minAll = min over dp\nreturn dp[0]",
+    "**k = 1** - every element alone must XOR to 0, so all must become 0.\n`Input: nums = [1,2,0,3,0], k = 1` → `Expected: 3`\n⚠️ Bug: replacing the XOR=0 goal with \"make all elements equal\" keeps the majority value → returns 2.\n\n**Single element** - smallest input; the value itself must change to 0.\n`Input: nums = [5], k = 1` → `Expected: 1`\n⚠️ Bug: assuming the existing value can always be kept → returns 0.\n\n**Already valid** - windows already XOR to 0, answer is 0.\n`Input: nums = [3,4,7,3,4,7], k = 3` → `Expected: 0`\n⚠️ Bug: forcing every group to a single global value instead of per-group choices → returns 2.\n\n**Missing \"absent value\" branch** - the new group's chosen value may not occur in the previous group's value set.\n`Input: nums = [1,2], k = 2` → `Expected: 1`\n⚠️ Bug: iterating only values present in the previous group when taking the min (dropping the minAll + m term) → returns 0.\n\n**k = n** - each group has exactly one element; all k values must XOR to 0.\n`Input: nums = [1,2,3], k = 3` → `Expected: 0`\n⚠️ Bug: using group size floor(n/k) instead of the correct per-group size → wrong costs, returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if values can be up to 2^20 instead of 2^10?",
+      "a": "The XOR-state dimension becomes 2^20, so the DP is O(n · 2^20) time and 2^20 space - too slow for n = 2000 in the worst case. You would need to exploit that only n distinct values ever appear, keeping states implicit via the present-value lists."
+    },
+    {
+      "q": "Can you also output one optimal modified array?",
+      "a": "Keep parent/choice backpointers: for each group and state x, store the chosen value v achieving dp[x]. After the final pass, walk back from state 0, assigning each group its recorded value. Time and space become O(n · 1024) and O(k · 1024)."
+    },
+    {
+      "q": "What if n is up to 10^5 but k stays small (k <= 100)?",
+      "a": "The group sizes grow but the number of groups is k, and total distinct (group, value) pairs is still n, so the complexity stays O(n · 1024 + k · 1024) time and O(1024) space - the same algorithm scales unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minChanges(vector<int>& nums, int k) {\n        const int B = 1024, INF = 1 << 29;\n        int n = nums.size();\n        vector<int> dp(B, 0), tmp(B), cnt(B, 0);\n        vector<pair<int,int>> pv;\n        pv.reserve(n);\n        int minAll = 0;\n        for (int j = 0; j < k; ++j) {\n            int m = 0;\n            pv.clear();\n            for (int i = j; i < n; i += k) { cnt[nums[i]]++; m++; }\n            for (int i = j; i < n; i += k) {\n                if (cnt[nums[i]] > 0) {\n                    pv.push_back({nums[i], cnt[nums[i]]});\n                    cnt[nums[i]] = 0;\n                }\n            }\n            if (j == 0) {\n                for (int x = 0; x < B; ++x) dp[x] = m;\n                int mx = 0;\n                for (auto& pr : pv) {\n                    dp[pr.first] = m - pr.second;\n                    if (pr.second > mx) mx = pr.second;\n                }\n                minAll = m - mx;\n            } else {\n                for (int x = 0; x < B; ++x) tmp[x] = INF;\n                for (auto& pr : pv) {\n                    int v = pr.first, c = pr.second;\n                    for (int x = 0; x < B; ++x) {\n                        int t = dp[x ^ v] - c;\n                        if (t < tmp[x]) tmp[x] = t;\n                    }\n                }\n                int minTmp = INF;\n                for (int x = 0; x < B; ++x) if (tmp[x] < minTmp) minTmp = tmp[x];\n                for (int x = 0; x < B; ++x) dp[x] = min(minAll, tmp[x]) + m;\n                minAll = min(minAll, minTmp) + m;\n            }\n        }\n        return dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

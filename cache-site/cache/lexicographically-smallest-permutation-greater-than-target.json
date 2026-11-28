@@ -1,0 +1,40 @@
+{
+  "slug": "lexicographically-smallest-permutation-greater-than-target",
+  "title": "Lexicographically Smallest Permutation Greater Than Target",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Matching with Backtrack Point",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26], snap[26]: fixed 26 ints each → O(1)\n- string res: up to n characters (returned, but built via substr copy) → O(n) auxiliary during construction\n- recursion depth: none\n- not counted: input strings s, target",
+  "approach": "Walk left to right matching target[i] exactly while counts allow, recording at each position the smallest available letter strictly greater than target[i] (a \"bump point\" with a count snapshot). If we run out (or match the whole string, which only equals target), fall back to the last bump point: keep the matched prefix, place that larger letter, and append all remaining letters in ascending order. This is correct because any answer must share a prefix with target up to some first differing position, and at that position the letter must exceed target[i] - the smallest such choice with the smallest suffix is optimal.",
+  "hints": [
+    "When building the answer character by character, at which position does it stop agreeing with target - and what must be true about the letter placed there? With n ≤ 300, how many positions could that first difference be?",
+    "Keep a 26-slot frequency count of s. In \"bba\" vs s=\"abc\": at index 0 you can match 'b', but you also note 'c' is available and bigger - that note is your fallback if matching later gets stuck.",
+    "for i in 0..n-1:\n    record bump = (i, smallest letter > target[i] with count > 0, copy of counts)\n    if count[target[i]] > 0: decrement and continue\n    else: stop and go to bump\nif no stop happened and no bump exists: return empty\nanswer = target[0..bump-1] + bump letter + all remaining letters ascending",
+    "**Exact match only** - s is a permutation of target itself, so full matching yields target, not a greater string.\n`Input: s = \"baba\", target = \"bbaa\"` → `Expected: \"\"`\n⚠️ Bug: treating a complete match as success and returning it → returns \"bbaa\" instead of \"\".\n\n**Stuck at first character** - no letter exceeds target[0] and target[0] is absent.\n`Input: s = \"bcd\", target = \"z\"` → `Expected: \"\"`\n⚠️ Bug: backtracking to an uninitialized bump index → returns garbage or crashes instead of \"\".\n\n**Bump at the stuck position** - the fallback letter is found exactly where matching fails.\n`Input: s = \"abc\", target = \"bba\"` → `Expected: \"bca\"`\n⚠️ Bug: snapshotting counts after consuming target[i] at the bump index → returns \"bab\" (reuses a spent 'b') instead of \"bca\".\n\n**Single character, strictly greater exists** - n = 1 with no prefix to keep.\n`Input: s = \"b\", target = \"a\"` → `Expected: \"b\"`\n⚠️ Bug: appending the bump letter without clearing it from the snapshot → returns \"bb\" (length 2) instead of \"b\".\n\n**Duplicate letters** - repeated characters must all be re-emitted sorted.\n`Input: s = \"aab\", target = \"aba\"` → `Expected: \"baa\"`\n⚠️ Bug: filling the suffix with letters in target order instead of ascending → returns \"baa\" only by luck elsewhere; with s = \"aab\", target = \"abb\" a wrong suffix order gives \"baa\" instead of the correct \"baa\"... trace s=\"aab\", target=\"abb\": bump at index 1 with 'b' after matching 'a', remaining {a,b} must be appended as \"ab\" → \"bab\"; wrong order gives \"bba\"."
+  ],
+  "followUps": [
+    {
+      "q": "What if we need the smallest permutation strictly greater than target allowing length change (target shorter than s)?",
+      "a": "If target is shorter, any permutation of the longer s is greater, so return s sorted ascending. If target is longer, no permutation can exceed it, return \"\" - the same greedy reduces to these boundary cases."
+    },
+    {
+      "q": "Can this be done in O(n) space total including output, for n up to 10^6?",
+      "a": "Yes - the algorithm is already streaming: maintain one 26-int count array, one snapshot copy (O(26)), and write the answer into a reusable buffer. Total auxiliary space is O(26) = O(1) beyond the output, and time stays O(26·n)."
+    },
+    {
+      "q": "Variant: return the lexicographically smallest permutation strictly LESS than target?",
+      "a": "Mirror the greedy: match target[i] while possible, record the largest available letter strictly smaller than target[i] as the bump point, and on failure (or full match) place that smaller letter and fill the remaining positions in descending order. Same O(n) time and O(1) auxiliary space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string lexGreaterPermutation(string s, string target) {\n        int n = s.size();\n        int cnt[26] = {0};\n        for (char ch : s) cnt[ch - 'a']++;\n\n        int bump = -1, bumpC = 0;\n        int snap[26];\n        bool broke = false;\n\n        for (int i = 0; i < n; i++) {\n            int t = target[i] - 'a';\n            for (int c = t + 1; c < 26; c++) {\n                if (cnt[c]) {\n                    bump = i;\n                    bumpC = c;\n                    for (int k = 0; k < 26; k++) snap[k] = cnt[k];\n                    break;\n                }\n            }\n            if (cnt[t]) {\n                cnt[t]--;\n            } else {\n                broke = true;\n                break;\n            }\n        }\n\n        if (bump < 0) return \"\";\n\n        string res = target.substr(0, bump);\n        res += char('a' + bumpC);\n        snap[bumpC]--;\n        for (int c = 0; c < 26; c++)\n            res.append(snap[c], char('a' + c));\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

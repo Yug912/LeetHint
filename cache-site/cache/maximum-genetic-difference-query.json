@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-genetic-difference-query",
+  "title": "Maximum Genetic Difference Query",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Persistent Binary Trie + DFS",
+  "tc": "O((n+m) log V)",
+  "sc": "O(n log V + m)",
+  "spaceBreakdown": "- persistent trie arrays ch (2 ints/node) and cnt: ≤ 19n + 1 nodes → O(n)\n- children adjacency (head/next) and query grouping (qhead/qnxt/qidx): O(n + m)\n- explicit DFS stack: O(h), h ≤ n\n- not counted: input arrays, returned answer vector",
+  "approach": "Each query asks for max(val XOR x) over the root-to-node path, so if we had a binary trie of all path values we could answer greedily bit by bit. Since paths of a node and its parent differ by one element, build a persistent trie: each node's version = its parent's version plus one insertion, sharing unchanged subtrees. DFS assigns each node a trie version and answers all queries at that node against that version.",
+  "hints": [
+    "Two adjacent nodes' root-paths share all but one node - what would it take to answer \"max XOR against a set\" for every root-path without rebuilding anything per node?\nWith n ≤ 10^5 and values < 2^18, a per-node rebuild of any full structure is already too much.",
+    "Use a persistent binary trie: inserting node u's value into its parent's trie version creates only ~18 new nodes, giving u its own version. Example 1: node 3's version holds {0,1,3}; query val=2 walks bits preferring the opposite bit → 2^1=3.",
+    "for each node u in DFS order:\n    ver[u] = insert(ver[parent[u]], u)   # persistent insert, ~18 new nodes\n    for each query (u, val):\n        cur = ver[u]; res = 0\n        for bit from high to low:\n            prefer child with bit XOR 1 if it exists → set bit in res\n        ans[query] = res\n    recurse into children with ver[u]",
+    "**Skewed tree** - a linked-list-shaped tree makes recursion depth n = 10^5.\n`Input: parents = [-1,0,1,2,...]` → `Expected: per-query answers along the chain`\n⚠️ Bug: recursive DFS without raising the stack limit → stack overflow / runtime error on LeetCode.\n\n**val equals a node on the path** - the answer can be 0.\n`Input: parents = [-1,0], queries = [[0,0]]` → `Expected: [0]`\n⚠️ Bug: initializing the answer to a nonzero sentinel and only updating on strict improvement → returns a wrong positive value.\n\n**Query at the root** - the path is just {root}, version contains exactly one value.\n`Input: parents = [-1,0,1], queries = [[0,5]]` → `Expected: [5]`\n⚠️ Bug: querying the empty base trie version 0 instead of the node's own version → walks into null children and returns garbage.\n\n**val larger than any node value** - val up to 2·10^5 needs all 18 bits (2^18 = 262144).\n`Input: parents = [-1,0], queries = [[1,200000]]` → `Expected: [200001]`\n⚠️ Bug: iterating only 17 bits (values < 2^17) → drops the top bit, returns 200000^1 = 200001 wrong as 73727-style truncation."
+  ],
+  "followUps": [
+    {
+      "q": "What if queries arrived online (node known only after all insertions)?",
+      "a": "Persistence already supports this: keep all versions indexed by node and answer any query in O(log V) against ver[node]. Same O(n log V) space, no change needed."
+    },
+    {
+      "q": "What if the tree gets edge updates (re-rooting / link-cut)?",
+      "a": "A static persistent trie no longer works; use an Euler-tour + offline grouping or a binary trie with a BIT over DFS order per bit, giving roughly O((n + m) log^2 V)."
+    },
+    {
+      "q": "Can memory be reduced below O(n log V)?",
+      "a": "Yes - go back to a single mutable trie with enter/exit DFS (insert on entry, delete on exit): O(n + m) time, O(log V) trie nodes, but it forces offline batch processing of queries grouped by node."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maxGeneticDifference(vector<int>& parents, vector<vector<int>>& queries) {\n        int n = parents.size(), m = queries.size();\n        vector<int> head(n, -1), nxt(n);\n        int root = -1;\n        for (int i = 0; i < n; i++) {\n            if (parents[i] == -1) root = i;\n            else { nxt[i] = head[parents[i]]; head[parents[i]] = i; }\n        }\n        vector<int> qhead(n, -1), qnxt(m);\n        for (int i = 0; i < m; i++) {\n            qnxt[i] = qhead[queries[i][0]];\n            qhead[queries[i][0]] = i;\n        }\n        const int B = 17;\n        vector<array<int,2>> ch(1, array<int,2>{0, 0});\n        vector<int> cnt(1, 0);\n        ch.reserve((size_t)(n + 1) * (B + 2));\n        cnt.reserve((size_t)(n + 1) * (B + 2));\n\n        auto insert = [&](int prev, int v) -> int {\n            int cur = ch.size();\n            array<int,2> prevCh = ch[prev];\n            int prevCnt = cnt[prev];\n            ch.push_back(prevCh);\n            cnt.push_back(prevCnt + 1);\n            int newRoot = cur;\n            for (int b = B; b >= 0; b--) {\n                int bit = (v >> b) & 1;\n                int old = ch[prev][bit];\n                int nn = ch.size();\n                if (old) {\n                    array<int,2> oldCh = ch[old];\n                    int oldCnt = cnt[old];\n                    ch.push_back(oldCh);\n                    cnt.push_back(oldCnt + 1);\n                } else {\n                    ch.push_back(array<int,2>{0, 0});\n                    cnt.push_back(1);\n                }\n                ch[cur][bit] = nn;\n                prev = old;\n                cur = nn;\n            }\n            return newRoot;\n        };\n\n        auto query = [&](int ver, int v) -> int {\n            int res = 0, cur = ver;\n            for (int b = B; b >= 0; b--) {\n                int bit = (v >> b) & 1;\n                int want = ch[cur][bit ^ 1];\n                if (want && cnt[want] > 0) { res |= 1 << b; cur = want; }\n                else cur = ch[cur][bit];\n            }\n            return res;\n        };\n\n        vector<int> ans(m, 0);\n        vector<pair<int,int>> st;\n        st.reserve(n);\n        st.push_back({root, 0});\n        while (!st.empty()) {\n            auto [u, pv] = st.back();\n            st.pop_back();\n            int v = insert(pv, u);\n            for (int qi = qhead[u]; qi != -1; qi = qnxt[qi])\n                ans[qi] = query(v, queries[qi][1]);\n            for (int c = head[u]; c != -1; c = nxt[c])\n                st.push_back({c, v});\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

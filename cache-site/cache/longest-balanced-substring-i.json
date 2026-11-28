@@ -1,0 +1,40 @@
+{
+  "slug": "longest-balanced-substring-i",
+  "title": "Longest Balanced Substring I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Brute Force Enumeration with Incremental Frequency",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[26]: fixed 26 ints → O(1)\n- a few int scalars (distinct, maxF, ans, loop vars) → O(1)\n- not counted: input string s",
+  "approach": "For each starting index i, extend the substring to the right while maintaining an incremental frequency array, the number of distinct characters, and the maximum frequency. A substring is balanced iff every distinct character appears the same count k, which means length = k × distinct and maxFreq = k; so the O(1) check is maxFreq × distinct == length. With n ≤ 1000 this O(n²) enumeration is well within budget.",
+  "hints": [
+    "For a substring where every distinct character appears exactly k times, how is its length expressible using only k and the number of distinct characters? The string length is at most 1000.",
+    "Enumerate every substring with an incremental frequency array. In \"abba\" starting at index 0, after adding the 4th character 'a' we have freq['a']=2, freq['b']=2, distinct=2, maxFreq=2; since maxFreq × distinct = 2×2 = 4 = length, it is balanced.",
+    "```\nans = 0\nfor i in 0..n-1:\n    reset freq, distinct = 0, maxF = 0\n    for j in i..n-1:\n        add s[j] to freq\n        update distinct (if freq became 1) and maxF\n        len = j - i + 1\n        if maxF * distinct == len:\n            ans = max(ans, len)\nreturn ans\n```",
+    "**Single character** - the smallest valid input has one character.\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing `ans = 0` and only updating when `distinct >= 2` → returns `0`\n\n**All characters equal** - one distinct character repeated.\n`Input: s = \"aaaa\"` → `Expected: 4`\n⚠️ Bug: requiring `distinct >= 2` before counting a substring as balanced → returns `0`\n\n**All distinct, each once** - every character appears exactly once.\n`Input: s = \"abc\"` → `Expected: 3`\n⚠️ Bug: only accepting substrings where `maxF > 1` → returns `1`\n\n**Balanced substring is not a prefix** - the answer starts mid-string.\n`Input: s = \"xabbac\"` → `Expected: 4`\n⚠️ Bug: only checking substrings starting at index 0 → returns `1`"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^5, how would you speed this up?",
+      "a": "Iterate d from 1 to 26 (alphabet size). For each d, run a sliding window keeping at most d distinct characters and maintain a frequency-of-frequencies map; whenever the window has exactly d distinct characters and only one frequency value, it is balanced. This is O(26·n) time and O(26) space."
+    },
+    {
+      "q": "What if the alphabet were only digits 0-9?",
+      "a": "The same brute force still works with a 10-element frequency array, but the sliding-window approach from the previous answer becomes O(10·n), even faster. No structural change is needed."
+    },
+    {
+      "q": "What if characters arrive in a stream and you may only store O(1) memory?",
+      "a": "You cannot guarantee the global optimum, because the longest balanced substring may span the entire stream and require revisiting old positions. With O(alphabet) memory you can only track running frequencies, so you would relax to a fixed-size windowed or approximate objective."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestBalanced(string s) {\n        int n = s.size();\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            int freq[26] = {0};\n            int distinct = 0;\n            int maxF = 0;\n            for (int j = i; j < n; j++) {\n                int idx = s[j] - 'a';\n                if (freq[idx] == 0) distinct++;\n                freq[idx]++;\n                if (freq[idx] > maxF) maxF = freq[idx];\n                int len = j - i + 1;\n                if (maxF * distinct == len && len > ans) {\n                    ans = len;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

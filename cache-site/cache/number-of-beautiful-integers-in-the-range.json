@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-beautiful-integers-in-the-range",
+  "title": "Number of Beautiful Integers in the Range",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Digit DP (counting numbers ≤ N with digit-property + modulus constraint)",
+  "tc": "O(D² · k)",
+  "sc": "O(D² · k)",
+  "spaceBreakdown": "- memo[11][21][21][2][2] int array: fixed ~18,630 ints → O(D²·k), constant\n- string s = to_string(n): ≤ 10 chars → O(D)\n- recursion depth: ≤ D = 10 → O(D)\n- not counted: input integers, returned int",
+  "approach": "Define f(n) = count of beautiful integers in [1, n]; answer is f(high) − f(low−1). Compute f with digit DP over n's decimal digits: state = (position, #even − #odd offset, remainder mod k, tight, started). Leading zeros (before the number \"starts\") don't count as even digits, and divisibility is tracked incrementally as rem = (rem·10+d) % k. Memoize all non-tight states; the state space (≈10·21·21·2·2) is tiny, so this is far faster than brute force.",
+  "hints": [
+    "If you knew how many beautiful integers are ≤ n for any single n, how would you get the count for [low, high]? Note high ≤ 10^9 (at most 10 digits) and k ≤ 20.",
+    "Use digit DP: walk the digits of n, remembering (position, even−odd balance, remainder mod k, tight, started). For n = 20, after fixing the first digit \"1\" (tight), you freely choose the second digit and count those with balance 0 and remainder 0 - 12 and 18 qualify.",
+    "```\nf(n):\n  digits = decimal digits of n\n  return count(pos=0, balance=0, rem=0, tight=true, started=false)\n\ncount(pos, bal, rem, tight, started):\n  if pos == len: return 1 if started and bal == 0 and rem == 0 else 0\n  if not tight and memoized: return memo\n  for d in 0..(tight ? digit[pos] : 9):\n     if started or d > 0:\n        newBal = bal + (d even ? +1 : -1)\n        newRem = (rem*10 + d) mod k\n     count(pos+1, newBal, newRem, tight and d == max, started or d > 0)\n\nanswer = f(high) - f(low - 1)\n```",
+    "**low = 1** - f(low−1) becomes f(0), whose digit string \"0\" must contribute 0.\n`Input: low = 1, high = 10, k = 1` → `Expected: 1`\n⚠️ Bug: treating the digit string \"0\" as the number 0 being \"started\" → counts 0 as beautiful → returns 2.\n\n**Leading zeros** - for 10, only the digits \"1\",\"0\" count, so it is 1 odd + 1 even, beautiful when divisible by k.\n`Input: low = 10, high = 10, k = 5` → `Expected: 1`\n⚠️ Bug: counting unstarted leading-zero positions as even digits → balance off by the digit count → returns 0.\n\n**Single-digit numbers** - one digit can never have equal even/odd counts.\n`Input: low = 1, high = 9, k = 1` → `Expected: 0`\n⚠️ Bug: forgetting the \"started\" check at the end → counts nothing wrong here but miscounts f(10) style inputs, e.g. returns 2 for low=1, high=10, k=1.\n\n**Largest values** - high = 10^9 has 10 digits; balance offset must cover ±10 and remainder up to 19.\n`Input: low = 1, high = 1000000000, k = 20` → `Expected: 237060`\n⚠️ Bug: sizing the balance dimension for only 9 digits (offset 9, range 19) → out-of-bounds write or wrong counts on 10-digit numbers.\n\n**k = 20 (largest k)** - remainder dimension must hold values 0..19.\n`Input: low = 20, high = 20, k = 20` → `Expected: 0`\n⚠️ Bug: computing rem as (rem + d) mod k instead of (rem·10 + d) mod k → 20 passes the mod check → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if high can be up to 10^18?",
+      "a": "The same digit DP works unchanged - only the digit count grows to 19, so time becomes O(D²·k) with D = 19 and the memo grows slightly. Use long long / unsigned return types since the count itself can exceed int."
+    },
+    {
+      "q": "What if k can be up to 10^5?",
+      "a": "The remainder dimension no longer fits in a small table; instead count balanced numbers ≤ n by length with combinatorics (choose digit parities), then handle the mod-k condition by enumerating only balanced candidates near the boundary or using the fact that counts of balanced numbers are dense. Time moves toward O(D·2^(D/2)) style enumeration instead of O(D²·k)."
+    },
+    {
+      "q": "What if the digits are given as a string in a streaming fashion (cannot store all digits)?",
+      "a": "Keep the same DP but process one digit at a time, keeping only the current layer of states (position dropped since it is implicit): O(k·21·2) memory per layer, O(D·k·21·2) total time. Tight states are handled on the fly as each digit arrives."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int K;\n    string s;\n    int memo[11][21][21][2][2];\n\n    int dp(int pos, int diff, int mod, int tight, int started) {\n        if (pos == (int)s.size())\n            return (started && diff == 10 && mod == 0) ? 1 : 0;\n        int &m = memo[pos][diff][mod][tight][started];\n        if (!tight && m != -1) return m;\n        int hi = tight ? s[pos] - '0' : 9;\n        int res = 0;\n        for (int d = 0; d <= hi; d++) {\n            int nd = diff, nm = mod, ns = started;\n            if (started || d > 0) {\n                nd += (d % 2 == 0) ? 1 : -1;\n                nm = (nm * 10 + d) % K;\n                ns = 1;\n            }\n            res += dp(pos + 1, nd, nm, tight && (d == hi), ns);\n        }\n        if (!tight) m = res;\n        return res;\n    }\n\n    int f(int n) {\n        s = to_string(n);\n        memset(memo, -1, sizeof(memo));\n        return dp(0, 10, 0, 1, 0);\n    }\n\npublic:\n    int numberOfBeautifulIntegers(int low, int high, int k) {\n        K = k;\n        return f(high) - f(low - 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

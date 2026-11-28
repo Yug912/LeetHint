@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-coins-to-be-added",
+  "title": "Minimum Number of Coins to be Added",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Range Extension",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(coins): in-place introsort, O(log n) recursion stack → O(log n)\n- long long x, int ans, int i, int n: scalars → O(1)\n- not counted: input vector coins (modified in place), returned int",
+  "approach": "Sort the coins and greedily track the largest value `x` such that every integer in `[1, x]` is formable (initially `x = 0`). If the next coin `c ≤ x+1`, consuming it extends the reachable range to `[1, x+c]`. If `c > x+1` or no coins remain, we must add a coin of value `x+1`, which extends the range to `[1, 2x+1]`. This is optimal because `x+1` is the smallest unformable value, and adding it is the single most efficient way to close the gap (it doubles the reachable prefix).",
+  "hints": [
+    "If you can already form every integer from 1 to x, what property of the next available coin determines whether the formable range extends without leaving a gap?",
+    "Greedy with sorted coins; track x = largest value such that [1, x] is fully formable. In Example 1, after using coin 1 (x=1), the next coin 4 exceeds x+1=2, so we must add coin 2 first.",
+    "```\nsort coins\nx = 0, ans = 0, i = 0\nwhile x < target:\n    if i < n and coins[i] <= x + 1:\n        x = x + coins[i]\n        i = i + 1\n    else:\n        x = 2 * x + 1\n        ans = ans + 1\nreturn ans\n```",
+    "**Coin too large** - first coin exceeds the current reachable boundary\n`Input: coins = [2], target = 5` → `Expected: 2`\n⚠️ Bug: consuming every coin without checking `coins[i] <= x + 1` → returns 1\n\n**Exhausted coins** - all original coins consumed but target not yet reached\n`Input: coins = [1,1,1], target = 20` → `Expected: 3`\n⚠️ Bug: stopping the loop when `i == n` instead of when `x >= target` → returns 0\n\n**Duplicates** - repeated coin values that all contribute to the range\n`Input: coins = [1,1,1], target = 3` → `Expected: 0`\n⚠️ Bug: deduplicating the coins array before processing → returns 1\n\n**All same large value** - no coin can start the chain from x=0\n`Input: coins = [5,5,5], target = 20` → `Expected: 3`\n⚠️ Bug: skipping the else-branch when `i < n` but `coins[i] > x+1` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if target can be up to 10^18?",
+      "a": "The same greedy works unchanged. Each added coin doubles x, so at most ~60 coins are ever added. Use `long long` for x. TC: O(n log n), SC: O(log n)."
+    },
+    {
+      "q": "Return the actual values of the coins to add, not just the count.",
+      "a": "Record `x + 1` each time the else-branch fires. The list has at most O(log target) entries. TC: O(n log n + log target), SC: O(log target) for the output vector."
+    },
+    {
+      "q": "Coins arrive in a streaming fashion and cannot be fully buffered - how do you adapt?",
+      "a": "Since coin values are bounded by 10^5, use a frequency array of size target+1 to count incoming coins, then process values 1..target in order with the same greedy. TC: O(n + target), SC: O(target)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumAddedCoins(vector<int>& coins, int target) {\n        sort(coins.begin(), coins.end());\n        long long x = 0;\n        int ans = 0;\n        int i = 0;\n        int n = (int)coins.size();\n        while (x < target) {\n            if (i < n && coins[i] <= x + 1) {\n                x += coins[i];\n                i++;\n            } else {\n                x = 2 * x + 1;\n                ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

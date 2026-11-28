@@ -1,0 +1,40 @@
+{
+  "slug": "find-longest-special-substring-that-occurs-thrice-ii",
+  "title": "Find Longest Special Substring That Occurs Thrice II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy / Top-K Tracking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<array<int,3>> top: 26*3 ints → O(1)\n- not counted: input string s, returned int",
+  "approach": "Compute `len[i]` = length of the longest special (single-char) substring ending at index `i` (increment when `s[i]==s[i-1]`, else reset to 1). For each character, a special substring of length `k` occurs once for every position `i` with that character where `len[i] >= k`. So the largest `k` with at least 3 occurrences for a character is exactly the third-largest `len[i]` in that character's group. We maintain the top-3 values per character (26 groups) in one pass and take the maximum third-largest across groups.",
+  "hints": [
+    "Where in s can a special substring of length k actually appear - what must the surrounding characters look like?\ns.length ≤ 5×10^5, so checking every substring explicitly is too slow.",
+    "Group consecutive identical characters into runs; for each of the 26 letters keep only its three longest run lengths. For \"aaaa\" the single run has length 4, giving 4−k+1 substrings of length k; k=2 yields 3 occurrences → answer 2.",
+    "```\nfor each maximal run (char c, length L):\n    insert L into top-3 list for c   # keep a ≥ b ≥ d\nfor each c with top runs a ≥ b ≥ d:\n    v1 = a − 2                      # valid if v1 > b\n    v2 = min(b, (a+b−1) / 2)       # valid if v2 > d\n    v3 = min(d, (a+b+d) / 3)       # valid if d ≥ 1\n    ans = max(ans, largest valid vi)\nreturn ans   # −1 if none valid\n```",
+    "**Single long run** - one run must supply all three occurrences\n`Input: s = \"aaaa\"` → `Expected: 2`\n⚠️ Bug: counting only distinct runs as occurrences (ignoring that one run of length 4 contains three \"aa\") → returns -1\n\n**No triple occurrence** - every character appears fewer than 3 times total\n`Input: s = \"abcdef\"` → `Expected: -1`\n⚠️ Bug: returning 0 instead of -1 when no valid length exists → returns 0\n\n**Three single-character runs** - the answer is length 1\n`Input: s = \"abcaba\"` → `Expected: 1`\n⚠️ Bug: skipping the v3 candidate because d = 1 looks too small to matter → returns -1\n\n**Two equal runs** - contributions must be summed across runs\n`Input: s = \"aaabaaa\"` → `Expected: 2`\n⚠️ Bug: using only the single longest run (a = 3, giving a−2 = 1) and ignoring the second run → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if \"at least thrice\" becomes \"at least t times\" for arbitrary t?",
+      "a": "Keep the top t runs per character instead of top 3. For each character, binary search the largest length k whose total occurrence count (sum over top-t runs of max(0, run−k+1)) is ≥ t. TC: O(n + 26·t·log n), SC: O(26·t)."
+    },
+    {
+      "q": "What if s arrives as a stream and is too large to store?",
+      "a": "Process characters one at a time, tracking the current run length and the top-3 run lengths per character in O(1) working state. When the current character changes, finalize the run and update that character's top-3. Compute the answer at the end from the stored values. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "Instead of the longest length, return the total count of distinct special substrings that occur at least thrice.",
+      "a": "Since the occurrence count is non-increasing in k, every length from 1 up to a character's answer is valid. Sum each character's answer value across all 26 letters. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumLength(string s) {\n        int n = s.size();\n        int ans = -1;\n        vector<array<int,3>> top(26, {0,0,0}); // top[0] >= top[1] >= top[2]\n        int run = 0;\n        char prev = 0;\n        for (int i = 0; i < n; i++) {\n            if (s[i] == prev) run++;\n            else { run = 1; prev = s[i]; }\n            int c = s[i] - 'a';\n            if (run > top[c][0]) {\n                top[c][2] = top[c][1];\n                top[c][1] = top[c][0];\n                top[c][0] = run;\n            } else if (run > top[c][1]) {\n                top[c][2] = top[c][1];\n                top[c][1] = run;\n            } else if (run > top[c][2]) {\n                top[c][2] = run;\n            }\n        }\n        for (int c = 0; c < 26; c++) {\n            if (top[c][2] > 0) ans = max(ans, top[c][2]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
