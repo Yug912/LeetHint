@@ -1,0 +1,40 @@
+{
+  "slug": "find-if-array-can-be-sorted",
+  "title": "Find if Array Can Be Sorted",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear Scan with Segment Grouping",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- prevMax, curMin, curMax, i, bits: scalars → O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Elements with the same popcount that are contiguous form a \"segment\": within it, adjacent swaps are always legal, so we can bubble-sort it freely, meaning every value in the segment can reach any position inside that segment. But a value can never cross an element whose popcount differs, so segments stay in their original left-to-right order. Therefore the array is sortable iff, for every pair of consecutive segments, the maximum of the left segment is ≤ the minimum of the right segment. We scan once, grouping consecutive equal-popcount elements, tracking each segment's min/max, and checking this condition.",
+  "hints": [
+    "Under the allowed swap, which pairs of elements can ever change their relative order, and which pairs can never cross each other?",
+    "Group consecutive elements sharing the same popcount into a segment; within a segment you can sort freely, so track each segment's min and max. For [8,4,2,30,15], the first segment {8,4,2} has min 2 / max 8 and the next {30,15} has min 15 / max 30, and 8 ≤ 15.",
+    "prevMax = 0\ni = 0\nwhile i < n:\n    bits = popcount(nums[i])\n    curMin = curMax = nums[i]\n    while i < n and popcount(nums[i]) == bits:\n        curMin = min(curMin, nums[i])\n        curMax = max(curMax, nums[i])\n        i = i + 1\n    if curMin < prevMax: return false\n    prevMax = curMax\nreturn true",
+    "**Single element** - only one element, no segments to compare.\n`Input: nums = [5]` → `Expected: true`\n⚠️ Bug: initialising prevMax to nums[0] instead of 0 and then skipping the first segment → returns false\n\n**Already sorted, mixed popcounts** - sorted input with alternating popcounts must still pass.\n`Input: nums = [1,2,3,4,5]` → `Expected: true`\n⚠️ Bug: comparing curMax of current segment < curMin of next segment with strict `<` instead of `≤` → returns false on equal adjacent segment boundaries\n\n**Unsortable by crossing** - a small value trapped behind a larger value of different popcount.\n`Input: nums = [3,16,8,4,2]` → `Expected: false`\n⚠️ Bug: only checking adjacent element order instead of segment min/max → returns true\n\n**All equal values** - every element identical, popcounts identical.\n`Input: nums = [7,7,7]` → `Expected: true`\n⚠️ Bug: using strict `<` in the segment-min vs prevMax check → returns false\n\n**Boundary at last element** - last segment is a single trailing element.\n`Input: nums = [8,4,2,15]` → `Expected: true`\n⚠️ Bug: loop condition `i < n - 1` instead of `i < n` → skips the final segment and may miss a violation"
+  ],
+  "followUps": [
+    {
+      "q": "If nums[i] could be up to 10^9, does anything change?",
+      "a": "No. __builtin_popcount works on 32-bit ints, and we only compare values, never accumulate sums, so no overflow. Time and space stay O(n) and O(1)."
+    },
+    {
+      "q": "If the operation allowed swapping ANY two elements (not just adjacent) with the same popcount, does the answer change?",
+      "a": "No. Adjacent swaps already let you bubble-sort within a maximal contiguous same-popcount block, which is the same freedom arbitrary swaps give inside that block; elements still cannot cross a different popcount. The segment min/max check is unchanged."
+    },
+    {
+      "q": "If elements arrive in a stream and you must answer \"sortable so far\" after each new element, how do you adapt?",
+      "a": "Keep the current segment's min/max and the previous segment's max. When a new element's popcount matches the current segment, update its min/max; otherwise close the segment (check curMin ≥ prevMax, set prevMax = curMax) and start a new segment with the new element. Each step is O(1), so total O(n) time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canSortArray(vector<int>& nums) {\n        int n = nums.size();\n        int prevMax = 0;\n        int i = 0;\n        while (i < n) {\n            int bits = __builtin_popcount((unsigned)nums[i]);\n            int curMin = nums[i];\n            int curMax = nums[i];\n            while (i < n && __builtin_popcount((unsigned)nums[i]) == bits) {\n                if (nums[i] < curMin) curMin = nums[i];\n                if (nums[i] > curMax) curMax = nums[i];\n                ++i;\n            }\n            if (curMin < prevMax) return false;\n            prevMax = curMax;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

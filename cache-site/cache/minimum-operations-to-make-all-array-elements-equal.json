@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-make-all-array-elements-equal",
+  "title": "Minimum Operations to Make All Array Elements Equal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting and Prefix Sum with Binary Search",
+  "tc": "O(n log n + m log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> prefix: up to n + 1 entries → O(n)\n- vector<long long> ans: up to m entries (returned output, typically not counted as auxiliary space, but uses O(m) memory)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "The minimum operations to make all elements equal to a target `q` is the sum of absolute differences `|nums[i] - q|`. To compute this efficiently across multiple queries, we first sort the array and build a prefix sum array. For each query, we use binary search to split the array into elements less than or equal to `q` and elements greater than `q`. The sum of absolute differences can then be calculated in O(1) time per query using the prefix sums, avoiding the O(n) calculation per query.",
+  "hints": [
+    "For a fixed target value, how do the elements less than the target and the elements greater than the target contribute to the total operations? The array size can be up to 10^5, so calculating this sum individually for each of the 10^5 queries is too slow.",
+    "Sort the array and build a prefix sum array. For a query `q = 5` on the sorted array `[1, 3, 6, 8]`, binary search splits it into `[1, 3]` and `[6, 8]`; the prefix sums let you calculate the total additions and total decreases in O(1) time.",
+    "sort(nums)\nbuild prefix sum array\nfor each query q:\n    idx = upper_bound(nums, q)\n    left_sum = q * idx - prefix[idx]\n    right_sum = (prefix[n] - prefix[idx]) - q * (n - idx)\n    ans = left_sum + right_sum\nreturn ans",
+    "**Overflow** - The sum of up to 10^5 elements, each up to 10^9, reaches 10^14.\n`Input: nums = [1000000000, 1000000000], queries = [1]` → `Expected: [1999999998]`\n⚠️ Bug: storing the prefix sum in an `int` vector → returns `99999998` (wraps around).\n\n**All elements equal** - Every element matches the query exactly.\n`Input: nums = [5,5,5], queries = [5]` → `Expected: [0]`\n⚠️ Bug: using `lower_bound` instead of `upper_bound` for the split → calculates negative differences for the matching elements and returns a non-zero sum.\n\n**Single element** - The array has only one element.\n`Input: nums = [10], queries = [5]` → `Expected: [5]`\n⚠️ Bug: initializing the prefix sum array with `n` elements instead of `n + 1` → out-of-bounds access or incorrect sum calculation when `idx = n`."
+  ],
+  "followUps": [
+    {
+      "q": "What if `queries` is not given upfront, but you receive one query at a time and must answer immediately?",
+      "a": "The approach remains identical. Pre-sort `nums` and build the prefix sum array once. Each online query is answered in O(log n) time using binary search, so the overall time complexity is still O(n log n + m log n) and space is O(n)."
+    },
+    {
+      "q": "What if an operation can increase or decrease an element by up to `k` instead of 1?",
+      "a": "The cost for each element becomes `ceil(|nums[i] - q| / k)`. The O(1) prefix sum trick no longer works because of the ceiling division. You would need to evaluate the cost for each element individually, taking O(m * n) time, or use a more complex mathematical grouping if `k` is small."
+    },
+    {
+      "q": "What if the array `nums` is too large to fit in memory, but you are given a sorted stream of elements?",
+      "a": "You can process the stream to build the prefix sum array and store the sorted elements in chunks or on disk. Since the array is already sorted from the stream, you skip the O(n log n) sorting step. Each query still requires an O(log n) binary search, which can be performed over the external sorted chunks."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<long long> minOperations(vector<int>& nums, vector<int>& queries) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        int m = queries.size();\n        \n        vector<long long> prefix(n + 1, 0);\n        for (int i = 0; i < n; ++i) {\n            prefix[i + 1] = prefix[i] + nums[i];\n        }\n        \n        vector<long long> ans(m);\n        for (int i = 0; i < m; ++i) {\n            long long q = queries[i];\n            int idx = upper_bound(nums.begin(), nums.end(), queries[i]) - nums.begin();\n            \n            long long less_eq = q * idx - prefix[idx];\n            long long greater = (prefix[n] - prefix[idx]) - q * (n - idx);\n            \n            ans[i] = less_eq + greater;\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

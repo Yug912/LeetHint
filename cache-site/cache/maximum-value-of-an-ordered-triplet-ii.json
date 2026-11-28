@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-value-of-an-ordered-triplet-ii",
+  "title": "Maximum Value of an Ordered Triplet II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Maximum (Running Variables)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long maxPrefix, maxDiff, answer: scalars → O(1)\n- int n, k: scalars → O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Iterate left to right treating each index as the triplet's `k`. Maintain `maxPrefix` = max(nums[0..k-1]) (best candidate for nums[i]) and `maxDiff` = max(nums[i]-nums[j]) over all i<j<k (best candidate for the difference). For each k, the best triplet ending at k is `maxDiff * nums[k]`; then update `maxDiff` using the current element as a potential j (`maxPrefix - nums[k]`) and update `maxPrefix`. This avoids the two auxiliary arrays, giving O(n) time and O(1) space.",
+  "hints": [
+    "For a fixed third index k, the value is (nums[i] − nums[j]) × nums[k]. Since nums[k] is fixed for that k, what single quantity involving indices before k do you need to maximize? The constraint n ≤ 10^5 rules out checking every triplet.",
+    "Track two running variables: the maximum value seen so far (candidate for nums[i]) and the maximum difference (nums[i] − nums[j]) seen so far. For nums = [12,6,1,2,7], when reaching index 4 (value 7), the best difference so far is 12−1=11, giving 11×7=77.",
+    "```\nmaxPrefix = max(nums[0], nums[1])\nmaxDiff = nums[0] - nums[1]\nanswer = 0\nfor i from 2 to n-1:\n    answer = max(answer, maxDiff * nums[i])\n    maxDiff = max(maxDiff, maxPrefix - nums[i])\n    maxPrefix = max(maxPrefix, nums[i])\nreturn answer\n```",
+    "**Minimum input** - Only three elements, all increasing, so the only triplet has a negative value.\n`Input: nums = [1,2,3]` → `Expected: 0`\n⚠️ Bug: returning the raw maximum without clamping negatives to 0 → returns -3\n\n**Overflow** - (10^6−1)×10^6 ≈ 10^12 exceeds 2^31−1 ≈ 2.1×10^9.\n`Input: nums = [1000000,1,1000000]` → `Expected: 999999000000`\n⚠️ Bug: using int for maxDiff and answer → 999999×1000000 overflows to -728391168, max(0,…)=0\n\n**Off-by-one** - Best k is the last index.\n`Input: nums = [12,6,1,2,7]` → `Expected: 77`\n⚠️ Bug: looping k only to n−2 instead of n−1 → misses index 4, returns 22\n\n**Best k in the middle** - Best k is not the last element.\n`Input: nums = [12,6,1,100,2]` → `Expected: 1100`\n⚠️ Bug: only multiplying maxDiff by the last element instead of tracking the running max → returns 196"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array can contain negative numbers?",
+      "a": "The approach still works unchanged. maxPrefix tracks the maximum (which could be negative), and maxDiff tracks the maximum difference. The answer is still max(0, maxDiff × nums[k]) since we return 0 for all-negative results. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you must return the actual triplet (i, j, k) instead of just the value?",
+      "a": "Track indices alongside the running variables: store the index where maxPrefix was achieved and the pair (i, j) where maxDiff was achieved. When answer is updated, record the current k. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the array arrives as a stream where you can only see each element once?",
+      "a": "The current solution already processes elements in a single pass and keeps only two running variables, so it works as-is for streaming. You produce the first candidate answer once the third element arrives. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumTripletValue(vector<int>& nums) {\n        int n = nums.size();\n        long long maxPrefix = max((long long)nums[0], (long long)nums[1]);\n        long long maxDiff = (long long)nums[0] - nums[1];\n        long long answer = 0;\n        for (int k = 2; k < n; k++) {\n            answer = max(answer, maxDiff * (long long)nums[k]);\n            maxDiff = max(maxDiff, maxPrefix - (long long)nums[k]);\n            maxPrefix = max(maxPrefix, (long long)nums[k]);\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

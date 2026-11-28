@@ -1,0 +1,40 @@
+{
+  "slug": "decode-xored-permutation",
+  "title": "Decode XORed Permutation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix XOR",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, total_xor, xor_without_first: O(1) each\n- vector<int> perm(n): O(n) - returned output, not counted\n- no recursion, no other containers",
+  "approach": "The key insight is that since perm is a permutation of 1..n, we can compute the XOR of all values 1..n upfront. Since n is odd, XORing every other encoded value starting from index 1 (encoded[1], encoded[3], ...) yields the XOR of perm[1] through perm[n-1] - all elements except perm[0]. XORing this with the total gives perm[0]. Once perm[0] is known, the rest follows directly from perm[i] = perm[i-1] XOR encoded[i-1].",
+  "hints": [
+    "Since perm is a permutation of 1 through n, what aggregate value involving all elements of the answer can you compute before decoding anything? n is always odd.",
+    "Compute the XOR of 1..n, then XOR it with encoded[1]^encoded[3]^... to isolate perm[0]. For encoded=[3,1], n=3: total=1^2^3=0, odd_xor=encoded[1]=1, so perm[0]=0^1=1.",
+    "```\ntotal = XOR of 1..n\nodd_xor = XOR of encoded[1], encoded[3], encoded[5], ...\nperm[0] = total XOR odd_xor\nfor i = 1 to n-1:\n    perm[i] = perm[i-1] XOR encoded[i-1]\nreturn perm\n```",
+    "**Smallest input** - n = 3, the minimum allowed size\n`Input: encoded = [3,1]` → `Expected: [1,2,3]`\n⚠️ Bug: starting the odd-index XOR loop at i=0 instead of i=1 → xor_without_first = encoded[0] = 3, perm[0] = 0^3 = 3, returns [3,0,1]\n\n**Off-by-one range** - computing XOR of 0..n-1 instead of 1..n\n`Input: encoded = [6,5,4,6]` → `Expected: [2,4,1,5,3]`\n⚠️ Bug: looping `for i=0; i<n; i++` for total_xor instead of `for i=1; i<=n; i++` → total_xor = 0^1^2^3^4 = 4, perm[0] = 4^3 = 7, returns [7,1,4,0,6]\n\n**Wrong starting index** - starting odd-index XOR at i=0 instead of i=1\n`Input: encoded = [6,5,4,6]` → `Expected: [2,4,1,5,3]`\n⚠️ Bug: looping `for i=0; i<n-1; i+=2` instead of `for i=1; i<n-1; i+=2` → xor_without_first = 6^4 = 2, perm[0] = 1^2 = 3, returns [3,5,0,4,2]"
+  ],
+  "followUps": [
+    {
+      "q": "What if n could be even?",
+      "a": "For even n, XORing odd-indexed encoded values gives perm[1]^...^perm[n-2], excluding both perm[0] and perm[n-1]. You can compute perm[0]^perm[n-1] but not either value individually. Try each candidate for perm[0] from 1..n, reconstruct the full permutation, and validate with a boolean array. TC: O(n²), SC: O(n)."
+    },
+    {
+      "q": "What if encoded[i] = perm[i] + perm[i+1] (sum instead of XOR)?",
+      "a": "Compute total sum 1+2+...+n = n(n+1)/2. The sum of encoded[1]+encoded[3]+... telescopes to the sum of perm[1..n-1], so perm[0] = total − that sum. Then perm[i] = encoded[i-1] − perm[i-1]. Use long long since n(n+1)/2 can reach ~5×10⁹. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the encoded array is circular, with an extra element encoded[n-1] = perm[n-1] XOR perm[0]?",
+      "a": "XOR of all encoded values becomes 0 (each perm element appears exactly twice), so you can no longer extract perm[0] from the encoding alone. The problem becomes underdetermined - you'd need at least one known element of perm to recover the rest. Given any perm[i], recover all others in O(n). TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> decode(vector<int>& encoded) {\n        int n = encoded.size() + 1;\n        \n        int total_xor = 0;\n        for (int i = 1; i <= n; i++) {\n            total_xor ^= i;\n        }\n        \n        int xor_without_first = 0;\n        for (int i = 1; i < n - 1; i += 2) {\n            xor_without_first ^= encoded[i];\n        }\n        \n        vector<int> perm(n);\n        perm[0] = total_xor ^ xor_without_first;\n        \n        for (int i = 1; i < n; i++) {\n            perm[i] = perm[i - 1] ^ encoded[i - 1];\n        }\n        \n        return perm;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

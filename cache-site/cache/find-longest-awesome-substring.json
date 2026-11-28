@@ -1,0 +1,40 @@
+{
+  "slug": "find-longest-awesome-substring",
+  "title": "Find Longest Awesome Substring",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix XOR with Bitmask",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int seen[1024]: fixed 1024 entries → O(1)\n- mask, ans, n, loop indices: O(1)\n- recursion / queue / heap: none\n- not counted: input string",
+  "approach": "A substring can be rearranged into a palindrome exactly when at most one digit has an odd frequency. Encode the parity of digit counts in each prefix as a 10-bit mask; then substring `[l,r]` is awesome iff `prefixMask[r]` equals `prefixMask[l-1]` (all even counts) or differs by one bit (exactly one odd count). Store the earliest index where each mask appeared, and for each prefix check those 11 candidate previous masks.",
+  "hints": [
+    "What property of the digit counts inside a substring decides whether it can be reordered into a palindrome? The string length can reach 10^5, so testing every substring directly is too slow.",
+    "Use a 10-bit parity mask for each prefix and an array storing the earliest index where each mask appeared. In `\"3242415\"`, after `\"32424\"` the mask is `1<<3`, which differs by one bit from the empty-prefix mask `0`, so length 5 is recorded.",
+    "seen[0] := -1, all other entries unset\nmask := 0, ans := 0\nfor i from 0 to n-1:\n    mask := mask xor (1 << digit(s[i]))\n    if seen[mask] is set: ans := max(ans, i - seen[mask])\n    for d in 0..9:\n        if seen[mask xor (1 << d)] is set: ans := max(ans, i - seen[mask xor (1 << d)])\n    if seen[mask] is unset: seen[mask] := i\nreturn ans",
+    "**Smallest input** - n = 1, so the answer is the single character itself.\n`Input: s = \"7\"` → `Expected: 1`\n⚠️ Bug: initializing the empty-prefix index `seen[0] = 0` instead of `-1` → returns `0`\n\n**All elements equal** - every prefix mask alternates between 0 and one bit, so the whole string is valid.\n`Input: s = \"1111\"` → `Expected: 4`\n⚠️ Bug: overwriting `seen[0]` with the first later index where the mask returns to 0 → returns `2`\n\n**No valid answer longer than 1** - adjacent characters are distinct, so no length-2 substring is awesome.\n`Input: s = \"12\"` → `Expected: 1`\n⚠️ Bug: checking only equal prefix masks and ignoring one-bit differences → returns `0`\n\n**Whole string has one odd count** - the maximum substring is the entire string and requires the one-bit-difference check.\n`Input: s = \"112\"` → `Expected: 3`\n⚠️ Bug: checking only equal prefix masks → returns `2`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string contained lowercase letters instead of digits?",
+      "a": "Use a 26-bit parity mask instead of 10 bits. The same prefix-xor idea works, but a full array of size 2^26 is too large, so store only masks that have appeared in a hash map. Time remains O(26n), space O(min(n, 2^26))."
+    },
+    {
+      "q": "Instead of at most one odd count, allow at most k odd counts. How does the approach change?",
+      "a": "For each prefix mask, look for previous masks within Hamming distance k by enumerating all masks formed by flipping 0..k bits. Time becomes O(n * sum_{j=0}^k C(A,j)) and space O(2^A) or O(n) with a hash map. For A=10 and small k this is still practical."
+    },
+    {
+      "q": "What if s arrives as a stream and cannot be stored?",
+      "a": "The algorithm is already online: update the running mask and answer as each character arrives, and keep only the earliest index per mask. No need to store s, so for digits time is O(n) and extra space is O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestAwesome(string s) {\n        int seen[1024];\n        for (int i = 0; i < 1024; ++i) seen[i] = -2;\n        seen[0] = -1;\n        \n        int mask = 0, ans = 0;\n        int n = (int)s.size();\n        \n        for (int i = 0; i < n; ++i) {\n            mask ^= (1 << (s[i] - '0'));\n            \n            if (seen[mask] != -2) {\n                int len = i - seen[mask];\n                if (len > ans) ans = len;\n            }\n            \n            for (int d = 0; d < 10; ++d) {\n                int want = mask ^ (1 << d);\n                if (seen[want] != -2) {\n                    int len = i - seen[want];\n                    if (len > ans) ans = len;\n                }\n            }\n            \n            if (seen[mask] == -2) seen[mask] = i;\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

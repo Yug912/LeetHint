@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-unique-good-subsequences",
+  "title": "Number of Unique Good Subsequences",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear DP with per-symbol ending state",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long dp, ends0, ends1: three scalars → O(1)\n- int hasZero, MOD: scalars → O(1)\n- no containers, no recursion",
+  "approach": "Track, as you scan left to right, how many unique good subsequences end in '0' (`ends0`) and in '1' (`ends1`), plus the total `dp` of good subsequences that start with '1'. When a new character `c` arrives, the new subsequences ending in `c` are formed by appending `c` to every existing good subsequence (plus the lone character if `c=='1'`), minus those already counted as ending in `c` (deduplication). The lone \"0\" is handled by a flag `hasZero` since it is the only good subsequence starting with '0'. The answer is `dp + hasZero`.",
+  "hints": [
+    "When you scan left to right and meet a new character, which already-counted subsequences can be extended by it without producing a leading-zero string - and which extensions would merely recreate a subsequence you already have?",
+    "Use linear DP storing, for each bit value, how many unique good subsequences end with that bit. For \"101\": after processing \"10\" you have subsequences {\"1\",\"10\"}; the final '1' appends to both and adds the lone \"1\", but \"1\" was already counted as ending in '1', so only two are new.",
+    "```\ndp = 0; end = [0, 0]; hasZero = 0\nfor c in binary:\n    if c == '1':\n        add = dp + 1 - end[1]\n    else:\n        add = dp - end[0]; hasZero = 1\n    dp = dp + add\n    end[c] = end[c] + add\nreturn dp + hasZero\n```",
+    "**Single \"0\"** - the only good subsequence is \"0\" itself.\n`Input: \"0\"` → `Expected: 1`\n⚠️ Bug: omitting `hasZero` from the return value → returns 0.\n\n**Leading zeros \"001\"** - both '0's map to the same \"0\".\n`Input: \"001\"` → `Expected: 2`\n⚠️ Bug: adding +1 unconditionally for every '0' seen (instead of `dp - ends[0]`) → returns 3.\n\n**Duplicate '1' \"11\"** - the second '1' creates only one new subsequence (\"11\").\n`Input: \"11\"` → `Expected: 2`\n⚠️ Bug: using `add = dp + 1` for '1' without subtracting `ends[1]` → returns 3.\n\n**Mixed \"110\"** - appending '0' to \"1\" and \"11\" yields \"10\" and \"110\".\n`Input: \"110\"` → `Expected: 5`\n⚠️ Bug: treating '0' like '1' with `add = dp + 1 - ends[0]` (adding a lone \"0\" every time) → returns 6."
+  ],
+  "followUps": [
+    {
+      "q": "What if the string could contain digits '0'-'9' instead of just '0' and '1'?",
+      "a": "Generalize `ends` to an array of size 10. For digit d > 0, `add = dp + 1 - ends[d]`; for d = 0, `add = dp - ends[0]` and set `hasZero`. Each step is still O(1), so total time stays O(n) and space O(1)."
+    },
+    {
+      "q": "What if you must list every unique good subsequence instead of just counting them?",
+      "a": "The count can be exponential (up to ~2^n distinct subsequences), so storing them is infeasible for n = 10^5. Only for small n could you maintain an explicit set of strings, giving O(n · 2^n) time and space."
+    },
+    {
+      "q": "What if the string arrives as a stream and you must report the count after each character?",
+      "a": "The DP is already online: update `dp`, `ends[0]`, `ends[1]`, and `hasZero` incrementally per character in O(1). The streaming version has the same O(n) total time and O(1) space, emitting the running answer after each step."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfUniqueGoodSubsequences(string binary) {\n        const int MOD = 1e9 + 7;\n        long long dp = 0, ends0 = 0, ends1 = 0;\n        int hasZero = 0;\n        for (char c : binary) {\n            if (c == '1') {\n                long long add = (dp + 1 - ends1 + MOD) % MOD;\n                dp = (dp + add) % MOD;\n                ends1 = (ends1 + add) % MOD;\n            } else {\n                long long add = (dp - ends0 + MOD) % MOD;\n                dp = (dp + add) % MOD;\n                ends0 = (ends0 + add) % MOD;\n                hasZero = 1;\n            }\n        }\n        return (int)((dp + hasZero) % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

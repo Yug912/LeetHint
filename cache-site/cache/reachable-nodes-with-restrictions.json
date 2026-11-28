@@ -1,0 +1,40 @@
+{
+  "slug": "reachable-nodes-with-restrictions",
+  "title": "Reachable Nodes With Restrictions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "BFS on Tree",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> adj: n vectors, 2(n-1) total entries → O(n)\n- unordered_set<int> blocked: up to n-1 entries → O(n)\n- vector<bool> visited: n entries → O(n)\n- queue<int> q: up to n entries → O(n)\n- not counted: input edges, restricted, returned int",
+  "approach": "Since the graph is a tree, there is exactly one path between any two nodes. A node is unreachable from node 0 if and only if some restricted node lies on that unique path. We perform a BFS from node 0, treating restricted nodes as blocked walls. We mark nodes visited when enqueuing (not when dequeuing) to avoid duplicates, and count every node we successfully dequeue. This visits each node and edge at most once.",
+  "hints": [
+    "In a tree, there is exactly one simple path between any two nodes. What must be true about that path for a node to be unreachable from node 0?",
+    "Use BFS from node 0, skipping restricted nodes. In Example 1, from node 0 we reach 1 (but not 4 or 5, both restricted); from 1 we reach 2 and 3 - total 4 nodes.",
+    "```\nbuild adjacency list from edges (both directions)\nput restricted nodes into a set\nqueue = [0], visited = {0}, count = 0\nwhile queue not empty:\n    u = dequeue\n    count = count + 1\n    for each neighbor v of u:\n        if v not visited and v not in restricted set:\n            mark v visited\n            enqueue v\nreturn count\n```",
+    "**Smallest input** - only two nodes, the sole neighbor is restricted\n`Input: n = 2, edges = [[0,1]], restricted = [1]` → `Expected: 1`\n⚠️ Bug: enqueuing all neighbors without checking restricted, then counting on dequeue without checking restricted → returns 2\n\n**Undirected edges** - each edge must be added in both directions\n`Input: n = 7, edges = [[0,1],[1,2],[3,1],[4,0],[0,5],[5,6]], restricted = [4,5]` → `Expected: 4`\n⚠️ Bug: building adjacency with only `adj[e[0]].push_back(e[1])` → returns 3 (node 3 unreachable because edge [3,1] only adds 3→1, not 1→3)\n\n**All neighbors blocked** - every neighbor of node 0 is restricted\n`Input: n = 4, edges = [[0,1],[0,2],[0,3]], restricted = [1,2,3]` → `Expected: 1`\n⚠️ Bug: not checking restricted before enqueuing neighbors → enqueues and counts 1, 2, 3 → returns 4\n\n**Break vs continue** - restricted neighbor appears first in adjacency list\n`Input: n = 4, edges = [[0,1],[0,2],[0,3]], restricted = [1]` → `Expected: 3`\n⚠️ Bug: using `break` instead of `continue` when a restricted neighbor is found → stops processing all remaining neighbors of 0 after seeing node 1 → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to answer many reachability queries, each with a different set of restricted nodes?",
+      "a": "Root the tree at 0 and precompute subtree sizes and entry/exit times. For each query, sort restricted nodes by depth (deepest first) and subtract each one's subtree size from n, skipping any whose ancestor is already restricted (detected via entry/exit time containment). TC: O(n) preprocess, O(k log k) per query where k = |restricted|. SC: O(n)."
+    },
+    {
+      "q": "What if edges can be added or removed dynamically between queries?",
+      "a": "Use a link-cut tree or Euler tour tree to maintain connected component sizes under edge insertions and deletions. When a node becomes restricted, conceptually remove all its incident edges; when unrestricted, re-add them. Query the component size containing node 0. TC: O(log² n) amortized per update/query. SC: O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^9 but only 10^5 edges are given (sparse tree)?",
+      "a": "Replace the size-n adjacency vector with a hash map mapping each node to its neighbor list. BFS still visits only nodes reachable from 0, processing at most O(E) nodes and edges. TC: O(E). SC: O(E)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int reachableNodes(int n, vector<vector<int>>& edges, vector<int>& restricted) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        unordered_set<int> blocked(restricted.begin(), restricted.end());\n        vector<bool> visited(n, false);\n        queue<int> q;\n        q.push(0);\n        visited[0] = true;\n        int count = 0;\n        while (!q.empty()) {\n            int u = q.front();\n            q.pop();\n            count++;\n            for (int v : adj[u]) {\n                if (!visited[v] && !blocked.count(v)) {\n                    visited[v] = true;\n                    q.push(v);\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

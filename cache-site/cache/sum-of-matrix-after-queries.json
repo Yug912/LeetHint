@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-matrix-after-queries",
+  "title": "Sum of Matrix After Queries",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Reverse Processing with Seen Tracking",
+  "tc": "O(q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> seenRow: n entries → O(n)\n- vector<bool> seenCol: n entries → O(n)\n- not counted: input queries, returned long long",
+  "approach": "Process queries in reverse order. The last query on a given row/column determines its final values for cells not later (in forward order) overwritten by the other dimension. Track seen rows and columns with boolean arrays. For an unseen row query, it contributes val × (number of unseen columns); for an unseen column query, val × (number of unseen rows). Skip already-seen rows/columns since a later (forward) query already fixed them.",
+  "hints": [
+    "When a row is set and then a column is set, which cells of that row keep the row's value? Does the order of operations matter for the final state of each cell?",
+    "Process queries in reverse with two boolean arrays tracking seen rows and columns. In Example 1, the last query [1,0,4] sets col 0 (unseen), so all 3 cells get value 4, adding 12 to the sum.",
+    "```\nseenRows = 0, seenCols = 0, sum = 0\nfor i from last query down to first:\n    type, index, val = queries[i]\n    if type == 0 and row[index] not seen:\n        sum += val * (n - seenCols)\n        mark row[index], seenRows += 1\n    if type == 1 and col[index] not seen:\n        sum += val * (n - seenRows)\n        mark col[index], seenCols += 1\nreturn sum\n```",
+    "**Overflow** - n = 10^4, val = 10^5, all cells could be 10^5, sum = 10^4 × 10^4 × 10^5 = 10^13.\n`Input: n = 10000, queries = [[0,0,100000]]` → `Expected: 1000000000000`\n⚠️ Bug: using `int` for sum → returns 727379968 (wraps around 2^31 - 1).\n\n**Duplicate row queries** - same row set twice; only the last (first in reverse) matters.\n`Input: n = 2, queries = [[0,0,5],[0,0,3]]` → `Expected: 6`\n⚠️ Bug: not checking seen rows, adding both → returns 10.\n\n**Single cell matrix** - n = 1, row and column overlap entirely.\n`Input: n = 1, queries = [[0,0,7],[1,0,9]]` → `Expected: 9`\n⚠️ Bug: counting both row and col contributions independently → returns 16.\n\n**All same type** - only row queries, no column queries.\n`Input: n = 3, queries = [[0,0,1],[0,1,2],[0,2,3]]` → `Expected: 6`\n⚠️ Bug: using seenCols instead of seenRows for row contribution → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if a third query type (type 2) sets a single cell [row, col] to a value?",
+      "a": "Process in reverse as before, but track seen cells individually. For a cell query, if neither its row nor column was already finalized and the cell itself is unseen, add val. Use a hash set for seen cells. TC becomes O(q), SC becomes O(n + q) in the worst case."
+    },
+    {
+      "q": "What if n can be up to 10^9 but queries.length stays at 5 × 10^4?",
+      "a": "Replace the boolean arrays with hash sets for seen rows and columns, since only at most 5 × 10^4 distinct rows/columns can appear. The logic stays identical. TC: O(q), SC: O(q)."
+    },
+    {
+      "q": "What if queries arrive as a stream and you must report the matrix sum after each query?",
+      "a": "The reverse-processing trick no longer applies directly. Maintain the current matrix sum incrementally: when setting a row, subtract old contributions of cells in that row whose columns were last set by column queries, then add the new values. Track per-row and per-column timestamps and values. TC: O(1) amortized per query, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long matrixSumQueries(int n, vector<vector<int>>& queries) {\n        long long sum = 0;\n        vector<bool> seenRow(n, false), seenCol(n, false);\n        int seenRows = 0, seenCols = 0;\n        for (int i = (int)queries.size() - 1; i >= 0; i--) {\n            int type = queries[i][0];\n            int index = queries[i][1];\n            int val = queries[i][2];\n            if (type == 0) {\n                if (!seenRow[index]) {\n                    sum += (long long)val * (n - seenCols);\n                    seenRow[index] = true;\n                    seenRows++;\n                }\n            } else {\n                if (!seenCol[index]) {\n                    sum += (long long)val * (n - seenRows);\n                    seenCol[index] = true;\n                    seenCols++;\n                }\n            }\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "slug": "coloring-a-border",
+  "title": "Coloring A Border",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Flood Fill / DFS",
+  "tc": "O(m*n)",
+  "sc": "O(m*n)",
+  "spaceBreakdown": "- vector<vector<bool>> visited: m*n entries → O(m*n)\n- vector<pair<int,int>> stk: up to m*n entries → O(m*n)\n- not counted: input grid, returned res",
+  "approach": "Use an iterative DFS (stack) to traverse the connected component of the starting cell, marking visited cells. For each cell in the component, check its four neighbors: if any neighbor is outside the grid or has a color different from the original component color, the cell is a border cell and is recolored. A copy of the grid stores the result while the original grid is used for neighbor checks to avoid interference from recoloring.",
+  "hints": [
+    "What distinguishes a cell on the edge of a connected same-color region from one fully surrounded by same-colored neighbors?",
+    "Use DFS (stack-based) to find all cells in the connected component, then check each cell's 4 neighbors. In Example 3, cell (1,1) has all 4 neighbors in the component, so it's not a border cell and stays color 1.",
+    "```\nmark (row, col) as visited, push to stack\nwhile stack not empty:\n    pop (r, c)\n    for each in-bounds neighbor (nr, nc) with same color and not visited:\n        mark visited, push to stack\nfor each visited cell (r, c):\n    if on grid boundary or any 4-neighbor not visited:\n        grid[r][c] = color\nreturn grid\n```",
+    "**Single cell grid** - The only cell is on the boundary.\n`Input: grid = [[5]], row = 0, col = 0, color = 3` → `Expected: [[3]]`\n⚠️ Bug: Only checking neighbor colors, not grid boundary position → returns [[5]]\n\n**All cells same color** - Only the outer ring is the border; interior cells stay unchanged.\n`Input: grid = [[1,1,1],[1,1,1],[1,1,1]], row = 1, col = 1, color = 2` → `Expected: [[2,2,2],[2,1,2],[2,2,2]]`\n⚠️ Bug: Coloring all visited cells instead of only border cells → returns [[2,2,2],[2,2,2],[2,2,2]]\n\n**Disconnected same-color cells** - Same-colored cells separated by different colors are in different components.\n`Input: grid = [[1,2,1]], row = 0, col = 0, color = 3` → `Expected: [[3,2,1]]`\n⚠️ Bug: Collecting all cells with"
+  ],
+  "followUps": [],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> colorBorder(vector<vector<int>>& grid, int row, int col, int color) {\n        int m = grid.size(), n = grid[0].size();\n        int orig = grid[row][col];\n        vector<vector<int>> res = grid;\n        vector<vector<bool>> visited(m, vector<bool>(n, false));\n        int dr[4] = {0, 0, 1, -1};\n        int dc[4] = {1, -1, 0, 0};\n        vector<pair<int,int>> stk;\n        stk.push_back({row, col});\n        visited[row][col] = true;\n        while (!stk.empty()) {\n            pair<int,int> p = stk.back();\n            stk.pop_back();\n            int r = p.first, c = p.second;\n            bool isBorder = false;\n            for (int k = 0; k < 4; k++) {\n                int nr = r + dr[k], nc = c + dc[k];\n                if (nr < 0 || nr >= m || nc < 0 || nc >= n) {\n                    isBorder = true;\n                } else if (grid[nr][nc] != orig) {\n                    isBorder = true;\n                } else if (!visited[nr][nc]) {\n                    visited[nr][nc] = true;\n                    stk.push_back({nr, nc});\n                }\n            }\n            if (isBorder) res[r][c] = color;\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

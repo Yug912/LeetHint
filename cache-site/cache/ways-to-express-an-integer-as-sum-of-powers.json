@@ -1,0 +1,40 @@
+{
+  "slug": "ways-to-express-an-integer-as-sum-of-powers",
+  "title": "Ways to Express an Integer as Sum of Powers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "0/1 Knapsack DP",
+  "tc": "O(n · n^(1/x))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n+1 entries → O(n)\n- no recursion, no other containers",
+  "approach": "This is a 0/1 knapsack counting problem: each positive integer i (where i^x ≤ n) is an item with weight i^x, and we count subsets summing to n. We use a 1D DP array where dp[j] = number of ways to form sum j, iterating j downward for each item so each integer is used at most once. The answer is dp[n] mod 10^9+7.",
+  "hints": [
+    "Each positive integer i can be used at most once, contributing i^x to the sum. With n ≤ 300, at most 300 candidates exist - what must you decide about each candidate to hit a total of exactly n?",
+    "Use 0/1 knapsack DP with a 1D array: dp[j] = number of ways to form sum j. For each i with i^x ≤ n, update dp[j] += dp[j − i^x] for j from n down to i^x. Example: n=10, x=2 → candidates 1,2,3 (powers 1,4,9); after processing all three, dp[10]=1.",
+    "```\ndp[0] = 1\nfor i = 1, 2, 3, ...:\n    p = i raised to power x\n    if p > n: stop\n    for j = n down to p:\n        dp[j] = (dp[j] + dp[j - p]) mod MOD\nreturn dp[n]\n```",
+    "**Smallest input** - n=1, x=1: only 1^1=1 is a valid decomposition.\n`Input: n=1, x=1` → `Expected: 1`\n⚠️ Bug: initializing dp[0]=0 instead of 1 → returns 0\n\n**No valid answer** - n=2, x=2: 1^2=1 is the only candidate, and 1≠2.\n`Input: n=2, x=2` → `Expected: 0`\n⚠️ Bug: iterating j ascending (p to n) instead of descending → returns 1 (counts 1+1=2, reusing integer 1)\n\n**Loop direction** - n=4, x=1: correct answer is 2 (4 alone, or 3+1).\n`Input: n=4, x=1` → `Expected: 2`\n⚠️ Bug: iterating j from p to n (ascending) instead of n to p (descending) → returns 5 (allows reusing integers, counting 1+1+1+1, 1+1+2, 2+2, 1+3, 4)\n\n**Break condition off-by-one** - n=9, x=2: 3^2=9 is a valid single-term decomposition.\n`Input: n=9, x=2` → `Expected: 1`\n⚠️ Bug: breaking when p >= n instead of p > n → returns 0 (skips i=3, missing 9=3^2)"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The O(n · n^(1/x)) approach becomes O(10^10) for x=1, which TLEs. Use generating functions: the answer is the coefficient of z^n in ∏(1 + z^(i^x)), computed via NTT-based polynomial multiplication. TC: O(n log² n), SC: O(n)."
+    },
+    {
+      "q": "What if you must print all valid decompositions instead of counting them?",
+      "a": "Replace the counting DP with backtracking: for each candidate i, try including or excluding it, prune when the partial sum exceeds n. The output can be exponential, so TC is O(n · S) where S is the number of solutions, SC: O(n) for the recursion stack."
+    },
+    {
+      "q": "What if each integer can be used up to 2 times instead of at most once?",
+      "a": "Change from 0/1 to bounded knapsack with limit 2. For each candidate i, iterate j downward and add dp[j − i^x] + dp[j − 2·i^x] (checking bounds). TC: O(n · n^(1/x)), SC: O(n). Same asymptotic complexity, constant factor increase."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfWays(int n, int x) {\n        const int MOD = 1000000007;\n        vector<int> dp(n + 1, 0);\n        dp[0] = 1;\n        for (int i = 1; ; i++) {\n            int p = 1;\n            for (int k = 0; k < x; k++) p *= i;\n            if (p > n) break;\n            for (int j = n; j >= p; j--) {\n                dp[j] = (dp[j] + dp[j - p]) % MOD;\n            }\n        }\n        return dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

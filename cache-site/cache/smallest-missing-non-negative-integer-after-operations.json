@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-missing-non-negative-integer-after-operations",
+  "title": "Smallest Missing Non-negative Integer After Operations",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Modular Arithmetic + Greedy Counting",
+  "tc": "O(n)",
+  "sc": "O(min(n, value))",
+  "spaceBreakdown": "- unordered_map<int,int> cnt: at most min(n, value) distinct residues → O(min(n, value))\n- unordered_map<int,int> used: at most min(n, value) distinct residues → O(min(n, value))\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Each element can only ever become values in its residue class modulo `value` (i.e. `r, r+value, r+2*value, …` where `r = ((x % value) + value) % value`). So the problem reduces to: with `cnt[r]` elements available in residue class `r`, how many consecutive integers `0,1,2,…` can we cover? We scan `t` upward; `t` is coverable iff `cnt[t % value] > used[t % value]`, where `used` tracks how many elements of that residue we have already \"spent\". The first `t` that fails is the MEX. A hash map (not a size-`value` array) keeps it optimal when `value` is large.",
+  "hints": [
+    "Since every operation shifts an element by exactly ±value, which target integers can a single `nums[i]` ever be transformed into - and what do all those reachable targets have in common? `value` can be as large as 10^5, so enumerating every reachable value per element is too slow.",
+    "Use a hash map keyed by `((nums[i] % value) + value) % value` to count elements per residue class. For Example 1 with `value=5`, the residues of `[1,-10,7,13,6,8]` are `[1,0,2,3,1,3]`, giving counts `{0:1, 1:2, 2:1, 3:2}`.",
+    "```\nfor x in nums:\n    r = ((x mod value) + value) mod value\n    cnt[r] += 1\nmex = 0\nloop:\n    r = mex mod value\n    if cnt[r] > used[r]:\n        used[r] += 1\n        mex += 1\n    else:\n        break\nreturn mex\n```",
+    "**Negative residue** - C++ `%` on negatives yields a negative result.\n`Input: nums = [-1,0], value = 2` → `Expected: 2`\n⚠️ Bug: using `x % value` directly without normalization → count[-1]=1, count[0]=1; at mex=1 (r=1) count[1]=0 → returns 1\n\n**Duplicate residues** - several elements share one residue class.\n`Input: nums = [0,0], value = 1` → `Expected: 2`\n⚠️ Bug: storing residues in a set instead of counting → count[0]=1; at mex=1 (r=0) `1 > 1` is false → returns 1\n\n**value equals 1** - every integer is reachable from every element.\n`Input: nums = [3,7,2], value = 1` → `Expected: 3`\n⚠️ Bug: capping the answer at `value` (returning `min(mex, value)`) → returns 1\n\n**Single element, nonzero residue** - the lone element cannot make 0.\n`Input: nums = [7], value = 5` → `Expected: 0`\n⚠️ Bug: initializing `mex = 1` unconditionally → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if `value` could be 0 (no operation possible)?",
+      "a": "No element can change, so compute the MEX of the original array directly: mark present non-negative integers and scan upward from 0. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if each operation costs 1 and you have a budget of k total operations - maximize MEX?",
+      "a": "Within each residue class, the cost to reach successive targets r, r+value, … increases by `value` each step; greedily pick the globally cheapest next target while budget remains using a min-heap. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if nums arrives as a stream and you must answer MEX queries online?",
+      "a": "Keep the residue-count hash map updated per element in O(1); answer each query by scanning t upward from the last known MEX, caching `used` counts between queries. Amortized O(1) per update and per query, space O(min(n, value))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findSmallestInteger(vector<int>& nums, int value) {\n        unordered_map<int,int> cnt;\n        for (int x : nums) {\n            int r = ((x % value) + value) % value;\n            cnt[r]++;\n        }\n        unordered_map<int,int> used;\n        int mex = 0;\n        while (true) {\n            int r = mex % value;\n            if (cnt[r] > used[r]) {\n                used[r]++;\n                mex++;\n            } else {\n                break;\n            }\n        }\n        return mex;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

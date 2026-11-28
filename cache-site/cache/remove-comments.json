@@ -1,0 +1,40 @@
+{
+  "slug": "remove-comments",
+  "title": "Remove Comments",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Finite State Machine (single-flag parser)",
+  "tc": "O(N)",
+  "sc": "O(N)",
+  "spaceBreakdown": "- string cur: accumulates visible text across lines, up to N chars → O(N)\n- vector<string> res: the returned output (not counted by LeetCode convention)\n- bool inBlock, int i: O(1)",
+  "approach": "Use a single boolean `inBlock` to track whether the parser is inside a block comment. Walk each line character by character: when not in a block, detect `//` (stop reading the line) or `/*` (enter block); otherwise append the character. When in a block, scan only for `*/` to exit. Accumulate visible characters in a buffer `cur`; at each line end, if not in a block and `cur` is non-empty, emit it. This correctly handles block comments spanning multiple lines (joining text before `/*` and after `*/`) and drops lines that become empty.",
+  "hints": [
+    "A block comment can start on one line and end on a later line, so what single piece of information must you carry forward from one line to the next while scanning?",
+    "Use a boolean flag `inBlock` and scan left to right. On `\"a/*comment\"`: append `a`, see `/*`, set `inBlock=true`; on `\"more_comment*/b\"`: skip until `*/`, set `inBlock=false`, append `b` → buffer holds `\"ab\"`.",
+    "```\ninBlock = false\ncur = \"\"\nfor each line:\n  i = 0\n  while i < len(line):\n    if not inBlock:\n      if line[i..i+1] == \"//\": break\n      if line[i..i+1] == \"/*\": inBlock = true; i += 2\n      else: cur += line[i]; i += 1\n    else:\n      if line[i..i+1] == \"*/\": inBlock = false; i += 2\n      else: i += 1\n  if not inBlock and cur != \"\":\n    output(cur); cur = \"\"\n```",
+    "**Line comment inside block** - `//` appearing inside an active block comment must be ignored\n`Input: [\"/* // */x\"]` → `Expected: [\"x\"]`\n⚠️ Bug: checking for `//` before checking `inBlock` state → returns `[]`\n\n**Empty line after removal** - a line that becomes empty must be dropped\n`Input: [\"// comment\"]` → `Expected: []`\n⚠️ Bug: pushing `cur` unconditionally at line end → returns `[\"\"]`\n\n**Block spanning lines** - text before `/*` and after `*/` on different lines must join\n`Input: [\"a/*b\",\"c*/d\"]` → `Expected: [\"ad\"]`\n⚠️ Bug: clearing `cur` at the end of every line → returns `[\"a\",\"d\"]`\n\n**Lone slash** - a single `/` is not a comment delimiter\n`Input: [\"/\"]` → `Expected: [\"/\"]`\n⚠️ Bug: treating any `/` as a comment start without checking the next character → returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle string literals so that `//` or `/*` inside a string is not treated as a comment?",
+      "a": "Add another state flag `inString` toggled by unescaped `\"`. While `inString` is true, skip comment detection entirely. Time stays O(N); space stays O(N) for the buffer."
+    },
+    {
+      "q": "What if block comments could be nested (e.g., `/* /* */ */`)?",
+      "a": "Replace the boolean with an integer depth counter, incrementing on `/*` and decrementing on `*/`; only emit characters when depth is 0. Time stays O(N); space unchanged."
+    },
+    {
+      "q": "If the source arrives as a streaming character sequence (not pre-split into lines), how would you adapt?",
+      "a": "Process character by character with the same state machine, emitting a newline to the output buffer whenever the input newline is seen and `inBlock` is false. Time O(N); space O(N) for the output buffer, since you cannot discard already-emitted output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> removeComments(vector<string>& source) {\n        vector<string> res;\n        bool inBlock = false;\n        string cur;\n        for (auto& line : source) {\n            int i = 0, n = (int)line.size();\n            while (i < n) {\n                if (!inBlock) {\n                    if (i + 1 < n && line[i] == '/' && line[i+1] == '/') {\n                        break;\n                    } else if (i + 1 < n && line[i] == '/' && line[i+1] == '*') {\n                        inBlock = true;\n                        i += 2;\n                    } else {\n                        cur += line[i];\n                        i += 1;\n                    }\n                } else {\n                    if (i + 1 < n && line[i] == '*' && line[i+1] == '/') {\n                        inBlock = false;\n                        i += 2;\n                    } else {\n                        i += 1;\n                    }\n                }\n            }\n            if (!inBlock) {\n                if (!cur.empty()) {\n                    res.push_back(cur);\n                    cur.clear();\n                }\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

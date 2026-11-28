@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-make-the-array-k-increasing",
+  "title": "Minimum Operations to Make the Array K-Increasing",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Longest Increasing Subsequence (LIS) / Patience Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> tails: up to n/k entries, which is at most n entries → O(n)\n- recursion depth: none\n- not counted: input arr, returned ans",
+  "approach": "The condition `arr[i-k] <= arr[i]` implies that the array can be decomposed into `k` independent subsequences, where the `i`-th subsequence consists of elements at indices `i, i+k, i+2k, ...`. For each subsequence, we need to find the minimum operations to make it non-decreasing. The minimum operations to make a sequence non-decreasing is its length minus the length of its Longest Non-Decreasing Subsequence (LNDS). We can efficiently find the LNDS of each subsequence using Patience Sorting with binary search (`upper_bound` to allow duplicates).",
+  "hints": [
+    "The condition `arr[i-k] <= arr[i]` only relates elements whose indices have the same remainder modulo `k`. What does this tell you about the dependencies between different groups of elements in the array?",
+    "For each independent subsequence, the minimum operations to make it non-decreasing equals its length minus the length of its Longest Non-Decreasing Subsequence (LNDS), found via Patience Sorting. For the subsequence `[4, 5, 6]` in Example 2, the LNDS length is 3, so 0 operations are needed.",
+    "```\nans = 0\nfor i = 0 to k-1:\n    tails = []\n    for j = i to n-1 step k:\n        pos = first element in tails > arr[j]\n        if pos exists:\n            replace pos with arr[j]\n        else:\n            append arr[j] to tails\n    ans += (length of subsequence) - (length of tails)\nreturn ans\n```",
+    "**Uneven subsequences** - `n` is not a multiple of `k`, so subsequences have different lengths.\n`Input: arr = [2,1,1], k = 2` → `Expected: 1`\n⚠️ Bug: calculating subsequence length as `n / k` instead of `(n - i - 1) / k + 1` → returns `0`\n\n**All duplicates** - Array contains identical values, requiring a non-decreasing (not strictly increasing) check.\n`Input: arr = [2,2,2], k = 1` → `Expected: 0`\n⚠️ Bug: using `lower_bound` instead of `upper_bound` for the subsequence → returns `2`\n\n**Already sorted** - Array is already K-increasing.\n`Input: arr = [1,2,3,4,5], k = 1` → `Expected: 0`\n⚠️ Bug: returning `tails.size()` instead of `length - tails.size()` → returns `5`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array elements could be negative?",
+      "a": "The algorithm remains exactly the same. The `upper_bound` logic works correctly for negative numbers as well, so no changes are needed. Time and space complexity remain O(n log n) and O(n) respectively."
+    },
+    {
+      "q": "What if `k` can be up to `10^9`?",
+      "a": "If `k > n`, every subsequence has length 1, so the array is already K-increasing and the answer is 0. We can add an early exit `if (k >= n) return 0;` to avoid unnecessary loops. Time complexity becomes O(1) in this case."
+    },
+    {
+      "q": "What if we need to make the array strictly increasing (`arr[i-k] < arr[i]`)?",
+      "a": "We would change `upper_bound` to `lower_bound` to find the Longest Strictly Increasing Subsequence (LIS) for each subsequence. The rest of the logic remains identical. Time and space complexity do not change."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int kIncreasing(vector<int>& arr, int k) {\n        int n = arr.size();\n        int ans = 0;\n        for (int i = 0; i < k; ++i) {\n            vector<int> tails;\n            for (int j = i; j < n; j += k) {\n                auto it = upper_bound(tails.begin(), tails.end(), arr[j]);\n                if (it == tails.end()) {\n                    tails.push_back(arr[j]);\n                } else {\n                    *it = arr[j];\n                }\n            }\n            int len = (n - i - 1) / k + 1;\n            ans += len - (int)tails.size();\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

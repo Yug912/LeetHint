@@ -1,0 +1,27 @@
+{
+  "slug": "replace-non-coprime-numbers-in-array",
+  "title": "Replace Non-Coprime Numbers in Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack / Greedy Reduction",
+  "tc": "O(n log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> st (the stack): up to n entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input nums, returned vector (same as st)",
+  "approach": "Use a stack to greedily merge adjacent non-coprime numbers. For each new element, push it onto the stack, then repeatedly check the top two elements: if their GCD > 1, replace them with their LCM (computed as a/gcd(a,b)*b using long long to avoid overflow) and continue merging leftward, since the new LCM may now be non-coprime with the new top. This works because the problem guarantees the final result is independent of merge order, so a left-to-right greedy merge is valid. Each element is pushed and popped at most once, giving linear work (times a log-factor for GCD).",
+  "hints": [
+    "When two adjacent numbers merge into their LCM, what relationship might the new value have with the number immediately to its left? The problem states that the order of merging does not affect the final result.",
+    "Use a stack. For each number, repeatedly check if it's non-coprime with the stack's top; if so, pop and replace with their LCM, then check again.\nExample: processing [6,4,3,...], after merging 6 and 4 into 12, check GCD(12,3)=3>1, so merge into 12.",
+    "```\nstack = []\nfor num in nums:\n    cur = num\n    while stack not empty and gcd(cur, stack.top) > 1:\n        cur = lcm(cur, stack.pop)\n    stack.push(cur)\nreturn stack\n```",
+    "**Single element** - Only one number, no pairs to check.\n`Input: nums = [7]` → `Expected: [7]`\n⚠️ Bug: adding `if (nums.size() < 2) return {};` at the start → returns `[]`\n\n**All coprime** - No adjacent pair shares a common factor.\n`Input: nums = [2, 3, 5, 7]` → `Expected: [2, 3, 5, 7]`\n⚠️ Bug: using `gcd >= 1` as merge condition → returns `[210]`\n\n**Cascading merge** - A merge creates a new non-coprime pair with the left neighbor.\n`Input: nums = [2, 3, 6]` → `Expected: [6]`\n⚠️ Bug: using `if` instead of `while` for the merge loop → returns `[2, 6]`\n\n**Overflow** - Product of two"
+  ],
+  "followUps": [],
+  "code": {
+    "cpp": "class Solution {\n    long long gcdll(long long a, long long b) {\n        while (b) {\n            long long t = b;\n            b = a % b;\n            a = t;\n        }\n        return a;\n    }\npublic:\n    vector<int> replaceNonCoprimes(vector<int>& nums) {\n        vector<int> st;\n        st.reserve(nums.size());\n        for (int x : nums) {\n            st.push_back(x);\n            while (st.size() >= 2) {\n                long long a = st[st.size() - 2];\n                long long b = st[st.size() - 1];\n                long long g = gcdll(a, b);\n                if (g > 1) {\n                    st.pop_back();\n                    st.pop_back();\n                    long long l = a / g * b;\n                    st.push_back((int)l);\n                } else {\n                    break;\n                }\n            }\n        }\n        return st;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

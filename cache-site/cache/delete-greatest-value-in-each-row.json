@@ -1,0 +1,40 @@
+{
+  "slug": "delete-greatest-value-in-each-row",
+  "title": "Delete Greatest Value in Each Row",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort + Column-wise Maximum",
+  "tc": "O(m·n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[101]: fixed-size array of 101 integers → O(1)\n- recursion depth: none\n- not counted: input grid (modified in place), returned int",
+  "approach": "Sort each row in descending order using counting sort (values are bounded by [1,100], so each row sorts in O(n) time). After sorting, the j-th column contains the (j+1)-th largest element from each row, which are exactly the elements deleted together in operation (j+1). The answer is the sum over all columns of the maximum value in that column across all rows. This works because the operation always deletes the largest remaining element per row, so after sorting, column j captures exactly the elements compared in round j+1.",
+  "hints": [
+    "What property of each row determines which of its elements get compared against elements of other rows in each round?\nThe grid has at most 50 rows and 50 columns, with values in [1, 100].",
+    "Sort each row with counting sort (values bounded by 100), then sum the maximum of each column. For grid [[1,2,4],[3,3,1]], sorted rows are [4,2,1] and [3,3,1]; column maxes are 4, 3, 1 → answer 8.",
+    "```\nfor each row:\n    count occurrences of values 1..100\n    rewrite row in descending order using counts\nfor each column j:\n    answer += max over all rows of grid[row][j]\nreturn answer\n```",
+    "**Single element** - m=1, n=1, one operation adds the only value.\n`Input: [[10]]` → `Expected: 10`\n⚠️ Bug: column loop uses `j < n-1` → returns 0\n\n**Duplicate max in a row** - counting sort must emit every copy of a value.\n`Input: [[3,3,1],[1,2,4]]` → `Expected: 8`\n⚠️ Bug: using `if (count[v] > 0)` instead of `while (count[v] > 0)` → returns 7\n\n**All elements equal** - each of n operations adds the same value.\n`Input: [[7,7,7],[7,7,7]]` → `Expected: 21`\n⚠️ Bug: summing each row's maximum once instead of per-column max → returns 14\n\n**Single row** - m=1, the answer is the sum of all elements.\n`Input: [[1,2,3]]` → `Expected: 6`\n⚠️ Bug: returning the row maximum instead of the sum of column maxes → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if grid values can be up to 10^9 instead of 100?",
+      "a": "Counting sort is no longer viable since the value range is too large. Use comparison sort (std::sort) on each row instead, giving O(m·n·log n) time and O(1) space. The column-max summation step remains O(m·n)."
+    },
+    {
+      "q": "What if rows arrive one at a time as a stream and you cannot store the full grid?",
+      "a": "Sort each row as it arrives and maintain a running column-wise maximum array of size n. After all rows are processed, sum the column maxes. Time stays O(m·n) with counting sort; space drops to O(n) for the column-max array plus O(1) for the count array."
+    },
+    {
+      "q": "What if you must also return which row contributed the maximum in each operation?",
+      "a": "After sorting each row, track both the maximum value and its row index for each column. Store a pair (value, row_index) per column, taking the max by value. Time and space complexity remain unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int deleteGreatestValue(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int count[101];\n        \n        for (int i = 0; i < m; i++) {\n            for (int v = 0; v <= 100; v++) count[v] = 0;\n            for (int j = 0; j < n; j++) count[grid[i][j]]++;\n            int idx = 0;\n            for (int v = 100; v >= 1; v--) {\n                while (count[v] > 0) {\n                    grid[i][idx++] = v;\n                    count[v]--;\n                }\n            }\n        }\n        \n        int answer = 0;\n        for (int j = 0; j < n; j++) {\n            int colMax = 0;\n            for (int i = 0; i < m; i++) {\n                if (grid[i][j] > colMax) colMax = grid[i][j];\n            }\n            answer += colMax;\n        }\n        \n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "flip-binary-tree-to-match-preorder-traversal",
+  "title": "Flip Binary Tree To Match Preorder Traversal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Preorder DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call stack: up to O(h), worst case O(n) for a skewed tree\n- `flips` vector: up to O(n) entries - not counted (returned output)\n- `pos`, `impossible`: O(1)",
+  "approach": "Perform a preorder DFS while maintaining a global index `pos` into `voyage`. At each node, verify `node->val == voyage[pos]`; if not, the match is impossible. After consuming the current node, the next voyage value must be the root of the left subtree. If the left child exists and its value doesn't match `voyage[pos]`, check whether the right child matches - if so, flip this node and recurse right-then-left; otherwise, it's impossible. This greedy choice is correct because all values are unique, so at most one child can match the next voyage value.",
+  "hints": [
+    "In a preorder traversal, after visiting a node, the very next value belongs to its left child (if one exists). Given that all node values are unique, what does it tell you if the left child's value doesn't equal that next voyage value?",
+    "Use recursive preorder DFS with a shared index into `voyage`. In Example 2, at node 1 the next voyage value is 3, the left child is 2, and the right child is 3 - so flip node 1 and recurse right-then-left.",
+    "```\ndfs(node):\n  if node is null: return\n  if voyage[pos] != node.val: mark impossible; return\n  pos++\n  if node.left exists:\n    if voyage[pos] == node.left.val:\n      dfs(node.left); dfs(node.right)\n    elif node.right exists and voyage[pos] == node.right.val:\n      record node.val as flipped\n      dfs(node.right); dfs(node.left)\n    else: mark impossible\n  else:\n    dfs(node.right)\n```",
+    "**Single node** - tree has no children, so no flip decision is needed.\n`Input: root = [1], voyage = [1]` → `Expected: []`\n⚠️ Bug: accessing `node->left->val` without null-checking `node->left` → null pointer dereference, crash\n\n**Skewed right chain** - left child is null at every node, only right children exist.\n`Input: root = [1,null,2], voyage = [1,2]` → `Expected: []`\n⚠️ Bug: unconditionally dereferencing `node->left->val` to decide whether to flip → crash on the null left child of node 1\n\n**Already matches** - the tree's preorder already equals voyage, so no flips are needed.\n`Input: root = [1,2,3], voyage = [1,2,3]` → `Expected: []`\n⚠️ Bug: checking `voyage[pos]` against the left child *before* incrementing `pos` → at node 1, compares voyage[0]=1 to left child 2, sees a mismatch, flips node 1 → returns `[1]` instead of `[]`\n\n**Left matches but right subtree fails** - the left child matches, but a deeper node in the right subtree doesn't.\n`Input: root = [1,2,3], voyage = [1,2,4]` → `Expected: [-1]`\n⚠️ Bug: not recursing into the right subtree after the left subtree succeeds → never visits node 3, returns `[]` instead of `[-1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if node values are not unique - how would you find the minimum number of flips?",
+      "a": "Without uniqueness, both children might match the next voyage value, so greedy no longer works. You'd need to try both flip and no-flip at each ambiguous node with memoization on (node, pos) pairs. TC: O(n²), SC: O(n²)."
+    },
+    {
+      "q": "How would you handle n up to 10^6 with a serialized tree input?",
+      "a": "The algorithm is already O(n), but deep recursion on a skewed tree risks stack overflow. Convert to an iterative preorder traversal using an explicit stack. TC: O(n), SC: O(n) worst case for the stack."
+    },
+    {
+      "q": "If voyage arrives as a stream and cannot be stored, can you still solve this?",
+      "a": "Yes - preorder consumes voyage strictly sequentially, so you only need the current value and a one-value lookahead to decide flips. Read values on demand via an iterator. TC: O(n), SC: O(h) for recursion only."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> flips;\n    int pos;\n    bool impossible;\n\n    void dfs(TreeNode* node, vector<int>& voyage) {\n        if (!node || impossible) return;\n        if (pos >= (int)voyage.size() || node->val != voyage[pos]) {\n            impossible = true;\n            return;\n        }\n        pos++;\n        if (node->left) {\n            if (pos < (int)voyage.size() && node->left->val == voyage[pos]) {\n                dfs(node->left, voyage);\n                dfs(node->right, voyage);\n            } else if (node->right && pos < (int)voyage.size() && node->right->val == voyage[pos]) {\n                flips.push_back(node->val);\n                dfs(node->right, voyage);\n                dfs(node->left, voyage);\n            } else {\n                impossible = true;\n            }\n        } else {\n            dfs(node->right, voyage);\n        }\n    }\n\n    vector<int> flipMatchVoyage(TreeNode* root, vector<int>& voyage) {\n        flips.clear();\n        pos = 0;\n        impossible = false;\n        dfs(root, voyage);\n        if (impossible) return {-1};\n        return flips;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

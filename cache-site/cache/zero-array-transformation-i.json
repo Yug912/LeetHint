@@ -1,0 +1,40 @@
+{
+  "slug": "zero-array-transformation-i",
+  "title": "Zero Array Transformation I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Difference Array",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> diff: size n+1 → O(n)\n- recursion depth: none\n- not counted: input nums, input queries, returned bool",
+  "approach": "Each query lets us decrement any subset of indices in its range, so index `i` can be decremented at most as many times as the number of queries whose range covers it. If for every index `i` the coverage count is ≥ `nums[i]`, we can always pick index `i` in exactly `nums[i]` of those covering queries to drive it to zero. We compute coverage counts for all indices efficiently using a difference array: for each query `[l, r]`, increment `diff[l]` and decrement `diff[r+1]`, then prefix-sum to get per-index coverage.",
+  "hints": [
+    "Since each query lets you pick any subset of its range, what is the maximum number of times a single position can be decremented across all queries?",
+    "Use a difference array to count how many query ranges cover each index. For `nums = [1,0,1]` with query `[0,2]`, mark `+1` at index 0 and `-1` at index 3, then prefix-sum to get coverage `[1,1,1]`.",
+    "```\ndiff = array of size n+1, all zeros\nfor each query [l, r]:\n    diff[l] += 1\n    diff[r+1] -= 1\ncover = 0\nfor i in 0 .. n-1:\n    cover += diff[i]\n    if cover < nums[i]:\n        return false\nreturn true\n```",
+    "**Single element already zero** - n=1, the only element is 0.\n`Input: nums = [0], queries = [[0,0]]` → `Expected: true`\n⚠️ Bug: allocating `diff` of size `n` instead of `n+1` → `diff[r+1]` writes out of bounds when `r = n-1`.\n\n**Exact coverage match** - coverage equals `nums` at every index.\n`Input: nums = [2,2,2], queries = [[0,2],[0,2]]` → `Expected: true`\n⚠️ Bug: using `cover <= nums[i]` to return false instead of `cover < nums[i]` → returns false when coverage equals `nums[i]`.\n\n**Zero needed but nonzero coverage** - an index needs 0 decrements but is covered.\n`Input: nums = [1,0,1], queries = [[0,2]]` → `Expected: true`\n⚠️ Bug: checking `cover != nums[i]` instead of `cover < nums[i]` → returns false because `cover[1] = 1 ≠ nums[1] = 0`.\n\n**Last element uncovered** - the final index lies outside every query range.\n`Input: nums = [0,0,5], queries = [[0,1]]` → `Expected: false`\n⚠️ Bug: loop bound `i < n-1` instead of `i < n` → never checks index 2, returns true."
+  ],
+  "followUps": [
+    {
+      "q": "What if each query decrements ALL indices in its range (not a subset)?",
+      "a": "Then every index must end up exactly at zero, so compute total decrements per index with the same difference array and check `cover[i] == nums[i]` for all `i`. TC: O(n + q), SC: O(n)."
+    },
+    {
+      "q": "What if you want to minimize the number of queries used?",
+      "a": "For each index `i` you need at least `nums[i]` selected queries covering it; this is an interval multi-cover problem solvable greedily with a segment tree tracking remaining requirements. TC: O(q log n), SC: O(n)."
+    },
+    {
+      "q": "What if queries arrive in a stream and you must answer after each query whether the array can currently be made zero?",
+      "a": "Maintain the difference array incrementally and use a segment tree tracking `min(cover[i] - nums[i])` over all indices; after each update, answer yes iff the global minimum is ≥ 0. TC: O(log n) per query, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isZeroArray(vector<int>& nums, vector<vector<int>>& queries) {\n        int n = nums.size();\n        vector<int> diff(n + 1, 0);\n        for (auto& q : queries) {\n            diff[q[0]]++;\n            diff[q[1] + 1]--;\n        }\n        int cover = 0;\n        for (int i = 0; i < n; i++) {\n            cover += diff[i];\n            if (cover < nums[i]) return false;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

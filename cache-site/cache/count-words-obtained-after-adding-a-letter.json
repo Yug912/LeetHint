@@ -1,0 +1,40 @@
+{
+  "slug": "count-words-obtained-after-adding-a-letter",
+  "title": "Count Words Obtained After Adding a Letter",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask + Hash Set",
+  "tc": "O((n + m) * 26)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> startMasks: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vectors, returned int",
+  "approach": "Since rearrangement is free, only the set of letters matters. Represent each word as a 26-bit mask (one bit per letter). Store all start-word masks in a hash set. For each target word, compute its mask, then try removing each of its set bits one at a time; if any resulting mask is in the start set, the target is obtainable (the removed bit is the appended letter). This works because the operation is exactly \"add one letter not already present,\" so the target mask = start mask ∪ {one new bit}.",
+  "hints": [
+    "Since any rearrangement is allowed and no letter repeats within a word, what single representation captures every word that is equivalent under rearrangement? Each word has at most 26 distinct letters.",
+    "Use a hash set of 26-bit integer masks (one bit per letter) for all startWords. For target \"acti\" (bits a,c,t,i set), remove each set bit and check the result - removing the 'i' bit yields the mask for \"act\", which is in the set.",
+    "```\nmasks = empty set\nfor s in startWords:\n    mask = 0\n    for c in s: mask |= 1 << (c - 'a')\n    add mask to masks\n\ncount = 0\nfor t in targetWords:\n    mask = 0\n    for c in t: mask |= 1 << (c - 'a')\n    for i in 0..25:\n        if bit i is set in mask and (mask with bit i cleared) is in masks:\n            count += 1\n            break\nreturn count\n```",
+    "**Target identical to a start word** - no letter was added, so it must not match.\n`Input: startWords = [\"ab\"], targetWords = [\"ab\"]` → `Expected: 0`\n⚠️ Bug: checking `startMasks.count(targetMask)` directly without removing a bit → returns 1\n\n**XOR on an unset bit** - toggling a bit absent from the target adds it, creating a false match.\n`Input: startWords = [\"abc\"], targetWords = [\"ab\"]` → `Expected: 0`\n⚠️ Bug: using `mask ^ (1 << i)` for all i without first checking `mask & (1 << i)` → returns 1\n\n**Multiple valid start words for one target** - the target should be counted once.\n`Input: startWords = [\"ab\",\"ac\"], targetWords = [\"abc\"]` → `Expected: 1`\n⚠️ Bug: not breaking after the first match, counting every valid start word → returns 2\n\n**Target containing all 26 letters** - bit 25 ('z') must be checked.\n`Input: startWords = [\"abcdefghijklmnopqrstuvwxy\"], targetWords = [\"abcdefghijklmnopqrstuvwxyz\"]` → `Expected: 1`\n⚠️ Bug: looping `i < 25` instead of `i < 26` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could append any number of letters (not just one) to a start word?",
+      "a": "Precompute all reachable masks by, for each start mask, adding every possible single bit and inserting the result into the set. Then just check each target mask directly. TC: O(n * 26 + m), SC: O(n * 26)."
+    },
+    {
+      "q": "What if targetWords arrive as a stream and you must answer each query online?",
+      "a": "Build the start mask set first (all start words known upfront), then for each streaming target compute its mask and check all 26 one-bit-removed variants. Each query is O(26). TC: O(26) per query, SC: O(n)."
+    },
+    {
+      "q": "What if letters could repeat within a word?",
+      "a": "A bitmask can no longer represent counts. Use a 26-element frequency array (or sorted string) as the hash key. For each target, try decrementing one non-zero frequency and check the resulting signature. TC: O((n + m) * 26 * 26) for hashing frequency arrays, SC: O(n * 26)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int wordCount(vector<string>& startWords, vector<string>& targetWords) {\n        unordered_set<int> startMasks;\n        for (const string& s : startWords) {\n            int mask = 0;\n            for (char c : s) mask |= (1 << (c - 'a'));\n            startMasks.insert(mask);\n        }\n        int count = 0;\n        for (const string& t : targetWords) {\n            int mask = 0;\n            for (char c : t) mask |= (1 << (c - 'a'));\n            for (int i = 0; i < 26; i++) {\n                if (mask & (1 << i)) {\n                    if (startMasks.count(mask ^ (1 << i))) {\n                        count++;\n                        break;\n                    }\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

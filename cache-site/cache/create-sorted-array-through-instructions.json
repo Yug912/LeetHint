@@ -1,0 +1,40 @@
+{
+  "slug": "create-sorted-array-through-instructions",
+  "title": "Create Sorted Array through Instructions",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Indexed Tree (Fenwick Tree)",
+  "tc": "O(n log m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- vector<int> bit: size 100002 → O(m)\n- not counted: input vector, returned int",
+  "approach": "For each element x being inserted, the cost is min(count of already-inserted elements < x, count of already-inserted elements > x). We maintain a Binary Indexed Tree (Fenwick Tree) over the value domain [1, 10^5]. For each instruction x: query(x-1) gives the count of elements strictly less than x, and (total_inserted - query(x)) gives the count strictly greater than x. Add their minimum to the total cost, then update the BIT at position x. This is correct because the BIT maintains exact frequency counts of all previously inserted values.",
+  "hints": [
+    "For each element being inserted, what two quantities about the already-inserted elements determine the insertion cost? The value domain is only up to 10^5.",
+    "Use a Binary Indexed Tree (Fenwick Tree) indexed by value. In Example 1, inserting 2 into [1,5,6]: query(1)=1 element less than 2, and 3−query(2)=2 elements greater than 2, so cost = min(1,2) = 1.",
+    "```\ntotal = 0, inserted = 0\nfor each x in instructions:\n    less = query(x - 1)\n    greater = inserted - query(x)\n    total += min(less, greater)\n    update(x, +1)\n    inserted += 1\nreturn total % MOD\n```",
+    "**Single element** - n = 1, no prior elements to compare against.\n`Input: instructions = [1]` → `Expected: 0`\n⚠️ Bug: not guarding query(0) in BIT (loop condition `i >= 0` instead of `i > 0`) → returns garbage or crashes on x = 1.\n\n**All equal values** - every insertion has zero elements strictly less and zero strictly greater.\n`Input: instructions = [5,5,5,5]` → `Expected: 0`\n⚠️ Bug: using `query(x)` instead of `query(x-1)` for \"less than\" → counts equal elements as less, returns 6 instead of 0.\n\n**Maximum cost overflow** - n = 10^5, values alternating high/low so each insertion costs ~n/2; total ≈ 10^5 × 5×10^4 = 5×10^9, exceeding int.\n`Input: instructions = [100000,1,100000,1,...] (10^5 elements)` → `Expected: (large value) % (10^9+7)`\n⚠️ Bug: accumulating cost in `int total` instead of `long long` → integer overflow, wrong modulo result.\n\n**Boundary value 10^5** - the largest allowed instruction value must index the BIT correctly.\n`Input: instructions = [100000]` → `Expected: 0`\n⚠️ Bug: BIT array sized 100001 with update loop `i <= 100000` accessing index 100000 out of bounds → undefined behavior."
+  ],
+  "followUps": [
+    {
+      "q": "What if instructions[i] can be up to 10^9 instead of 10^5?",
+      "a": "Coordinate-compress all instruction values first (sort unique values, map each to its rank), then use the same BIT over the compressed domain of size n. TC becomes O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if you must also return the final sorted array, not just the cost?",
+      "a": "Use a balanced BST or a Fenwick tree with binary search on prefix sums to find each insertion position, then build the array. The cost computation stays the same; TC remains O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if instructions arrive as a streaming input of unknown length and memory is limited to O(√n)?",
+      "a": "Use a sqrt-decomposition: maintain frequency buckets of width √m over the value domain. Each query scans O(√m) buckets, giving TC O(n√m) and SC O(√m), trading time for space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int createSortedArray(vector<int>& instructions) {\n        const int MOD = 1e9 + 7;\n        const int MAXV = 100002;\n        vector<int> bit(MAXV, 0);\n        \n        auto update = [&](int i, int val) {\n            for (; i < MAXV; i += i & (-i))\n                bit[i] += val;\n        };\n        \n        auto query = [&](int i) -> long long {\n            long long sum = 0;\n            for (; i > 0; i -= i & (-i))\n                sum += bit[i];\n            return sum;\n        };\n        \n        long long totalCost = 0;\n        long long inserted = 0;\n        \n        for (int x : instructions) {\n            long long less = query(x - 1);\n            long long greater = inserted - query(x);\n            totalCost += min(less, greater);\n            update(x, 1);\n            inserted++;\n        }\n        \n        return (int)(totalCost % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

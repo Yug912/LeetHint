@@ -1,0 +1,40 @@
+{
+  "slug": "special-array-ii",
+  "title": "Special Array II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Grouping",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> group: n entries → O(n)\n- recursion depth: none\n- not counted: input nums, returned vector<bool> ans",
+  "approach": "A subarray is special iff no adjacent pair inside it has equal parity. Precompute a `group` id for each index: start a new group exactly at each index `i` where `nums[i]` and `nums[i-1]` share parity. Then a query `[l, r]` is special iff `group[l] == group[r]`, because equal group ids mean no parity-breaking boundary lies between them. This gives O(n + q) total time.",
+  "hints": [
+    "With up to 10^5 queries each spanning up to 10^5 elements, what single precomputed label per index would let you answer any range query in O(1)?",
+    "Assign each index a group id; a new group starts exactly where two adjacent elements share parity. For nums = [4,3,1,6], the groups are [0,0,1,1] because 3 and 1 are both odd.",
+    "```\ngroup[0] = 0\nfor i in 1..n-1:\n    if parity(nums[i]) == parity(nums[i-1]):\n        group[i] = group[i-1] + 1\n    else:\n        group[i] = group[i-1]\nfor each query [l, r]:\n    answer = (group[l] == group[r])\n```",
+    "**Single element** - n = 1, the only possible query is a single index\n`Input: nums = [5], queries = [[0,0]]` → `Expected: [true]`\n⚠️ Bug: returning `l != r` as a precondition for `true` → returns `[false]`\n\n**All same parity** - every adjacent pair breaks the special property\n`Input: nums = [2,4,6,8], queries = [[0,3],[1,2]]` → `Expected: [false,false]`\n⚠️ Bug: comparing `group[l] < group[r]` instead of `==` → returns `[true,true]`\n\n**Boundary indices** - query touches the first or last element\n`Input: nums = [3,4,1,2,6], queries = [[0,3],[4,4]]` → `Expected: [true,true]`\n⚠️ Bug: starting the loop at `i = 0` and reading `nums[i-1]` → out-of-bounds read, corrupts `group[0]`\n\n**Break at the query boundary** - the breaking pair sits just outside the queried range\n`Input: nums = [3,4,1,2,6], queries = [[0,3]]` → `Expected: [true]`\n⚠️ Bug: incrementing the group id when parities differ (inverted condition) → groups become `[0,1,2,3,3]`, returns `[false]`"
+  ],
+  "followUps": [
+    {
+      "q": "For each query, also return the number of maximal special subarrays fully contained in nums[l..r].",
+      "a": "Build a prefix count `pref[i]` = number of group starts in [0..i]. A new group starts at i when i==0 or parities of i and i-1 match. Answer = pref[r] - pref[l] + 1. TC O(n+q), SC O(n)."
+    },
+    {
+      "q": "Support point updates that change an element's value (and possibly its parity), then answer queries online.",
+      "a": "Replace the static group array with a segment tree storing, per segment, whether it is internally special and the parity of its endpoints; merging two children checks the boundary pair. Each update and query is O(log n). TC O((n+q) log n), SC O(n)."
+    },
+    {
+      "q": "\"Special\" now means adjacent elements differ by exactly k (not parity). Answer the same queries.",
+      "a": "The group structure is identical - start a new group wherever |nums[i]-nums[i-1]| != k. Precompute groups once, then answer each query by comparing group ids. TC O(n+q), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<bool> isArraySpecial(vector<int>& nums, vector<vector<int>>& queries) {\n        int n = nums.size();\n        vector<int> group(n, 0);\n        for (int i = 1; i < n; i++) {\n            if ((nums[i] & 1) == (nums[i - 1] & 1)) {\n                group[i] = group[i - 1] + 1;\n            } else {\n                group[i] = group[i - 1];\n            }\n        }\n        vector<bool> ans;\n        ans.reserve(queries.size());\n        for (const auto& q : queries) {\n            ans.push_back(group[q[0]] == group[q[1]]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-longest-special-substring-that-occurs-thrice-i",
+  "title": "Find Longest Special Substring That Occurs Thrice I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Run-Length Encoding",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- top1[26], top2[26], top3[26]: fixed 26 ints each → O(1)\n- no recursion, no dynamic containers\n- not counted: input string s",
+  "approach": "Group consecutive identical characters into runs. For each character, track only its three longest run lengths L1 ≥ L2 ≥ L3. The longest special substring occurring at least thrice for that character is max(L1−2, L2−1, L3), because a run of length L contributes L−k+1 substrings of length k, and these three values are the critical thresholds where the total count crosses 3. Return the maximum over all characters, or −1 if no positive candidate exists.",
+  "hints": [
+    "For a fixed character, what determines how many special substrings of length k you can form: the total count of that character, or the lengths of its individual consecutive runs?",
+    "Run-length encode the string and keep only the top three run lengths per character. In \"aaaa\", the single run of 'a' has length 4, giving top-3 = [4, 0, 0].",
+    "```\nfor each maximal run of char c with length len:\n    insert len into top-3 for c (maintaining descending order)\nfor each character c:\n    candidate = max(top1[c]-2, top2[c]-1, top3[c])\n    ans = max(ans, candidate)\nreturn ans if ans > 0 else -1\n```",
+    "**Three equal runs** - three runs of the same character with equal lengths\n`Input: \"aaabaaacaaa\"` → `Expected: 3`\n⚠️ Bug: checking only top1[c]-2 as candidate → returns 1 instead of 3\n\n**No valid answer** - every character appears in runs too short for three occurrences\n`Input: \"abcdef\"` → `Expected: -1`\n⚠️ Bug: returning 0 instead of -1 when no candidate is positive → returns 0\n\n**Two equal runs** - two runs of the same length for one character\n`Input: \"aabbaa\"` → `Expected: 1`\n⚠️ Bug: ignoring top2[c]-1 in the candidate formula → returns 0 instead of 1\n\n**Single long run** - one character fills the entire string\n`Input: \"aaaa\"` → `Expected: 2`\n⚠️ Bug: using top1[c]-1 instead of top1[c]-2 → returns 3 instead of 2"
+  ],
+  "followUps": [
+    {
+      "q": "If s.length grows to 10^5, does this approach still work?",
+      "a": "Yes. Run-length encoding is a single linear pass, and tracking top-3 per character is O(1) per run. The solution scales to any length with O(n) time and O(1) space."
+    },
+    {
+      "q": "What if we need the longest special substring occurring at least k times instead of 3?",
+      "a": "Keep the top-k run lengths per character instead of top-3. For each character with sorted runs L1 ≥ L2 ≥ … ≥ Lk, the candidate is max(Li − (k − i)) for i = 1..k. Time stays O(n), space becomes O(k)."
+    },
+    {
+      "q": "What if the string arrives as a character stream with no random access?",
+      "a": "Maintain the current run's character and length, updating on each incoming character. When the run breaks, insert its length into the top-3 for that character. This uses O(1) memory (26×3 counters) and processes each character exactly once."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumLength(string s) {\n        int n = s.size();\n        int top1[26] = {0}, top2[26] = {0}, top3[26] = {0};\n\n        int i = 0;\n        while (i < n) {\n            int j = i;\n            while (j < n && s[j] == s[i]) j++;\n            int len = j - i;\n            int c = s[i] - 'a';\n            if (len >= top1[c]) {\n                top3[c] = top2[c];\n                top2[c] = top1[c];\n                top1[c] = len;\n            } else if (len >= top2[c]) {\n                top3[c] = top2[c];\n                top2[c] = len;\n            } else if (len > top3[c]) {\n                top3[c] = len;\n            }\n            i = j;\n        }\n\n        int ans = 0;\n        for (int c = 0; c < 26; c++) {\n            int candidate = top1[c] - 2;\n            if (top2[c] - 1 > candidate) candidate = top2[c] - 1;\n            if (top3[c] > candidate) candidate = top3[c];\n            if (candidate > ans) ans = candidate;\n        }\n        return ans > 0 ? ans : -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "reachable-nodes-in-subdivided-graph",
+  "title": "Reachable Nodes In Subdivided Graph",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dijkstra's Shortest Path",
+  "tc": "O((n + E) log n)",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- adj: adjacency list with 2E pairs across n vectors → O(n + E)\n- dist: array of n longs → O(n)\n- pq: at most n entries → O(n)\n- recursion: none",
+  "approach": "Run Dijkstra from node 0 on the original graph, using edge weight = cnt + 1 (the number of edges in the subdivided chain). This gives the shortest distance from 0 to every original node. Count original nodes with dist ≤ maxMoves. For each edge [u, v, cnt], the subdivided nodes reachable from u's side number min(cnt, maxMoves − dist[u]) (if dist[u] ≤ maxMoves), and similarly from v's side. Sum both sides but cap at cnt to avoid double-counting overlapping nodes.",
+  "hints": [
+    "For a subdivided node on edge [u, v], it can be reached from either u or v. What do you need to know about u and v to determine if either path fits within maxMoves?\nThe subdivided graph can have up to 10^8 new nodes, so building it explicitly is infeasible.",
+    "Use Dijkstra's algorithm with a min-heap on the original graph, where each edge [u, v, cnt] has weight cnt + 1. In Example 1, this gives dist[0]=0, dist[2]=2, dist[1]=5.",
+    "```\ndist[0] = 0\nrun Dijkstra with edge weight = cnt + 1\nans = count of nodes i with dist[i] <= maxMoves\nfor each edge [u, v, cnt]:\n    a = min(cnt, maxMoves - dist[u])  if dist[u] <= maxMoves else 0\n    b = min(cnt, maxMoves - dist[v])  if dist[v] <= maxMoves else 0\n    ans += min(cnt, a + b)\nreturn ans\n```",
+    "**Disconnected source** - node 0 has no edges at all\n`Input: edges = [[1,2,1]], maxMoves = 5, n = 3` → `Expected: 1`\n⚠️ Bug: not guarding `dist[u] <= maxMoves` before computing edge contributions → returns 2\n\n**Zero budget** - maxMoves is 0, only node 0 itself qualifies\n`Input: edges = [[0,1,5]], maxMoves = 0, n = 2` → `Expected: 1`\n⚠️ Bug: using `dist[i] < maxMoves` instead of `<=` → returns 0\n\n**Edge weight off-by-one** - cnt=1 means 2 edges in the chain, not 1\n`Input: edges = [[0,1,1]], maxMoves = 1, n = 2` → `Expected: 2`\n⚠️ Bug: using `cnt` instead of `cnt + 1` as Dijkstra weight → returns 3\n\n**Double counting** - both endpoints reachable, their coverage overlaps\n`Input: edges = [[0,1,3]], maxMoves = 5, n = 2` → `Expected: 5`\n⚠️ Bug: adding `a + b` without `min(cnt, a + b)` → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph is directed - edges go only from u to v?",
+      "a": "Run Dijkstra on the directed graph. For each edge [u, v, cnt], subdivided nodes can only be reached from u's side, so add min(cnt, max(0, maxMoves − dist[u])) when dist[u] ≤ maxMoves. TC and SC stay O((n + E) log n) and O(n + E)."
+    },
+    {
+      "q": "What if there are k source nodes instead of just node 0?",
+      "a": "Initialize the priority queue with all k sources at distance 0 (multi-source Dijkstra). The rest of the algorithm is unchanged. TC remains O((n + E) log n); the initial heap just has k entries instead of 1."
+    },
+    {
+      "q": "What if n can be up to 10^6 and edges up to 10^6?",
+      "a": "Dijkstra still runs in O((n + E) log n), which is feasible. Use a flat CSR-style adjacency array instead of vector-of-vectors to reduce memory overhead. SC stays O(n + E)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int reachableNodes(vector<vector<int>>& edges, int maxMoves, int n) {\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& e : edges) {\n            int u = e[0], v = e[1], cnt = e[2];\n            adj[u].push_back({v, cnt + 1});\n            adj[v].push_back({u, cnt + 1});\n        }\n        \n        const long long INF = 1e18;\n        vector<long long> dist(n, INF);\n        priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<pair<long long,int>>> pq;\n        dist[0] = 0;\n        pq.push({0, 0});\n        \n        while (!pq.empty()) {\n            auto [d, u] = pq.top(); pq.pop();\n            if (d > dist[u]) continue;\n            for (auto& [v, w] : adj[u]) {\n                if (dist[u] + w < dist[v]) {\n                    dist[v] = dist[u] + w;\n                    pq.push({dist[v], v});\n                }\n            }\n        }\n        \n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            if (dist[i] <= maxMoves) ans++;\n        }\n        \n        for (auto& e : edges) {\n            int u = e[0], v = e[1], cnt = e[2];\n            long long a = 0, b = 0;\n            if (dist[u] <= maxMoves) a = min((long long)cnt, (long long)maxMoves - dist[u]);\n            if (dist[v] <= maxMoves) b = min((long long)cnt, (long long)maxMoves - dist[v]);\n            ans += min((long long)cnt, a + b);\n        }\n        \n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

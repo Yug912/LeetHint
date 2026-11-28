@@ -1,0 +1,40 @@
+{
+  "slug": "take-gifts-from-the-richest-pile",
+  "title": "Take Gifts From the Richest Pile",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Max-Heap Simulation",
+  "tc": "O((n + k) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<int> pq: up to n entries → O(n)\n- not counted: input vector gifts, returned long long",
+  "approach": "Use a max-heap to always have the current maximum available in O(log n). Push all gifts into the heap, then repeat k times: pop the top, replace it with floor(sqrt(top)), and push the result back. After k iterations, sum all remaining elements. The integer square root is computed via `(int)sqrt((double)top)` with a correction step to handle any floating-point rounding on perfect squares.",
+  "hints": [
+    "Every second you must identify the current maximum among up to 10^3 piles, and you do this up to 10^3 times. What property of the untouched piles would let you find the next maximum without scanning all of them again?",
+    "Use a max-heap (C++ `priority_queue`). Push all gifts, then k times: pop the top, replace with floor(sqrt(top)), push back. From [25,64,9,4,100]: pop 100→push 10, pop 64→push 8, pop 25→push 5, pop 10→push 3. Sum = 9+8+5+4+3 = 29.",
+    "```\nbuild max-heap from gifts\nrepeat k times:\n    top = extract maximum\n    new_val = floor(sqrt(top))\n    insert new_val into heap\nsum all remaining elements\nreturn sum\n```",
+    "**Overflow** - up to 10^3 piles each with up to 10^9 gifts, total sum reaches 10^12\n`Input: gifts = [1000000000, 1000000000, 1000000000, 1000000000], k = 1` → `Expected: 3000003162`\n⚠️ Bug: accumulating sum in `int` → 3000003162 exceeds INT_MAX (2147483647), signed overflow produces -1294964134\n\n**All equal** - every pile has the same value, so which pile gets reduced depends on the heap type\n`Input: gifts = [4, 4, 4, 4], k = 2` → `Expected: 12`\n⚠️ Bug: using a min-heap instead of max-heap → second iteration pops 2 instead of 4, sqrt(2)=1, returns 4+4+4+1=13\n\n**Duplicates** - multiple piles share the maximum value and must each be processed independently\n`Input: gifts = [9, 9, 9], k = 2` → `Expected: 15`\n⚠️ Bug: using a set instead of a multiset → duplicates collapse to one entry, after 2 iterations only {1} remains, returns 1\n\n**Off-by-one** - minimal k to test loop bounds\n`Input: gifts = [100], k = 1` → `Expected: 10`\n⚠️ Bug: loop condition `i <= k` instead of `i < k` → performs 2 iterations, sqrt(10)=3, returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^9?",
+      "a": "After O(log log max) square-root operations any value converges to 1. For gifts[i] ≤ 10^9 this takes at most ~5 iterations per pile, so cap effective k at 5n and run the same heap loop. TC becomes O(n log n + min(k, 5n) log n), SC unchanged O(n)."
+    },
+    {
+      "q": "What if gifts[i] can be up to 10^18?",
+      "a": "Use `long long` throughout and compute integer square root via binary search to avoid floating-point precision loss. The correction step `(s+1)*(s+1) <= top` already guards against rounding. TC and SC remain the same."
+    },
+    {
+      "q": "What if gifts arrive one at a time in a stream and you must answer \"after k seconds\" queries online?",
+      "a": "Maintain the max-heap incrementally - push each new gift as it arrives. For each query, snapshot the heap, run k pop-replace-push cycles, sum, then restore. TC: O(n log n + q·k log n) for q queries, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long pickGifts(vector<int>& gifts, int k) {\n        priority_queue<int> pq(gifts.begin(), gifts.end());\n        for (int i = 0; i < k; i++) {\n            int top = pq.top();\n            pq.pop();\n            int s = (int)sqrt((double)top);\n            if ((long long)(s + 1) * (s + 1) <= top) s++;\n            pq.push(s);\n        }\n        long long sum = 0;\n        while (!pq.empty()) {\n            sum += pq.top();\n            pq.pop();\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

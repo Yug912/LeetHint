@@ -1,0 +1,40 @@
+{
+  "slug": "find-building-where-alice-and-bob-can-meet",
+  "title": "Find Building Where Alice and Bob Can Meet",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack with Binary Search",
+  "tc": "O(n + m log n)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<vector<pair<int,int>>> byB: n buckets holding m total entries → O(n + m)\n- vector<int> stk: up to n indices → O(n)\n- vector<int> ans: m entries (returned output, not counted)\n- not counted: input heights/queries, returned ans",
+  "approach": "Normalize each query so a ≤ b. If a == b or heights[a] < heights[b], the answer is b (they're together or Alice/Bob can step directly to the other's building). Otherwise heights[a] ≥ heights[b], and we need the smallest index t > b with heights[t] > heights[a] (this also satisfies Bob since heights[b] ≤ heights[a] < heights[t]). Scan buildings right-to-left, maintaining a monotonic stack of indices whose heights are strictly decreasing from bottom to top (popping any building dominated by a taller one to its left). For each query bucketed at index b, binary search the stack for the rightmost (smallest-index) entry whose height exceeds heights[a].",
+  "hints": [
+    "When scanning buildings from right to left, which already-seen buildings can never be the leftmost valid meeting spot for any future query? The constraints allow up to 5·10^4 buildings and 5·10^4 queries.",
+    "Use a monotonic stack of indices (heights strictly decreasing from bottom to top) scanned right-to-left, binary-searched per query. In Example 1, query [0,3]: at i=3 the stack is [5,3] with heights [7,5]; the rightmost stack entry exceeding heights[0]=6 is index 5.",
+    "```\nnormalize each query so a <= b\nif a == b or heights[a] < heights[b]: ans = b\nelse: attach (a, queryIndex) to bucket[b]\n\nscan i from n-1 down to 0:\n    pop stack while heights[top] <= heights[i]\n    push i\n    for each (a, qi) in bucket[i]:\n        binary search stack for rightmost height > heights[a]\n        ans[qi] = that index, or -1\n```",
+    "**Same building** - Alice and Bob start at the same index.\n`heights = [6,4,8,5,2,7], queries = [[2,2]]` → `Expected: [2]`\n⚠️ Bug: skipping the `a == b` check and falling into the else branch, then binary searching the stack at i=2 (which only holds index 2, height 8) for height > 8 → returns `[-1]`.\n\n**Equal heights** - two different buildings with the same height.\n`heights = [3,3,3], queries = [[0,1]]` → `Expected: [-1]`\n⚠️ Bug: using `heights[a] <= heights[b]` instead of `<` in the direct-reach check treats 3 ≤ 3 as a direct move → returns `[1]`.\n\n**Swap needed** - query given as [larger, smaller].\n`heights = [5,3,8,2,6,1,4,6], queries = [[5,2]]` → `Expected: [-1]`\n⚠️ Bug: not swapping when a > b, so a=5, b=2; heights[5]=1 < heights[2]=8 triggers the direct case → returns `[2]`.\n\n**Binary search direction** - stack has multiple entries exceeding the target.\n`heights = [3,2,4,5,7,8], queries = [[0,1]]` → `Expected: [2]`\n⚠️ Bug: binary searching for the leftmost (lowest vector index) stack entry with height > target instead of rightmost; stack at i=1 is [5,4,3,2,1] with heights [8,7,5,4,2], leftmost > 3 is index 0 = building 5 → returns `[5]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if heights are revealed one at a time from right to left and queries arrive online (answer each before the next)?",
+      "a": "The same monotonic stack works online. As each new height arrives, pop dominated entries, push the current index, then answer any pending query whose b equals the current index by binary searching the stack. TC stays O(n + m log n), SC O(n + m)."
+    },
+    {
+      "q": "What if there are up to 10 people at given buildings and we need the leftmost building all can reach?",
+      "a": "Normalize so the largest starting index is the reference. If all are at the same building or the tallest-start person can directly reach another, simplify; otherwise find the smallest t > max(positions) with heights[t] > max(heights of all positions). Binary search the same stack for height > that maximum. TC O(n + m log n), SC O(n + m)."
+    },
+    {
+      "q": "What if a person can move to any taller building regardless of direction (left or right)?",
+      "a": "Each person can reach any building taller than their starting height, so the answer is the leftmost building with height > max(heights[a], heights[b]). Precompute buildings sorted by height with their indices, then for each query find the smallest index among buildings taller than the threshold. TC O((n + m) log n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> leftmostBuildingQueries(vector<int>& heights, vector<vector<int>>& queries) {\n        int n = heights.size();\n        int m = queries.size();\n        vector<int> ans(m, -1);\n        \n        vector<vector<pair<int,int>>> byB(n);\n        for (int qi = 0; qi < m; qi++) {\n            int a = queries[qi][0], b = queries[qi][1];\n            if (a > b) swap(a, b);\n            if (a == b) {\n                ans[qi] = a;\n            } else if (heights[a] < heights[b]) {\n                ans[qi] = b;\n            } else {\n                byB[b].push_back({a, qi});\n            }\n        }\n        \n        vector<int> stk;\n        for (int i = n - 1; i >= 0; i--) {\n            while (!stk.empty() && heights[stk.back()] <= heights[i]) {\n                stk.pop_back();\n            }\n            stk.push_back(i);\n            \n            for (auto& [a, qi] : byB[i]) {\n                int lo = 0, hi = (int)stk.size() - 1, res = -1;\n                while (lo <= hi) {\n                    int mid = (lo + hi) / 2;\n                    if (heights[stk[mid]] > heights[a]) {\n                        res = stk[mid];\n                        lo = mid + 1;\n                    } else {\n                        hi = mid - 1;\n                    }\n                }\n                ans[qi] = res;\n            }\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

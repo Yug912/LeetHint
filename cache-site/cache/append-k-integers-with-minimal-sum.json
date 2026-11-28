@@ -1,0 +1,40 @@
+{
+  "slug": "append-k-integers-with-minimal-sum",
+  "title": "Append K Integers With Minimal Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Math",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(nums): modifies input in place, introsort stack O(log n) - typically not counted\n- no other containers allocated\n- not counted: input vector, returned long long",
+  "approach": "The k smallest positive integers not in nums yield the minimum sum. Start with the sum of 1..k = k*(k+1)/2. Sort nums and skip duplicates. For each unique value v ≤ the current range end, v \"occupies\" a slot in 1..k, so remove v from the sum and extend the range by one (add cur+1). This greedy adjustment is correct because processing in sorted order ensures each extension lands on the next available integer.",
+  "hints": [
+    "The k appended integers must be positive, unique, and absent from nums. With k up to 10^8, listing candidates one by one is too slow - what mathematical fact about the first k positive integers avoids enumeration?",
+    "Sort the unique values of nums. Initialize the answer as k*(k+1)/2, then for each sorted value v not exceeding the current range end, subtract v and add the next integer beyond the range. Example: nums=[5,6], k=6 → 21, remove 5 add 7 → 23, remove 6 add 8 → 25.",
+    "```\nsort nums, skip duplicates\nans = k * (k + 1) / 2\ncur = k\nfor each unique v in sorted nums:\n    if v <= cur:\n        ans = ans - v + (cur + 1)\n        cur = cur + 1\nreturn ans\n```",
+    "**Duplicate small values** - nums contains the same small value multiple times\n`Input: nums = [1,1], k = 1` → `Expected: 2`\n⚠️ Bug: not skipping duplicate values → processes 1 twice → returns 4\n\n**Overflow** - k at maximum makes k*(k+1) exceed 2^31-1 (10^8 × 10^8 = 10^16)\n`Input: nums = [1], k = 100000000` → `Expected: 5000000150000000`\n⚠️ Bug: using int for the answer → k*(k+1)/2 overflows → returns wrong value\n\n**Boundary comparison** - a nums value equals the current range end\n`Input: nums = [3], k = 3` → `Expected: 7`\n⚠️ Bug: using v < cur instead of v <= cur → skips 3 → returns 6\n\n**All nums values beyond range** - every element of nums exceeds k\n`Input: nums = [100,200], k = 3` → `Expected: 6`\n⚠️ Bug: unconditionally subtracting every nums value → returns -294"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^18?",
+      "a": "The formula k*(k+1)/2 requires __int128 for the multiplication, then cast back to long long. The loop over unique nums values is unchanged. TC: O(n log n), SC: O(1)."
+    },
+    {
+      "q": "What if nums arrives as an unbounded stream and cannot be stored?",
+      "a": "Keep only values ≤ k + n in a hash set (at most n values can fall in range, so the range extends at most n times). After the stream ends, sort those values and apply the same adjustment. TC: O(n + m log m) where m ≤ n, SC: O(m)."
+    },
+    {
+      "q": "What if you must also return the k appended integers, not just their sum?",
+      "a": "Use the same greedy logic but collect values: emit 1..cur skipping each in-range nums value, then emit cur+1..cur+extra for each adjustment. TC: O(n log n + k), SC: O(n + k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimalKSum(vector<int>& nums, int k) {\n        sort(nums.begin(), nums.end());\n        long long ans = (long long)k * (k + 1) / 2;\n        long long cur = k;\n        int n = nums.size();\n        for (int i = 0; i < n; i++) {\n            if (i > 0 && nums[i] == nums[i - 1]) continue;\n            if ((long long)nums[i] <= cur) {\n                ans = ans - nums[i] + (cur + 1);\n                cur++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

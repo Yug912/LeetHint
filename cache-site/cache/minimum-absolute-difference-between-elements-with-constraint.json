@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-absolute-difference-between-elements-with-constraint",
+  "title": "Minimum Absolute Difference Between Elements With Constraint",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Ordered Set with Binary Search",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- set<int> s: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Iterate index j from x to n-1. Maintain a sorted set of all nums[i] for i in [0, j-x]. For each j, the closest value to nums[j] in the set is found via lower_bound; check that element and its predecessor. The minimum difference over all j is the answer. This works because for a fixed j, the best partner i ≤ j-x is the value closest to nums[j], and a sorted set lets us find it in O(log n).",
+  "hints": [
+    "With n up to 10^5, checking every pair is too slow. As you scan index j left to right, which earlier indices are even allowed to pair with it, and what property of nums[i] would make |nums[i]-nums[j]| smallest for that j?",
+    "Use a C++ std::set to keep all nums[0..j-x] sorted. For nums=[4,3,2,4], x=2: at j=3 the set holds {3,4}; lower_bound(4) finds 4, giving diff 0.",
+    "```\nans = INF\nS = empty sorted set\nfor j from x to n-1:\n    insert nums[j-x] into S\n    it = lower_bound(S, nums[j])\n    if it exists: ans = min(ans, *it - nums[j])\n    if predecessor exists: ans = min(ans, nums[j] - predecessor)\nreturn ans\n```",
+    "**x = 0** - i and j may be the same index, so the answer is always 0 when duplicates exist.\n`Input: nums = [7,7], x = 0` → `Expected: 0`\n⚠️ Bug: starting the loop at j = x+1 instead of j = x → returns 2147483647 (never considers j=0 pairing with itself).\n\n**All elements equal** - every valid pair gives difference 0.\n`Input: nums = [5,5,5,5], x = 2` → `Expected: 0`\n⚠️ Bug: only checking *it and skipping the predecessor via prev(it) → returns 0 here but fails when the closest value is strictly below nums[j].\n\n**Largest gap, single valid pair** - only one pair qualifies.\n`Input: nums = [1,2,3,4], x = 3` → `Expected: 3`\n⚠️ Bug: initializing ans to 0 instead of INT_MAX → returns 0.\n\n**x = n-1, two elements** - exactly one pair is valid.\n`Input: nums = [10, 1], x = 1` → `Expected: 9`\n⚠️ Bug: inserting nums[j-x] after the lower_bound lookup → set is empty at j=1, returns 2147483647."
+  ],
+  "followUps": [
+    {
+      "q": "What if x can be 0 and you must pick two distinct indices i ≠ j?",
+      "a": "Still use the sorted set, but insert nums[j-x] before querying only when j-x differs from j; with x=0, insert nums[j] after querying, or query the set before inserting the current value so a value never pairs with itself. Time stays O(n log n), space O(n)."
+    },
+    {
+      "q": "What if the array is an unbounded stream and you cannot store all past elements?",
+      "a": "Keep only the last x elements in a bounded sorted structure (e.g. a sorted container of size x) so that when element j arrives, the eligible partners are exactly those at indices ≤ j-x. Time becomes O(n log x) and space O(x), trading accuracy for memory only if you also subsample."
+    },
+    {
+      "q": "What if you need the actual pair (i, j), not just the minimum difference?",
+      "a": "Store pairs (value, index) in the sorted set keyed by value; when lower_bound finds the closest value, record both its index and the current j alongside the running minimum. Time and space remain O(n log n) and O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minAbsoluteDifference(vector<int>& nums, int x) {\n        int n = nums.size();\n        int ans = INT_MAX;\n        set<int> s;\n        for (int j = x; j < n; j++) {\n            s.insert(nums[j - x]);\n            auto it = s.lower_bound(nums[j]);\n            if (it != s.end()) {\n                ans = min(ans, *it - nums[j]);\n            }\n            if (it != s.begin()) {\n                auto pit = prev(it);\n                ans = min(ans, nums[j] - *pit);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

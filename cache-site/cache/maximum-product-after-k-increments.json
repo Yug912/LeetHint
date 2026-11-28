@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-product-after-k-increments",
+  "title": "Maximum Product After K Increments",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Leveling",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() stack: O(log n)\n- local variables: O(1)\n- not counted: input vector `nums` (modified in place)",
+  "approach": "To maximize the product, we should always increment the smallest available element. Instead of simulating this one increment at a time with a min-heap, we can sort the array and \"level up\" groups of smallest elements. We maintain a running sum to calculate in O(1) how many increments are needed to bring all elements up to the level of the next smallest element. Once we find the point where we run out of `k` increments, we distribute the remaining increments evenly among the leveled elements.",
+  "hints": [
+    "If you repeatedly increment the smallest available number, what happens to the values of the smallest group of numbers before any of them can exceed the next smallest number?\nThe array length and k are both up to 10^5.",
+    "Sort the array and use a running sum to calculate how many increments are needed to level up the first `i+1` elements to `nums[i]`.\nFor `nums = [2, 3, 3, 6]` and `k = 2`, leveling the first two elements to 3 requires `3*2 - (2+3) = 1` increment.",
+    "```\nsort nums\nsum = 0\nfor i from 0 to n-1:\n    sum += nums[i]\n    needed = nums[i] * (i + 1) - sum\n    if needed > k:\n        break\n// distribute remaining k among the first i elements\n```",
+    "**Single element** - The array has only one number, so all increments apply to it.\n`Input: nums = [5], k = 3` → `Expected: 8`\n⚠️ Bug: Initialising the product accumulator to 0 instead of 1 → returns 0.\n\n**Large product overflow** - The product of 10^5 elements up to 10^6 exceeds 2^31 - 1.\n`Input: nums = [1000000, 1000000], k = 0` → `Expected: 999993007`\n⚠️ Bug: Using `int` for the product accumulation → returns 272620039.\n\n**Leveling calculation** - The number of increments to level up the first `i+1` elements depends on the correct count of elements.\n`Input: nums = [1, 2, 3], k = 2` → `Expected: 18`\n⚠️ Bug: Calculating `needed` as `nums[i] * i - sum` instead of `nums[i] * (i + 1) - sum` → returns 48.\n\n**Zeros in input** - The array contains zeros, which must be incremented to maximize the product.\n`Input: nums = [0, 4], k = 5` → `Expected: 20`\n⚠️ Bug: Filtering out zeros before processing → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if k is up to 10^9?",
+      "a": "The sorting and leveling approach still works perfectly. We just need to ensure all intermediate calculations use 64-bit integers to prevent overflow. The time complexity remains O(n log n) and space complexity remains O(log n)."
+    },
+    {
+      "q": "What if the array is already sorted?",
+      "a": "We can skip the sorting step entirely. The running sum and leveling logic iterates through the array in one pass. This reduces the time complexity to O(n) while space complexity becomes O(1)."
+    },
+    {
+      "q": "What if the array arrives as a data stream and cannot fit in memory?",
+      "a": "We cannot sort the stream in memory. If the value range is limited, we can use a frequency array to count occurrences and simulate the leveling process. Otherwise, we would need an external sort, which increases the I/O complexity."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumProduct(vector<int>& nums, int k) {\n        int n = nums.size();\n        sort(nums.begin(), nums.end());\n        long long sum = 0;\n        int i = 0;\n        for (; i < n; ++i) {\n            sum += nums[i];\n            long long needed = (long long)nums[i] * (i + 1) - sum;\n            if (needed > k) {\n                break;\n            }\n        }\n        \n        long long mod = 1000000007;\n        long long ans = 1;\n        \n        if (i < n) {\n            long long count = i;\n            long long base = nums[i - 1];\n            long long prev_sum = sum - nums[i];\n            long long rem = k - (base * count - prev_sum);\n            long long q = rem / count;\n            long long r = rem % count;\n            \n            for (int j = 0; j < r; ++j) {\n                ans = (ans * (base + q + 1)) % mod;\n            }\n            for (int j = 0; j < count - r; ++j) {\n                ans = (ans * (base + q)) % mod;\n            }\n            for (int j = i; j < n; ++j) {\n                ans = (ans * nums[j]) % mod;\n            }\n        } else {\n            long long count = n;\n            long long base = nums[n - 1];\n            long long rem = k - (base * count - sum);\n            long long q = rem / count;\n            long long r = rem % count;\n            \n            for (int j = 0; j < r; ++j) {\n                ans = (ans * (base + q + 1)) % mod;\n            }\n            for (int j = 0; j < count - r; ++j) {\n                ans = (ans * (base + q)) % mod;\n            }\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

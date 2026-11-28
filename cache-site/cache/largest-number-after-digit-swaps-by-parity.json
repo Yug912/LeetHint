@@ -1,0 +1,40 @@
+{
+  "slug": "largest-number-after-digit-swaps-by-parity",
+  "title": "Largest Number After Digit Swaps by Parity",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[10]: fixed 10 elements → O(1)\n- int digits[10]: fixed 10 elements → O(1)\n- long long result: single variable → O(1)\n- recursion depth: none\n- not counted: input int, returned int",
+  "approach": "Since swaps are unrestricted within each parity group (odd digits swap with odd, even with even), the optimal strategy is to place the largest available digit of the correct parity at each position from left to right. Use counting sort with a fixed array of size 10 to track digit frequencies, then greedily reconstruct the number by scanning from digit 9 (or 8) downward to find the largest available digit matching the original position's parity. This is correct because placing a larger digit earlier always contributes more to the number's value than any later placement.",
+  "hints": [
+    "Since any two digits of the same parity can be swapped, what determines which digits can end up at which positions in the final number? The constraint 1 ≤ num ≤ 10^9 means num has at most 10 digits.",
+    "Use counting sort with a fixed array of size 10. For num = 1234, count digits: count[1]=1, count[2]=1, count[3]=1, count[4]=1. Reconstruct left to right: position 0 has digit 1 (odd), pick largest available odd digit (3); position 1 has digit 2 (even), pick largest available even digit (4); continue to get 3412.",
+    "```\ncount occurrences of each digit 0-9\nfor each position from most significant to least:\n    parity = original digit at this position mod 2\n    find largest digit d with same parity and count[d] > 0\n    decrement count[d]\n    append d to result\nreturn result\n```",
+    "**All same parity** - all digits are odd, so all can be freely rearranged among all positions.\n`Input: 1357` → `Expected: 7531`\n⚠️ Bug: using position parity instead of digit value parity → returns 5713\n\n**Different parity, no swap possible** - digits of different parity cannot be swapped.\n`Input: 12` → `Expected: 12`\n⚠️ Bug: sorting all digits descending regardless of parity → returns 21\n\n**Already optimal** - digits already in the largest arrangement.\n`Input: 87655` → `Expected: 87655`\n⚠️ Bug: scanning digits in ascending order instead of descending → returns 65857\n\n**Zeros are even** - 0 is an even digit and can swap with other even digits.\n`Input: 1002` → `Expected: 1200`\n⚠️ Bug: checking `d % 2 == 0 && d > 0` for even instead of `d % 2 == 0` → returns 1002"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can swap any two digits regardless of parity?",
+      "a": "Sort all digits in descending order using the same counting sort approach. The parity check is removed entirely - just pick the largest available digit at each position. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if num can be up to 10^100 (represented as a string)?",
+      "a": "Represent num as a string and apply the same counting sort on its characters. The count array stays size 10, and reconstruction scans the string left to right. Time O(n) where n is the string length, space O(1)."
+    },
+    {
+      "q": "What if you can swap digits of the same parity at most k times?",
+      "a": "Greedily process positions left to right. At each position, find the largest digit of the same parity to the right and swap it in, decrementing k. Stop when k reaches 0 or all positions are processed. Time O(n²), space O(n) for the digit array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestInteger(int num) {\n        int count[10] = {0};\n        int digits[10];\n        int n = 0;\n        \n        int temp = num;\n        while (temp > 0) {\n            int d = temp % 10;\n            count[d]++;\n            digits[n++] = d;\n            temp /= 10;\n        }\n        \n        long long result = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            int d = digits[i];\n            int start = (d % 2 == 0) ? 8 : 9;\n            for (int j = start; j >= 0; j -= 2) {\n                if (count[j] > 0) {\n                    count[j]--;\n                    result = result * 10 + j;\n                    break;\n                }\n            }\n        }\n        \n        return (int)result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

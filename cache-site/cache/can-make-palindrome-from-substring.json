@@ -1,0 +1,40 @@
+{
+  "slug": "can-make-palindrome-from-substring",
+  "title": "Can Make Palindrome from Substring",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix XOR Bitmask",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> prefix: n+1 entries → O(n)\n- vector<bool> ans: not counted (returned output)\n- recursion depth: none",
+  "approach": "Since we can rearrange the substring freely, only character frequency parities matter. A palindrome has at most one character with odd frequency; each replacement can fix two odd-frequency characters at once (change one to match the other). So the minimum replacements needed is `oddCount / 2` (integer division). We precompute a prefix XOR bitmask where bit `j` tracks the parity of letter `j` in `s[0..i-1]`. For query `[l, r, k]`, the substring's parity mask is `prefix[r+1] ^ prefix[l]`; count its set bits and check if `oddCount / 2 ≤ k`.",
+  "hints": [
+    "Since you can rearrange the substring freely before replacing, what property of the character counts - not their positions - determines whether a palindrome is achievable? The string and queries each reach up to 10^5 in size.",
+    "Use a prefix XOR bitmask over the 26 letters: `prefix[i]` tracks the parity of each letter in `s[0..i-1]`. For query `[l,r,k]`, compute `mask = prefix[r+1] ^ prefix[l]`, count set bits = number of odd-frequency letters, and check if that count divided by 2 is ≤ k. Example: `s='abcda'`, query `[0,3,2]` gives mask `0b1111` (4 odd), `4/2=2 ≤ 2` → true.",
+    "```\nprefix[0] = 0\nfor i in 0..n-1:\n    prefix[i+1] = prefix[i] XOR (1 << (s[i] - 'a'))\nfor each query (l, r, k):\n    mask = prefix[r+1] XOR prefix[l]\n    odd = popcount(mask)\n    result = (odd / 2) <= k\n```",
+    "**Single character** - substring of length 1 is always a palindrome.\n`Input: s = \"a\", queries = [[0,0,0]]` → `Expected: [true]`\n⚠️ Bug: comparing `oddCount <= k` instead of `oddCount / 2 <= k` → returns `[false]`\n\n**Two distinct characters, k=0** - needs 1 replacement to pair the two odd frequencies.\n`Input: s = \"ab\", queries = [[0,1,0]]` → `Expected: [false]`\n⚠️ Bug: using `prefix[r]` instead of `prefix[r+1]` → mask = `prefix[1] ^ prefix[0]` = bit(a), oddCount=1, `1/2=0 ≤ 0` → returns `[true]`\n\n**Even-length all-distinct** - 4 odd frequencies need 2 replacements.\n`Input: s = \"abcd\", queries = [[0,3,1]]` → `Expected: [false]`\n⚠️ Bug: using `(oddCount - 1) / 2` instead of `oddCount / 2` → `(4-1)/2 = 1 ≤ 1` → returns `[true]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if rearranging is not allowed - you can only replace characters in place?",
+      "a": "For each query, compare `s[l+i]` with `s[r-i]` for `i` in `0..(len-1)/2`, counting mismatches. Answer is true if mismatches ≤ k. TC: O(n) per query, O(n·q) total; no preprocessing helps since character positions matter."
+    },
+    {
+      "q": "What if the alphabet is all of Unicode (up to 10^6 distinct characters)?",
+      "a": "Replace the 26-bit mask with a hash map of character → parity, stored as prefix snapshots. Each query XORs two maps. TC: O(n·A + q·A) where A is distinct characters per prefix; SC: O(n·A)."
+    },
+    {
+      "q": "What if you must answer queries online with only O(√n) extra space?",
+      "a": "Store prefix parity checkpoints only at every √n-th index. For a query, start from the nearest checkpoint before `l` and scan forward to `r`, toggling parities as you go. TC: O(q·√n), SC: O(√n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<bool> canMakePaliQueries(string s, vector<vector<int>>& queries) {\n        int n = s.size();\n        vector<int> prefix(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            prefix[i + 1] = prefix[i] ^ (1 << (s[i] - 'a'));\n        }\n        vector<bool> ans;\n        ans.reserve(queries.size());\n        for (auto& q : queries) {\n            int mask = prefix[q[1] + 1] ^ prefix[q[0]];\n            int oddCount = __builtin_popcount(mask);\n            ans.push_back(oddCount / 2 <= q[2]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

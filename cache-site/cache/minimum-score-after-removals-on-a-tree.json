@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-score-after-removals-on-a-tree",
+  "title": "Minimum Score After Removals on a Tree",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Tree DFS with Subtree XOR",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- adj: vector<vector<int>> with 2(n−1) total entries → O(n)\n- xorSub, tin, tout, vals: four vectors of size n → O(n)\n- dfs recursion stack: worst case O(n) on a skewed tree\n- not counted: input nums, edges, returned int",
+  "approach": "Root the tree at node 0 and run a DFS to compute each node's subtree XOR and entry/exit timestamps. Removing two edges corresponds to picking two non-root nodes u and v (each represents the edge to its parent). Three cases arise: (1) u is an ancestor of v - the three component XORs are xorSub[v], xorSub[u]^xorSub[v], total^xorSub[u]; (2) v is an ancestor of u - symmetric; (3) neither is an ancestor - XORs are xorSub[u], xorSub[v], total^xorSub[u]^xorSub[v]. Iterate all O(n²) pairs, compute the score for each, and track the minimum. Entry/exit timestamps give O(1) ancestry checks.",
+  "hints": [
+    "With n up to 1000, you can afford to examine every pair of edges directly. For a fixed pair of removed edges, what single per-node precomputed quantity would let you state the XOR of each of the three resulting pieces without re-traversing the tree?",
+    "Root the tree at node 0 and run a DFS recording each node's subtree XOR plus entry/exit timestamps for O(1) ancestry tests. In Example 1, subtree XOR of node 1 is 5^5^4^11 = 15; removing edges above nodes 1 and 2 gives pieces with XOR 15, 5, and total^15 = 1.",
+    "```\nroot tree at 0\nDFS: compute xorSub[u], tin[u], tout[u]\ntotal = xorSub[0]\nfor each pair (u, v), u < v, both non-root:\n    if u is ancestor of v:\n        a, b, c = xorSub[v], xorSub[u]^xorSub[v], total^xorSub[u]\n    elif v is ancestor of u:\n        a, b, c = xorSub[u], xorSub[v]^xorSub[u], total^xorSub[v]\n    else:\n        a, b, c = xorSub[u], xorSub[v], total^xorSub[u]^xorSub[v]\n    ans = min(ans, max(a,b,c) - min(a,b,c))\nreturn ans\n```",
+    "**Smallest input** - n=3, only one pair of edges to remove.\n`Input: nums = [1,2,3], edges = [[0,1],[1,2]]` → `Expected: 2`\n⚠️ Bug: starting the pair loop at u=0 (root) instead of u=1 → treats the root as having a parent edge, computes a phantom component with XOR 0 → returns 1 instead of 2.\n\n**Reversed ancestry** - the higher-indexed node is the ancestor of the lower-indexed one.\n`Input: nums = [1,2,4], edges = [[0,2],[2,1]]` → `Expected: 3`\n⚠️ Bug: only checking `isAnc(u,v)` and falling through to the \"neither\" branch when false, skipping the `isAnc(v,u)` case → for pair (1,2) computes XORs 4, 6, 5 giving score 2 instead of 3.\n\n**Star tree** - no non-root node is an ancestor of another.\n`Input: nums = [1,2,3,4], edges = [[0,1],[0,2],[0,3]]` → `Expected: 1`\n⚠️ Bug: always using the ancestor formula `xorSub[u]^xorSub[v]` for the middle piece instead of the \"neither\" formula → for pair (2,3) computes middle piece as 3^4=7 instead of 4, giving overall min 2 instead of 1.\n\n**All equal, even count** - total XOR is 0, allowing a score of 0.\n`Input: nums = [7,7,7,7,7,7], edges = [[0,1],[1,2],[2,3],[3,4],[4,5]]` → `Expected: 0`\n⚠️ Bug: accumulating subtree values with `+` instead of `^` in the DFS → xorSub holds sums, component \"XORs\" become nonsensical → returns a positive value instead of 0."
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 10^5, how would you optimize beyond O(n²)?",
+      "a": "For each first edge (subtree u), the second edge splits either inside or outside u's subtree. You would need a structure like a binary trie over subtree XOR values to find, for a fixed u, the v that makes the three XOR values closest together - targeting roughly O(n · B) where B is the bit width of the values. The ancestry constraint (v must be inside or outside u's subtree) makes this significantly harder and may require a merge-small-to-large or persistent trie approach."
+    },
+    {
+      "q": "What if you must remove exactly k edges (k ≥ 2) instead of 2?",
+      "a": "The same subtree-XOR framework extends: each removed edge corresponds to a non-root node, and the component XORs are determined by the nesting structure of the chosen nodes. For k=3 the pair loop becomes a triple loop (O(n³)), which is feasible only for small n. For general k the problem becomes combinatorial and likely requires exponential or approximation approaches."
+    },
+    {
+      "q": "What if node values can be up to 10^18?",
+      "a": "Replace `int` with `long long` for all XOR accumulations and component values. XOR of values up to 10^18 stays below 2^60, which fits in a signed 64-bit integer. The algorithm and complexity are otherwise unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<vector<int>> adj;\n    vector<int> xorSub, tin, tout, vals;\n    int timer;\n\n    void dfs(int u, int p) {\n        tin[u] = timer++;\n        xorSub[u] = vals[u];\n        for (int v : adj[u]) {\n            if (v != p) {\n                dfs(v, u);\n                xorSub[u] ^= xorSub[v];\n            }\n        }\n        tout[u] = timer++;\n    }\n\npublic:\n    int minimumScore(vector<int>& nums, vector<vector<int>>& edges) {\n        int n = nums.size();\n        adj.assign(n, {});\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        xorSub.assign(n, 0);\n        tin.assign(n, 0);\n        tout.assign(n, 0);\n        vals = nums;\n        timer = 0;\n        dfs(0, -1);\n        int total = xorSub[0];\n\n        auto isAnc = [&](int a, int b) -> bool {\n            return tin[a] <= tin[b] && tout[b] <= tout[a];\n        };\n\n        int ans = INT_MAX;\n        for (int u = 1; u < n; u++) {\n            for (int v = u + 1; v < n; v++) {\n                int a, b, c;\n                if (isAnc(u, v)) {\n                    a = xorSub[v];\n                    b = xorSub[u] ^ xorSub[v];\n                    c = total ^ xorSub[u];\n                } else if (isAnc(v, u)) {\n                    a = xorSub[u];\n                    b = xorSub[v] ^ xorSub[u];\n                    c = total ^ xorSub[v];\n                } else {\n                    a = xorSub[u];\n                    b = xorSub[v];\n                    c = total ^ xorSub[u] ^ xorSub[v];\n                }\n                int mx = max({a, b, c});\n                int mn = min({a, b, c});\n                ans = min(ans, mx - mn);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-adjacent-swaps-to-reach-the-kth-smallest-number",
+  "title": "Minimum Adjacent Swaps to Reach the Kth Smallest Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Inversion Counting with Fenwick Tree",
+  "tc": "O(k·n + n·log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string target: copy of num, length n → O(n)\n- vector<queue<int>> digitPos: 10 queues holding n indices total → O(n)\n- vector<int> arr: length n → O(n)\n- vector<int> bit: length n+1 → O(n)\n- recursion depth: none\n- not counted: input string num, returned int",
+  "approach": "First, compute the k-th next permutation of `num` to get the target string. Then, the minimum adjacent swaps to transform `num` into `target` equals the inversion count of the position-mapping array: for each character in `target` (left to right), find its corresponding position in `num` (using per-digit FIFO queues to handle duplicates correctly), producing an array `arr` where `arr[i]` is the index in `num` of the character that should land at position `i`. The number of inversions in `arr` (pairs `i<j` with `arr[i]>arr[j]`) is the answer, counted in O(n log n) via a Fenwick tree (BIT).",
+  "hints": [
+    "If you know the exact target string, what quantity determines how many adjacent swaps are needed to rearrange the original string into it? The string length can be up to 1000.",
+    "Use a Fenwick tree (BIT) to count inversions. For `num = \"5489355142\"` and target `\"5489355421\"`, the position-mapping array is `[0,1,2,3,4,5,6,8,9,7]`, which has 2 inversions → answer 2.",
+    "```\ntarget = k-th next permutation of num\nfor each digit d in 0..9:\n    queue positions in num where digit == d\nfor i in 0..n-1:\n    d = target[i]\n    arr[i] = pop front of queue[d]\ncount inversions in arr using BIT:\n    for i from n-1 down to 0:\n        ans += BIT.query(arr[i])       // count seen values < arr[i]\n        BIT.update(arr[i], +1)\nreturn ans\n```",
+    "**Smallest input** - Only two digits, one swap needed.\n`Input: num = \"12\", k = 1` → `Expected: 1`\n⚠️ Bug: Using 0-indexed BIT values without shifting by 1 → infinite loop when `arr[i]=0` because `update(0,...)` never advances `idx`.\n\n**Duplicate digits** - Multiple identical digits require FIFO matching.\n`Input: num = \"11112\", k = 4` → `Expected: 4`\n⚠️ Bug: Matching target digits to num positions with a stack instead of a queue → produces `arr=[4,3,2,1,0]`, returns 10 instead of 4.\n\n**Leading zeros** - The string may start with '0'.\n`Input: num = \"00123\", k = 1` → `Expected: 1`\n⚠️ Bug: Converting the string to an integer and back (stripping leading zeros) → target becomes \"132\" instead of \"00132\", returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "If k can be up to 10^9, how would you avoid calling next-permutation k times?",
+      "a": "Use the factorial number system to directly compute the k-th lexicographically greater permutation. Precompute factorials up to n, then for each position determine which unused digit to place. This reduces the permutation-finding phase from O(k·n) to O(n^2) (or O(n log n) with a Fenwick tree for digit selection)."
+    },
+    {
+      "q": "If n can be up to 10^5 (with k ≤ 1000), is the solution still fast enough?",
+      "a": "The BIT inversion counting is O(n log n) ≈ 1.7 million ops, which is fine. The k next-permutation calls cost O(k·n) = 10^8, which is borderline but feasible in C++. If k also grows large, switch to the factorial-number-system approach for O(n^2) total."
+    },
+    {
+      "q": "If swaps can be between any two positions (not just adjacent), what changes?",
+      "a": "The minimum number of arbitrary swaps to transform one permutation into another equals n minus the number of cycles in the position-mapping permutation. Decompose `arr` into cycles in O(n) time and return `n - cycle_count`. No BIT is needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int getMinSwaps(string num, int k) {\n        int n = num.size();\n        string target = num;\n        for (int i = 0; i < k; i++) {\n            nextPermutation(target);\n        }\n\n        // For each digit 0-9, store positions in num (FIFO order)\n        vector<queue<int>> digitPos(10);\n        for (int i = 0; i < n; i++) {\n            digitPos[num[i] - '0'].push(i);\n        }\n\n        // Build position-mapping array\n        vector<int> arr(n);\n        for (int i = 0; i < n; i++) {\n            int d = target[i] - '0';\n            arr[i] = digitPos[d].front();\n            digitPos[d].pop();\n        }\n\n        // Count inversions using Fenwick tree (1-indexed)\n        vector<int> bit(n + 1, 0);\n        long long inversions = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            int val = arr[i] + 1;  // shift to 1-indexed\n            // Query: count of already-seen values strictly less than arr[i]\n            int cnt = 0;\n            for (int idx = val - 1; idx > 0; idx -= idx & (-idx))\n                cnt += bit[idx];\n            inversions += cnt;\n            // Update: insert current value\n            for (int idx = val; idx <= n; idx += idx & (-idx))\n                bit[idx]++;\n        }\n\n        return (int)inversions;\n    }\n\nprivate:\n    void nextPermutation(string& s) {\n        int n = s.size();\n        int i = n - 2;\n        while (i >= 0 && s[i] >= s[i + 1]) i--;\n        if (i >= 0) {\n            int j = n - 1;\n            while (s[j] <= s[i]) j--;\n            swap(s[i], s[j]);\n        }\n        reverse(s.begin() + i + 1, s.end());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

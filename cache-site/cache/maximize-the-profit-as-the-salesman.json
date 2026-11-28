@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-the-profit-as-the-salesman",
+  "title": "Maximize the Profit as the Salesman",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Weighted Interval Scheduling (DP)",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<vector<pair<int,int>>> byEnd: n buckets holding all m offers → O(n + m)\n- vector<int> dp: n+1 entries → O(n)\n- not counted: input offers, return value",
+  "approach": "Since houses lie on a number line, accepting an offer [s, e] makes the region [0, s-1] fully independent of [e+1, n-1]. We use DP over house positions: dp[i] = max gold using houses [0, i-1]. At each house i, we either leave it unsold (dp[i+1] = dp[i]) or accept an offer ending at i (dp[i+1] = dp[start] + gold). Grouping offers by their end position lets us process everything in a single left-to-right sweep.",
+  "hints": [
+    "If you accept an offer covering houses [s, e], what can you say about the best you can do with houses 0 through s-1? With n up to 10^5, checking every subset of offers is infeasible.",
+    "Dynamic programming over house positions: dp[i] = max gold using houses [0, i-1]. For offer [1,3,2] in Example 1, accepting it yields dp[1] + 2 = 1 + 2 = 3, stored in dp[4].",
+    "```\ngroup offers by their end house\ndp[0] = 0\nfor i from 0 to n-1:\n    dp[i+1] = dp[i]            # house i unsold\n    for each offer (start, gold) ending at i:\n        dp[i+1] = max(dp[i+1], dp[start] + gold)\nreturn dp[n]\n```",
+    "**Overlapping at boundary** - two offers share a house at the boundary\n`Input: n=4, offers=[[0,2,5],[2,3,4]]` → `Expected: 5`\n⚠️ Bug: using best result up to and including `start` instead of up to `start-1` → returns 9\n\n**Gap between offers** - unsold houses between two offers\n`Input: n=5, offers=[[0,0,1],[4,4,3]]` → `Expected: 4`\n⚠️ Bug: not carrying forward dp[i] to dp[i+1] when no offer ends at house i → returns 3\n\n**Multiple offers same end** - several offers ending at the same house\n`Input: n=3, offers=[[0,2,1],[0,2,5],[0,2,3]]` → `Expected: 5`\n⚠️ Bug: keeping only one offer per end position → returns 1\n\n**Duplicate offers** - identical offers submitted twice\n`Input: n=3, offers=[[0,2,5],[0,2,5]]` → `Expected: 5`\n⚠️ Bug: summing all offers at the same end position instead of taking the max → returns 10"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^9 but offers.length stays at 10^5?",
+      "a": "Can't allocate an array of size n. Sort offers by end position, then for each offer binary search for the last offer ending before its start. DP over offer indices instead of house indices. O(m log m) time, O(m) space."
+    },
+    {
+      "q": "What if houses are arranged in a circle (house 0 and house n-1 are adjacent)?",
+      "a": "Circular interval scheduling. Run the linear DP twice: once forcing house 0 unsold, once forcing house n-1 unsold. Take the max of the two results. O(n + m) time, O(n + m) space."
+    },
+    {
+      "q": "What if offers arrive in a stream and each must be accepted or rejected immediately?",
+      "a": "Maintain a map from house position to best gold achievable up to that point. When offer [s,e,g] arrives, query the best gold up to s-1, add g, and update position e if it improves. Use a balanced BST with prefix-max queries. O(m log n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximizeTheProfit(int n, vector<vector<int>>& offers) {\n        vector<vector<pair<int,int>>> byEnd(n);\n        for (auto& o : offers) {\n            byEnd[o[1]].push_back({o[0], o[2]});\n        }\n        vector<int> dp(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            dp[i + 1] = dp[i];\n            for (auto& p : byEnd[i]) {\n                dp[i + 1] = max(dp[i + 1], dp[p.first] + p.second);\n            }\n        }\n        return dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

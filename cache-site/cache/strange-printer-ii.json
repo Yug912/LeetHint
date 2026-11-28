@@ -1,0 +1,40 @@
+{
+  "slug": "strange-printer-ii",
+  "title": "Strange Printer II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Topological Sort / Directed Acyclic Graph",
+  "tc": "O(C·m·n + C²)",
+  "sc": "O(C²)",
+  "spaceBreakdown": "- `min_r`, `max_r`, `min_c`, `max_c` arrays: fixed size 61 each → O(1)\n- `adj` boolean matrix: fixed size 61x61 → O(1)\n- `in_degree` array: fixed size 61 → O(1)\n- `queue q`: up to 61 elements → O(1)\n- not counted: input `targetGrid`",
+  "approach": "The key insight is that if a color $C$ is printed as a solid rectangle, any other color $D$ appearing inside $C$'s final bounding box must have been printed *after* $C$ to cover it. This creates a directed dependency edge $C \\to D$. We can build a directed graph of these dependencies for all colors present in the grid. If this graph contains a cycle, it is impossible to print the grid; otherwise, a valid printing sequence exists (the reverse of a topological sort).",
+  "hints": [
+    "Given that a printed color forms a solid rectangle, what must be true about any other color that appears inside its bounding box in the final grid? Colors are integers from 1 to 60.",
+    "Build a directed graph where an edge C -> D means color C must be printed before color D, then check for cycles using topological sort. In Example 1, color 1's bounding box contains color 2, so add an edge 1 -> 2.",
+    "```\nfor each color C:\n    find its bounding box in targetGrid\n    for each cell in C's bounding box:\n        if cell color D != C:\n            add edge C -> D\nreturn true if graph has no cycles, else false\n```",
+    "**Single cell** - A 1x1 grid with one color.\n`Input: targetGrid = [[5]]` → `Expected: true`\n⚠️ Bug: Initializing bounding box max coordinates to 0 instead of -1 → fails to detect color 5 as present, returns `false`.\n\n**Disconnected same color** - A color appears in multiple separate regions, so its bounding box contains other colors.\n`Input: targetGrid = [[1,2,1],[2,1,2],[1,2,1]]` → `Expected: false`\n⚠️ Bug: Assuming a color's printed rectangle is exactly its visible cells, rather than its bounding box → fails to add edges 1 -> 2 and 2 -> 1, returns `true`.\n\n**Mutual overlap** - Two colors each have their bounding box contain the other, forming a cycle.\n`Input: targetGrid = [[1,2],[2,1]]` → `Expected: false`\n⚠️ Bug: Using an undirected graph or ignoring edge directions → fails to detect the cycle, returns `true`.\n\n**Absent color** - A color value within the constraint range (1-60) does not appear in the grid.\n`Input: targetGrid = [[1,1],[1,1]]` → `Expected: true`\n⚠️ Bug: Not checking if a color exists before processing its bounding box → processes uninitialized bounding box coordinates, returns `false` or crashes."
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid size is much larger, say 1000x1000, but the number of colors is still at most 60?",
+      "a": "The time complexity would be O(m * n + C^2) where C is the number of colors. Since C is small, the bounding box calculation takes O(m * n) and the graph operations take O(C^2), so it easily scales to 1000x1000."
+    },
+    {
+      "q": "What if a color can be printed multiple times, but not overlapping with itself?",
+      "a": "This would break the bounding box assumption, as a color could be printed in separate rectangles. We would need to find connected components of each color and treat each component as a separate vertex in the graph, increasing the number of vertices."
+    },
+    {
+      "q": "What if the printer can print non-rectangular shapes, like L-shapes?",
+      "a": "The bounding box logic would no longer apply directly. We would need to determine the exact printed shape for each color, which is much harder and might require checking if the visible cells of a color can be formed by a sequence of allowed shapes covering each other."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isPrintable(vector<vector<int>>& targetGrid) {\n        int m = targetGrid.size();\n        int n = targetGrid[0].size();\n        \n        int min_r[61], max_r[61], min_c[61], max_c[61];\n        for (int i = 0; i < 61; ++i) {\n            min_r[i] = 61;\n            max_r[i] = -1;\n            min_c[i] = 61;\n            max_c[i] = -1;\n        }\n        \n        for (int i = 0; i < m; ++i) {\n            for (int j = 0; j < n; ++j) {\n                int c = targetGrid[i][j];\n                min_r[c] = min(min_r[c], i);\n                max_r[c] = max(max_r[c], i);\n                min_c[c] = min(min_c[c], j);\n                max_c[c] = max(max_c[c], j);\n            }\n        }\n        \n        bool adj[61][61] = {false};\n        for (int c = 1; c <= 60; ++c) {\n            if (max_r[c] == -1) continue;\n            for (int i = min_r[c]; i <= max_r[c]; ++i) {\n                for (int j = min_c[c]; j <= max_c[c]; ++j) {\n                    if (targetGrid[i][j] != c) {\n                        adj[c][targetGrid[i][j]] = true;\n                    }\n                }\n            }\n        }\n        \n        int in_degree[61] = {0};\n        for (int u = 1; u <= 60; ++u) {\n            for (int v = 1; v <= 60; ++v) {\n                if (adj[u][v]) {\n                    in_degree[v]++;\n                }\n            }\n        }\n        \n        queue<int> q;\n        for (int u = 1; u <= 60; ++u) {\n            if (max_r[u] != -1 && in_degree[u] == 0) {\n                q.push(u);\n            }\n        }\n        \n        int count = 0;\n        int total_colors = 0;\n        for (int u = 1; u <= 60; ++u) {\n            if (max_r[u] != -1) total_colors++;\n        }\n        \n        while (!q.empty()) {\n            int u = q.front();\n            q.pop();\n            count++;\n            for (int v = 1; v <= 60; ++v) {\n                if (adj[u][v]) {\n                    in_degree[v]--;\n                    if (in_degree[v] == 0) {\n                        q.push(v);\n                    }\n                }\n            }\n        }\n        \n        return count == total_colors;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

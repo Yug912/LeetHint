@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-white-tiles-covered-by-a-carpet",
+  "title": "Maximum White Tiles Covered by a Carpet",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two-Pointer Sliding Window",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): C++ introsort stack → O(log n)\n- scalars (cover, right, left, ans, total, carpetEnd): O(1)\n- no extra containers allocated\n- not counted: input tiles (sorted in place), returned int",
+  "approach": "Sort tiles by left endpoint. In an optimal placement, sliding the carpet left until its left edge hits some tile's left endpoint never reduces coverage, so we only try placements where the carpet starts at a tile's left edge. For each such placement, a two-pointer sweep advances a `right` pointer over all tiles fully inside the carpet, maintaining a running sum of their lengths; the next tile contributes a partial overlap if it starts before the carpet ends. The right pointer only moves forward, giving O(n) after the O(n log n) sort.",
+  "hints": [
+    "If the carpet's left edge sits in the middle of a white tile, what happens to the covered count when you slide the carpet left until that edge meets the tile's left endpoint? The tiles are non-overlapping and there are up to 5 × 10^4 of them.",
+    "Sort the tiles by left endpoint, then use a two-pointer sliding window with a running sum of fully-covered tile lengths. For tiles = [[1,5],[10,11],[12,18],...] and carpetLen = 10, placing the carpet at tile 10: the right pointer fully covers [10,11] and [12,18] (sum = 9), and the next tile [20,25] starts past the carpet end (19), so the answer is 9.",
+    "```\nsort tiles by left endpoint\nleft = 0, right = 0, cover = 0, ans = 0\nfor left in 0..n-1:\n    carpetEnd = tiles[left].l + carpetLen - 1\n    while right < n and tiles[right].r <= carpetEnd:\n        cover += length(tiles[right])\n        right += 1\n    total = cover\n    if right < n and tiles[right].l <= carpetEnd:\n        total += carpetEnd - tiles[right].l + 1\n    ans = max(ans, total)\n    if right > left:\n        cover -= length(tiles[left])\n    else:\n        right = left + 1\n        cover = 0\nreturn ans\n```",
+    "**Single tile wider than carpet** - the starting tile is never fully inside the carpet, so `right` stays equal to `left`.\n`Input: tiles = [[1,100]], carpetLen = 10` → `Expected: 10`\n⚠️ Bug: unconditionally subtracting `tiles[left]` from `cover` when `right == left` → `cover` becomes −100 → returns 0\n\n**Overflow on carpet end** - `l_i` and `carpetLen` both reach 10^9, so `l_i + carpetLen − 1` ≈ 2 × 10^9 > 2^31 − 1.\n`Input: tiles = [[999999999,999999999]], carpetLen = 1000000000` → `Expected: 1`\n⚠️ Bug: computing `carpetEnd` in `int` → 1999999998 overflows to a negative value → returns 0\n\n**Carpet ends exactly at next tile's start** - boundary on the partial-overlap check.\n`Input: tiles = [[1,3],[4,6]], carpetLen = 4` → `Expected: 4`\n⚠️ Bug: checking `tiles[right][0] < carpetEnd` instead of `<=` → misses the tile starting at `carpetEnd` → returns 3\n\n**Carpet exactly covers one tile** - `carpetLen` equals the tile length.\n`Input: tiles = [[1,5]], carpetLen = 5` → `Expected: 5`\n⚠️ Bug: using `<` instead of `<=` in `tiles[right].r <= carpetEnd` while keeping the partial check off → tile counted as partial only → returns 5 (happens to match, but with a longer tile like [[1,5],[6,10]], carpetLen=5 it returns 5 instead of 5 - still correct; the real break is the previous case)"
+  ],
+  "followUps": [
+    {
+      "q": "What if tiles can overlap? How does the approach change?",
+      "a": "Overlapping tiles must first be merged into disjoint intervals (sort by left endpoint, sweep to merge). After merging, the same two-pointer sliding window applies unchanged. Time stays O(n log n) due to the sort; space stays O(log n) if merging is done in place, or O(n) if a new merged array is built."
+    },
+    {
+      "q": "What if there are multiple carpets (k carpets) instead of one?",
+      "a": "This becomes an interval-cover DP: sort tiles, compute prefix sums of tile lengths, then DP over tiles choosing placements. State is which tile you're up to and how many carpets remain. Time becomes O(n · k) with O(k) or O(n · k) space depending on implementation."
+    },
+    {
+      "q": "What if tiles arrive as a stream and you must answer queries online?",
+      "a": "Maintain tiles in a balanced BST or sorted structure keyed by left endpoint. For each query (carpetLen), binary search for the starting tile and walk forward - but without a precomputed prefix sum this is O(n) per query. To support fast queries, maintain a Fenwick tree over tile lengths indexed by sorted position, giving O(log^2 n) per query and O(log n) per insertion."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumWhiteTiles(vector<vector<int>>& tiles, int carpetLen) {\n        sort(tiles.begin(), tiles.end());\n        int n = (int)tiles.size();\n        int ans = 0;\n        long long cover = 0;\n        int right = 0;\n        for (int left = 0; left < n; left++) {\n            long long carpetEnd = (long long)tiles[left][0] + carpetLen - 1;\n            while (right < n && (long long)tiles[right][1] <= carpetEnd) {\n                cover += (long long)tiles[right][1] - tiles[right][0] + 1;\n                right++;\n            }\n            long long total = cover;\n            if (right < n && (long long)tiles[right][0] <= carpetEnd) {\n                total += carpetEnd - tiles[right][0] + 1;\n            }\n            if (total > ans) ans = (int)total;\n            if (right > left) {\n                cover -= (long long)tiles[left][1] - tiles[left][0] + 1;\n            } else {\n                right = left + 1;\n                cover = 0;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-walk-in-weighted-graph",
+  "title": "Minimum Cost Walk in Weighted Graph",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find with Component Aggregation",
+  "tc": "O((n + E + Q) * α(n))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> parent: n entries → O(n)\n- vector<int> rank_: n entries → O(n)\n- vector<int> compAnd: n entries → O(n)\n- recursion depth in find(): O(log n) with union-by-rank → O(log n)\n- not counted: input edges/query, returned vector ans",
+  "approach": "The key insight is that since walks can revisit edges and bitwise AND is monotonically non-increasing (adding more operands only clears bits), the minimum cost walk between s and t in the same connected component is the AND of ALL edge weights in that component. We can always construct such a walk by traversing every edge in the component (via back-and-forth detours) and then walking to t. Use DSU to track connected components while maintaining the AND of all edge weights per component root. For each query, if s and t share a root, return that component's AND value; otherwise return -1.",
+  "hints": [
+    "A walk may traverse the same edge multiple times. How does including an additional edge in a walk change the bitwise-AND of its edge weights?",
+    "Use Disjoint Set Union (DSU). For each component, store the AND of all its edge weights. In Example 1, component {0,1,2,3} has edges with weights 7, 7, 1, so its stored value is 7 & 7 & 1 = 1.",
+    "```\ninit DSU with n nodes, compAnd[i] = all-1s\nfor each edge (u, v, w):\n    ru = find(u), rv = find(v)\n    if ru == rv:\n        compAnd[ru] &= w\n    else:\n        union(ru, rv)\n        compAnd[new_root] &= compAnd[old_root] & w\nfor each query (s, t):\n    if find(s) == find(t):\n        output compAnd[find(s)]\n    else:\n        output -1\n```",
+    "**Single edge** - smallest connected graph with exactly one edge\n`n=2, edges=[[0,1,7]], query=[[0,1]]` → `Expected: [7]`\n⚠️ Bug: initializing compAnd to 0 instead of all-1s → returns [0]\n\n**Parallel edges** - multiple edges between the same pair of nodes\n`n=2, edges=[[0,1,3],[0,1,5]], query=[[0,1]]` → `Expected: [1]`\n⚠️ Bug: skipping edges where both endpoints are already connected → returns [3]\n\n**Disconnected nodes** - query spans two separate components\n`n=4, edges=[[0,1,7]], query=[[0,2]]` → `Expected: [-1]`\n⚠️ Bug: returning compAnd without checking find(s) == find(t) → returns [7]\n\n**Cycle within component** - edges forming a cycle must all contribute to the AND\n`n=3, edges=[[0,1,7],[1,2,3],[2,0,5]], query=[[0,2]]` → `Expected: [1]`\n⚠️ Bug: skipping edges where find(u) == find(v) before ANDing w → returns [3]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph is directed instead of undirected?",
+      "a": "Replace DSU with strongly connected components (SCC) via Tarjan's or Kosaraju's algorithm. Two nodes have a walk between them iff they are in the same SCC. The answer is the AND of all edge weights within that SCC. TC: O(V + E), SC: O(V)."
+    },
+    {
+      "q": "What if edge weights can be up to 10^18?",
+      "a": "Use long long for compAnd and initialize to ~0LL. The AND logic is identical; only the data type changes. TC and SC remain the same."
+    },
+    {
+      "q": "What if we need the maximum cost walk instead of the minimum?",
+      "a": "AND is monotonically non-increasing, so the maximum AND walk uses the fewest edges. Greedily build the answer bit-by-bit from high to low: for each candidate bit mask, check if s and t are connected using only edges whose weights contain all set bits of the mask. TC: O(W * E * α(n)) where W is the bit-width, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> parent;\n    vector<int> rank_;\n    vector<int> compAnd;\n\n    int find(int x) {\n        if (parent[x] != x) {\n            parent[x] = find(parent[x]);\n        }\n        return parent[x];\n    }\n\n    void unite(int x, int y, int w) {\n        int px = find(x);\n        int py = find(y);\n        if (px == py) {\n            compAnd[px] &= w;\n            return;\n        }\n        if (rank_[px] < rank_[py]) {\n            int tmp = px;\n            px = py;\n            py = tmp;\n        }\n        parent[py] = px;\n        compAnd[px] &= compAnd[py];\n        compAnd[px] &= w;\n        if (rank_[px] == rank_[py]) {\n            rank_[px]++;\n        }\n    }\n\n    vector<int> minimumCost(int n, vector<vector<int>>& edges, vector<vector<int>>& query) {\n        parent.resize(n);\n        rank_.resize(n, 0);\n        compAnd.resize(n, ~0);\n\n        for (int i = 0; i < n; i++) {\n            parent[i] = i;\n        }\n\n        for (auto& e : edges) {\n            unite(e[0], e[1], e[2]);\n        }\n\n        vector<int> ans;\n        ans.reserve(query.size());\n        for (auto& q : query) {\n            int ps = find(q[0]);\n            int pt = find(q[1]);\n            if (ps != pt) {\n                ans.push_back(-1);\n            } else {\n                ans.push_back(compAnd[ps]);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "remove-letter-to-equalize-frequency",
+  "title": "Remove Letter To Equalize Frequency",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Counting with Case Analysis",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[26]: fixed 26 ints → O(1)\n- int fc[101]: fixed 101 ints → O(1)\n- scalar locals (cnt, f1, c1, f2, c2): O(1)\n- not counted: input string, returned bool",
+  "approach": "Count how many times each of the 26 letters appears, then build a frequency-of-frequencies map (how many letters share each count value). The answer is true only in a few cases: (1) there is one distinct frequency and it is 1 (delete any letter) or only one distinct letter exists (delete one copy); (2) there are two distinct frequencies f1 < f2 where either f2 = f1+1 and exactly one letter has frequency f2 (delete one from it), or f1 = 1 and exactly one letter has frequency 1 (delete that lone letter). Any other configuration is impossible to fix with one deletion.",
+  "hints": [
+    "If you list how many times each distinct letter appears, what is the largest number of different count values that list can contain while still being fixable by deleting a single character - and what must be special about those values?",
+    "Use a frequency array of size 26 for letters, then a second frequency-of-frequencies array. For \"abcc\", the letter counts are a:1, b:1, c:2, giving frequency-of-frequencies {1→2, 2→1}.",
+    "```\ncount letter frequencies in array of size 26\nbuild frequency-of-frequencies map\nif one distinct frequency value f with count c:\n    return (f == 1) or (c == 1)\nif two distinct frequency values f1 < f2 with counts c1, c2:\n    return (f2 == f1 + 1 and c2 == 1) or (f1 == 1 and c1 == 1)\nreturn false\n```",
+    "**Single distinct character** - all letters identical, only one frequency entry with count 1.\n`Input: \"zzz\"` → `Expected: true`\n⚠️ Bug: only checking the two-frequency case, never handling the single-frequency case where c==1 → returns false\n\n**All frequencies are 1** - every letter appears exactly once.\n`Input: \"abc\"` → `Expected: true`\n⚠️ Bug: in the single-frequency case, requiring f > 1 before returning true → returns false\n\n**Two equal frequencies, no outlier** - two letters each appear the same number of times greater than 1.\n`Input: \"aazz\"` → `Expected: false`\n⚠️ Bug: returning true whenever there is exactly one distinct frequency → returns true\n\n**Lone frequency-1 letter** - one letter appears once, all others share a higher frequency.\n`Input: \"abbcc\"` → `Expected: true`\n⚠️ Bug: only checking the f2==f1+1 branch, ignoring the f1==1 branch → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "If word.length can be up to 10^5, does the approach change?",
+      "a": "No. Counting is O(n) and the case analysis is O(26 + max_freq), both fine. The only adjustment is sizing the frequency-of-frequencies structure for max_freq up to 10^5 (use a hash map or a vector sized to n). Time stays O(n), space stays O(1) since at most 26 distinct letters exist."
+    },
+    {
+      "q": "What if you could remove up to k characters instead of exactly one?",
+      "a": "This is harder: you must decide whether some target frequency t lets every letter reach t by removing between 0 and k total characters. A feasible approach iterates candidate target frequencies and sums the needed removals, giving O(26 · max_freq) time and O(1) space, but the greedy validity per target must be checked carefully."
+    },
+    {
+      "q": "What if the alphabet were Unicode with up to 10^6 distinct symbols?",
+      "a": "Replace the size-26 array with a hash map for letter frequencies. The frequency-of-frequencies map then holds at most n entries. Time remains O(n); space becomes O(n) in the worst case when all symbols are distinct."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool equalFrequency(string word) {\n        int freq[26] = {0};\n        for (char c : word) {\n            freq[c - 'a']++;\n        }\n        int fc[101] = {0};\n        for (int i = 0; i < 26; i++) {\n            if (freq[i] > 0) {\n                fc[freq[i]]++;\n            }\n        }\n        int cnt = 0;\n        int f1 = 0, c1 = 0, f2 = 0, c2 = 0;\n        for (int f = 1; f <= 100; f++) {\n            if (fc[f] > 0) {\n                cnt++;\n                if (cnt == 1) {\n                    f1 = f;\n                    c1 = fc[f];\n                } else if (cnt == 2) {\n                    f2 = f;\n                    c2 = fc[f];\n                }\n            }\n        }\n        if (cnt == 1) {\n            return f1 == 1 || c1 == 1;\n        }\n        if (cnt == 2) {\n            if (f2 == f1 + 1 && c2 == 1) return true;\n            if (f1 == 1 && c1 == 1) return true;\n            return false;\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

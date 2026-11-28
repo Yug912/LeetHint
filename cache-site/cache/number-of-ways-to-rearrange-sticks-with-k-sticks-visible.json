@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-ways-to-rearrange-sticks-with-k-sticks-visible",
+  "title": "Number of Ways to Rearrange Sticks With K Sticks Visible",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "1D Dynamic Programming",
+  "tc": "O(n·k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<long long> dp(k+1): up to 1001 entries → O(k)\n- recursion depth: none (iterative)\n- not counted: input parameters, returned int",
+  "approach": "The key insight is to consider the position of the smallest stick (length 1). If it's placed first, it's always visible and contributes 1 to the count; if placed in any of the other n−1 positions, it's never visible (a longer stick is always to its left) and doesn't affect any other stick's visibility. This yields the recurrence f(n,k) = f(n−1,k−1) + (n−1)·f(n−1,k), which are the unsigned Stirling numbers of the first kind. We implement this with a 1D DP array, iterating k downward so each step uses only values from the previous iteration.",
+  "hints": [
+    "Among all n sticks, which one's position most cleanly splits arrangements into two cases: one where it adds to the visible count and one where it doesn't? Note that n can be up to 1000, so enumerating all permutations is infeasible.",
+    "Use dynamic programming with a 1D array dp[j] = number of arrangements with j visible sticks. For n=3, k=2: after processing sticks 1 through 3, dp[2] = 3.",
+    "```\ndp[0] = 1, all other dp[j] = 0\nfor i = 1 to n:\n    for j = min(i, k) down to 1:\n        dp[j] = dp[j-1] + (i-1) * dp[j]\n    dp[0] = 0\nreturn dp[k]\n```",
+    "**Smallest input** - n=1, k=1 is the minimum allowed.\n`Input: n=1, k=1` → `Expected: 1`\n⚠️ Bug: initializing dp[0]=0 instead of 1 → returns 0\n\n**Forward iteration** - overwrites dp[j-1] before it is used.\n`Input: n=4, k=2` → `Expected: 11`\n⚠️ Bug: iterating j from 1 to k instead of k down to 1 → uses already-updated dp[j-1], returns 18\n\n**Base case not reset** - dp[0] must become 0 for every i ≥ 1.\n`Input: n=4, k=3` → `Expected: 6`\n⚠️ Bug: not setting dp[0]=0 after each iteration → dp[0] stays 1, inflates dp[1] and propagates, returns 7\n\n**Overflow** - (i−1)·dp[j] exceeds 2^31−1 when i≈1000 and dp[j]≈10^9.\n`Input: n=1000, k=1000` → `Expected: 1`\n⚠️ Bug: using int instead of long long for dp array → product 999×(10^9)≈10^12 overflows, returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if we need exactly k sticks visible from the left AND exactly j visible from the right?",
+      "a": "This requires tracking both left-to-right and right-to-left maxima simultaneously. The joint distribution is more complex - you would need a 3D DP or exploit the connection between left-to-right maxima and the cycle structure of permutations via the fundamental bijection. Time complexity becomes O(n·k·j)."
+    },
+    {
+      "q": "What if n can be up to 10^6 and k is small (say k ≤ 20)?",
+      "a": "The O(n·k) DP still works within time limits. Alternatively, use the generating function: the answer is the coefficient of x^k in x(x+1)(x+2)…(x+n−1). For small k, expand only the terms contributing to x^k, keeping a size-k polynomial and multiplying by (x+i) at each step. Time O(n·k), space O(k)."
+    },
+    {
+      "q": "What if we need to answer many queries (n_i, k_i) efficiently?",
+      "a": "Precompute the full Stirling number table for all n up to max(n_i) and all k up to max(k_i) using the same DP, then answer each query in O(1). Precomputation is O(N·K) time and O(N·K) space, where N and K are the maximum values across all queries."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int rearrangeSticks(int n, int k) {\n        const int MOD = 1e9 + 7;\n        vector<long long> dp(k + 1, 0);\n        dp[0] = 1;\n        \n        for (int i = 1; i <= n; i++) {\n            for (int j = min(i, k); j >= 1; j--) {\n                dp[j] = (dp[j - 1] + (long long)(i - 1) * dp[j]) % MOD;\n            }\n            dp[0] = 0;\n        }\n        \n        return (int)dp[k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

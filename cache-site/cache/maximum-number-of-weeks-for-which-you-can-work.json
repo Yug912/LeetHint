@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-weeks-for-which-you-can-work",
+  "title": "Maximum Number of Weeks for Which You Can Work",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Math",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total, int maxM, long long rest: scalar variables → O(1)\n- loop variable m: scalar → O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "The project with the most milestones is the bottleneck. If its count is at most one more than the sum of all other projects' milestones, we can interleave everything and finish all milestones (answer = total sum). Otherwise, the best we can do is place one milestone from the largest project in each \"gap\" around the other milestones, giving 2·(sum of others) + 1 weeks. We compute the total sum and maximum in a single pass, then apply this comparison.",
+  "hints": [
+    "If one project has far more milestones than every other project combined, what determines how many of its milestones you can actually schedule before you are forced to stop?",
+    "Greedy comparison of the maximum milestone count against the sum of the rest. For [5,2,1], max=5 and rest=3; since 5 > 3+1, only 4 of project 0's milestones fit, giving 3+4=7 weeks.",
+    "```\ntotal = sum(milestones)\nmaxM = max(milestones)\nrest = total - maxM\nif maxM <= rest + 1:\n    return total\nelse:\n    return 2 * rest + 1\n```",
+    "**Single project** - only one project exists, so no interleaving is possible\n`Input: milestones = [5]` → `Expected: 1`\n⚠️ Bug: returning total without checking the interleaving constraint → returns 5\n\n**Overflow** - sum of milestones exceeds 2^31 - 1 (3 × 10^9 > 2.147 × 10^9)\n`Input: milestones = [1000000000, 1000000000, 1000000000]` → `Expected: 3000000000`\n⚠️ Bug: using int for total → returns -1294967296\n\n**Dominant project** - one project has more milestones than all others combined plus one\n`Input: milestones = [5, 1, 1]` → `Expected: 5`\n⚠️ Bug: returning total (7) without checking maxM > rest + 1 → returns 7\n\n**All equal** - no single project dominates, so all milestones can be finished\n`Input: milestones = [3, 3, 3]` → `Expected: 9`\n⚠️ Bug: always returning 2*rest+1 regardless of the condition → returns 13"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could work on the same project for up to k consecutive weeks before being forced to switch?",
+      "a": "Each gap between other projects can now hold up to k milestones from the largest project. If maxM ≤ k·(rest+1), finish all milestones; otherwise the answer is rest + k·(rest+1) = (k+1)·rest + k. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you must also output the actual project chosen each week?",
+      "a": "Use a max-heap keyed by remaining milestones. Each week, pick the project with the most remaining milestones that differs from last week's choice; if the top is the same as last week, pick the second-highest. TC: O(W log n) where W is the answer, SC: O(n)."
+    },
+    {
+      "q": "What if milestones values arrive in a stream and you must answer after each new value?",
+      "a": "Maintain a running sum and running maximum. After each new value, recompute rest = sum − max and apply the same formula. TC: O(1) per query, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long numberOfWeeks(vector<int>& milestones) {\n        long long total = 0;\n        int maxM = 0;\n        for (int m : milestones) {\n            total += m;\n            if (m > maxM) maxM = m;\n        }\n        long long rest = total - maxM;\n        if (maxM <= rest + 1) return total;\n        return 2 * rest + 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

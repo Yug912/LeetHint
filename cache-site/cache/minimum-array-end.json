@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-array-end",
+  "title": "Minimum Array End",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bit Manipulation / Bit Merging",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long ans, v: single scalars → O(1)\n- int i, j: loop counters → O(1)\n- no containers, no recursion, no dynamic allocation",
+  "approach": "For the AND of all elements to equal x, every element must have all set bits of x. The remaining \"free\" bit positions (where x has 0) can be assigned values 0, 1, 2, …, n−1 to produce the lexicographically smallest strictly increasing sequence. The minimum last element is therefore x \"merged\" with n−1: we scan bit positions of x left-to-right; whenever x has a 0, we consume the next bit of (n−1) and place it there. This directly yields the answer in a single pass over 64 bit positions.",
+  "hints": [
+    "The AND of all n elements equals x. What must every element contain, and which bits remain free to make the elements strictly increasing?",
+    "Bit manipulation - merge x with (n−1) by writing (n−1)'s bits into x's zero-bit positions, right to left. For n=3, x=4 (100): zero-positions are 0,1,3,…; write v=2 (10) into positions 0,1 → 110 = 6.",
+    "```\nans = x\nv = n - 1\ni = 0\nfor j from 0 to 63:\n    if bit j of ans is 0:\n        if bit i of v is 1:\n            set bit j of ans\n        i = i + 1\nreturn ans\n```",
+    "**Single element** - n=1 means the array is just [x], so the answer is x itself.\n`Input: n=1, x=100000000` → `Expected: 100000000`\n⚠️ Bug: using `v = n` instead of `v = n - 1` → returns 100000001\n\n**Direct OR fails** - x's set bits overlap with v's bits, so a plain OR doesn't distribute v into the zero positions.\n`Input: n=2, x=7` → `Expected: 15`\n⚠️ Bug: computing `x | (n-1)` → returns 7\n\n**Overflow past 32 bits** - x with many low bits set and large n pushes the answer above 2^31−1.\n`Input: n=1048576, x=1048575` → `Expected: 1099511627775`\n⚠️ Bug: declaring `ans` as `int` → returns -1\n\n**Bits placed without skipping x's set bits** - v's bits must go only into positions where x is 0.\n`Input: n=4, x=5` → `Expected: 15`\n⚠️ Bug: placing v's bits at consecutive positions 0,1,2,… without skipping x's set bits → returns 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if the XOR of all elements must equal x instead of the AND?",
+      "a": "XOR requires each bit of x to appear an odd number of times across all elements. You would need to distribute bits so each target bit has odd parity while keeping the sequence increasing - a fundamentally different combinatorial problem, not a simple merge. TC would depend on the new strategy."
+    },
+    {
+      "q": "What if n can be up to 10^18?",
+      "a": "v = n−1 can have up to 60 bits. Combined with x's bits, the answer can need up to ~87 bits, exceeding unsigned long long. Use __int128. The algorithm is identical; only the data type changes. TC stays O(1), SC O(1)."
+    },
+    {
+      "q": "Instead of the last element, return the k-th element (0-indexed) of the optimal array.",
+      "a": "The k-th element is the merge of x with k. Replace v = n−1 with v = k in the same loop. TC O(1), SC O(1). This confirms the array is x merged with 0, 1, 2, …, n−1."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minEnd(int n, int x) {\n        long long ans = x;\n        long long v = n - 1;\n        int i = 0;\n        for (int j = 0; j < 64; j++) {\n            if (!((ans >> j) & 1)) {\n                if ((v >> i) & 1) {\n                    ans |= (1LL << j);\n                }\n                i++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

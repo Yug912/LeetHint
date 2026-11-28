@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-integers-to-choose-from-a-range-i",
+  "title": "Maximum Number of Integers to Choose From a Range I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Hash Set",
+  "tc": "O(n + b)",
+  "sc": "O(b)",
+  "spaceBreakdown": "- unordered_set<int> ban: up to b entries → O(b)\n- long long sum, int count: O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "To maximize the count of chosen integers under a sum budget, always pick the smallest available numbers first - smaller numbers contribute less to the sum, leaving room for more picks. Store banned values in a hash set for O(1) membership checks, then iterate from 1 to n, skipping banned numbers and adding each valid number to the running sum until adding the next would exceed maxSum. Since we process in increasing order, once one number doesn't fit, no larger number will either, so we can stop immediately.",
+  "hints": [
+    "With a fixed sum budget, which numbers from 1 to n let you fit the most of them in? The constraint n ≤ 10^4 means you can examine every candidate in the range.",
+    "Use a hash set to store banned numbers, then iterate from 1 upward greedily. In Example 1, banned={1,5,6}, n=5: skip 1 (banned), take 2 (sum=2), take 3 (sum=5), then 4 would make sum 9 > 6 so stop - answer is 2.",
+    "```\nput banned into a set\nsum = 0, count = 0\nfor i from 1 to n:\n    if i in banned: continue\n    if sum + i > maxSum: break\n    sum += i\n    count += 1\nreturn count\n```",
+    "**Smallest input** - only one candidate exists.\n`banned=[], n=1, maxSum=1` → `Expected: 1`\n⚠️ Bug: using `sum + i >= maxSum` instead of `sum + i > maxSum` → returns 0\n\n**All candidates banned** - nothing available to pick.\n`banned=[1,2,3,4,5], n=5, maxSum=100` → `Expected: 0`\n⚠️ Bug: not checking banned membership at all, just summing greedily → returns 5\n\n**Banned values outside range** - banned contains values greater than n.\n`banned=[100,200], n=5, maxSum=100` → `Expected: 5`\n⚠️ Bug: indexing `bool flag[banned[i]]` with a size-(n+1) array without checking `banned[i] <= n` → out-of-bounds write at index 100\n\n**Break on banned** - banned values appear early in the range.\n`banned=[1,2,3], n=10, maxSum=100` → `Expected: 7`\n⚠️ Bug: using `break` instead of `continue` when a banned number is found → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^9 (but banned.length stays ≤ 10^4), how would you solve it without iterating 1 to n?",
+      "a": "Sort the banned list and process gaps between consecutive banned values. For each gap [prev+1, next-1], use arithmetic-series math to determine how many numbers fit before exceeding maxSum. This gives O(b log b) time and O(1) extra space."
+    },
+    {
+      "q": "If banned arrives as a stream too large to fit in memory, how would you adapt?",
+      "a": "External-sort the banned stream, then stream candidates 1 to n and check membership via a merge-style pointer into the sorted banned stream. Time becomes O(n log b) with O(1) in-memory space beyond the banned buffer window."
+    },
+    {
+      "q": "If you must also return the actual chosen integers (not just the count), how does the solution change?",
+      "a": "The greedy logic stays identical; collect each chosen number into a result vector as you go. Time complexity remains O(n + b), but space increases to O(k) where k is the number of chosen integers (up to n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxCount(vector<int>& banned, int n, int maxSum) {\n        unordered_set<int> ban(banned.begin(), banned.end());\n        long long sum = 0;\n        int count = 0;\n        for (int i = 1; i <= n; i++) {\n            if (ban.count(i)) continue;\n            if (sum + i > maxSum) break;\n            sum += i;\n            count++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

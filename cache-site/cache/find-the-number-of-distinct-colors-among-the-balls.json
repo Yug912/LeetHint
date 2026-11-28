@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-number-of-distinct-colors-among-the-balls",
+  "title": "Find the Number of Distinct Colors Among the Balls",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Simulation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> ballColor: at most n entries (only touched balls) → O(n)\n- unordered_map<int,int> colorCount: at most n entries (only active colors) → O(n)\n- vector<int> result: returned output, not counted\n- recursion depth: none",
+  "approach": "Maintain two hash maps: `ballColor` (ball label → current color) and `colorCount` (color → number of balls with that color), plus a running `distinct` counter. For each query `[x, y]`: if ball `x` already has a color `c ≠ y`, decrement `colorCount[c]` and, if it hits 0, erase it and decrement `distinct`; then set `ballColor[x] = y`, and if `colorCount[y]` was 0, increment `distinct`, then increment the count. This is correct because a recolor affects at most two colors (the old one, which may vanish, and the new one, which may appear), so `distinct` only needs local updates.",
+  "hints": [
+    "Between two consecutive queries, at most how many colors' presence among the balls can change? Note limit can be up to 10^9, so an array indexed by ball label is infeasible.",
+    "Use two hash maps: ball→current color and color→count of balls with that color. After [1,4],[2,5],[1,3]: ball→color is {1:3, 2:5} and color→count is {3:1, 5:1}, giving 2 distinct colors.",
+    "```\ndistinct = 0\nfor each [x, y] in queries:\n    if ball x has old color c and c != y:\n        decrement count[c]\n        if count[c] == 0: erase c, distinct--\n    set ball[x] = y\n    if count[y] == 0: distinct++\n    increment count[y]\n    append distinct to result\n```",
+    "**All balls same color** - multiple balls receive the same color\n`Input: limit=2, queries=[[0,1],[1,1],[2,1]]` → `Expected: [1,1,1]`\n⚠️ Bug: incrementing `distinct` on every query without checking whether `colorCount[y]` was already >0 → returns `[1,2,3]`\n\n**Same color reapplied to a ball** - ball recolored to its current color\n`Input: limit=1, queries=[[0,1],[0,1]]` → `Expected: [1,1]`\n⚠️ Bug: decrementing the old color count (dropping `distinct` to 0) and appending before re-adding the same color → returns `[1,0]`\n\n**Color returns after hitting zero** - a color disappears then reappears later\n`Input: limit=2, queries=[[0,1],[1,2],[0,3],[1,1]]` → `Expected: [1,2,2,2]`\n⚠️ Bug: not erasing `colorCount` entries when they hit 0 and using `.count(y)>0` to test presence → on Q4, color 1's stale zero-count entry skips the distinct increment → returns `[1,2,2,1]`\n\n**Single query** - n = 1\n`Input: limit=0, queries=[[0,1]]` → `Expected: [1]`\n⚠️ Bug: loop starting at `i=1` instead of `i=0` → returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if a third query type `[x, 0]` means \"uncolor ball x\"?",
+      "a": "Handle it like a recolor to a sentinel: look up the old color, decrement its count, erase if zero and decrement `distinct`, then erase `ballColor[x]`. Per-query cost stays O(1) amortized; total O(n)."
+    },
+    {
+      "q": "What if limit ≤ 10^6 and you need O(1) worst-case per query (no hash overhead)?",
+      "a": "Replace `ballColor` with an `int` array of size limit+1 (init to 0/uncolored). Colors still range to 10^9, so coordinate-compress all `y` values first (O(n log n)), then use a `colorCount` array indexed by compressed id. TC O(n log n), SC O(limit + n)."
+    },
+    {
+      "q": "What if queries stream in and you may only keep O(k) memory where k is the number of currently-active colors?",
+      "a": "Correct recoloring requires knowing each touched ball's current color, so you cannot drop `ballColor` entries; memory is O(touched balls + active colors) ≤ O(n). With O(k) memory and arbitrary recolors the problem is unsolvable - you'd need to forbid recolors or accept approximate answers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> queryResults(int limit, vector<vector<int>>& queries) {\n        unordered_map<int,int> ballColor;\n        unordered_map<int,int> colorCount;\n        vector<int> result;\n        result.reserve(queries.size());\n        int distinct = 0;\n        for (auto& q : queries) {\n            int x = q[0], y = q[1];\n            auto it = ballColor.find(x);\n            if (it != ballColor.end()) {\n                int oldColor = it->second;\n                if (oldColor == y) {\n                    result.push_back(distinct);\n                    continue;\n                }\n                if (--colorCount[oldColor] == 0) {\n                    colorCount.erase(oldColor);\n                    distinct--;\n                }\n            }\n            ballColor[x] = y;\n            if (colorCount[y]++ == 0) {\n                distinct++;\n            }\n            result.push_back(distinct);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

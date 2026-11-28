@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-index-of-a-valid-split",
+  "title": "Minimum Index of a Valid Split",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Boyer-Moore Majority Vote + Running Prefix Count",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- Boyer-Moore vote variables (x, cnt): O(1)\n- Running counters f, f1, f2 (long long): O(1)\n- No containers, no recursion: nothing grows with n\n- not counted: input vector",
+  "approach": "The dominant element of any valid split must be the dominant element x of the whole array (since both halves must share it, and x is the only majority in the whole). Find x and its total frequency f via Boyer-Moore majority vote, then sweep i from 0 to n−2 maintaining f1 = count of x in the prefix [0..i]; the suffix count is f2 = f − f1. The split at i is valid iff 2·f1 > i+1 and 2·f2 > n−1−i; return the first such i.",
+  "hints": [
+    "The dominant element of both halves must be the same as the dominant element of the whole array. As you grow the left part one element at a time, what single running quantity tells you whether that element is dominant on the left - and how is the right part's count of it determined from that same quantity?",
+    "Use Boyer-Moore majority vote to find the dominant element x and its total frequency f, then sweep left to right tracking f1 = count of x in the prefix; the suffix count is f − f1. For nums = [1,2,2,2], x=2, f=4; at i=2, f1=2 (2·2>3) and f2=2 (2·2>1), so return 2.",
+    "```\nfind dominant x and total count f\nf1 = 0\nfor i in 0 .. n-2:\n    if nums[i] == x: f1 += 1\n    f2 = f - f1\n    if 2*f1 > i+1 and 2*f2 > n-1-i:\n        return i\nreturn -1\n```",
+    "**Single element** - n=1 means no index i satisfies 0 ≤ i < n−1.\n`Input: nums = [7]` → `Expected: -1`\n⚠️ Bug: returning i as soon as the left condition holds (ignoring the right) → returns 0.\n\n**All equal** - every prefix and suffix has the same dominant element, so the earliest split wins.\n`Input: nums = [5,5,5]` → `Expected: 0`\n⚠️ Bug: incrementing f1 after the validity check instead of before → at i=0 checks f1=0, fails; at i=1 checks f1=1, 2·1>2 is false → returns -1.\n\n**No valid split** - the dominant element never forms a majority in both halves simultaneously.\n`Input: nums = [3,3,3,3,7,2,2]` → `Expected: -1`\n⚠️ Bug: checking only 2·f1 > i+1 (left side) → at i=0, f1=1, 2>1 true → returns 0.\n\n**Two equal elements** - the only valid split is at index 0.\n`Input: nums = [5,5]` → `Expected: 0`\n⚠️ Bug: looping i from 1 to n−2 instead of 0 to n−2 → loop body never runs → returns -1."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array could have zero or multiple dominant elements - how would the answer change?",
+      "a": "First run Boyer-Moore and verify the candidate actually has frequency > n/2; if none does, return -1 immediately. If multiple dominant elements were allowed (impossible by majority definition), you'd track each majority candidate separately, but majority is unique whenever it exists. Complexity stays O(n) time, O(1) space."
+    },
+    {
+      "q": "What if nums arrives as a stream and you can only make one pass with O(1) memory, returning the answer online?",
+      "a": "Use Boyer-Moore to identify x in a first pass, but a single pass can't know f in advance, so you'd need two passes over the stream (or buffer it). With a second pass you maintain f1 and need f, which requires either storing the stream or accepting two passes; true one-pass online solving isn't possible because suffix dominance depends on the unknown total f. Two passes keep O(n) time and O(1) space."
+    },
+    {
+      "q": "What if you must return all valid split indices instead of just the minimum?",
+      "a": "The same sweep collects every i satisfying 2·f1 > i+1 and 2·f2 > n−1−i into a result vector. The valid indices form a contiguous range (once x becomes dominant on the left and stays dominant on the right until the suffix loses majority), so you could also binary-search the range boundaries. Time O(n) for collection, O(log n) for the boundary approach; space O(k) for the output list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumIndex(vector<int>& nums) {\n        int n = nums.size();\n        // Boyer-Moore majority vote to find the dominant element x.\n        int x = nums[0], cnt = 1;\n        for (int i = 1; i < n; ++i) {\n            if (nums[i] == x) {\n                ++cnt;\n            } else {\n                --cnt;\n                if (cnt == 0) {\n                    x = nums[i];\n                    cnt = 1;\n                }\n            }\n        }\n        // Total frequency f of the dominant element.\n        long long f = 0;\n        for (int i = 0; i < n; ++i) {\n            if (nums[i] == x) ++f;\n        }\n        // Sweep split point i from 0 to n-2.\n        long long f1 = 0;\n        for (int i = 0; i < n - 1; ++i) {\n            if (nums[i] == x) ++f1;\n            long long f2 = f - f1;\n            // x dominant in [0..i]  <=> 2*f1 > i+1\n            // x dominant in [i+1..n-1] <=> 2*f2 > n-1-i\n            if (2 * f1 > (long long)(i + 1) && 2 * f2 > (long long)(n - 1 - i)) {\n                return i;\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

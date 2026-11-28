@@ -1,0 +1,40 @@
+{
+  "slug": "find-minimum-diameter-after-merging-two-trees",
+  "title": "Find Minimum Diameter After Merging Two Trees",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Tree Diameter / Graph Center",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<vector<int>> adj in treeDiameter: up to n (or m) vertices → O(n) or O(m), allocated sequentially\n- vector<int> dist in bfsFarthest: n (or m) entries → O(n) or O(m)\n- queue<int> q in bfsFarthest: up to n (or m) entries → O(n) or O(m)\n- Max at any point: O(max(n, m)) = O(n + m); not counted: input edges1, edges2",
+  "approach": "The merged tree's diameter is the max of three values: diameter of tree1, diameter of tree2, or the longest path crossing the new edge. The crossing path length equals (farthest reachable distance from connection node a in tree1) + (farthest from b in tree2) + 1. To minimize this, pick a and b as the centers of their trees - the node(s) in the middle of the diameter path - whose eccentricity is ceil(d/2). Compute each tree's diameter via two-pass BFS, then return max(d1, d2, ceil(d1/2) + ceil(d2/2) + 1).",
+  "hints": [
+    "The merged tree's longest path either stays within one original tree or crosses the new edge. For a path crossing through nodes a and b, its length depends on the farthest reachable node from a in tree1 and from b in tree2. Which nodes a and b make this crossing path as short as possible?",
+    "Use two-pass BFS to compute each tree's diameter (BFS from any node to find the farthest, then BFS from that farthest node). The node minimizing the longest path to any other node - the tree's center - has eccentricity ceil(diameter / 2). For Example 1, tree1 has diameter 2 (radius 1), tree2 has diameter 1 (radius 1), so the crossing path is 1+1+1=3.",
+    "```\nfunction treeDiameter(edges):\n    build adjacency list\n    far = BFS_farthest(adj, node 0)\n    return BFS_farthest(adj, far).distance\n\nd1 = treeDiameter(edges1)\nd2 = treeDiameter(edges2)\nr1 = (d1 + 1) / 2\nr2 = (d2 + 1) / 2\nreturn max(d1, d2, r1 + r2 + 1)\n```",
+    "**Both single nodes** - n=m=1, no edges in either tree\n`Input: edges1 = [], edges2 = []` → `Expected: 1`\n⚠️ Bug: returning max(d1, d2) without the crossing term → returns 0\n\n**Odd diameter** - ceil division changes the radius\n`Input: edges1 = [[0,1],[1,2],[2,3]], edges2 = [[0,1],[1,2],[2,3]]` → `Expected: 5`\n⚠️ Bug: using d/2 instead of (d+1)/2 for radius → returns max(3, 3, 1+1+1) = 4\n\n**Non-path tree with single BFS** - one BFS pass gives wrong diameter on branched trees\n`Input: edges1 = [[0,1],[0,2],[0,3],[2,4],[2,5]], edges2 = [[0,1],[0,2],[0,3],[2,4],[2,5]]` → `Expected: 5`\n⚠️ Bug: using single BFS pass instead of two-pass → d1=d2=2 (should be 3), returns 3\n\n**Single node diameter** - a single node has diameter 0, not 1\n`Input: edges1 = [], edges2 = [[0,1]]` → `Expected: 2`\n⚠️ Bug: returning 1 for diameter of single-node tree → d1=1, returns max(1, 1, 1+1+1) = 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if the edges have positive weights?",
+      "a": "Replace BFS with Dijkstra's algorithm for the two-pass diameter computation. The rest of the approach stays the same: radius = ceil(diameter/2), answer = max(d1, d2, r1+r2+1). TC becomes O((n+m) log(n+m))."
+    },
+    {
+      "q": "What if you need to return the actual pair of nodes to connect?",
+      "a": "During the second BFS pass, track parent pointers to reconstruct the diameter path. The center of this path (the middle node, or either of the two middle nodes for even-length paths) is the optimal connection point. SC increases by O(n) for the parent array."
+    },
+    {
+      "q": "What if you must merge three trees with two new edges?",
+      "a": "Connect them in a chain. The diameter is the max of individual diameters and the longest crossing path through both edges. Pick centers of each tree as connection points. The crossing path becomes r1 + r2 + r3 + 2 (two new edges). Answer = max(d1, d2, d3, r1+r2+1, r2+r3+1, r1+r2+r3+2)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumDiameterAfterMerge(vector<vector<int>>& edges1, vector<vector<int>>& edges2) {\n        int d1 = treeDiameter(edges1);\n        int d2 = treeDiameter(edges2);\n        return max({d1, d2, (d1 + 1) / 2 + (d2 + 1) / 2 + 1});\n    }\n    \nprivate:\n    int treeDiameter(vector<vector<int>>& edges) {\n        int n = edges.size() + 1;\n        if (n == 1) return 0;\n        \n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        \n        int far = bfsFarthest(adj, 0, n).first;\n        return bfsFarthest(adj, far, n).second;\n    }\n    \n    pair<int, int> bfsFarthest(vector<vector<int>>& adj, int start, int n) {\n        vector<int> dist(n, -1);\n        queue<int> q;\n        q.push(start);\n        dist[start] = 0;\n        int farthestNode = start;\n        int maxDist = 0;\n        \n        while (!q.empty()) {\n            int u = q.front();\n            q.pop();\n            for (int v : adj[u]) {\n                if (dist[v] == -1) {\n                    dist[v] = dist[u] + 1;\n                    q.push(v);\n                    if (dist[v] > maxDist) {\n                        maxDist = dist[v];\n                        farthestNode = v;\n                    }\n                }\n            }\n        }\n        \n        return {farthestNode, maxDist};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

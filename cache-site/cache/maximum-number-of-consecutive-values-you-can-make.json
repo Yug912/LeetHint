@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-consecutive-values-you-can-make",
+  "title": "Maximum Number of Consecutive Values You Can Make",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Range Extension",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() recursion stack (introsort): O(log n)\n- long long x: O(1)\n- loop variable c: O(1)\n- not counted: input vector (modified in place)",
+  "approach": "Sort the coins and maintain x = the largest value such that all integers 0..x are makeable. Initially x = 0 (the empty subset makes 0). Process coins in ascending order: if the current coin c ≤ x + 1, then adding c to every subset that makes 0..x produces c..c+x, which overlaps or touches the existing range, extending it to 0..x+c. If c > x + 1, a gap appears at x+1 and no further extension is possible. The answer is x + 1 (the count of values 0..x). Use long long for x since the sum can reach 4×10⁴ × 4×10⁴ = 1.6×10⁹.",
+  "hints": [
+    "If you can already make every integer from 0 through x, and you pick one more coin worth v, when does a gap appear between x and v?",
+    "Sort the coins and greedily extend the reachable range [0, x]. With [1,1,1,4] sorted: x=0, coin 1 ≤ 1 → x=1; coin 1 ≤ 2 → x=2; coin 1 ≤ 3 → x=3; coin 4 ≤ 4 → x=7. Return 8.",
+    "```\nsort coins\nx = 0\nfor c in sorted coins:\n    if c <= x + 1:\n        x = x + c\n    else:\n        break\nreturn x + 1\n```",
+    "**Single large coin** - the sole coin exceeds 1, so only 0 is makeable\n`Input: coins = [2]` → `Expected: 1`\n⚠️ Bug: initializing x to 1 instead of 0 → returns 2\n\n**Overflow** - 4×10⁴ coins each worth 4×10⁴ sum to 1.6×10⁹\n`Input: coins = [40000, 40000, ..., 40000]` (4×10⁴ coins) → `Expected: 1600000001`\n⚠️ Bug: using int for x → 1.6×10⁹ exceeds INT_MAX, wraps negative, returns wrong value\n\n**Gap in the middle** - a coin too large to bridge the current range must stop processing\n`Input: coins = [1,1,5]` → `Expected: 3`\n⚠️ Bug: not breaking when c > x+1, continuing to add all coins → returns 7\n\n**All ones** - each coin extends the range by exactly 1\n`Input: coins = [1,1,1,1]` → `Expected: 5`\n⚠️ Bug: using c < x+1 instead of c <= x+1 → first coin fails check (1 < 1 is false), returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if some coins have negative values?",
+      "a": "Negative coins break the greedy ordering since they can fill gaps below 0. You would shift all values by the sum of negatives and use a DP or set-based approach to track reachable sums, giving O(n × S) time where S is the total range of achievable sums."
+    },
+    {
+      "q": "What if coins arrive in a stream and you cannot sort them all at once?",
+      "a": "Maintain the current reachable range [0, x] and buffer coins with value > x+1 in a min-heap. After each new coin, repeatedly check if the smallest buffered coin can now extend the range. This gives O(n log n) time and O(n) space in the worst case."
+    },
+    {
+      "q": "What if you need to count the total number of distinct values you can make, not just consecutive from 0?",
+      "a": "This becomes the subset sum counting problem, which is NP-hard in general. With n up to 4×10⁴, there are 2^n subsets, so exact counting is infeasible without additional constraints like a small total sum."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int getMaximumConsecutive(vector<int>& coins) {\n        sort(coins.begin(), coins.end());\n        long long x = 0;\n        for (int c : coins) {\n            if (c > x + 1) break;\n            x += c;\n        }\n        return (int)(x + 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-days-without-meetings",
+  "title": "Count Days Without Meetings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Merge Intervals",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(meetings): in-place on input (not counted), introsort recursion stack O(log n)\n- scalar variables (covered, curStart, curEnd, i): O(1)\n- no extra containers allocated",
+  "approach": "Sort meetings by start day, then sweep through merging overlapping intervals into disjoint ranges. For each merged range [s, e], the covered days are e − s + 1. Sum all covered days and subtract from `days`. This avoids iterating over up to 10^9 individual days and instead processes only the ≤ 10^5 meetings.",
+  "hints": [
+    "When meetings overlap, the same day gets counted multiple times. What property of the meeting set would let you count each covered day exactly once without iterating over all 10^9 days?",
+    "Sort meetings by start day, then merge overlapping intervals into disjoint ranges. In Example 1, sorted [[1,3],[5,7],[9,10]] has no overlaps; covered = 3+3+2 = 8, so free = 10−8 = 2.",
+    "```\nsort meetings by start\ncurStart, curEnd = first meeting\ncovered = 0\nfor each remaining meeting m:\n    if m.start <= curEnd:\n        curEnd = max(curEnd, m.end)\n    else:\n        covered += curEnd - curStart + 1\n        curStart, curEnd = m.start, m.end\ncovered += curEnd - curStart + 1\nreturn days - covered\n```",
+    "**Single meeting** - the loop body never executes, so the final interval must be added after the loop.\n`Input: days = 6, meetings = [[1,6]]` → `Expected: 0`\n⚠️ Bug: forgetting `covered += curEnd - curStart + 1` after the loop → returns 6\n\n**Boundary overlap** - two meetings share an endpoint day.\n`Input: days = 5, meetings = [[1,3],[3,5]]` → `Expected: 0`\n⚠️ Bug: using `<` instead of `<=` in the overlap check → day 3 double-counted, covered = 6, returns −1\n\n**Unsorted input** - meetings arrive in reverse order.\n`Input: days = 10, meetings = [[9,10],[5,7],[1,3]]` → `Expected: 2`\n⚠️ Bug: skipping the sort → merges [9,10] then absorbs [5,7] and [1,3] into [1,10], covered = 2, returns 8\n\n**Duplicate meetings** - identical intervals appear twice.\n`Input: days = 5, meetings = [[2,3],[2,3]]` → `Expected: 3`\n⚠️ Bug: summing each interval independently without merging → covered = 4, returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "Meetings arrive one at a time in a stream; after each insertion, report the current free-day count. How would you adapt?",
+      "a": "Maintain a sorted set (e.g., std::set) of disjoint merged intervals. On each new meeting, find overlapping intervals via lower_bound, merge them, and update a running covered-day total. Each insertion is O(log n) amortized. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "Instead of counting free days in [1, days], count free days in a query range [L, R] given with each query. How does the approach change?",
+      "a": "Merge intervals the same way, but when summing gaps, clamp each gap's start to L and end to R. Pre-sort once, then each query is a linear scan of merged intervals. TC: O(n log n + q·n), SC: O(1)."
+    },
+    {
+      "q": "Support both adding and removing meetings dynamically, querying free days after each operation. What data structure helps?",
+      "a": "Use an interval tree or a balanced BST keyed by interval start, storing the total covered-day count at each subtree. Insertions and deletions merge or split intervals in O(log n). TC: O(log n) per operation, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countDays(int days, vector<vector<int>>& meetings) {\n        sort(meetings.begin(), meetings.end());\n        int n = meetings.size();\n        long long covered = 0;\n        int curStart = meetings[0][0];\n        int curEnd = meetings[0][1];\n        for (int i = 1; i < n; i++) {\n            if (meetings[i][0] <= curEnd) {\n                curEnd = max(curEnd, meetings[i][1]);\n            } else {\n                covered += (long long)(curEnd - curStart + 1);\n                curStart = meetings[i][0];\n                curEnd = meetings[i][1];\n            }\n        }\n        covered += (long long)(curEnd - curStart + 1);\n        return days - (int)covered;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

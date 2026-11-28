@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-of-a-path-with-special-roads",
+  "title": "Minimum Cost of a Path With Special Roads",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Shortest Path (Dijkstra without Heap)",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> points: up to 402 entries → O(n)\n- map<pair<int,int>,int> idx: up to 402 entries → O(n)\n- vector<vector<pair<int,int>>> specialAdj: up to 200 edges total → O(n)\n- vector<long long> dist: 402 entries → O(n)\n- vector<bool> visited: 402 entries → O(n)\n- sort(): O(log n) stack\n- not counted: input arrays",
+  "approach": "The key insight is that we only need to consider positions that are special road endpoints, the start, or the target as graph nodes - any intermediate stop at a non-endpoint point is never beneficial due to the triangle inequality of Manhattan distance. We build a dense graph where every pair of nodes is connected by a Manhattan-distance edge, plus directed special road edges. Since the graph is dense (O(n²) edges for O(n) nodes), Dijkstra's algorithm with a linear scan for the minimum (no priority queue) is optimal at O(n²) time and O(n) space.",
+  "hints": [
+    "Since moving between any two points costs their Manhattan distance, when would stopping at an intermediate point that isn't a special road endpoint ever reduce the total cost?",
+    "Use Dijkstra's shortest path with a linear scan for the minimum (no priority queue), since the graph has O(n²) edges for O(n) nodes. In Example 1, from (1,1) we reach (1,2) at cost 1, then take the special road to (3,3) at cost 2.",
+    "```\nnodes = unique points from {start, target, all special road endpoints}\nfor each node u:\n  for each node v: relax with Manhattan(u, v)\n  for each special road from u: relax with road_cost\nrun Dijkstra with linear scan:\n  repeat n times:\n    find unvisited node with min dist\n    mark visited, relax all neighbors\nreturn dist[target]\n```",
+    "**Directed road** - special road goes from target to start, not useful in the forward direction.\n`Input: start = [1,1], target = [3,3], specialRoads = [[3,3,1,1,1]]` → `Expected: 4`\n⚠️ Bug: treating special roads as bidirectional (adding reverse edges) → returns 1 instead of 4.\n\n**Expensive special road** - Manhattan distance is cheaper than the special road.\n`Input: start = [1,1], target = [3,3], specialRoads = [[1,1,3,3,10]]` → `Expected: 4`\n⚠️ Bug: always preferring a special road when one exists between current position and destination → returns 10 instead of 4.\n\n**Duplicate endpoints** - two special roads between the same points with different costs.\n`Input: start = [1,1], target = [3,3], specialRoads = [[1,1,3,3,5],[1,1,3,3,2]]` → `Expected: 2`\n⚠️ Bug: using a map keyed by (source, destination) that keeps only the first cost seen → returns 5 instead of 2.\n\n**No special roads** - only Manhattan distance matters.\n`Input: start = [1,1], target = [5,5], specialRoads = []` → `Expected: 8`\n⚠️ Bug: accessing specialRoads[0] without checking if the array is empty → undefined behavior or crash."
+  ],
+  "followUps": [
+    {
+      "q": "What if special roads were bidirectional instead of directed?",
+      "a": "Add a reverse edge for each special road with the same cost. The graph structure and algorithm remain identical - still O(n²) Dijkstra with linear scan. Time and space complexity are unchanged."
+    },
+    {
+      "q": "What if you had multiple possible start positions and needed the minimum cost from any start to the target?",
+      "a": "Initialize dist[src] = 0 for all start positions before running Dijkstra (multi-source Dijkstra). The rest of the algorithm is unchanged. Time complexity remains O(n²), space O(n)."
+    },
+    {
+      "q": "What if you needed to answer multiple queries (different start/target pairs) on the same set of special roads?",
+      "a": "Precompute all-pairs shortest paths using Floyd-Warshall in O(n³) time. Then each query is O(1) lookup. With n ≤ 402, this is about 6.5×10^7 operations, feasible for many queries."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumCost(vector<int>& start, vector<int>& target, vector<vector<int>>& specialRoads) {\n        vector<pair<int,int>> points;\n        points.push_back({start[0], start[1]});\n        points.push_back({target[0], target[1]});\n        \n        for (auto& r : specialRoads) {\n            points.push_back({r[0], r[1]});\n            points.push_back({r[2], r[3]});\n        }\n        \n        sort(points.begin(), points.end());\n        points.erase(unique(points.begin(), points.end()), points.end());\n        \n        int n = points.size();\n        \n        map<pair<int,int>, int> idx;\n        for (int i = 0; i < n; i++) {\n            idx[points[i]] = i;\n        }\n        \n        int src = idx[{start[0], start[1]}];\n        int dst = idx[{target[0], target[1]}];\n        \n        vector<vector<pair<int,int>>> specialAdj(n);\n        for (auto& r : specialRoads) {\n            int u = idx[{r[0], r[1]}];\n            int v = idx[{r[2], r[3]}];\n            specialAdj[u].push_back({v, r[4]});\n        }\n        \n        const long long INF = 1e18;\n        vector<long long> dist(n, INF);\n        vector<bool> visited(n, false);\n        dist[src] = 0;\n        \n        for (int iter = 0; iter < n; iter++) {\n            int u = -1;\n            long long minDist = INF;\n            for (int i = 0; i < n; i++) {\n                if (!visited[i] && dist[i] < minDist) {\n                    minDist = dist[i];\n                    u = i;\n                }\n            }\n            if (u == -1) break;\n            visited[u] = true;\n            \n            for (int v = 0; v < n; v++) {\n                if (visited[v]) continue;\n                long long manhattan = (long long)abs(points[v].first - points[u].first) \n                                    + abs(points[v].second - points[u].second);\n                if (dist[u] + manhattan < dist[v]) {\n                    dist[v] = dist[u] + manhattan;\n                }\n            }\n            \n            for (auto& edge : specialAdj[u]) {\n                int v = edge.first;\n                int c = edge.second;\n                if (dist[u] + c < dist[v]) {\n                    dist[v] = dist[u] + c;\n                }\n            }\n        }\n        \n        return (int)dist[dst];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-subarray-sum-with-length-divisible-by-k",
+  "title": "Maximum Subarray Sum With Length Divisible by K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum with Modulo Grouping",
+  "tc": "O(n)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<long long> minP: exactly k entries → O(k)\n- recursion depth: none\n- not counted: input nums, returned long long",
+  "approach": "A subarray from index `i+1` to `j` has length `j-i`, which is divisible by `k` exactly when `j % k == i % k`. So we group prefix-sum indices by their remainder modulo `k`. Scanning left to right, for the current prefix sum `P[j]` we want the smallest earlier `P[i]` with `i % k == j % k`; the difference is a candidate answer. We keep one running minimum per remainder class (size `k`), giving a single linear pass.",
+  "hints": [
+    "If a subarray starts right after index `i` and ends at index `j`, what relationship between `i` and `j` guarantees the subarray length is a multiple of `k`? With `n ≤ 2·10^5`, checking every subarray directly is too slow.",
+    "Track prefix sums but bucket them by `index % k`, keeping the minimum prefix sum seen in each bucket. In Example 3 (`k=2`), prefix sums `[0,-5,-4,-2,-5,-1]` sit at indices `[0,1,2,3,4,5]`; even indices share remainder 0, odd indices share remainder 1, so a valid subarray pairs same-remainder indices.",
+    "```\nminP = array of size k, filled with +inf\nprefix = 0\nans = -inf\nfor j from 0 to n:\n    r = j mod k\n    if minP[r] != +inf:\n        ans = max(ans, prefix - minP[r])\n    minP[r] = min(minP[r], prefix)\n    if j < n:\n        prefix = prefix + nums[j]\nreturn ans\n```",
+    "**Smallest input** - only one element, so the answer is that element itself.\n`nums = [-5], k = 1` → `Expected: -5`\n⚠️ Bug: initialising `ans = 0` instead of `-inf` → returns `0`\n\n**All negatives** - every valid subarray sum is negative, so the max is the least-negative one.\n`nums = [-1,-2,-3,-4,-5], k = 4` → `Expected: -10`\n⚠️ Bug: initialising `ans = 0` → returns `0`\n\n**Overflow** - `n = 2·10^5` elements each `10^9` gives a prefix sum of `2·10^14`.\n`nums = [10^9 repeated 2·10^5 times], k = 1` → `Expected: 200000000000000`\n⚠️ Bug: storing prefix in `int` → wraps to a wrong signed value\n\n**k equals n** - exactly one valid subarray, the whole array.\n`nums = [1,2,3], k = 3` → `Expected: 6`\n⚠️ Bug: updating `minP[r]` before computing the candidate at `j=k` → subtracts the just-seen prefix, returning `0`"
+  ],
+  "followUps": [
+    {
+      "q": "What if `k` can exceed `n`, so no subarray length is a multiple of `k`?",
+      "a": "Add an upfront check `if (k > n) return 0;` (or whatever sentinel the problem defines). The main loop never produces a candidate in that case, so `ans` stays `-inf`; the guard makes the contract explicit. Time stays O(n), space O(k)."
+    },
+    {
+      "q": "What if we also require the subarray length to be at least some `L` (still divisible by `k`)?",
+      "a": "Delay inserting each prefix sum into its bucket by `L` positions using a small queue per remainder class, so `minP[r]` only holds indices `i ≤ j - L`. Everything else is unchanged. Time O(n), space O(k + L/k) ≈ O(k)."
+    },
+    {
+      "q": "Solve it in a streaming setting where elements arrive one at a time and you must report the current best after each.",
+      "a": "The algorithm is already online: maintain `prefix`, the `k`-sized `minP`, and `ans`; for each new element update `prefix`, query/update `minP[prefix_index % k]`, and refresh `ans`. Per-element time O(1), total memory O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxSubarraySum(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> minP(k, LLONG_MAX);\n        long long prefix = 0;\n        long long ans = LLONG_MIN;\n        for (int j = 0; j <= n; j++) {\n            int r = j % k;\n            if (minP[r] != LLONG_MAX) {\n                long long cand = prefix - minP[r];\n                if (cand > ans) ans = cand;\n            }\n            if (prefix < minP[r]) minP[r] = prefix;\n            if (j < n) prefix += nums[j];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-path-quality-of-a-graph",
+  "title": "Maximum Path Quality of a Graph",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Backtracking with Pruning",
+  "tc": "O(4^(maxTime/10) + E log n)",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- adj (adjacency list): n vectors with up to 4 pairs each → O(n + E)\n- dist (Dijkstra distances): n ints → O(n)\n- visited (visit counts): n ints → O(n)\n- priority_queue (Dijkstra): up to n entries → O(n)\n- recursion depth: at most maxTime/10 = 10 → O(1)\n- not counted: input values/edges, returned int",
+  "approach": "Since every edge takes at least 10 seconds and maxTime ≤ 100, any valid path has at most 10 edges. With at most 4 edges per node, the DFS tree has at most 4^10 ≈ 10^6 leaves - small enough for backtracking. We DFS from node 0, tracking elapsed time and a visited-count array (to allow revisits without double-counting value). At each step we prune any neighbor v where time + edge_weight + shortest_distance(v→0) exceeds maxTime, using Dijkstra precomputed distances. We update the answer whenever we return to node 0.",
+  "hints": [
+    "With maxTime ≤ 100 and every edge taking at least 10 seconds, what is the maximum number of edges any valid path can contain?",
+    "Use DFS/backtracking from node 0, tracking visited nodes and elapsed time. Precompute each node's shortest time back to 0 via Dijkstra to prune branches that cannot return in time. In Example 1, from node 1 at time 10, the shortest return is 10, so 10+10=20 ≤ 49 allows further exploration.",
+    "```\ndfs(u, time):\n    if u == 0: update best with current quality\n    for each neighbor (v, w) of u:\n        if time + w + dist[v] > maxTime: skip\n        if v not yet visited: add values[v] to quality\n        increment visited[v]\n        dfs(v, time + w)\n        decrement visited[v]\n        if was newly visited: subtract values[v]\n```",
+    "**Single node** - n=1, no edges, only node 0 exists.\n`values=[5], edges=[], maxTime=50` → `Expected: 5`\n⚠️ Bug: only updating ans when reaching node 0 after at least one move → returns `0`\n\n**Node 0 isolated** - graph is disconnected; node 0 has no edges.\n`values=[10,20,30], edges=[[1,2,10]], maxTime=50` → `Expected: 10`\n⚠️ Bug: not initializing curQuality with values[0] before DFS → returns `0`\n\n**Cannot return in time** - a high-value node is reachable but round-trip exceeds maxTime.\n`values=[0,100], edges=[[0,1,60]], maxTime=100` → `Expected: 0`\n⚠️ Bug: updating ans at every visited node instead of only at node 0 → returns `100`\n\n**Revisiting a node** - same node appears twice in path; value must count once.\n`values=[1,10], edges=[[0,1,10]], maxTime=40` → `Expected: 11`\n⚠️ Bug: adding values[v] on every visit instead of first visit only → returns `21`"
+  ],
+  "followUps": [
+    {
+      "q": "If maxTime can be up to 10^9 but n ≤ 20, how would you solve it?",
+      "a": "Use DP with bitmask: dp[mask][node] = minimum time to reach node having visited exactly the nodes in mask. Then check each mask where node 0 is included and see if dp[mask][0] + shortest_return ≤ maxTime. TC: O(2^n · n^2), SC: O(2^n · n)."
+    },
+    {
+      "q": "If the graph is directed instead of undirected, what changes?",
+      "a": "Build adjacency lists with directed edges only. For the pruning step, run Dijkstra on the reverse graph (edges reversed) to compute shortest path from each node back to 0. The DFS structure stays identical. TC and SC remain the same."
+    },
+    {
+      "q": "If you must also return the actual path (node sequence) achieving maximum quality?",
+      "a": "Maintain a vector<int> path during DFS, pushing each node on entry and popping on exit. When updating the best quality at node 0, copy the current path. SC increases by O(maxTime/10) for the path vector; TC is unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximalPathQuality(vector<int>& values, vector<vector<int>>& edges, int maxTime) {\n        int n = values.size();\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back({e[1], e[2]});\n            adj[e[1]].push_back({e[0], e[2]});\n        }\n        \n        vector<int> dist(n, INT_MAX);\n        dist[0] = 0;\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;\n        pq.push({0, 0});\n        while (!pq.empty()) {\n            auto [d, u] = pq.top(); pq.pop();\n            if (d > dist[u]) continue;\n            for (auto& [v, w] : adj[u]) {\n                if (dist[u] + w < dist[v]) {\n                    dist[v] = dist[u] + w;\n                    pq.push({dist[v], v});\n                }\n            }\n        }\n        \n        vector<int> visited(n, 0);\n        long long ans = 0;\n        long long curQ = values[0];\n        visited[0] = 1;\n        \n        function<void(int,int)> dfs = [&](int u, int time) {\n            if (u == 0) {\n                ans = max(ans, curQ);\n            }\n            for (auto& [v, w] : adj[u]) {\n                if (dist[v] == INT_MAX) continue;\n                if (time + w + dist[v] > maxTime) continue;\n                bool added = false;\n                if (visited[v] == 0) {\n                    curQ += values[v];\n                    added = true;\n                }\n                visited[v]++;\n                dfs(v, time + w);\n                visited[v]--;\n                if (added) curQ -= values[v];\n            }\n        };\n        \n        dfs(0, 0);\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

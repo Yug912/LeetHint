@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-score-of-spliced-array",
+  "title": "Maximum Score Of Spliced Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Kadane's Algorithm (Maximum Subarray)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- s1, s2, best1, best2, cur1, cur2, d1, d2, n, i: scalar variables → O(1)\n- no containers allocated\n- no recursion",
+  "approach": "Swapping subarray [l..r] changes sum(nums1) by Σ(nums2[i]−nums1[i]) over [l..r] and changes sum(nums2) by the negation of that. So the best swap for sum(nums1) adds the maximum subarray sum of diff1 = nums2−nums1, and the best swap for sum(nums2) adds the maximum subarray sum of diff2 = nums1−nums2. We run Kadane's algorithm (allowing the empty subarray, i.e., best ≥ 0) on both difference arrays and return max(s1+best1, s2+best2).",
+  "hints": [
+    "Swapping [l..r] changes sum(nums1) and sum(nums2) by equal and opposite amounts. What per-index comparison between the two arrays tells you whether including index i in the swapped range helps or hurts sum(nums1)?",
+    "Apply Kadane's maximum-subarray algorithm to the per-index differences. In Example 1, diff = nums2 − nums1 = [−50, 30, −50]; its max subarray sum is 30, so sum(nums1) can reach 180 + 30 = 210.",
+    "```\ns1 = sum(nums1), s2 = sum(nums2)\nbest1 = max_subarray_sum(nums2[i] - nums1[i])   # empty allowed → ≥ 0\nbest2 = max_subarray_sum(nums1[i] - nums2[i])\nreturn max(s1 + best1, s2 + best2)\n```",
+    "**Other array wins** - the optimal swap maximizes sum(nums2), not sum(nums1).\n`nums1 = [1,10,1], nums2 = [10,1,10]` → `Expected: 30`\n⚠️ Bug: computing only s1 + maxsub(nums2−nums1) and ignoring the symmetric s2 term → returns 21.\n\n**Sign error** - the difference must be added to the array whose sum you want to boost.\n`nums1 = [60,60,60], nums2 = [10,90,10]` → `Expected: 210`\n⚠️ Bug: using diff = nums1 − nums2 for the s1 term → returns 230.\n\n**Max subarray not at index 0** - the best range starts mid-array.\n`nums1 = [60,60,60], nums2 = [10,90,10]` → `Expected: 210`\n⚠️ Bug: Kadane written as `cur += d; best = max(best, cur)` without resetting cur → returns 180."
+  ],
+  "followUps": [
+    {
+      "q": "What if you can perform the swap operation at most k times on disjoint subarrays?",
+      "a": "Model it as selecting up to k disjoint subarrays of diff to maximize the total boost - a DP with state (position, swaps used, in/out of subarray). TC O(nk), SC O(k) with a rolling array."
+    },
+    {
+      "q": "What if the arrays can contain negative numbers?",
+      "a": "The approach is unchanged: Kadane handles negatives, and keeping best ≥ 0 still correctly models the \"no swap\" option. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if you must swap exactly one non-empty subarray (no opt-out)?",
+      "a": "Initialize Kadane's best to the first difference instead of 0, forcing a non-empty subarray. Then return max(s1+best1, s2+best2) as before. TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumsSplicedArray(vector<int>& nums1, vector<int>& nums2) {\n        long long s1 = 0, s2 = 0;\n        int n = nums1.size();\n        for (int i = 0; i < n; i++) {\n            s1 += nums1[i];\n            s2 += nums2[i];\n        }\n        long long best1 = 0, cur1 = 0;\n        long long best2 = 0, cur2 = 0;\n        for (int i = 0; i < n; i++) {\n            long long d1 = (long long)nums2[i] - nums1[i];\n            long long d2 = (long long)nums1[i] - nums2[i];\n            cur1 = max(d1, cur1 + d1);\n            best1 = max(best1, cur1);\n            cur2 = max(d2, cur2 + d2);\n            best2 = max(best2, cur2);\n        }\n        long long ans = max(s1 + best1, s2 + best2);\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

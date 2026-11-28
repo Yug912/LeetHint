@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-weighted-subgraph-with-the-required-paths",
+  "title": "Minimum Weighted Subgraph With the Required Paths",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Multi-source Shortest Path (Dijkstra)",
+  "tc": "O((n + m) log n)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- fwd adjacency list: up to n vectors + m entries → O(n + m)\n- rev adjacency list: up to n vectors + m entries → O(n + m)\n- dist arrays da, db, dd: each n longs → O(n) each, O(n) total\n- priority queue: up to O(n + m) entries at once → O(n + m)\n- recursion depth: none\n- not counted: input edges, return value",
+  "approach": "The optimal subgraph's two paths (src1→dest and src2→dest) must share a common suffix from some meeting node x to dest. Thus the answer is min over all x of dist(src1,x) + dist(src2,x) + dist(x,dest). We compute three Dijkstra runs: from src1 and src2 on the original graph, and from dest on the reversed graph (giving dist-to-dest for every node). The minimum sum over all nodes x is the answer, or -1 if no finite sum exists.",
+  "hints": [
+    "In Example 1's optimal subgraph, what do the two paths from src1=0 and src2=1 to dest=5 have in common? With n up to 10^5, enumerating subgraphs is infeasible.",
+    "Run Dijkstra's shortest-path algorithm three times: from src1 and src2 on the original graph (da, db), and from dest on the reversed graph (dd = distance from each node to dest). In Example 1, da[1]=3, db[1]=0, dd[1]=6, summing to 9.",
+    "```\nbuild forward and reversed adjacency lists\nda = Dijkstra(forward, src1)\ndb = Dijkstra(forward, src2)\ndd = Dijkstra(reversed, dest)\nans = INF\nfor each node x:\n    ans = min(ans, da[x] + db[x] + dd[x])\nreturn ans if finite else -1\n```",
+    "**No valid path** - src2 cannot reach dest at all\n`Input: n=3, edges=[[0,1,1],[2,1,1]], src1=0, src2=1, dest=2` → `Expected: -1`\n⚠️ Bug: summing da[x]+db[x]+dd[x] without checking each is finite → returns 3000000000000000003 instead of -1\n\n**Meeting at dest** - the optimal meeting point is dest itself\n`Input: n=3, edges=[[0,2,3],[1,2,4]], src1=0, src2=1, dest=2` → `Expected: 7`\n⚠️ Bug: excluding x=dest from the loop (e.g., looping x < n-1) → returns -1\n\n**Duplicate edges** - multiple edges between the same pair with different weights\n`Input: n=3, edges=[[0,2,5],[0,2,2],[1,2,3]], src1=0, src2=1, dest=2` → `Expected: 5`\n⚠️ Bug: using a map keyed by (from,to) that overwrites instead of keeping all edges → keeps weight 5, returns 8\n\n**Overflow** - longest path weight exceeds 2^31-1\n`Input: n=100000, 99999-chain edges each weight 100000, src1=0, src2=1, dest=99999` → `Expected: 19999700000`\n⚠️ Bug: using int for distance arrays → 99999×100000 = 9.9999×10^9 > 2^31-1, wraps to 1409965408, returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are k sources instead of just src1 and src2?",
+      "a": "Run k Dijkstras from each source on the forward graph plus one from dest on the reversed graph. For each node x, sum all da_i[x] + dd[x] and take the minimum. Time becomes O(k·(n+m)·log n), space stays O(n+m)."
+    },
+    {
+      "q": "What if edge weights can be negative (but no negative cycles)?",
+      "a": "Replace Dijkstra with Bellman-Ford or SPFA for each of the three runs. Time becomes O(n·m) per run, O(n·m) total. The same meeting-point formula still holds."
+    },
+    {
+      "q": "Return the actual edges of the optimal subgraph, not just the weight.",
+      "a": "Find the meeting node x* that minimizes da[x]+db[x]+dd[x], then reconstruct the three shortest paths (src1→x*, src2→x*, x*→dest) using predecessor arrays stored during each Dijkstra. Take the union of their edges. Time and space unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimumWeight(int n, vector<vector<int>>& edges, int src1, int src2, int dest) {\n        const long long INF = (long long)1e18;\n        \n        vector<vector<pair<int,long long>>> fwd(n), rev(n);\n        for (auto& e : edges) {\n            fwd[e[0]].push_back({e[1], (long long)e[2]});\n            rev[e[1]].push_back({e[0], (long long)e[2]});\n        }\n        \n        auto dijkstra = [&](vector<vector<pair<int,long long>>>& g, int src) {\n            vector<long long> dist(n, INF);\n            priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<pair<long long,int>>> pq;\n            dist[src] = 0;\n            pq.push({0, src});\n            while (!pq.empty()) {\n                auto [d, u] = pq.top(); pq.pop();\n                if (d > dist[u]) continue;\n                for (auto& [v, w] : g[u]) {\n                    if (dist[u] + w < dist[v]) {\n                        dist[v] = dist[u] + w;\n                        pq.push({dist[v], v});\n                    }\n                }\n            }\n            return dist;\n        };\n        \n        vector<long long> da = dijkstra(fwd, src1);\n        vector<long long> db = dijkstra(fwd, src2);\n        vector<long long> dd = dijkstra(rev, dest);\n        \n        long long ans = INF;\n        for (int x = 0; x < n; x++) {\n            if (da[x] < INF && db[x] < INF && dd[x] < INF) {\n                long long sum = da[x] + db[x] + dd[x];\n                if (sum < ans) ans = sum;\n            }\n        }\n        return ans >= INF ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "k-divisible-elements-subarrays",
+  "title": "K Divisible Elements Subarrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Trie / Enumeration with Dedup",
+  "tc": "O(n^2)",
+  "sc": "O(n^2)",
+  "spaceBreakdown": "- Trie nodes: up to O(n^2) distinct subarrays → O(n^2)\n- unordered_map entries across all nodes: O(n^2) total\n- recursion depth: none\n- not counted: input nums",
+  "approach": "Enumerate every subarray by fixing the start index `i` and extending the end index `j`, tracking how many elements seen so far are divisible by `p`; stop extending once that count exceeds `k`. To dedup, insert each valid subarray into a trie keyed by element values - every newly created trie node corresponds to exactly one distinct subarray. The answer is the total number of nodes created.",
+  "hints": [
+    "As you extend a subarray one element to the right, how does the count of elements divisible by `p` change - and once it exceeds `k`, can any further extension ever become valid again?",
+    "Use a **trie** where each root-to-node path encodes one subarray. For `nums=[2,3,3,2,2]`, starting at `i=0` you walk/create nodes `2 → 3 → 3 → 2`; each newly created node is one distinct subarray, and revisiting an existing path means that subarray was already counted.",
+    "```\nroot = new TrieNode\ncount = 0\nfor i in 0..n-1:\n    divs = 0\n    cur = root\n    for j in i..n-1:\n        if nums[j] % p == 0: divs += 1\n        if divs > k: break\n        if nums[j] not in cur.children:\n            cur.children[nums[j]] = new TrieNode\n            count += 1\n        cur = cur.children[nums[j]]\nreturn count\n```",
+    "**Single element** - only one subarray exists.\n`Input: nums = [5], k = 1, p = 5` → `Expected: 1`\n⚠️ Bug: using `if (divs >= k) break;` instead of `if (divs > k) break;` → returns 0.\n\n**All equal elements** - distinct subarrays differ only by length.\n`Input: nums = [2,2,2], k = 1, p = 2` → `Expected: 1`\n⚠️ Bug: counting valid (i,j) pairs without dedup → returns 3.\n\n**Boundary index** - the only divisible element sits at the last position.\n`Input: nums = [1,3,5], k = 1, p = 5` → `Expected: 6`\n⚠️ Bug: inner loop `for j in i..n-2` (off-by-one excluding last index) → returns 3.\n\n**k covers everything** - every subarray qualifies, answer is n(n+1)/2.\n`Input: nums = [1,2,3,4], k = 4, p = 1` → `Expected: 10`\n⚠️ Bug: deduping by length only (ignoring values) → returns 4."
+  ],
+  "followUps": [
+    {
+      "q": "What if `n` can be up to 10^5?",
+      "a": "O(n^2) enumeration is too slow. Build a suffix array (or suffix automaton) over the integer sequence to count distinct subarrays in O(n log n), then for each starting index binary-search the longest prefix whose divisible-count stays ≤ k using a prefix-sum of divisibles. Total O(n log n)."
+    },
+    {
+      "q": "What if you must count subarrays with EXACTLY `k` elements divisible by `p`?",
+      "a": "Reuse the same trie twice: compute `countDistinctAtMost(k)` and `countDistinctAtMost(k-1)`, then subtract. Each run is O(n^2), so overall O(n^2) time and O(n^2) space."
+    },
+    {
+      "q": "What if `nums` arrives as a stream and you cannot store the whole array?",
+      "a": "Exact distinct counting is impossible in sublinear memory, since duplicates can recur arbitrarily far apart. Use a rolling hash over a bounded sliding window and store seen hashes in a hash set for an exact answer within window length W (O(W) memory), or a Bloom filter for an approximate count with O(1) memory."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countDistinct(vector<int>& nums, int k, int p) {\n        struct Node {\n            unordered_map<int, Node*> children;\n        };\n        Node* root = new Node();\n        int count = 0;\n        int n = nums.size();\n        for (int i = 0; i < n; i++) {\n            int divs = 0;\n            Node* cur = root;\n            for (int j = i; j < n; j++) {\n                if (nums[j] % p == 0) divs++;\n                if (divs > k) break;\n                auto it = cur->children.find(nums[j]);\n                if (it == cur->children.end()) {\n                    Node* nxt = new Node();\n                    cur->children[nums[j]] = nxt;\n                    count++;\n                    cur = nxt;\n                } else {\n                    cur = it->second;\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

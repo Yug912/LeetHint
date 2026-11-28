@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-make-a-subsequence",
+  "title": "Minimum Operations to Make a Subsequence",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "LIS via Patience Sorting",
+  "tc": "O(n + m log m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> idx: up to n entries → O(n)\n- vector<int> tails: up to min(n, m) entries → O(n)\n- recursion depth: none\n- not counted: input vectors target and arr",
+  "approach": "The minimum insertions needed equals `len(target) − LCS(target, arr)`, because the longest common subsequence is the largest portion of `target` already present in `arr` in the correct order. Since `target` has distinct elements, map each `target[i]` to its index `i`, then replace every element of `arr` that exists in `target` with that index (skip others). The LCS becomes the Longest Increasing Subsequence of this transformed array, computed in O(m log m) via patience sorting with binary search.",
+  "hints": [
+    "If some elements of `target` require zero insertions, what must already be true about their relative order in `arr`?",
+    "Longest Common Subsequence reduced to Longest Increasing Subsequence via index mapping, solved with patience sorting (binary search on a `tails` array). For `target=[5,1,3]`, `arr=[9,4,2,3,4]`, only `3` appears (index 2), so `nums=[2]`, LIS=1, answer=3−1=2.",
+    "```\nmap each target[i] to index i\nnums = [map[x] for x in arr if x in map]\ntails = []\nfor v in nums:\n    pos = lower_bound(tails, v)\n    if pos == end(tails): append v to tails\n    else: tails[pos] = v\nreturn len(target) - len(tails)\n```",
+    "**No common elements** - arr contains none of target's values\n`target = [1,2,3], arr = [4,5,6]` → `Expected: 3`\n⚠️ Bug: using `idx[x]` (operator[]) without checking existence inserts 0 for missing keys → nums=[0,0,0], LIS=1, returns 2\n\n**Duplicates in arr** - same target value appears multiple times in arr\n`target = [1,2,3], arr = [1,1,2,2,3,3]` → `Expected: 0`\n⚠️ Bug: using `upper_bound` instead of `lower_bound` finds non-decreasing subsequence of length 6 → returns 3−6=−3\n\n**Reverse order** - all target elements present but reversed in arr\n`target = [1,2,3], arr = [3,2,1]` → `Expected: 2`\n⚠️ Bug: returning `len(target) - |set(target) ∩ set(arr)|` (counting common elements instead of LCS) → returns 3−3=0"
+  ],
+  "followUps": [
+    {
+      "q": "What if `target` can contain duplicates?",
+      "a": "The index mapping breaks because one value maps to multiple indices. For each `arr` element, you must try all matching target indices in decreasing order (to avoid reusing the same position). Time becomes O(m·k·log n) where k is the max frequency of any value in target."
+    },
+    {
+      "q": "What if `arr` arrives as a streaming input too large to store?",
+      "a": "Process each element on the fly: hash-lookup the index, binary-search the `tails` array, update it. You never store `arr` itself. Space stays O(n) for the map and tails; time stays O(m log n)."
+    },
+    {
+      "q": "What if you must return the actual insertions (values and positions)?",
+      "a": "Track parent pointers during patience sorting to reconstruct the LIS. The target elements not in the LIS are the insertions; place each at the position where the next LIS element appears. Time and space remain O(n + m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& target, vector<int>& arr) {\n        unordered_map<int, int> idx;\n        idx.reserve(target.size());\n        for (int i = 0; i < (int)target.size(); ++i) {\n            idx[target[i]] = i;\n        }\n        vector<int> tails;\n        tails.reserve(min(target.size(), arr.size()));\n        for (int x : arr) {\n            auto it = idx.find(x);\n            if (it == idx.end()) continue;\n            int v = it->second;\n            auto pos = lower_bound(tails.begin(), tails.end(), v);\n            if (pos == tails.end()) {\n                tails.push_back(v);\n            } else {\n                *pos = v;\n            }\n        }\n        return (int)target.size() - (int)tails.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

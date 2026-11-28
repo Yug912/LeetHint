@@ -1,0 +1,40 @@
+{
+  "slug": "sort-the-students-by-their-kth-score",
+  "title": "Sort the Students by Their Kth Score",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Custom Comparator Sort",
+  "tc": "O(m log m)",
+  "sc": "O(log m)",
+  "spaceBreakdown": "- std::sort introsort recursion stack: up to O(log m) frames → O(log m)\n- lambda capture of k: one int, O(1)\n- not counted: input matrix (modified in place), returned reference",
+  "approach": "The kth column value is the only thing that determines each row's final position. Use `std::sort` on the matrix rows with a comparator returning `a[k] > b[k]` (descending). Because all integers in the matrix are distinct, no tie-breaking is needed. The sort runs in O(m log m) and reorders the matrix in place.",
+  "hints": [
+    "What property of a row, looking at the examples, decides whether it moves up or down in the final ordering? All integers in the matrix are distinct, so no two rows ever tie.",
+    "Use `std::sort` with a comparator comparing the kth element of two rows in descending order. For `score = [[10,6,9,1],[7,5,11,2],[4,8,3,15]]` with k=2: row 0 has 9, row 1 has 11, so row 1 ranks above row 0.",
+    "```\nsort the rows of the matrix using comparator(a, b):\n    return a[k] > b[k]\nreturn the matrix\n```",
+    "**Smallest input** - only one row, nothing to reorder\n`Input: score = [[5]], k = 0` → `Expected: [[5]]`\n⚠️ Bug: returning an empty matrix when `score.size() == 1` → returns `[]`\n\n**Single column** - n = 1, the only column is the sort key\n`Input: score = [[3],[1],[2]], k = 0` → `Expected: [[3],[2],[1]]`\n⚠️ Bug: comparing `a[1]` instead of `a[k]` → out-of-bounds access / undefined behavior\n\n**Reverse sorted input** - rows arrive ascending by the kth column\n`Input: score = [[4,8,3,15],[10,6,9,1],[7,5,11,2]], k = 2` → `Expected: [[7,5,11,2],[10,6,9,1],[4,8,3,15]]`\n⚠️ Bug: using `a[k] < b[k]` (ascending) → returns `[[4,8,3,15],[10,6,9,1],[7,5,11,2]]` (unchanged)\n\n**Boundary column k = n-1** - sort key is the last column\n`Input: score = [[9,1],[1,9]], k = 1` → `Expected: [[1,9],[9,1]]`\n⚠️ Bug: hardcoding column 0 in the comparator (`a[0] > b[0]`) → returns `[[9,1],[1,9]]` (original order preserved)"
+  ],
+  "followUps": [
+    {
+      "q": "If m can be up to 10^9 and rows arrive in a stream, but you only need the top K students by the kth exam, how would you adapt?",
+      "a": "Keep a min-heap of size K keyed by the kth score; for each incoming row, push it and pop the smallest when the heap exceeds K. This gives O(m log K) time and O(K) space instead of holding all rows."
+    },
+    {
+      "q": "If the distinctness guarantee is dropped and ties on the kth exam are possible, how do you make the output deterministic?",
+      "a": "Extend the comparator to break ties using subsequent columns (k+1, k+2, …) or by original row index. The sort stays O(m log m) with O(1) extra per comparison; just make the comparator a strict weak ordering."
+    },
+    {
+      "q": "If you must answer many queries with different k values on the same matrix, how do you speed each query up?",
+      "a": "Precompute, for each column j, a permutation of row indices sorted descending by column j - O(n · m log m) preprocessing. Each query then materializes the answer by reordering rows via the stored permutation in O(m) time and O(m) output space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> sortTheStudents(vector<vector<int>>& score, int k) {\n        sort(score.begin(), score.end(),\n             [k](const vector<int>& a, const vector<int>& b) {\n                 return a[k] > b[k];\n             });\n        return score;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

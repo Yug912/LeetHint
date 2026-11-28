@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-subsequence-widths",
+  "title": "Sum of Subsequence Widths",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Contribution Analysis with Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(nums): introsort, O(log n) stack frames\n- fast exponentiation loop: O(1) variables (p2_bwd, b, e)\n- main loop: O(1) variables (p2_fwd, p2_bwd, ans, contrib, i)\n- not counted: input vector nums (modified in place)",
+  "approach": "Sort the array. For each element nums[i] in the sorted array, it serves as the maximum in exactly 2^i subsequences (any subset of the i elements before it) and as the minimum in 2^(n−1−i) subsequences (any subset of elements after it). Its net contribution to the total width sum is nums[i]·(2^i − 2^(n−1−i)). Summing over all i gives the answer. Powers of 2 are maintained incrementally: 2^i forward by multiplying by 2, and 2^(n−1−i) backward by multiplying by the modular inverse of 2 (inv2 = 500000004), starting from 2^(n−1) computed via fast exponentiation. This avoids storing a powers array, using only O(log n) space for the sort stack.",
+  "hints": [
+    "For a given subsequence, what determines its width - the positions of its elements in the original array, or only their values? The constraint n ≤ 10^5 rules out enumerating all 2^n subsequences.",
+    "Sort the array, then use contribution analysis: each element nums[i] contributes nums[i]·(2^i − 2^(n−1−i)) to the answer. For nums = [1,2,3], element 3 at index 2 contributes 3·(2^2 − 2^0) = 3·3 = 9.",
+    "```\nsort nums\np2_fwd = 1\np2_bwd = 2^(n-1) mod MOD  (via fast exponentiation)\nans = 0\nfor i = 0 to n-1:\n    contrib = (p2_fwd - p2_bwd + MOD) mod MOD\n    ans = (ans + nums[i] * contrib) mod MOD\n    p2_fwd = p2_fwd * 2 mod MOD\n    p2_bwd = p2_bwd * inv2 mod MOD\nreturn ans\n```",
+    "**Single element** - n=1, the only subsequence has width 0.\n`Input: nums = [5]` → `Expected: 0`\n⚠️ Bug: hardcoding p2_bwd = 2 instead of computing 2^(n−1) = 1 → contrib = 1−2 = −1, ans = 5·(−1) mod MOD = 1000000002 ≠ 0.\n\n**Two elements** - smallest case with a non-zero width.\n`Input: nums = [1,2]` → `Expected: 1`\n⚠️ Bug: computing 2^n = 4 instead of 2^(n−1) = 2 for p2_bwd → contribs are −3 and 0, ans = 1·(−3) = −3 → returns 1000000004 ≠ 1.\n\n**Reverse sorted** - input in descending order.\n`Input: nums = [3,2,1]` → `Expected: 6`\n⚠️ Bug: skipping the sort step → processes [3,2,1] directly: contribs −3, 0, 3 give ans = 3·(−3) + 2·0 + 1·3 = −6 → returns 1000000001 ≠ 6.\n\n**Duplicates** - repeated values, each copy counts separately.\n`Input: nums = [2,2,3]` → `Expected: 3`\n⚠️ Bug: deduplicating to [2,3] before computing → answer becomes 1 (subsequences [2],[3],[2,3] have widths 0,0,1) ≠ 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array elements can be negative?",
+      "a": "The formula still works unchanged - sorting handles negatives naturally, and each element's contribution nums[i]·(2^i − 2^(n−1−i)) remains valid. Just ensure intermediate products use long long to avoid overflow with large negative values. TC and SC unchanged."
+    },
+    {
+      "q": "What if you need the sum of widths of all subsequences of exactly length k?",
+      "a": "Replace 2^i with C(i, k−1) (choosing k−1 elements from the i before) and 2^(n−1−i) with C(n−1−i, k−1). Precompute factorials and inverse factorials for O(1) binomial queries. TC becomes O(n log n) for sort + O(n) for the sweep; SC becomes O(n) for the factorial tables."
+    },
+    {
+      "q": "What if the array is too large to fit in memory and arrives as a stream?",
+      "a": "You need the sorted order, so buffer elements in an external sort or use a streaming quantile sketch. The contribution formula requires knowing each element's rank, so exact computation needs the full sorted array. An approximate answer is possible via streaming order-statistics sketches. TC: O(n log n) with external sort; SC: O(B) where B is the buffer size."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int sumSubseqWidths(vector<int>& nums) {\n        const long long MOD = 1000000007;\n        const long long inv2 = 500000004;\n        int n = nums.size();\n        sort(nums.begin(), nums.end());\n        // Compute 2^(n-1) mod MOD via fast exponentiation\n        long long p2_bwd = 1;\n        int e = n - 1;\n        long long b = 2;\n        while (e > 0) {\n            if (e & 1) p2_bwd = p2_bwd * b % MOD;\n            b = b * b % MOD;\n            e >>= 1;\n        }\n        long long p2_fwd = 1;\n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            long long contrib = (p2_fwd - p2_bwd + MOD) % MOD;\n            ans = (ans + (long long)nums[i] * contrib) % MOD;\n            p2_fwd = p2_fwd * 2 % MOD;\n            p2_bwd = p2_bwd * inv2 % MOD;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

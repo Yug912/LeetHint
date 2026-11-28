@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-candies-you-can-get-from-boxes",
+  "title": "Maximum Candies You Can Get from Boxes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "BFS / Graph Traversal",
+  "tc": "O(n + K + C)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> haveBox, haveKey, opened: each n bits → O(n)\n- queue<int> q: at most n entries → O(n)\n- not counted: input arrays, return int",
+  "approach": "A box is processable exactly when you possess it AND (it is already open OR you hold its key). Process openable boxes with BFS: when you open a box you may gain new keys (which can unlock boxes you already hold) and new boxes (which may be openable immediately if open or if you already hold their key). Track three boolean arrays - haveBox, haveKey, opened - to avoid reprocessing and to detect newly-unlocked boxes from either direction. Correctness follows because every box that ever becomes openable is pushed exactly once, and a box can only become openable via gaining its key or gaining the box itself, both of which we check at the moment they happen.",
+  "hints": [
+    "Before you can collect candies from a box, what two facts about it must both be true? When you open a box, which of those facts might newly become true for boxes you already possessed but couldn't use?",
+    "Use BFS with a queue of currently-openable boxes; track three boolean arrays per box: haveBox, haveKey, opened. In Example 1, opening box 2 yields key 1 - since you already hold box 1, push it next.",
+    "```\nhaveBox, haveKey, opened = false arrays\nfor b in initialBoxes:\n    haveBox[b] = true\n    if status[b] == 1: opened[b] = true; enqueue b\nwhile queue not empty:\n    b = dequeue\n    ans += candies[b]\n    for k in keys[b]:\n        haveKey[k] = true\n        if haveBox[k] and not opened[k]: opened[k] = true; enqueue k\n    for c in containedBoxes[b]:\n        haveBox[c] = true\n        if (status[c] == 1 or haveKey[c]) and not opened[c]: opened[c] = true; enqueue c\nreturn ans\n```",
+    "**Empty start** - initialBoxes is empty, so nothing is ever openable.\n`Input: status=[1], candies=[5], keys=[[]], containedBoxes=[[]], initialBoxes=[]` → `Expected: 0`\n⚠️ Bug: unconditionally enqueuing box 0 regardless of initialBoxes → returns 5\n\n**Key arrives after the box** - you hold a closed box first, its key comes from a later box.\n`Input: status=[1,0], candies=[1,2], keys=[[1],[]], containedBoxes=[[1],[]], initialBoxes=[0]` → `Expected: 3`\n⚠️ Bug: only checking haveKey at the moment a box is received, never re-checking when a key arrives → returns 1\n\n**Self-key on already-opened box** - a box lists a key to itself.\n`Input: status=[1], candies=[7], keys=[[0]], containedBoxes=[[]], initialBoxes=[0]` → `Expected: 7`\n⚠️ Bug: enqueuing based on haveBox && (status==1 || haveKey) without an `opened` guard → infinite loop\n\n**Closed box found inside an open box, no key ever** - box 3 in Example 1.\n`Input: status=[1,0,1,0], candies=[7,5,4,100], keys=[[],[],[1],[]], containedBoxes=[[1,2],[3],[],[]], initialBoxes=[0]` → `Expected: 16`\n⚠️ Bug: enqueuing every contained box regardless of openability → returns 116"
+  ],
+  "followUps": [
+    {
+      "q": "What if a box could be re-sealed (status flips to 0) after you open it, and you must re-acquire a key to reopen?",
+      "a": "Drop the permanent `opened` array; instead track a dynamic `openable` state recomputed from current status and haveKey. BFS still terminates because each (box, key-set-change) transition is finite, but worst-case time grows with the number of reseal events. TC unchanged at O(n + K + C) if reseals are bounded."
+    },
+    {
+      "q": "What if opening a box requires holding k distinct keys for it simultaneously?",
+      "a": "Replace the boolean haveKey with an integer keyCount per box and a threshold array; enqueue a box only when its collected-key count reaches its threshold. TC stays O(n + K + C); SC stays O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^7 and the adjacency lists arrive as a stream you cannot store fully?",
+      "a": "You must store only haveBox/haveKey/opened bitsets (O(n) bits ≈ a few MB) plus the current queue, and process keys/containedBoxes edges as they stream in. Time remains O(n + K + C) but you cannot revisit old edges, so the streaming order must be topologically consistent with containment or you need a second pass."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxCandies(vector<int>& status, vector<int>& candies, vector<vector<int>>& keys, vector<vector<int>>& containedBoxes, vector<int>& initialBoxes) {\n        int n = (int)status.size();\n        vector<char> haveBox(n, 0), haveKey(n, 0), opened(n, 0);\n        queue<int> q;\n        for (int b : initialBoxes) {\n            haveBox[b] = 1;\n            if (status[b] == 1 && !opened[b]) {\n                opened[b] = 1;\n                q.push(b);\n            }\n        }\n        long long ans = 0;\n        while (!q.empty()) {\n            int b = q.front(); q.pop();\n            ans += candies[b];\n            for (int k : keys[b]) {\n                haveKey[k] = 1;\n                if (haveBox[k] && !opened[k]) {\n                    opened[k] = 1;\n                    q.push(k);\n                }\n            }\n            for (int c : containedBoxes[b]) {\n                haveBox[c] = 1;\n                if ((status[c] == 1 || haveKey[c]) && !opened[c]) {\n                    opened[c] = 1;\n                    q.push(c);\n                }\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

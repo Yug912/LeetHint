@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-total-damage-with-spell-casting",
+  "title": "Maximum Total Damage With Spell Casting",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Sorted Unique Values with Two Pointers",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> vals: up to n entries → O(n)\n- vector<long long> cnt: up to n entries → O(n)\n- vector<long long> dp: up to n+1 entries → O(n)\n- recursion depth: none\n- sort(): O(log n) stack\n- not counted: input (modified in place), returned scalar",
+  "approach": "Sort the spells and group identical damage values together (hint 1: if we use power x, use all of them). Let `vals[]` be the sorted unique damages and `cnt[]` their frequencies. Use DP where `dp[i+1]` = max damage using the first `i+1` unique values: either skip value `i` (`dp[i]`) or take all spells of value `vals[i]` plus the best solution using only values `<= vals[i]-3` (since `vals[i]-2, vals[i]-1, vals[i]+1, vals[i]+2` are forbidden, and values are sorted/distinct so only the lower side matters). A two-pointer `ptr` tracks how many unique values are `<= vals[i]-3`, giving O(n log n) total.",
+  "hints": [
+    "If you decide to cast even one spell of damage x, is there any reason not to cast every other spell with that same damage x?",
+    "Dynamic programming on sorted unique damage values. For power = [1,1,3,4], group into (1→2, 3→3, 4→4); at value 4, the best compatible predecessor is value 1 (since 4−3=1), giving 2+4=6.",
+    "```\nsort and group by damage value → vals[], sums[]\ndp[0] = sums[0]\nptr = -1\nfor i = 1 to m-1:\n    while ptr+1 < i and vals[ptr+1] <= vals[i] - 3:\n        ptr++\n    take = sums[i] + (ptr >= 0 ? dp[ptr] : 0)\n    dp[i] = max(dp[i-1], take)\nreturn dp[m-1]\n```",
+    "**Single spell** - only one element in the array\n`Input: power = [5]` → `Expected: 5`\n⚠️ Bug: not initializing dp[0] when m==1 → returns 0\n\n**All duplicates** - every spell has the same damage value\n`Input: power = [3,3,3]` → `Expected: 9`\n⚠️ Bug: counting each unique value once instead of summing all occurrences → returns 3\n\n**Consecutive values** - all values within 2 of each other, so at most one group can be chosen\n`Input: power = [1,2,3]` → `Expected: 3`\n⚠️ Bug: using vals[i] - 2 instead of vals[i] - 3 in the compatibility check → returns 4\n\n**Overflow** - three spells with damage 10^9, sum = 3×10^9 exceeds 2^31−1\n`Input: power = [1000000000, 1000000000, 1000000000]` → `Expected: 3000000000`\n⚠️ Bug: using int for sums → 3000000000 overflows to -1294967296"
+  ],
+  "followUps": [
+    {
+      "q": "What if the forbidden range was [x−k, x+k] for a general k instead of [x−2, x+2]?",
+      "a": "Replace the condition vals[i] - 3 with vals[i] - k - 1 in the two-pointer. Everything else stays the same. Time complexity remains O(n log n), space O(n)."
+    },
+    {
+      "q": "What if we also need to output which spells to cast, not just the maximum damage?",
+      "a": "Store a backpointer array: for each i, record whether we took or skipped, and if taken, which j we used. Backtrack from dp[m-1] to reconstruct the chosen damage values, then map back to original spell indices. Time stays O(n log n), space increases by O(n) for backpointers (already O(n) total)."
+    },
+    {
+      "q": "What if power[i] could be negative?",
+      "a": "Add a base case allowing zero spells: initialize dp[i] = max(dp[i], 0"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumTotalDamage(vector<int>& power) {\n        sort(power.begin(), power.end());\n        int n = power.size();\n        vector<long long> vals, cnt;\n        for (int i = 0; i < n; ) {\n            int j = i;\n            while (j < n && power[j] == power[i]) j++;\n            vals.push_back(power[i]);\n            cnt.push_back(j - i);\n            i = j;\n        }\n        int m = vals.size();\n        vector<long long> dp(m + 1, 0);\n        int ptr = 0;\n        for (int i = 0; i < m; i++) {\n            while (ptr < i && vals[ptr] <= vals[i] - 3) ptr++;\n            long long take = cnt[i] * vals[i] + dp[ptr];\n            dp[i + 1] = max(dp[i], take);\n        }\n        return dp[m];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

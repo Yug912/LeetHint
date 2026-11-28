@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-ways-to-split-a-string",
+  "title": "Number of Ways to Split a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Counting / Combinatorics",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string s: input, not counted\n- scalar variables (total, k, count, four position ints, ways1, ways2, ans): O(1)\n- no containers, no recursion",
+  "approach": "Count total ones T. If T % 3 ≠ 0, return 0. If T = 0, every split works: choose 2 cut points among n−1 gaps → C(n−1, 2). Otherwise each part needs k = T/3 ones. The first cut can fall anywhere in the zero-run between the k-th and (k+1)-th one (ways1 = pos[k+1] − pos[k]), and the second cut anywhere between the 2k-th and (2k+1)-th one (ways2 = pos[2k+1] − pos[2k]). The answer is ways1 × ways2 mod 1e9+7.",
+  "hints": [
+    "For a valid split, each part must contain the same number of '1's - given that, what determines how many positions the first cut can take?",
+    "Count total ones T; if T % 3 = 0, each part gets k = T/3 ones, and the first cut can only sit in the zero-gap between the k-th and (k+1)-th one. For \"10101\" (T=3, k=1), that gap has 1 zero → 2 cut positions; same for the second cut → 2 × 2 = 4.",
+    "```\ntotal = count of '1' in s\nif total % 3 != 0: return 0\nk = total / 3\nif k == 0: return C(n-1, 2) mod MOD\nscan s, record positions of k-th, (k+1)-th, 2k-th, (2k+1)-th ones\nways1 = pos[k+1] - pos[k]\nways2 = pos[2k+1] - pos[2k]\nreturn (ways1 * ways2) mod MOD\n```",
+    "**All zeros** - total ones is 0, which is divisible by 3, but there are no \"k-th ones\" to locate.\n`Input: s = \"0000\"` → `Expected: 3`\n⚠️ Bug: not special-casing total==0 and indexing into an empty ones-list → returns 0 or crashes.\n\n**Total not divisible by 3** - e.g., exactly 2 ones.\n`Input: s = \"1001\"` → `Expected: 0`\n⚠️ Bug: skipping the `total % 3 != 0` check and proceeding → returns a garbage nonzero value.\n\n**All-zeros overflow** - n = 10^5, so (n−1)(n−2)/2 ≈ 5×10^9 > 2^31−1.\n`Input: s = \"0000…0\" (length 10^5)` → `Expected: 4999950003 mod 1e9+7`\n⚠️ Bug: computing `(n-1)*(n-2)/2` with `int` → overflow → wrong answer.\n\n**Product overflow** - large zero-gaps on both sides make ways1 × ways2 exceed 2^31−1.\n`Input: s = \"1\" + \"0\"*49999 + \"1\" + \"0\"*49999 + \"1\"` → `Expected: 50000 × 50000 mod 1e9+7`\n⚠️ Bug: multiplying `ways1 * ways2` as `int` → overflow → wrong answer."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to splitting into k parts instead of 3.",
+      "a": "Total ones must be divisible by k; each part gets total/k ones. The answer is the product over all k−1 boundaries of (gap length + 1), taken mod 1e9+7. Time O(n), space O(1)."
+    },
+    {
+      "q": "The string arrives as a single-pass stream of unknown length up to 10^9; how do you solve it?",
+      "a": "First pass counts total ones T. If T % 3 ≠ 0 return 0; if T = 0 you need the length n, so the stream must also report its length. Second pass records only the four critical one-positions (k-th, k+1-th, 2k-th, 2k+1-th). Time O(n), space O(1), two stream reads."
+    },
+    {
+      "q": "Elements are integers in [−10^9, 10^9] and parts must have equal sums, not equal one-counts.",
+      "a": "Compute prefix sums; total sum S must be divisible by 3. Count positions where prefix = S/3 (first cut) and prefix = 2S/3 (second cut); for each second-cut position, the number of valid first cuts before it gives the answer via a running count. Time O(n), space O(1) with streaming prefix sums."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numWays(string s) {\n        const int MOD = 1000000007;\n        int n = s.size();\n        int total = 0;\n        for (char c : s) if (c == '1') total++;\n        if (total % 3 != 0) return 0;\n        int k = total / 3;\n        if (k == 0) {\n            long long gaps = n - 1;\n            long long ans = gaps * (gaps - 1) / 2 % MOD;\n            return (int)ans;\n        }\n        int count = 0;\n        int firstEnd = -1, secondStart = -1, secondEnd = -1, thirdStart = -1;\n        for (int i = 0; i < n; i++) {\n            if (s[i] == '1') {\n                count++;\n                if (count == k) firstEnd = i;\n                else if (count == k + 1) secondStart = i;\n                if (count == 2 * k) secondEnd = i;\n                else if (count == 2 * k + 1) thirdStart = i;\n            }\n        }\n        long long ways1 = secondStart - firstEnd;\n        long long ways2 = thirdStart - secondEnd;\n        long long ans = ways1 * ways2 % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

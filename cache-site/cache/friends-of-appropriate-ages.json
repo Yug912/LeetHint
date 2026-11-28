@@ -1,0 +1,40 @@
+{
+  "slug": "friends-of-appropriate-ages",
+  "title": "Friends Of Appropriate Ages",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Array",
+  "tc": "O(n + 120²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[121]: fixed 121 integers → O(1)\n- long long res: single variable → O(1)\n- not counted: input vector, returned int",
+  "approach": "Since ages are bounded by 1-120, we group people by age using a frequency array of size 121. For each sender age x and receiver age y, a request is valid when y > 0.5*x + 7 and y ≤ x (the third condition is redundant: if y > 100 and x < 100 then y > x, already excluded). We use integer arithmetic (2*y > x + 14) to avoid floating point. When x == y, we add count[x] * (count[x] - 1) to exclude self-requests; otherwise count[x] * count[y]. The total is at most n*(n-1) ≈ 4×10⁸, so we accumulate in long long.",
+  "hints": [
+    "With n up to 2×10⁴ but every age between 1 and 120, what can you say about how many people must share the same age value?",
+    "Use a frequency array of size 121 where count[a] = number of people with age a. For Example 1 with two 16-year-olds: sender age 16, receiver age 16, add 2 × (2 − 1) = 2 requests.",
+    "```\ncount = array of size 121, all zeros\nfor each age a in ages:\n    count[a] += 1\n\ntotal = 0\nfor x = 1 to 120:\n    for y = 1 to 120:\n        if 2*y <= x + 14: continue\n        if y > x: continue\n        if x == y:\n            total += count[x] * (count[x] - 1)\n        else:\n            total += count[x] * count[y]\nreturn total\n```",
+    "**Single person** - only one person exists, cannot request anyone\n`Input: [15]` → `Expected: 0`\n⚠️ Bug: using `count[x] * count[y]` without subtracting 1 when x == y → returns 1\n\n**Too young to friend** - age 14: 0.5×14+7 = 14, so no age ≤ 14 qualifies as receiver\n`Input: [14,14]` → `Expected: 0`\n⚠️ Bug: using `2*y < x + 14` instead of `2*y <= x + 14` → returns 2\n\n**All equal, valid age** - three 16-year-olds can all request each other\n`Input: [16,16,16]` → `Expected: 6`\n⚠️ Bug: using `count[x] * count[y]` without subtracting 1 when x == y → returns 9\n\n**Boundary receiver** - age 15 equals exactly 0.5×16+7, so 16 cannot request 15\n`Input: [15,16]` → `Expected: 0`\n⚠️ Bug: using `y >= x/2 + 7` instead of `y > x/2 + 7` → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if ages can be up to 10⁹ instead of 120?",
+      "a": "Sort the ages array. For each person x, use binary search (lower_bound/upper_bound) to count how many ages fall in the range (0.5*x + 7, x]. Handle the x == y case by subtracting 1 if x itself is in range. TC: O(n log n), SC: O(1) if sorting in place."
+    },
+    {
+      "q": "What if ages arrive as a stream and you must answer the running total online?",
+      "a": "Maintain a Fenwick tree (BIT) over the fixed range [1, 120]. For each incoming age x, query the prefix sum in (0.5*x + 7, x] before inserting x into the BIT. TC: O(log 120) per element, SC: O(120)."
+    },
+    {
+      "q": "What if n can be up to 10⁷ but ages are still ≤ 120?",
+      "a": "The frequency array approach is unchanged. Counting frequencies is O(n) and the pair iteration is O(120²) = O(1), so the bottleneck is just reading the input. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numFriendRequests(vector<int>& ages) {\n        int count[121] = {0};\n        for (int a : ages) count[a]++;\n        long long res = 0;\n        for (int x = 1; x <= 120; x++) {\n            if (count[x] == 0) continue;\n            for (int y = 1; y <= 120; y++) {\n                if (count[y] == 0) continue;\n                if (2 * y <= x + 14) continue;\n                if (y > x) continue;\n                if (x != y) {\n                    res += (long long)count[x] * count[y];\n                } else {\n                    res += (long long)count[x] * (count[x] - 1);\n                }\n            }\n        }\n        return (int)res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

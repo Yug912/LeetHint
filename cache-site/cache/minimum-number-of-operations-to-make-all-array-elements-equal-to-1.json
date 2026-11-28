@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-operations-to-make-all-array-elements-equal-to-1",
+  "title": "Minimum Number of Operations to Make All Array Elements Equal to 1",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "GCD State Compression",
+  "tc": "O(n log^2 M)",
+  "sc": "O(log M)",
+  "spaceBreakdown": "- vector<pair<int,int>> states: up to O(log M) distinct gcd entries → O(log M)\n- vector<pair<int,int>> newStates: up to O(log M) entries (temporary, rebuilt each iteration) → O(log M)\n- scalar variables (n, ones, minLen, i, loop temps): O(1)\n- not counted: input vector nums, returned int",
+  "approach": "If a 1 already exists in the array, we can spread it to every other element with one operation each (n − ones total). If no 1 exists, we must first create one by finding the shortest subarray whose gcd is 1; a subarray of length L requires L−1 operations to reduce to a 1, then n−1 more to spread it. To find this shortest subarray efficiently, we use gcd-state compression: at each index we track the distinct gcd values of all subarrays ending there. Since gcd is monotonically non-increasing as a subarray extends and at least halves at each change, there are at most O(log M) distinct gcd values per index, yielding O(n · log M) total time.",
+  "hints": [
+    "For subarrays ending at the same index, how many distinct gcd values can there be if each element is at most 10^6?",
+    "Track distinct gcd values of subarrays ending at each index (at most O(log M) per index). In [2,6,3,4], extending the state (3,1) at index 2 with nums[3]=4 gives gcd(3,4)=1 with length 2 - the shortest subarray with gcd 1.",
+    "```\ncount ones; if any, return n - ones\nstates = empty list of (gcd, length)\nfor each index i:\n    newStates = [(nums[i], 1)] + [(gcd(g, nums[i]), len+1) for (g, len) in states]\n    deduplicate newStates by gcd value, keeping shortest length\n    if any state has gcd 1, update minLen\n    states = newStates\nif minLen found, return (minLen - 1) + (n - 1)\nelse return -1\n```",
+    "**Impossible case** - all elements share a common factor greater than 1\n`Input: nums = [2,10,6,14]` → `Expected: -1`\n⚠️ Bug: not checking if minLen == INT_MAX before computing the answer → returns undefined (INT_MAX + 5 overflows)\n\n**All ones** - every element is already 1, zero operations needed\n`Input: nums = [1,1,1]` → `Expected: 0`\n⚠️ Bug: returning `n - ones + 1` instead of `n - ones` → returns 1\n\n**Minimum coprime pair** - smallest input with no 1 present\n`Input: nums = [2,3]` → `Expected: 2`\n⚠️ Bug: returning `minLen + n - 1` instead of `(minLen - 1) + (n - 1)` → returns 4\n\n**Multiple ones reduce cost** - more than one 1 means fewer spread operations\n`Input: nums = [2,1,1,4]` → `Expected: 2`\n⚠️ Bug: counting only one 1 instead of all → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^5, does the approach still work efficiently?",
+      "a": "Yes. The gcd-state compression runs in O(n · log M) time and O(log M) space. With n = 10^5 and log M ≈ 20, this is about 2 × 10^6 operations, well within limits. The number of distinct gcd states per index never exceeds O(log M) ≈ 20."
+    },
+    {
+      "q": "What if the array is given as a stream of unknown length, and you must output the answer once the stream ends?",
+      "a": "Process elements one at a time, maintaining the gcd states and tracking the running gcd of all elements seen. When the stream ends, if the running gcd is 1, use the recorded minimum subarray length; otherwise return -1. Time per element is O(log M), total space O(log M)."
+    },
+    {
+      "q": "What if you need to make all elements equal to some target d > 1 instead of 1?",
+      "a": "Check if d divides every element. If not, it is impossible. If yes, divide all elements by d and solve the original problem on the scaled array - the gcd-state compression applies identically, and the answer is the same number of operations."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int gcd(int a, int b) {\n        while (b) { int t = b; b = a % b; a = t; }\n        return a;\n    }\npublic:\n    int minOperations(vector<int>& nums) {\n        int n = nums.size();\n        int ones = 0;\n        for (int x : nums) if (x == 1) ones++;\n        if (ones > 0) return n - ones;\n        \n        int minLen = INT_MAX;\n        vector<pair<int,int>> states;\n        \n        for (int i = 0; i < n; i++) {\n            vector<pair<int,int>> newStates;\n            for (auto& [g, len] : states) {\n                newStates.push_back({gcd(g, nums[i]), len + 1});\n            }\n            newStates.push_back({nums[i], 1});\n            \n            sort(newStates.begin(), newStates.end());\n            states.clear();\n            for (auto& [g, len] : newStates) {\n                if (!states.empty() && states.back().first == g) {\n                    states.back().second = min(states.back().second, len);\n                } else {\n                    states.push_back({g, len});\n                }\n            }\n            \n            if (!states.empty() && states[0].first == 1) {\n                minLen = min(minLen, states[0].second);\n            }\n        }\n        \n        if (minLen == INT_MAX) return -1;\n        return (minLen - 1) + (n - 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

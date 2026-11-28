@@ -1,0 +1,40 @@
+{
+  "slug": "form-largest-integer-with-digits-that-add-up-to-target",
+  "title": "Form Largest Integer With Digits That Add up to Target",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Unbounded Knapsack",
+  "tc": "O(target * 9)",
+  "sc": "O(target)",
+  "spaceBreakdown": "- vector<int> dp: up to target + 1 entries → O(target)\n- string res: up to target characters → O(target)\n- recursion depth: none\n- not counted: input, returned string",
+  "approach": "The problem is a variation of the unbounded knapsack problem. We want to maximize the number of digits painted for a given target cost, and among those with the maximum number of digits, find the lexicographically largest one. We use dynamic programming where `dp[i]` stores the maximum number of digits that can be painted with an exact cost of `i`. After computing the `dp` array, we reconstruct the largest number by greedily picking the largest possible digit (from 9 down to 1) at each step, ensuring that the remaining cost can still be perfectly formed into the remaining required digits.",
+  "hints": [
+    "With a fixed total cost, what quantity should you maximize first to guarantee the largest possible integer, and what should you maximize second among all options with that first quantity?\nFact: The cost of painting a digit (i + 1) is given by cost[i], and the total cost used must be exactly target.",
+    "Use an unbounded knapsack dynamic programming array `dp` where `dp[c]` stores the maximum number of digits paintable with exact cost `c`.\nFor Example 1, `dp[9]` becomes 4 because we can paint four '7's (cost 2 each) to reach target 9.",
+    "```\ndp[0] = 0, dp[1..target] = -1\nfor c from 1 to target:\n  for d from 0 to 8:\n    if c >= cost[d] and dp[c - cost[d]] != -1:\n      dp[c] = max(dp[c], dp[c - cost[d]] + 1)\n\nif dp[target] == -1: return \"0\"\nrem = target\nwhile rem > 0:\n  for d from 8 down to 0:\n    if rem >= cost[d] and dp[rem - cost[d]] == dp[rem] - 1:\n      append (d + 1) to result\n      rem -= cost[d]\n      break\nreturn result\n```",
+    "**No valid combination** - The target cannot be formed by any combination of costs.\n`Input: cost = [2,4,6,2,4,6,4,4,4], target = 5` → `Expected: \"0\"`\n⚠️ Bug: Returning an empty string instead of \"0\" when `dp[target] == -1` → returns `\"\"`\n\n**All costs equal to 1** - Every digit costs 1, so the maximum length is the target itself.\n`Input: cost = [1,1,1,1,1,1,1,1,1], target = 3` → `Expected: \"999\"`\n⚠️ Bug: Iterating digits from 1 to 9 instead of 9 down to 1 during reconstruction → returns `\"111\"`\n\n**Ties in cost** - Multiple digits have the same cost, requiring the largest digit to be chosen.\n`Input: cost = [4,3,2,5,6,7,2,5,5], target = 2` → `Expected: \"7\"`\n⚠️ Bug: Picking the first digit that satisfies the DP condition instead of the largest → returns `\"3\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the cost array had 10 elements (digits 0-9), but the integer still cannot have 0 digits?",
+      "a": "The algorithm remains identical. You simply skip the digit 0 during both the DP and reconstruction phases. The time and space complexity remain O(target)."
+    },
+    {
+      "q": "What if you were allowed to use each digit at most once (0-1 knapsack instead of unbounded)?",
+      "a": "You would iterate the target backwards for each digit to prevent reusing it. The time complexity becomes O(9 * target) and space remains O(target)."
+    },
+    {
+      "q": "What if the target could be up to 10^9, but the costs are still small?",
+      "a": "We could use the shortest path approach on the remainder of costs modulo the minimum cost. The time complexity would be O(min_cost * log(target)) and space O(min_cost)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string largestNumber(vector<int>& cost, int target) {\n        vector<int> dp(target + 1, -1);\n        dp[0] = 0;\n        \n        for (int i = 1; i <= target; ++i) {\n            for (int d = 0; d < 9; ++d) {\n                if (i >= cost[d] && dp[i - cost[d]] != -1) {\n                    dp[i] = max(dp[i], dp[i - cost[d]] + 1);\n                }\n            }\n        }\n        \n        if (dp[target] == -1) return \"0\";\n        \n        string res;\n        int rem = target;\n        while (rem > 0) {\n            for (int d = 8; d >= 0; --d) {\n                if (rem >= cost[d] && dp[rem - cost[d]] == dp[rem] - 1) {\n                    res.push_back('0' + d + 1);\n                    rem -= cost[d];\n                    break;\n                }\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

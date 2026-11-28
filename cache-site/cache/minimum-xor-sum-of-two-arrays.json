@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-xor-sum-of-two-arrays",
+  "title": "Minimum XOR Sum of Two Arrays",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hungarian Algorithm",
+  "tc": "O(n^3)",
+  "sc": "O(n^2)",
+  "spaceBreakdown": "- vector<vector<long long>> cost: n x n matrix → O(n^2)\n- vectors u, v, minv: each up to n+1 entries → O(n)\n- vectors p, way: each up to n+1 entries → O(n)\n- vector<char> used: up to n+1 entries → O(n)\n- recursion depth: none\n- not counted: input, returned value",
+  "approach": "This problem is equivalent to finding the minimum weight perfect matching in a bipartite graph, which is the classic assignment problem. We construct a cost matrix where `cost[i][j] = nums1[i] ^ nums2[j]`, and then apply the Hungarian algorithm to find the optimal assignment in $O(n^3)$ time. The algorithm maintains potentials for each row and column, iteratively building the matching by finding the shortest augmenting path, guaranteeing the minimum total cost.",
+  "hints": [
+    "If you view `nums1` and `nums2` as two sets of nodes, and the XOR of `nums1[i]` and `nums2[j]` as the weight of an edge between them, what kind of graph structure are you trying to find a minimum weight version of?\nThe constraints allow `n` up to 14, and values up to $10^7$.",
+    "This is the minimum weight perfect matching problem on a bipartite graph, solvable with the Hungarian algorithm. For `nums1 = [1,2]` and `nums2 = [2,3]`, the cost matrix has edges `(1,2)=3`, `(1,3)=2`, `(2,2)=0`, `(2,3)=1`; the algorithm finds the matching `{(1,3), (2,2)}` with cost 2.",
+    "```\nInitialize potentials u, v to 0, matching p to empty\nFor each row i:\n  Add row i to the alternating tree\n  While an augmenting path is not found:\n    Find the minimum slack (delta) over all columns not in the tree\n    Update potentials: u[rows in tree] += delta, v[cols in tree] -= delta\n    Add the column with minimum slack to the tree\n    If it is unmatched, augment the path and update matching p\nReturn the sum of costs for the matched pairs\n```",
+    "**Smallest input** - `n = 1`, so there is only one possible pairing.\n`Input: nums1 = [5], nums2 = [5]` → `Expected: 0`\n⚠️ Bug: Using `j < n` instead of `j <= n` in the column iteration loop → skips the only column, leaves `j1` uninitialized, causes undefined behavior or out-of-bounds access.\n\n**All elements equal** - Every pairing has the same XOR sum.\n`Input: nums1 = [7,7], nums2 = [7,7]` → `Expected: 0`\n⚠️ Bug: Initializing `delta` to 0 instead of `INT_MAX` → `minv[j] < delta` is false for all columns, `j1` remains -1, causes out-of-bounds access.\n\n**Zeros in arrays** - XOR with 0 yields the other number.\n`Input: nums1 = [0, 5], nums2 = [5, 0]` → `Expected: 0`\n⚠️ Bug: Initializing `minv` to 0 instead of `INT_MAX` → `cur < minv[j]` is false for 0, fails to update `way`, returns 10.\n\n**Multiple optimal matchings** - Several pairings yield the same minimum sum.\n`Input: nums1 = [1,2], nums2 = [2,3]` → `Expected: 2`\n⚠️ Bug: Skipping the augmenting path update `p[j0] = p[j1]` → matching is not updated, returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if `n` is up to $10^5$, but the values in `nums1` and `nums2` are small (e.g., up to 100)?",
+      "a": "If values are small, we can use a greedy approach or frequency-based matching. We can count the frequencies of each value in `nums1` and `nums2`, and then find the optimal pairing by iterating through all possible pairs of values (at most 100x100) and matching them greedily or using min-cost flow on the value graph. Time complexity would be $O(V^2)$ where $V$ is the max value, and space $O(V)$."
+    },
+    {
+      "q": "What if we want to maximize the XOR sum instead of minimizing it?",
+      "a": "The Hungarian algorithm can be easily adapted to find a maximum weight perfect matching by negating all costs in the cost matrix. We would initialize the cost matrix with `-(nums1[i] ^ nums2[j])` and run the same algorithm. The time and space complexity remain $O(n^3)$ and $O(n^2)$ respectively."
+    },
+    {
+      "q": "What if the arrays are streamed and we cannot store the entire cost matrix in memory?",
+      "a": "If we cannot store the $n \\times n$ cost matrix, we can compute the cost on the fly since it's just an XOR operation. This reduces the space complexity from $O(n^2)$ to $O(n)$ for the potentials and matching arrays. The time complexity remains $O(n^3)$, but with a constant factor increase due to recomputing costs."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumXORSum(vector<int>& nums1, vector<int>& nums2) {\n        int n = nums1.size();\n        vector<vector<long long>> cost(n, vector<long long>(n));\n        for (int i = 0; i < n; ++i) {\n            for (int j = 0; j < n; ++j) {\n                cost[i][j] = nums1[i] ^ nums2[j];\n            }\n        }\n        \n        vector<long long> u(n + 1), v(n + 1);\n        vector<int> p(n + 1), way(n + 1);\n        const long long INF = 1000000000000000000LL;\n        \n        for (int i = 1; i <= n; ++i) {\n            p[0] = i;\n            int j0 = 0;\n            vector<long long> minv(n + 1, INF);\n            vector<char> used(n + 1, false);\n            do {\n                used[j0] = true;\n                int i0 = p[j0], j1 = 0;\n                long long delta = INF;\n                for (int j = 1; j <= n; ++j) {\n                    if (!used[j]) {\n                        long long cur = cost[i0 - 1][j - 1] - u[i0] - v[j];\n                        if (cur < minv[j]) {\n                            minv[j] = cur;\n                            way[j] = j0;\n                        }\n                        if (minv[j] < delta) {\n                            delta = minv[j];\n                            j1 = j;\n                        }\n                    }\n                }\n                for (int j = 0; j <= n; ++j) {\n                    if (used[j]) {\n                        u[p[j]] += delta;\n                        v[j] -= delta;\n                    } else {\n                        minv[j] -= delta;\n                    }\n                }\n                j0 = j1;\n            } while (p[j0] != 0);\n            \n            do {\n                int j1 = way[j0];\n                p[j0] = p[j1];\n                j0 = j1;\n            } while (j0);\n        }\n        \n        long long ans = 0;\n        for (int j = 1; j <= n; ++j) {\n            if (p[j] != 0) {\n                ans += cost[p[j] - 1][j - 1];\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-a-string-can-break-another-string",
+  "title": "Check If a String Can Break Another String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Counting with Prefix Sums",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq1[26]: fixed 26 ints → O(1)\n- int freq2[26]: fixed 26 ints → O(1)\n- pref1, pref2, two bools: scalars → O(1)\n- recursion depth: none\n- not counted: input strings s1, s2",
+  "approach": "Since the alphabet is fixed at 26 lowercase letters, we use frequency arrays instead of sorting. The key insight: s1 can break s2 iff for every letter threshold c, the cumulative count of s1 characters ≤ c is at most the cumulative count of s2 characters ≤ c (and vice versa for the other direction). We compute two 26-element frequency arrays, then walk through them accumulating prefix sums, tracking whether each direction's dominance condition holds throughout.",
+  "hints": [
+    "Both strings consist only of lowercase English letters (at most 26 distinct values). For any chosen letter, how many characters in each string are strictly smaller than it - and what must be true of those two counts for one string to be able to break the other?",
+    "Use two frequency arrays of size 26 (one per string) and compare their running prefix sums. For s1 = \"abc\" and s2 = \"xya\", the prefix sums of s2 are always ≥ those of s1 at every letter, so s2 can break s1.",
+    "```\ncount freq1[26] and freq2[26] from s1 and s2\ns1Breaks = true, s2Breaks = true\npref1 = 0, pref2 = 0\nfor i from 0 to 25:\n    pref1 += freq1[i]\n    pref2 += freq2[i]\n    if pref1 > pref2: s1Breaks = false\n    if pref2 > pref1: s2Breaks = false\nreturn s1Breaks or s2Breaks\n```",
+    "**Single character, equal** - n = 1, both strings identical.\n`Input: s1 = \"a\", s2 = \"a\"` → `Expected: true`\n⚠️ Bug: using `pref1 >= pref2` instead of `pref1 > pref2` to clear s1Breaks → at i=0, 1 >= 1 clears both flags, returns false.\n\n**Only one direction checked** - s2 can break s1 but not vice versa.\n`Input: s1 = \"abc\", s2 = \"xya\"` → `Expected: true`\n⚠️ Bug: only checking if s1 breaks s2 (omitting the reverse check) → s1Breaks = false, returns false.\n\n**Tie then divergence** - prefix sums equal at the first index but diverge later.\n`Input: s1 = \"abe\", s2 = \"acd\"` → `Expected: false`\n⚠️ Bug: returning true on the first index where pref1 == pref2 → at i=0, 1 == 1, returns true.\n\n**AND instead of OR** - both directions tracked but combined with the wrong operator.\n`Input: s1 = \"leetcodee\", s2 = \"interview\"` → `Expected: true`\n⚠️ Bug: returning `s1Breaks && s2Breaks` instead of `s1Breaks || s2Breaks` → false && true = false."
+  ],
+  "followUps": [
+    {
+      "q": "What if the strings could contain any Unicode characters instead of just 26 lowercase letters?",
+      "a": "Replace the fixed arrays with a hash map for frequencies, then sort the distinct keys to compute prefix sums in order. Time becomes O(n + k log k) where k is the number of distinct characters; space O(k)."
+    },
+    {
+      "q": "What if the strings arrive as a stream and you can only store O(1) extra memory?",
+      "a": "Since the alphabet is fixed at 26, maintain two 26-element frequency arrays updated as each character arrives. After the stream ends, compute prefix sums in a single 26-step pass. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if you need to answer the break question for many pairs of substrings of s1 and s2?",
+      "a": "Precompute 2D prefix frequency arrays pref1[i][c] and pref2[i][c] giving the count of character c in the first i positions. Each query derives substring frequencies via subtraction, then checks prefix-sum dominance in O(26). Preprocessing O(26n), each query O(26)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkIfCanBreak(string s1, string s2) {\n        int freq1[26] = {0}, freq2[26] = {0};\n        for (char c : s1) freq1[c - 'a']++;\n        for (char c : s2) freq2[c - 'a']++;\n        \n        int pref1 = 0, pref2 = 0;\n        bool s1Breaks = true, s2Breaks = true;\n        for (int i = 0; i < 26; i++) {\n            pref1 += freq1[i];\n            pref2 += freq2[i];\n            if (pref1 > pref2) s1Breaks = false;\n            if (pref2 > pref1) s2Breaks = false;\n        }\n        return s1Breaks || s2Breaks;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-paths-with-max-score",
+  "title": "Number of Paths with Max Score",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming (rolling rows)",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- prevDp, prevWays (row i+1): n entries each → O(n)\n- curDp, curWays (row i): n entries each → O(n)\n- not counted: input board, returned vector",
+  "approach": "Process cells from S (bottom-right) toward E (top-left). For each cell, the best sum equals its own value plus the maximum best-sum among the three cells that could precede it (below, right, below-right); the path count is the sum of counts of predecessors that tie that maximum. Obstacles are marked unreachable. Because each row only needs the row immediately below it plus the already-computed cell to its right, two rolling rows suffice. Return [best at E, count at E] mod 1e9+7, or [0,0] if E is unreachable.",
+  "hints": [
+    "Every move goes up, left, or up-left. For a fixed destination cell, which other cells could be the last step before reaching it?\nThe board has at most 100 rows and 100 columns.",
+    "Dynamic programming with two rolling rows. In Example 1, cell (0,0)='E' takes the max of its reachable predecessors (1,0)=5, (0,1)=7, (1,1)=blocked, giving sum 7 and 1 path.",
+    "```\nfor i from n-1 downto 0:\n  for j from n-1 downto 0:\n    if board[i][j] == 'X': mark unreachable\n    elif (i,j) is S: sum=0, ways=1\n    else:\n      best = max reachable sum among (i+1,j), (i,j+1), (i+1,j+1)\n      ways = sum of ways over predecessors whose sum == best\n      this sum = best + value(board[i][j])\n  roll current row into previous row\nreturn [sum at E, ways at E]  (or [0,0] if E unreachable)\n```",
+    "**No path** - a full row of obstacles blocks every route.\n`Input: board = [\"E11\",\"XXX\",\"11S\"]` → `Expected: [0,0]`\n⚠️ Bug: returning raw `dp[0][0]` without checking the -1 unreachable sentinel → returns `[-1, 0]`\n\n**Tie in path count** - two predecessors give the same max sum.\n`Input: board = [\"E12\",\"1X1\",\"21S\"]` → `Expected: [4,2]`\n⚠️ Bug: using strict `>` when comparing neighbor sums and never adding counts on equality → returns `[4,1]`\n\n**Direct diagonal only** - the sole viable route is the single up-left move from S to E.\n`Input: board = [\"EX\",\"XS\"]` → `Expected: [0,1]`\n⚠️ Bug: omitting the (i+1,j+1) diagonal predecessor → returns `[0,0]`\n\n**S and E are not digits** - their contribution to the sum must be zero.\n`Input: board = [\"E1\",\"1S\"]` → `Expected: [1,2]`\n⚠️ Bug: computing value as `c - '0'` for every cell including E → 'E'-'0' = 21 inflates the sum → returns `[22,2]`"
+  ],
+  "followUps": [
+    {
+      "q": "List every path that achieves the maximum score (not just the count).",
+      "a": "The count can be exponential, so materializing all paths is infeasible in general. Enumerate lazily via backtracking guided by the filled DP table: from E, only step to predecessors whose stored sum equals the max. Time O(n² + output size); space O(n²) to keep the full table for back-pointers."
+    },
+    {
+      "q": "Diagonal moves are forbidden (only up and left allowed).",
+      "a": "Drop the (i+1,j+1) predecessor from the recurrence, leaving two neighbors. Still O(n²) time and O(n) space with rolling rows; the path count becomes binomial (choosing which steps are \"up\" vs \"left\")."
+    },
+    {
+      "q": "The board is streamed one row at a time, top to bottom, and you must output the answer after the last row.",
+      "a": "Since reachability of E depends on cells below and to the right, a top-down stream cannot compute it online without buffering. Buffer all rows (O(n²) memory) or require the stream bottom-up to keep the O(n) rolling-row scheme."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> pathsWithMaxScore(vector<string>& board) {\n        int n = board.size();\n        const long long MOD = 1000000007;\n        vector<long long> prevDp(n, -1), prevWays(n, 0);\n        vector<long long> curDp(n), curWays(n);\n        for (int i = n - 1; i >= 0; i--) {\n            for (int j = n - 1; j >= 0; j--) {\n                char c = board[i][j];\n                if (c == 'X') {\n                    curDp[j] = -1;\n                    curWays[j] = 0;\n                    continue;\n                }\n                if (i == n - 1 && j == n - 1) {\n                    curDp[j] = 0;\n                    curWays[j] = 1;\n                    continue;\n                }\n                long long val = (c == 'E' || c == 'S') ? 0 : (c - '0');\n                long long best = -1;\n                long long cnt = 0;\n                if (i + 1 < n && prevDp[j] >= 0) {\n                    if (prevDp[j] > best) { best = prevDp[j]; cnt = prevWays[j]; }\n                    else if (prevDp[j] == best) { cnt = (cnt + prevWays[j]) % MOD; }\n                }\n                if (j + 1 < n && curDp[j + 1] >= 0) {\n                    if (curDp[j + 1] > best) { best = curDp[j + 1]; cnt = curWays[j + 1]; }\n                    else if (curDp[j + 1] == best) { cnt = (cnt + curWays[j + 1]) % MOD; }\n                }\n                if (i + 1 < n && j + 1 < n && prevDp[j + 1] >= 0) {\n                    if (prevDp[j + 1] > best) { best = prevDp[j + 1]; cnt = prevWays[j + 1]; }\n                    else if (prevDp[j + 1] == best) { cnt = (cnt + prevWays[j + 1]) % MOD; }\n                }\n                if (best < 0) {\n                    curDp[j] = -1;\n                    curWays[j] = 0;\n                } else {\n                    curDp[j] = best + val;\n                    curWays[j] = cnt;\n                }\n            }\n            swap(prevDp, curDp);\n            swap(prevWays, curWays);\n        }\n        if (prevDp[0] < 0) return {0, 0};\n        return {(int)prevDp[0], (int)prevWays[0]};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

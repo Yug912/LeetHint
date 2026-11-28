@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-subarray-with-or-at-least-k-ii",
+  "title": "Shortest Subarray With OR at Least K II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window with Bit OR Aggregation",
+  "tc": "O(n log V)",
+  "sc": "O(log V)",
+  "spaceBreakdown": "- vector<pair<int,int>> cur: at most 32 entries (bounded by bit count) → O(1)\n- vector<pair<int,int>> nxt: at most 33 entries → O(1)\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "The key insight is that bitwise OR only sets bits, never unsets them. So for all subarrays ending at index i, there are at most ~30 distinct OR values (one per bit-count level). We maintain a small list of (OR value, start index) pairs for subarrays ending at the current position. When moving to index i+1, we OR every existing value with nums[i+1] and prepend the single-element subarray. We merge adjacent entries with equal OR (keeping the one with the larger start index = shorter subarray). For each entry with OR ≥ k, we update the answer with the subarray length.",
+  "hints": [
+    "As a subarray grows, its bitwise OR only gains bits, never loses them. With nums[i] ≤ 10^9 (about 30 bits), how many distinct OR values can exist among all subarrays ending at the same index?",
+    "Maintain a list of (OR value, start index) pairs for subarrays ending at the current index, merging duplicates. At i=1 in [2,1,8], the list is [(1,1),(3,0)] - OR of [1] and OR of [2,1].",
+    "```\ncur = empty list of (or_value, start_index)\nans = infinity\nfor i in 0..n-1:\n    next = [(nums[i], i)] + [(v | nums[i], j) for (v, j) in cur]\n    cur = merge next, skipping entries whose OR equals the previous kept entry\n    for (v, j) in cur:\n        if v >= k: ans = min(ans, i - j + 1)\nreturn ans if ans != infinity else -1\n```",
+    "**k = 0 with zeros** - every element alone satisfies the OR condition.\n`Input: nums = [0,0], k = 0` → `Expected: 1`\n⚠️ Bug: checking `v > k` instead of `v >= k` → returns -1\n\n**No valid answer** - no subarray reaches k.\n`Input: nums = [1,2], k = 100` → `Expected: -1`\n⚠️ Bug: initializing ans to 0 instead of INT_MAX and returning ans → returns 0\n\n**Single element** - n = 1, the only subarray is the element itself.\n`Input: nums = [5], k = 5` → `Expected: 1`\n⚠️ Bug: not prepending (nums[i], i) to the list → returns -1\n\n**Duplicate OR after merging** - multiple subarrays ending at i share the same OR; keep the shortest.\n`Input: nums = [1,7,1], k = 7` → `Expected: 1`\n⚠️ Bug: keeping the smallest start index instead of the largest when merging duplicates → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual subarray (start and end indices) instead of just the length.",
+      "a": "Track the best (start, end) pair alongside ans. Whenever you find a shorter valid subarray, record its start and end. The algorithm is otherwise unchanged. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "Count the total number of special subarrays with OR ≥ k.",
+      "a": "The list partitions all starting positions into segments by OR value. For each ending position i, sum the lengths of segments whose OR ≥ k. Each segment (v_t, j_t) contributes (j_{t-1} - j_t) subarrays where j_{-1} = i+1. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "nums arrives as an infinite stream; answer the current shortest special subarray after each element.",
+      "a": "The per-element list maintenance works online with no changes. Keep cur and ans across iterations and output the current answer after each new element arrives. TC: O(1) amortized per element, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumSubarrayLength(vector<int>& nums, int k) {\n        int n = nums.size();\n        int ans = INT_MAX;\n        vector<pair<int,int>> cur;\n        for (int i = 0; i < n; i++) {\n            vector<pair<int,int>> nxt;\n            nxt.push_back({nums[i], i});\n            for (auto& [v, j] : cur) {\n                nxt.push_back({v | nums[i], j});\n            }\n            cur.clear();\n            for (auto& [v, j] : nxt) {\n                if (!cur.empty() && cur.back().first == v) continue;\n                cur.push_back({v, j});\n            }\n            for (auto& [v, j] : cur) {\n                if (v >= k) {\n                    ans = min(ans, i - j + 1);\n                }\n            }\n        }\n        return ans == INT_MAX ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

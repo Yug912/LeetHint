@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-sum-obtained-of-any-permutation",
+  "title": "Maximum Sum Obtained of Any Permutation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Difference Array + Counting Sort (Greedy Assignment)",
+  "tc": "O(n + m + MAXV)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> freq of size n → O(n)\n- vector<int> cntN, cntF each of size 100001 → O(1) (fixed constant, same magnitude as n)\n- not counted: input nums, requests, returned int",
+  "approach": "Compute how many requests cover each index using a difference array + prefix sweep. Then pair the largest nums values with the most-covered indices: since both nums[i] and the per-index frequency are bounded by 10^5, use counting sort on both (descending) and walk two pointers to multiply matched counts. This avoids the O(n log n) comparison sort and yields O(n + m + MAXV) time.",
+  "hints": [
+    "With nums freely reorderable, what single property of each index decides how much it contributes to the grand total across all requests? Constraint: n ≤ 10^5 and nums[i] ≤ 10^5.",
+    "Use a difference array to get each index's coverage count, then counting-sort both nums and the coverage counts (all values ≤ 10^5) and pair largest-with-largest. For requests [[1,3],[0,1]] the index coverages are [1,2,1,1,0].",
+    "```\nfreq = difference array of size n\nfor each request [l, r]: freq[l] += 1; freq[r+1] -= 1\nprefix-sum freq\ncountN[v] = occurrences of v in nums\ncountF[v] = occurrences of v in freq\ni = j = MAXV-1\nwhile i >= 0 and j >= 0:\n    skip zeros on both\n    pairs = min(countN[i], countF[j])\n    ans += pairs * i * j\n    decrement both counts\nreturn ans mod 1e9+7\n```",
+    "**Single element** - n = 1, one request covering it.\n`nums = [7], requests = [[0,0]]` → `Expected: 7`\n⚠️ Bug: initialising the difference array with size n+1 but reading freq[r[1]+1] without bounds check on n=1 → out-of-bounds write, undefined behavior.\n\n**Overflow** - n = 10^5, all nums[i] = 10^5, all requests = [0, n-1].\n`nums = [100000]*100000, requests = [[0,99999]]` → `Expected: 10000000000 mod 1e9+7 = 999999937`\n⚠️ Bug: computing `pairs * i * j` in `int` (10^5 × 10^5 × 10^5 = 10^15) → signed overflow wraps to a negative/wrong value.\n\n**Zero-coverage indices** - some index appears in no request.\n`nums = [1,2,3], requests = [[0,0]]` → `Expected: 3`\n⚠️ Bug: skipping freq==0 entries in counting sort instead of pairing them with the smallest nums → leaves counts unbalanced, returns 0 or wrong sum.\n\n**All equal nums** - every value identical, only frequency ordering matters.\n`nums = [5,5,5,5], requests = [[0,2],[1,3]]` → `Expected: 40`\n⚠️ Bug: deduplicating nums values before multiplying by frequency counts → undercounts by the multiplicity, returns 20.\n\n**Boundary index** - request touches the last index only.\n`nums = [1,2,3], requests = [[2,2]]` → `Expected: 3`\n⚠️ Bug: writing `freq[r[1]+1] -= 1` unconditionally when r[1] = n-1 → writes past the array, corrupts memory."
+  ],
+  "followUps": [
+    {
+      "q": "What if requests arrive in an online stream and you must answer the max-sum query after each insertion, allowing nums to be re-permuted each time?",
+      "a": "Maintain the frequency multiset under range increments with a Fenwick/BIT over the difference array; after each update, recompute the dot product of sorted nums against sorted frequencies. Each insertion costs O(n) for the re-pairing in the worst case, so this is feasible only if updates are rare relative to queries."
+    },
+    {
+      "q": "What if nums[i] can be negative (range -10^5 to 10^5)?",
+      "a": "The greedy still holds: pair largest nums with largest frequencies. Counting sort must shift values by +10^5 to index non-negative buckets, doubling the bucket array size to 200001. Time stays O(n + m + MAXV), space O(n)."
+    },
+    {
+      "q": "What if memory is limited to O(1) extra beyond reusing the input array?",
+      "a": "Drop the separate freq array by reusing nums itself after computing frequencies in place is impossible cleanly; instead, sort nums in place with heapsort (O(1) extra) and compute frequencies by streaming requests twice - once for the difference array stored in nums (overwriting), once to reconstruct. This sacrifices the input and raises time to O(n log n) due to comparison sort."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSumRangeQuery(vector<int>& nums, vector<vector<int>>& requests) {\n        const int MOD = 1000000007;\n        const int MAXV = 100001;\n        int n = nums.size();\n        vector<long long> freq(n, 0);\n        for (auto& r : requests) {\n            freq[r[0]]++;\n            if (r[1] + 1 < n) freq[r[1] + 1]--;\n        }\n        for (int i = 1; i < n; i++) freq[i] += freq[i - 1];\n        \n        vector<int> cntN(MAXV, 0), cntF(MAXV, 0);\n        for (int x : nums) cntN[x]++;\n        for (int i = 0; i < n; i++) {\n            int f = (int)freq[i];\n            if (f >= 0 && f < MAXV) cntF[f]++;\n        }\n        \n        long long ans = 0;\n        int i = MAXV - 1, j = MAXV - 1;\n        while (i >= 0 && j >= 0) {\n            while (i >= 0 && cntN[i] == 0) i--;\n            while (j >= 0 && cntF[j] == 0) j--;\n            if (i < 0 || j < 0) break;\n            long long pairs = min(cntN[i], cntF[j]);\n            ans = (ans + pairs * ((long long)i * j % MOD)) % MOD;\n            cntN[i] -= (int)pairs;\n            cntF[j] -= (int)pairs;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

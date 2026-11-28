@@ -1,0 +1,40 @@
+{
+  "slug": "alternating-groups-ii",
+  "title": "Alternating Groups II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, bad, ans, j, j2: scalar variables → O(1)\n- no containers, no recursion, no extra arrays\n- not counted: input vector `colors`",
+  "approach": "A window of k tiles is alternating iff all k−1 adjacent pairs inside it have different colors. We maintain a running count of \"bad\" pairs (adjacent tiles with the same color) in the current window. Sliding the window by one removes exactly one pair and adds exactly one pair, so each step is O(1). Modular indexing on the original array handles the circular wrap-around with no extra space.",
+  "hints": [
+    "When you shift a window of k tiles by one position along the circle, how many adjacent tile pairs change? The circle has up to 10^5 tiles.",
+    "Sliding window with a running count of \"bad\" adjacent pairs (same color). For colors = [0,1,0,1,0], k = 3: initial window [0,1,0] has 0 bad pairs → count it; slide right, remove pair (0,1), add pair (2,3) via modular index.",
+    "```\nbad = count of same-color pairs in window [0, k-1]\nans = 1 if bad == 0 else 0\nfor i = 1 to n-1:\n    if colors[i-1] == colors[i]: bad--\n    if colors[(i+k-2) mod n] == colors[(i+k-1) mod n]: bad++\n    if bad == 0: ans++\nreturn ans\n```",
+    "**Minimum sizes** - n = 3, k = 3, the smallest allowed input.\n`colors = [0,1,0], k = 3` → `Expected: 1`\n⚠️ Bug: sliding loop uses `i <= n` instead of `i < n` → returns 2 (re-processes the initial window as window n, double-counting it)\n\n**All same colors** - every adjacent pair breaks alternation.\n`colors = [1,1,1,1], k = 3` → `Expected: 0`\n⚠️ Bug: initializing `bad = 0` without scanning the initial window's pairs → returns 4 (every step sees bad reach 0 after a spurious decrement)\n\n**Circular wrap-around** - valid groups span the end-to-start boundary.\n`colors = [0,1,0,0,1,0,1], k = 6` → `Expected: 2`\n⚠️ Bug: only checking linear windows starting at indices 0 through n−k → returns 0 (misses the two groups that wrap around)\n\n**Off-by-one in pair index** - the added pair uses the wrong offset.\n`colors = [0,1,0,1], k = 4` → `Expected: 4`\n⚠️ Bug: computing the added pair as `(i+k-1, i+k)` instead of `(i+k-2, i+k-1)` → returns 0 (checks a pair one position ahead, never seeing the true boundary pair)"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can exceed n?",
+      "a": "A window larger than the circle wraps around fully. The group is alternating only if every adjacent pair in the circle (including the wrap-around pair) differs, which requires n to be even. Check all n pairs in O(n); if all differ and n is even, the answer is n, otherwise 0. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if colors can be any integer from 0 to 9 instead of just 0 or 1?",
+      "a": "The solution is unchanged - \"alternating\" means adjacent tiles differ, regardless of how many color values exist. The bad-pair count still tracks `colors[a] == colors[b]`. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if tiles arrive one at a time in a stream and you must report the count after each new tile?",
+      "a": "Keep a circular buffer of the last k tiles and the running bad-pair count. On each new tile, add the new pair, remove the expired pair, and report whether bad equals 0. Each step is O(1). TC O(n) total, SC O(k) for the buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfAlternatingGroups(vector<int>& colors, int k) {\n        int n = colors.size();\n        int bad = 0;\n        for (int i = 0; i < k - 1; i++) {\n            if (colors[i] == colors[i + 1]) bad++;\n        }\n        int ans = (bad == 0) ? 1 : 0;\n        for (int i = 1; i < n; i++) {\n            if (colors[i - 1] == colors[i]) bad--;\n            int j1 = (i + k - 2) % n;\n            int j2 = (i + k - 1) % n;\n            if (colors[j1] == colors[j2]) bad++;\n            if (bad == 0) ans++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

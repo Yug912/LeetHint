@@ -1,0 +1,40 @@
+{
+  "slug": "largest-1-bordered-square",
+  "title": "Largest 1-Bordered Square",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Grid (Prefix Count Arrays)",
+  "tc": "O(n * m * min(n, m))",
+  "sc": "O(n * m)",
+  "spaceBreakdown": "- vector<vector<int>> up: n × m integers → O(n * m)\n- vector<vector<int>> left: n × m integers → O(n * m)\n- recursion depth: none\n- not counted: input grid, returned int",
+  "approach": "Precompute two 2D arrays: `up[i][j]` = consecutive 1s ending at (i,j) going upward, and `left[i][j]` = consecutive 1s ending at (i,j) going leftward. Then for each cell (i,j) as the bottom-right corner of a candidate square, try all sizes k from largest to smallest. A k×k square is valid iff all four borders are solid: `left[i][j] >= k` (bottom), `up[i][j] >= k` (right), `left[i-k+1][j] >= k` (top), `up[i][j-k+1] >= k` (left). Each check is O(1), giving O(n·m·min(n,m)) total.",
+  "hints": [
+    "For a square of side k whose bottom-right corner is at cell (i, j), what must be true about the run of 1s along each of its four edges? The grid has at most 100 rows and 100 columns.",
+    "Precompute two 2D arrays: consecutive-1 counts going up and going left from every cell. In Example 1, cell (2,2) has `up=3` and `left=3`, so a 3×3 square is testable in O(1) by checking four corner counts.",
+    "```\nbuild up[i][j] and left[i][j] from grid\nbest = 0\nfor each cell (i, j):\n    for k from min(i, j) + 1 down to 1:\n        if k <= best: break\n        if left[i][j] >= k and up[i][j] >= k\n           and left[i-k+1][j] >= k and up[i][j-k+1] >= k:\n            best = k\n            break\nreturn best * best\n```",
+    "**All zeros** - no 1-bordered square exists\n`Input: [[0,0],[0,0]]` → `Expected: 0`\n⚠️ Bug: initializing `best` to 1 instead of 0 → returns 1\n\n**Single cell with 1** - minimum input size\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: starting the size loop at `k = 2` instead of `k = 1` → returns 0\n\n**Border gap** - bottom-right corner has enough consecutive 1s but the top border does not\n`Input: [[1,0,1],[1,1,1],[1,1,1]]` → `Expected: 4`\n⚠️ Bug: checking only `left[i][j] >= k` and `up[i][j] >= k` (bottom and right borders) without checking `left[i-k+1][j]` and `up[i][j-k+1]` → returns 9\n\n**Full grid of ones** - largest square fills the entire grid\n`Input: [[1,1,1],[1,1,1],[1,1,1]]` → `Expected: 9`\n⚠️ Bug: returning `best` (side length) instead of `best * best` (area) → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Find the largest 1-bordered rectangle (not necessarily square).",
+      "a": "For each pair of rows (top, bottom), scan columns left to right tracking whether every cell in the column segment [top, bottom] is 1. Use the up-array to test this in O(1) per column: a column is valid if `up[bottom][c] >= bottom - top + 1`. Then find the widest run of consecutive valid columns - that width times the row-span gives a candidate rectangle. TC: O(n² · m), SC: O(n · m)."
+    },
+    {
+      "q": "Count the total number of 1-bordered squares in the grid.",
+      "a": "Reuse the same up/left arrays. For each cell (i, j) and each size k from 1 to min(i,j)+1, run the same four-border O(1) check and increment a counter on success. TC: O(n · m · min(n, m)), SC: O(n · m)."
+    },
+    {
+      "q": "The grid is streamed row by row and you can only keep O(m) memory.",
+      "a": "Maintain only the current and previous rows of the up array (O(m) each) and the full left array for the current row (O(m)). When processing row i, you can only test squares whose bottom edge is on row i, but you still need up values for row i-k+1 which may have been discarded. To handle this, process in two passes or store a compact bitmask per row. TC: O(n · m · min(n, m)), SC: O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largest1BorderedSquare(vector<vector<int>>& grid) {\n        int n = grid.size();\n        int m = grid[0].size();\n        vector<vector<int>> up(n, vector<int>(m, 0));\n        vector<vector<int>> left(n, vector<int>(m, 0));\n\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < m; j++) {\n                if (grid[i][j] == 1) {\n                    up[i][j] = (i == 0) ? 1 : up[i - 1][j] + 1;\n                    left[i][j] = (j == 0) ? 1 : left[i][j - 1] + 1;\n                }\n            }\n        }\n\n        int best = 0;\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < m; j++) {\n                int maxK = min(i, j) + 1;\n                for (int k = maxK; k >= 1; k--) {\n                    if (k <= best) break;\n                    if (left[i][j] >= k && up[i][j] >= k &&\n                        left[i - k + 1][j] >= k && up[i][j - k + 1] >= k) {\n                        best = k;\n                        break;\n                    }\n                }\n            }\n        }\n\n        return best * best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

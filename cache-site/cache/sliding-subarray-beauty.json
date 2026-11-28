@@ -1,0 +1,40 @@
+{
+  "slug": "sliding-subarray-beauty",
+  "title": "Sliding Subarray Beauty",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window with Frequency Array",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[51]: fixed-size array of 51 ints → O(1)\n- vector<int> ans: n−k+1 ints → O(n) but this is the returned output (not counted)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "The key insight is that nums[i] ∈ [-50, 50], so at most 51 distinct values exist. Maintain a frequency array of size 51 (indexed by -value for negatives) over the current window of size k. For each window, if the total negative count is less than x, the beauty is 0; otherwise, walk from -50 toward -1 accumulating frequencies until the running count reaches x, and that value is the beauty. Slide the window by incrementing/decrementing frequencies in O(1) per element.",
+  "hints": [
+    "Each nums[i] lies in [-50, 50]. For any window, how many distinct negative values could you possibly need to distinguish?",
+    "Use a frequency array of size 51 indexed by -value. For window [1,-1,-3] with x=2: freq[1]=1 (for -1), freq[3]=1 (for -3). Walk from index 50 down to 1, accumulating counts; the value where the running total first reaches x=2 is -1.",
+    "```\nfreq[1..50] = 0, negCount = 0\nfor i = 0 to n-1:\n    if nums[i] < 0: freq[-nums[i]]++, negCount++\n    if i >= k and nums[i-k] < 0: freq[-nums[i-k]]--, negCount--\n    if i >= k-1:\n        if negCount < x: append 0\n        else:\n            cnt = 0\n            for v = 50 down to 1:\n                cnt += freq[v]\n                if cnt >= x: append -v, break\n```",
+    "**Single element window** - n = k = 1, the smallest valid input\n`nums = [-5], k = 1, x = 1` → `[-5]`\n⚠️ Bug: using `i > k - 1` instead of `i >= k - 1` for the window-complete check → skips i=0, returns `[]`\n\n**All non-negative** - zero negative integers in every window\n`nums = [1,2,3], k = 2, x = 1` → `[0,0]`\n⚠️ Bug: omitting the `negCount < x` guard so the search loop never reaches x and pushes nothing → returns `[]`\n\n**x equals k, all negative** - boundary on the count comparison\n`nums = [-1,-2,-3], k = 3, x = 3` → `[-1]`\n⚠️ Bug: using `cnt > x` instead of `cnt >= x` → never triggers at cnt=3, returns `[0]`\n\n**Wrong iteration direction** - walking from least to most negative\n`nums = [-1,-2,-3,-4,-5], k = 2, x = 2` → `[-1,-2,-3,-4]`\n⚠️ Bug: iterating from -1 toward -50 (finding x-th largest) → returns `[-2,-3,-4,-5]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] ranges from -10^9 to 10^9 instead of [-50, 50]?",
+      "a": "The fixed frequency array no longer works. Use two multisets: keep the smallest x negatives in a \"left\" multiset and the rest in a \"right\" multiset, rebalancing on each insert/remove. TC becomes O(n log k), SC becomes O(k)."
+    },
+    {
+      "q": "What if k = n (a single window covering the entire array)?",
+      "a": "The same algorithm works unchanged - there is exactly one window. Alternatively, collect all negatives and use quickselect to find the x-th smallest in O(n) average time, SC O(1)."
+    },
+    {
+      "q": "What if nums arrives as an unbounded stream and you must output beauty after every k-th element?",
+      "a": "Maintain the same frequency array online: add each incoming element, and once k elements have been seen, output the beauty then remove the element that falls out of the window. The approach is identical since each update is O(1) and the search is O(50). TC O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getSubarrayBeauty(vector<int>& nums, int k, int x) {\n        int n = nums.size();\n        int freq[51] = {0}; // freq[v] = count of value -v in current window\n        vector<int> ans;\n        ans.reserve(n - k + 1);\n        int negCount = 0;\n\n        for (int i = 0; i < n; i++) {\n            if (nums[i] < 0) {\n                freq[-nums[i]]++;\n                negCount++;\n            }\n            if (i >= k) {\n                int old = nums[i - k];\n                if (old < 0) {\n                    freq[-old]--;\n                    negCount--;\n                }\n            }\n            if (i >= k - 1) {\n                if (negCount < x) {\n                    ans.push_back(0);\n                } else {\n                    int cnt = 0;\n                    for (int v = 50; v >= 1; v--) {\n                        cnt += freq[v];\n                        if (cnt >= x) {\n                            ans.push_back(-v);\n                            break;\n                        }\n                    }\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

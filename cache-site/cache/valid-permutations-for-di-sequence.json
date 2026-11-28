@@ -1,0 +1,40 @@
+{
+  "slug": "valid-permutations-for-di-sequence",
+  "title": "Valid Permutations for DI Sequence",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Prefix Sums",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> dp: size n+1 → O(n)\n- vector<long long> pref: size up to n+1 → O(n)\n- vector<long long> ndp: size n+1 → O(n)\n- recursion depth: none (iterative)\n- not counted: input string s",
+  "approach": "The validity of a permutation depends only on relative comparisons, so we track ranks, not absolute values. Define dp[i][j] = number of valid permutations of {0,…,i} (consistent with s[0..i-1]) whose last element equals j. To extend from length i to i+1, take a permutation of {0,…,i-1} ending in v, shift all values ≥ j up by one, and append j; the constraint s[i-1] then forces v into a contiguous range, giving transitions via prefix sums: 'I' → dp[i][j] = Σ_{v<j} dp[i-1][v], 'D' → dp[i][j] = Σ_{v≥j} dp[i-1][v]. Answer = Σ_j dp[n][j].",
+  "hints": [
+    "When building the permutation left to right, what matters about each newly placed value-its exact magnitude, or its rank among the values placed so far? The string length is at most 200.",
+    "Use DP where dp[i][j] counts valid permutations of {0,…,i} ending in value j, with prefix sums for O(1) transitions. For s=\"DID\" at i=1 (s[0]='D'), dp[1][0]=1 since 'D' sums dp[0][v≥0]=1.",
+    "```\ndp[0] = 1  (only j=0)\nfor i = 1..n:\n    pref[k] = sum of dp[0..k-1]\n    for j = 0..i:\n        if s[i-1] == 'I': ndp[j] = pref[j]        # sum dp[0..j-1]\n        else:               ndp[j] = pref[i] - pref[j]  # sum dp[j..i-1]\n    dp = ndp\nreturn sum(dp[0..n]) mod 1e9+7\n```",
+    "**Smallest input** - n=1, a single constraint character.\n`Input: s = \"D\"` → `Expected: 1`\n⚠️ Bug: initializing dp[0]=0 as the base case → returns 0.\n\n**All increasing** - every character is 'I', so only the strictly ascending permutation is valid.\n`Input: s = \"II\"` → `Expected: 1`\n⚠️ Bug: building pref inclusively (pref[k]=sum dp[0..k]) so 'I' transition reads pref[j] including dp[j] → returns 5.\n\n**Modular subtraction** - with n=200, dp values far exceed 10^9+7, so prefix sums wrap around.\n`Input: s = \"DIDIDID...\" (length 200)` → `Expected: (large value mod 10^9+7)`\n⚠️ Bug: writing `(pref[i] - pref[j]) % MOD` without `+ MOD` → returns a negative number when pref[i] < pref[j] after wraparound.\n\n**Final summation** - the answer is the total over all ending values, not a single cell.\n`Input: s = \"DID\"` → `Expected: 5`\n⚠️ Bug: returning dp[n][n] instead of summing dp[n][0..n] → returns 0 (dp[3][3]=0 in the trace)."
+  ],
+  "followUps": [
+    {
+      "q": "What if s may contain '?' meaning either 'I' or 'D'?",
+      "a": "At a '?', sum both transitions: ndp[j] = pref[j] + (pref[i]-pref[j]) = pref[i], independent of j. The DP structure is unchanged. TC O(n²), SC O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The O(n²) DP is too slow. The count has a combinatorial closed form expressible via polynomial multiplication, computable in O(n log n) using NTT under the same modulus. SC O(n)."
+    },
+    {
+      "q": "Return the lexicographically smallest valid permutation instead of the count.",
+      "a": "Keep the full 2D DP table, then greedily pick the smallest feasible value at each position-checking the DP table confirms a valid completion exists. TC O(n²), SC O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numPermsDISequence(string s) {\n        const long long MOD = 1000000007;\n        int n = s.size();\n        vector<long long> dp(n + 1, 0);\n        dp[0] = 1;\n        for (int i = 1; i <= n; i++) {\n            vector<long long> pref(i + 1, 0);\n            for (int j = 0; j < i; j++) pref[j + 1] = (pref[j] + dp[j]) % MOD;\n            vector<long long> ndp(n + 1, 0);\n            char c = s[i - 1];\n            for (int j = 0; j <= i; j++) {\n                if (c == 'I') {\n                    ndp[j] = pref[j];\n                } else {\n                    ndp[j] = (pref[i] - pref[j] + MOD) % MOD;\n                }\n            }\n            dp = ndp;\n        }\n        long long ans = 0;\n        for (int j = 0; j <= n; j++) ans = (ans + dp[j]) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-polygon-with-the-largest-perimeter",
+  "title": "Find Polygon With the Largest Perimeter",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Prefix Sum",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(nums): introsort recursion stack → O(log n)\n- long long sum, best: O(1)\n- int i: O(1)\n- not counted: input vector (modified in place), returned value",
+  "approach": "Sort the array so that for any chosen longest side at index i, all shorter sides are the elements before it. Since all values are positive, including every shorter side both maximizes the perimeter and makes the polygon condition (longest side < sum of others) easiest to satisfy. Scan left to right maintaining a running prefix sum; at each index i ≥ 2, if nums[i] < running_sum, the sides nums[0..i] form a valid polygon with perimeter = running_sum + nums[i]. Track the maximum such perimeter (the last valid one is always the largest since all values are positive).",
+  "hints": [
+    "After sorting the side lengths, for a chosen longest side, which of the shorter sides should you include to both maximize the perimeter and make the polygon condition easiest to satisfy? The constraint n ≤ 10^5 rules out checking every subset.",
+    "Sort the array and scan left to right with a running prefix sum. For each index i ≥ 2, if nums[i] < running_sum, the sides nums[0..i] form a valid polygon. In Example 2, sorted [1,1,2,3,5,12,50]: at i=4, running_sum=7 > 5, so perimeter 12 is valid.",
+    "```\nsort nums\nsum = 0\nbest = -1\nfor i from 0 to n-1:\n    if i >= 2 and nums[i] < sum:\n        best = sum + nums[i]\n    sum += nums[i]\nreturn best\n```",
+    "**Overflow** - n up to 10^5 with values up to 10^9, total sum reaches 10^14\n`Input: [1000000000,1000000000,1000000000]` → `Expected: 3000000000`\n⚠️ Bug: storing the running sum as `int` → `sum + nums[i]` computed in 32-bit arithmetic overflows, returns -1294967296\n\n**Boundary index** - smallest valid input has exactly 3 elements\n`Input: [1,1,1]` → `Expected: 3`\n⚠️ Bug: checking `i > 2` instead of `i >= 2` → skips the only valid polygon at i=2, returns -1\n\n**Strict inequality** - longest side must be strictly less than the sum of others\n`Input: [5,5,10]` → `Expected: -1`\n⚠️ Bug: using `<=` instead of `<` → 10 <= 10 evaluates true, returns 20\n\n**Late validity** - an early index can fail while a later one succeeds\n`Input: [1,100,101,200]` → `Expected: 402`\n⚠️ Bug: returning -1 on the first failed check → at i=2, 101 < 101 is false, returns -1 instead of continuing to i=3 where 200 < 202"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must use exactly k sides (k is given as a parameter)?",
+      "a": "After sorting, slide a window of exactly k consecutive elements. For each window ending at index i, check if nums[i] < (prefix_sum[i] - prefix_sum[i-k]). Track the maximum valid perimeter. Time O(n log n), space O(1)."
+    },
+    {
+      "q": "What if elements arrive one at a time and you must output the answer after each insertion?",
+      "a": "Maintain a sorted structure (e.g., Fenwick tree with coordinate compression) to compute prefix sums dynamically. Each insertion and query is O(log n), giving O(n log n) total. The logic remains: find the largest index where the element is strictly less than the sum of all smaller elements."
+    },
+    {
+      "q": "What if nums has 10^9 elements and cannot fit in memory?",
+      "a": "Use external merge sort to sort the data in chunks, then compute prefix sums in a streaming pass over the sorted data. The algorithm logic is identical; only the I/O changes. Time O(n log n) with O(1) internal memory plus disk buffers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long largestPerimeter(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        long long sum = 0;\n        long long best = -1;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            if (i >= 2 && (long long)nums[i] < sum) {\n                best = sum + nums[i];\n            }\n            sum += nums[i];\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "delete-columns-to-make-sorted-iii",
+  "title": "Delete Columns to Make Sorted III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Longest Increasing Subsequence (LIS) Variant",
+  "tc": "O(m² · n)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- vector<int> dp(m, 1): up to m entries → O(m)\n- recursion depth: none\n- not counted: input vector<string>& strs, returned int",
+  "approach": "Minimizing deletions is equivalent to maximizing the number of kept columns. The kept columns must form a subsequence of indices where, for every row, the characters are non-decreasing - this is a Longest Increasing Subsequence variant with a multi-row comparison. We use dp[j] = longest valid subsequence ending at column j, checking all previous columns i < j for compatibility across all rows. The answer is (total columns) − max(dp).",
+  "hints": [
+    "Minimizing deletions is the same as maximizing the number of columns you keep. What property must the set of kept column indices satisfy for every row simultaneously?",
+    "This is the Longest Increasing Subsequence DP, but the \"increasing\" check must hold across all rows at once. For strs = [\"babca\",\"bbazb\"], column 1 (a,b) can precede column 3 (c,z) because a≤c and b≤z, so dp[3] can extend dp[1].",
+    "```\nfor each column j from 0 to m-1:\n    dp[j] = 1\n    for each column i from 0 to j-1:\n        if for all rows r: strs[r][i] <= strs[r][j]:\n            dp[j] = max(dp[j], dp[i] + 1)\nreturn m - max(dp)\n```",
+    "**All equal characters** - every column has the same character in every row.\n`Input: strs = [\"aaa\",\"aaa\"]` → `Expected: 0`\n⚠️ Bug: using `strs[r][i] < strs[r][j]` (strict) instead of `<=` → returns 2\n\n**Subsequence not ending at last column** - the longest valid subsequence ends before the final column.\n`Input: strs = [\"zabca\"]` → `Expected: 2`\n⚠️ Bug: returning `m - dp[m-1]` instead of `m - max(dp)` → returns 3\n\n**Single column** - only one column exists, already sorted.\n`Input: strs = [\"x\"]` → `Expected: 0`\n⚠️ Bug: initializing dp[j] to 0 instead of 1 → returns 1\n\n**Conflicting rows** - columns compatible for one row but not another.\n`Input: strs = [\"ab\",\"ba\"]` → `Expected: 1`\n⚠️ Bug: checking only the first row for compatibility → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if each string could have a different length?",
+      "a": "Treat missing characters (beyond a string's length) as smaller than any letter so shorter strings sort first. Apply the same column-subsequence DP with a modified comparison that handles out-of-bounds access per row. Time stays O(m² · n), space O(m)."
+    },
+    {
+      "q": "What if n (number of strings) is up to 10^5?",
+      "a": "Use bitsets to represent each column's characters across all rows. Checking if column i can precede column j becomes a bitwise comparison taking O(n/64) per pair, reducing total time to O(m² · n/64). The DP itself stays O(m²). Space becomes O(m · n/64) for the bitsets."
+    },
+    {
+      "q": "What if you must return the actual set of deletion indices?",
+      "a": "Track a predecessor array pred[j] alongside dp, storing the i that achieved the best dp[j]. After finding the column with max dp, backtrack through pred to reconstruct the kept columns, then complement to get deletions. Space increases to O(m) for the predecessor array; time is unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDeletionSize(vector<string>& strs) {\n        int n = strs.size();\n        int m = strs[0].size();\n        vector<int> dp(m, 1);\n        int maxKeep = 1;\n        for (int j = 0; j < m; j++) {\n            for (int i = 0; i < j; i++) {\n                bool ok = true;\n                for (int r = 0; r < n; r++) {\n                    if (strs[r][i] > strs[r][j]) {\n                        ok = false;\n                        break;\n                    }\n                }\n                if (ok) {\n                    dp[j] = max(dp[j], dp[i] + 1);\n                }\n            }\n            maxKeep = max(maxKeep, dp[j]);\n        }\n        return m - maxKeep;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

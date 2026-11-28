@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-initial-energy-to-finish-tasks",
+  "title": "Minimum Initial Energy to Finish Tasks",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort stack: O(log n)\n- sumActual, result: O(1) scalars\n- not counted: input vector (modified in place)",
+  "approach": "Sort tasks by (minimum_i − actual_i) in descending order. Then scan left to right, tracking the cumulative actual energy spent so far. For each task, the initial energy must be at least minimum_i plus the energy already spent on previous tasks. The answer is the maximum of these values across all tasks. This works because tasks with a larger gap between their minimum and actual cost should be done earlier (when energy is abundant), as proven by an exchange argument on adjacent pairs.",
+  "hints": [
+    "If two tasks must be done one after the other, which property of each task determines which should go first to keep the required starting energy lower?\nEach task's minimum_i is at least its actual_i (1 ≤ actual_i ≤ minimum_i ≤ 10^4).",
+    "Sort tasks by (minimum_i − actual_i) in descending order, then scan left to right accumulating required energy. In Example 1, the sorted order is [4,8], [2,4], [1,2] with differences 4, 2, 1.",
+    "```\nsort tasks by (minimum - actual) descending\nsum_actual = 0\nanswer = 0\nfor each task (actual, minimum):\n    answer = max(answer, minimum + sum_actual)\n    sum_actual += actual\nreturn answer\n```",
+    "**Single task** - only one task, answer is just its minimum\n`Input: [[5,10]]` → `Expected: 10`\n⚠️ Bug: returning sum of actuals (5) without checking minimum → returns 5\n\n**Wrong sort direction** - ascending difference sort gives a suboptimal order\n`Input: [[1,2],[2,4],[4,8]]` → `Expected: 8`\n⚠️ Bug: sorting by (min−actual) ascending → returns 11\n\n**Wrong sort key** - minimum alone is not the right sort criterion\n`Input: [[8,10],[1,5]]` → `Expected: 11`\n⚠️ Bug: sorting by minimum descending → returns 13\n\n**All differences equal** - ties don't affect the answer but the formula must still account for minimums\n`Input: [[3,5],[3,5],[3,5]]` → `Expected: 11`\n⚠️ Bug: returning total actuals (9) → returns 9, fails on third task (9−3−3=3 < 5)"
+  ],
+  "followUps": [
+    {
+      "q": "What if each task also has a deadline, and you must complete all tasks before their respective deadlines?",
+      "a": "You'd combine the energy-based ordering with deadline constraints. Sort by (minimum − actual) descending as before, but also ensure no deadline is violated - this may require a more complex scheduling algorithm that considers both energy and time feasibility."
+    },
+    {
+      "q": "What if tasks arrive online one at a time and you must immediately decide whether to attempt each task?",
+      "a": "Without future knowledge, you can't globally sort. An online algorithm would need a threshold policy: attempt a task if current energy ≥ its minimum, possibly using a competitive ratio analysis to bound how much worse the online solution is versus the optimal offline solution."
+    },
+    {
+      "q": "What if you can recharge energy between tasks at cost C per unit, and want to minimize total cost (initial energy + recharges)?",
+      "a": "The same sorting applies, but after sorting, you'd compute the optimal recharge strategy: at each step where energy would drop below the next task's minimum, recharge just enough. The total cost becomes initial energy plus sum of recharges, optimized jointly."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumEffort(vector<vector<int>>& tasks) {\n        sort(tasks.begin(), tasks.end(), [](const vector<int>& a, const vector<int>& b) {\n            return (a[1] - a[0]) > (b[1] - b[0]);\n        });\n        long long sumActual = 0;\n        long long result = 0;\n        for (const auto& task : tasks) {\n            result = max(result, (long long)task[1] + sumActual);\n            sumActual += task[0];\n        }\n        return (int)result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

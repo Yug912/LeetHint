@@ -1,0 +1,40 @@
+{
+  "slug": "escape-a-large-maze",
+  "title": "Escape a Large Maze",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bounded BFS / Enclosure Detection",
+  "tc": "O(B^2)",
+  "sc": "O(B^2)",
+  "spaceBreakdown": "- unordered_set<long long> blocked_set: up to B entries → O(B)\n- unordered_set<long long> visited: up to 20001 entries → O(B^2)\n- queue<pair<int, int>> q: up to 20001 entries → O(B^2)\n- recursion depth: none\n- not counted: input, returned boolean",
+  "approach": "The grid is $10^6 \\times 10^6$, making a full BFS/DFS impossible. However, with at most 200 blocked cells, the maximum area they can enclose is a triangle of $19900$ cells. We can run a BFS from the `source` and `target` simultaneously or sequentially. If either BFS explores more than $20000$ cells without finding the other, it is not enclosed. If both are not enclosed, they can reach each other. If either gets stuck (queue empties) before reaching $20000$ cells and without finding the other, they are enclosed and cannot reach each other.",
+  "hints": [
+    "The grid is 10^6 × 10^6, yet at most 200 cells are blocked. What is the largest area that 200 blocked cells could possibly wall off completely?",
+    "Use BFS from the source with a visit cap of B·(B−1)/2+1 (≈19901 for B=200). In Example 1, BFS from [0,0] visits only 1 cell and stops - the source is trapped, so return false.",
+    "```\nlimit = B*(B-1)/2 + 1\nr1 = BFS(source → target, limit)\n  if reached target: return true\n  if exhausted: return false        // source trapped\n  // else source is free\nr2 = BFS(target → source, limit)\n  if reached source: return true\n  if exhausted: return false        // target trapped\nreturn true                         // both free → same unbounded region\n```",
+    "**Trapped source** - source at a corner with two adjacent blocked cells, no valid moves\n`Input: blocked = [[0,1],[1,0]], source = [0,0], target = [0,2]` → `Expected: false`\n⚠️ Bug: not checking the blocked set before enqueueing neighbors → enqueues (0,1) and (1,0) → BFS walks through walls → returns true\n\n**Hash key overflow** - coordinates near 10^6, key x·1000001+y ≈ 10^12 exceeds 2^31−1\n`Input: blocked = [], source = [0,0], target = [999999,999999]` → `Expected: true`\n⚠️ Bug: using `int` for the hash key → 999999·1000001+999999 ≈ 10^12 overflows → wrong hash values → cells revisited or missed → TLE or wrong answer\n\n**Cap too low** - 3 blocked cells enclose 3 cells; a cap below 3 causes a false \"free\" verdict\n`Input: blocked = [[2,0],[1,1],[0,2]], source = [0,0], target = [5,5]` → `Expected: false`\n⚠️ Bug: setting visit cap to 2 → BFS visits 3 cells, exceeds cap, declares source \"free\" → returns true\n\n**Source free, target trapped** - source in the open region, target boxed in\n`Input: blocked = [[0,1],[1,0]], source = [5,5], target = [0,0]` → `Expected: false`\n⚠️ Bug: only running BFS from source and returning true when it exceeds the cap → source is free so returns true, never checks that target is trapped → wrong"
+  ],
+  "followUps": [
+    {
+      "q": "What if blocked cells can be added or removed between multiple queries?",
+      "a": "Rebuild the blocked hash set and rerun the two-sided BFS for each query. Each query costs O(B²). If B stays ≤ 200 this is fast; for many queries, cache region labels so repeated cells aren't re-explored."
+    },
+    {
+      "q": "What if the grid is 10^9 × 10^9 instead of 10^6 × 10^6?",
+      "a": "The solution is unchanged - we only explore O(B²) cells around source and target regardless of grid size. Use `long long` for the hash key (10^9 · 10^9 = 10^18 fits in `long long`). TC remains O(B²)."
+    },
+    {
+      "q": "What if we must answer many source-target pairs on the same fixed blocked set?",
+      "a": "Precompute all enclosed regions by flood-filling from each blocked-cell boundary, labeling every reachable cell with a region ID. Each query then checks whether source and target share a region ID or both lie in the unbounded region - O(1) per query after O(B²) preprocessing."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isEscapePossible(vector<vector<int>>& blocked, vector<int>& source, vector<int>& target) {\n        unordered_set<long long> blocked_set;\n        for (auto& b : blocked) {\n            blocked_set.insert((long long)b[0] * 1000000LL + b[1]);\n        }\n        \n        return bfs(source, target, blocked_set) && bfs(target, source, blocked_set);\n    }\n    \nprivate:\n    bool bfs(const vector<int>& source, const vector<int>& target, unordered_set<long long>& blocked_set) {\n        int dirs[4][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};\n        unordered_set<long long> visited;\n        queue<pair<int, int>> q;\n        \n        q.push({source[0], source[1]});\n        visited.insert((long long)source[0] * 1000000LL + source[1]);\n        \n        while (!q.empty()) {\n            auto curr = q.front();\n            q.pop();\n            \n            if (curr.first == target[0] && curr.second == target[1]) {\n                return true;\n            }\n            \n            if (visited.size() > 20000) {\n                return true;\n            }\n            \n            for (int d = 0; d < 4; ++d) {\n                int nx = curr.first + dirs[d][0];\n                int ny = curr.second + dirs[d][1];\n                \n                if (nx >= 0 && nx < 1000000 && ny >= 0 && ny < 1000000) {\n                    long long key = (long long)nx * 1000000LL + ny;\n                    if (blocked_set.find(key) == blocked_set.end() && visited.find(key) == visited.end()) {\n                        visited.insert(key);\n                        q.push({nx, ny});\n                    }\n                }\n            }\n        }\n        \n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

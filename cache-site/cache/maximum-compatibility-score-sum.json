@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-compatibility-score-sum",
+  "title": "Maximum Compatibility Score Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(m²·n + m·2^m)",
+  "sc": "O(m² + 2^m)",
+  "spaceBreakdown": "- vector<vector<int>> score: m × m matrix → O(m²)\n- vector<int> dp: 2^m entries → O(2^m)\n- recursion depth: none (iterative)\n- not counted: input, returned value",
+  "approach": "Precompute the compatibility score for every student-mentor pair by counting matching answers. Then use bitmask DP where `dp[mask]` represents the maximum compatibility sum when the mentors indicated by `mask` are assigned to the first `popcount(mask)` students. For each state, try assigning the next student to each unassigned mentor and take the maximum. The answer is `dp[(1<<m)-1]`. This is correct because every perfect matching corresponds to exactly one path through the DP states, and we explore all of them.",
+  "hints": [
+    "With m ≤ 8 students and mentors, what distinguishes one partial assignment from another when deciding which mentor to give the next student? The constraints guarantee m ≤ 8 and n ≤ 8.",
+    "Use bitmask dynamic programming where the mask tracks which mentors are already assigned. For Example 1, `dp[0b100] = 3` means mentor 2 is assigned to student 0 with compatibility score 3.",
+    "```\nprecompute score[i][j] for all student-mentor pairs\ndp[0] = 0, all other dp = -1\nfor each mask from 0 to 2^m - 1:\n    if dp[mask] is unreachable, skip\n    studentIdx = popcount(mask)\n    for each mentor j not in mask:\n        dp[mask | (1<<j)] = max(dp[mask | (1<<j)], dp[mask] + score[studentIdx][j])\nreturn dp[2^m - 1]\n```",
+    "**Single element** - Only one student and one mentor exist.\n`Input: students = [[1]], mentors = [[1]]` → `Expected: 1`\n⚠️ Bug: returning `dp[0]` instead of `dp[(1<<m)-1]` → returns 0\n\n**All identical answers** - Every pair has full compatibility n.\n`Input: students = [[1,1],[1,1]], mentors = [[1,1],[1,1]]` → `Expected: 4`\n⚠️ Bug: computing score as number of differing answers instead of matching answers → returns 0\n\n**Overwrite instead of max** - Multiple assignment paths reach the same mask with different scores.\n`Input: students = [[1,1,0],[1,0,1],[0,0,1]], mentors = [[1,0,0],[0,0,1],[1,1,0]]` → `Expected: 8`\n⚠️ Bug: using `dp[newMask] = dp[mask] + score` instead of `dp[newMask] = max(dp[newMask], dp[mask] + score)` → returns 6\n\n**All opposite answers** - No answers match between any pair.\n`Input: students = [[0,0],[0,0],[0,0]], mentors = [[1,1],[1,1],[1,1]]` → `Expected: 0`\n⚠️ Bug: skipping zero-score pairs with `if (score == 0) continue` → `dp[(1<<m)-1]` stays -1, returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if m can be up to 20?",
+      "a": "Bitmask DP with O(m·2^m) states becomes infeasible (20·2^20 ≈ 20M, borderline). Use the Hungarian algorithm for maximum-weight perfect matching, which runs in O(m³). Score precomputation stays O(m²·n). Overall TC: O(m²·n + m³), SC: O(m²)."
+    },
+    {
+      "q": "What if some student-mentor pairs are forbidden and cannot be matched?",
+      "a": "Set the compatibility score for forbidden pairs to a large negative value (e.g., -1e9) so the DP never selects them in an optimal solution. If no valid perfect matching exists, `dp[(1<<m)-1]` will be negative, and we return that or signal infeasibility. TC and SC remain unchanged."
+    },
+    {
+      "q": "What if n (number of questions) can be up to 10^5?",
+      "a": "Score precomputation becomes O(m²·n) = O(64·10^5) ≈ 6.4M, which is fine. The bitmask DP is still O(m·2^m) = O(2048). Store answers as vectors and compare element-by-element. Overall TC: O(m²·n + m·2^m), SC: O(m² + 2^m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxCompatibilitySum(vector<vector<int>>& students, vector<vector<int>>& mentors) {\n        int m = students.size();\n        int n = students[0].size();\n        \n        vector<vector<int>> score(m, vector<int>(m, 0));\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < m; j++) {\n                for (int k = 0; k < n; k++) {\n                    if (students[i][k] == mentors[j][k]) {\n                        score[i][j]++;\n                    }\n                }\n            }\n        }\n        \n        int size = 1 << m;\n        vector<int> dp(size, -1);\n        dp[0] = 0;\n        \n        for (int mask = 0; mask < size; mask++) {\n            if (dp[mask] == -1) continue;\n            int studentIdx = __builtin_popcount(mask);\n            if (studentIdx >= m) continue;\n            for (int j = 0; j < m; j++) {\n                if (mask & (1 << j)) continue;\n                int newMask = mask | (1 << j);\n                dp[newMask] = max(dp[newMask], dp[mask] + score[studentIdx][j]);\n            }\n        }\n        \n        return dp[size - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

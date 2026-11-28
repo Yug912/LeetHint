@@ -1,0 +1,40 @@
+{
+  "slug": "greatest-common-divisor-traversal",
+  "title": "Greatest Common Divisor Traversal",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find / Connected Components",
+  "tc": "O(M log log M + n log M)",
+  "sc": "O(n + M)",
+  "spaceBreakdown": "- int parent[200005]: up to n + M + 1 ≈ 2×10^5 entries → O(n + M)\n- int spf[100005]: M + 1 ≈ 10^5 entries → O(M)\n- recursion depth: none (iterative find)\n- not counted: input vector",
+  "approach": "Two indices are connected if their numbers share a prime factor. We use Union-Find with each array index and each prime factor (up to 10^5) as nodes: for each nums[i], factorize it via a precomputed smallest-prime-factor sieve and union the index with each distinct prime. After processing all numbers, check if all indices share one root. If n=1, return true; if any nums[i]=1 and n>1, return false since 1 has no prime factors.",
+  "hints": [
+    "With n up to 10^5, checking every pair's gcd is too slow. What property must two numbers share for their gcd to exceed 1?",
+    "Use a Union-Find (disjoint set) structure. Treat each array index and each prime factor as a node. For nums = [2,3,6], factorize 6 into primes 2 and 3, then union index 2 with prime-node 2 and prime-node 3 - linking index 0 (prime 2) to index 1 (prime 3) through index 2.",
+    "```\nbuild smallest-prime-factor sieve up to max(nums)\nfor each index i from 0 to n-1:\n    factorize nums[i] into distinct primes\n    union i with each prime p (as virtual node n+p)\ncheck all indices 0..n-1 share the same root\n```",
+    "**Single element** - n=1, no pairs to check.\n`Input: nums = [1]` → `Expected: true`\n⚠️ Bug: checking `if (nums[i] == 1) return false` before `if (n == 1) return true` → returns `false`\n\n**Value of 1 in array** - 1 has no prime factors, cannot connect to any other index.\n`Input: nums = [2, 1]` → `Expected: false`\n⚠️ Bug: initializing `parent[i] = 0` for all i instead of `parent[i] = i` → all indices share root 0 → returns `true`\n\n**Connected through intermediate** - direct gcd is 1 but a path exists through shared primes.\n`Input: nums = [2, 3, 6]` → `Expected: true`\n⚠️ Bug: checking if overall GCD of all elements > 1 → GCD(2,3,6)=1 → returns `false`\n\n**Adjacent-only check** - the array is connected but not through adjacent pairs.\n`Input: nums = [4, 3, 12, 8]` → `Expected: true`\n⚠️ Bug: only checking if all adjacent pairs have gcd > 1 → gcd(4,3)=1 → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^9?",
+      "a": "A full SPF sieve up to 10^9 is infeasible. Instead, precompute primes up to sqrt(10^9) ≈ 31623 with a sieve, then factorize each nums[i] by trial division using those primes. TC becomes O(n * sqrt(M) / log(sqrt(M))), SC becomes O(sqrt(M)) for the prime list."
+    },
+    {
+      "q": "What if the array arrives as a stream and you must answer after each insertion?",
+      "a": "The Union-Find structure supports incremental additions naturally. For each new element, factorize and union with its prime factors. Track a component count of indices; after each insertion, the answer is true iff count equals 1. TC: O(log M) per element, SC: O(n + M) accumulated."
+    },
+    {
+      "q": "What if you must answer many connectivity queries (is index i connected to index j)?",
+      "a": "Build the Union-Find structure once as before. Each query is just find(i) == find(j), which is O(α(n+M)) ≈ O(1) amortized. Preprocessing stays O(M log log M + n log M), and Q queries add O(Q)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int parent[200005];\n    int spf[100005];\n\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n\n    void unite(int x, int y) {\n        int px = find(x), py = find(y);\n        if (px != py) parent[px] = py;\n    }\n\n    bool canTraverseAllPairs(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 1) return true;\n\n        int M = 100000;\n        for (int i = 0; i <= M; i++) spf[i] = i;\n        for (int i = 2; i * i <= M; i++) {\n            if (spf[i] == i) {\n                for (int j = i * i; j <= M; j += i) {\n                    if (spf[j] == j) spf[j] = i;\n                }\n            }\n        }\n\n        int total = n + M + 1;\n        for (int i = 0; i < total; i++) parent[i] = i;\n\n        for (int i = 0; i < n; i++) {\n            int v = nums[i];\n            if (v == 1) return false;\n            while (v > 1) {\n                int p = spf[v];\n                unite(i, n + p);\n                while (v % p == 0) v /= p;\n            }\n        }\n\n        int root = find(0);\n        for (int i = 1; i < n; i++) {\n            if (find(i) != root) return false;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

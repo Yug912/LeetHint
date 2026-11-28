@@ -1,0 +1,40 @@
+{
+  "slug": "sum-game",
+  "title": "Sum Game",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Math / Game Theory",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few scalar locals (diff, q, n, half, i): O(1)\n- no containers, no recursion\n- not counted: input string num",
+  "approach": "Let diff = (sum of left-half digits) − (sum of right-half digits), and let q = (# '?' in left half) − (# '?' in right half). The total number of moves is q1+q2, which has the same parity as q. If q is odd, Alice makes the last move and can always break equality, so Alice wins. If q is even, Bob can force a tie exactly when diff = −9·q/2 (each pair of moves on opposite sides lets Alice gain at most 9 and Bob cancel at most 9; on the same side Bob mirrors Alice). Otherwise Alice wins.",
+  "hints": [
+    "If Alice fills a '?' on the left and Bob replies on a '?' on the right, what is the largest net change they can produce together in the sum difference? How does pairing moves across the two halves constrain the final gap?",
+    "Track two integers only: the digit-sum difference (left − right) and the question-mark-count difference (left − right). For \"?3295???\", left sum = 3+2+9 = 14 with 1 '?', right sum = 5 with 3 '?', giving diff = 9 and q = −2.",
+    "```\ndiff = 0, q = 0\nfor each index i in num:\n    if num[i] == '?':  q += (i < n/2) ? +1 : -1\n    else:              diff += (i < n/2) ? +digit : -digit\nif q is odd: return true (Alice wins)\nreturn diff != -9 * q / 2\n```",
+    "**Odd question count** - Alice gets the last move\n`Input: \"?0\"` → `Expected: true`\n⚠️ Bug: only checking `diff != -9*q/2` with integer division (q=1 → q/2=0) gives `0 != 0` → false\n\n**No question marks** - game already over\n`Input: \"5023\"` → `Expected: false`\n⚠️ Bug: returning true whenever the string contains no '?' returns true instead of comparing the two sums\n\n**All question marks** - both halves fully unknown\n`Input: \"????\"` → `Expected: false`\n⚠️ Bug: assuming Alice always wins when '?' exists returns true; Bob mirrors Alice's digit on the opposite half\n\n**Bob's exact balance** - diff equals −9·q/2\n`Input: \"?3295???\"` → `Expected: false`\n⚠️ Bug: using `diff < -9*q/2` instead of `!=` returns true because 9 is not less than 9 is false, but a `>` check would wrongly return true"
+  ],
+  "followUps": [
+    {
+      "q": "What if Bob moves first instead of Alice?",
+      "a": "Swap the parity rule: with even total moves Alice now makes the last move and wins unless diff = −9·q/2; with odd total moves Bob makes the last move and can force equality only under the same balance condition. Time and space stay O(n) and O(1)."
+    },
+    {
+      "q": "What if each digit 0-9 may be used at most k times total across the whole string?",
+      "a": "The closed-form balance breaks because Bob cannot always mirror with the same digit. You would need a flow/matching check on remaining digit quotas after greedy pairing, raising time to O(n + 10·k) and space to O(1) (a 10-slot quota array)."
+    },
+    {
+      "q": "What if num arrives as a stream of length up to 10^9 and you cannot store it?",
+      "a": "Maintain diff and q incrementally as characters arrive, plus a counter for the index to know which half each char belongs to (you must know n up front, or assume the half boundary is fixed). Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool sumGame(string num) {\n        int n = num.size();\n        int half = n / 2;\n        long long diff = 0;\n        int q = 0;\n        for (int i = 0; i < n; i++) {\n            if (num[i] == '?') {\n                q += (i < half) ? 1 : -1;\n            } else {\n                int d = num[i] - '0';\n                diff += (i < half) ? d : -d;\n            }\n        }\n        if ((q & 1) != 0) return true;\n        return diff != -9LL * q / 2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
