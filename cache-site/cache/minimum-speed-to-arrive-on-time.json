@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-speed-to-arrive-on-time",
+  "title": "Minimum Speed to Arrive on Time",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search",
+  "tc": "O(n log(10^7))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers, arrays, or strings allocated\n- No recursion\n- Only a fixed set of scalar variables (lo, hi, mid, time, n, loop index)",
+  "approach": "The total travel time is monotonically decreasing as speed increases: if speed v gets you there on time, any speed > v also works. This monotonicity enables binary search on speed from 1 to 10^7. For each candidate speed, compute total time: the first n−1 trains each take ceil(dist[i]/speed) hours (including wait for the next integer departure), and the last train takes dist[n−1]/speed hours (no waiting after arrival). If hour ≤ n−1, return −1 immediately because each of the first n−1 trains requires at least 1 hour (any positive fraction rounds up to 1), making it impossible.",
+  "hints": [
+    "If a particular speed gets you to the office on time, what can you say about every speed higher than it? The constraint n ≤ 10^5 rules out checking every speed one by one.",
+    "Binary search on the speed. For dist = [1,3,2], hour = 2.7: at speed 2, time = ceil(1/2) + ceil(3/2) + 2/2 = 1+2+1 = 4 > 2.7, so search higher; at speed 3, time = 1+1+0.667 = 2.667 ≤ 2.7, so 3 works and we try lower.",
+    "```\nif hour <= n-1: return -1\nlo, hi = 1, 10^7\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    time = sum(ceil(dist[i] / mid) for i in 0..n-2) + dist[n-1] / mid\n    if time <= hour:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Single train** - n=1 means no waiting between trains; the last (only) train's time is not rounded up.\n`Input: dist = [5], hour = 2.5` → `Expected: 2`\n⚠️ Bug: applying ceiling to the last train: ceil(5/2) = 3 > 2.5, tries speed 3, returns 3 instead of 2.\n\n**Exact boundary** - hour equals n−1 exactly; even infinite speed cannot make the last train take 0 time.\n`Input: dist = [1,3,2], hour = 2.0` → `Expected: -1`\n⚠️ Bug: using `hour < n-1` instead of `hour <= n-1`: 2.0 < 2 is false, proceeds to search, returns 10^7 instead of -1.\n\n**Last train fractional** - the last train's fractional time must fit within the remaining budget after integer rounding of earlier trains.\n`Input: dist = [1,1,1], hour = 2.01` → `Expected: 100`\n⚠️ Bug: using integer division for the last train: 1/100 = 0 (int), time = 1+1+0 = 2 ≤ 2.01, returns 1 instead of 100.\n\n**Impossible despite large hour** - hour is valid (≥1) but still impossible because n−1 trains each need at least 1 hour.\n`Input: dist = [1,1], hour = 1.0` → `Expected: -1`\n⚠️ Bug: skipping the impossibility check: binary search runs, at speed 10^7 time = ceil(1/10^7) + 1/10^7 = 1.0000001 > 1.0, returns 10^7 instead of -1."
+  ],
+  "followUps": [
+    {
+      "q": "What if each train has its own maximum speed limit, and you must find a common speed that does not exceed any limit?",
+      "a": "The approach is identical, but the upper bound of the binary search becomes the minimum of all individual speed limits. If that minimum is still too slow to arrive on time, return -1. TC remains O(n log M), SC O(1)."
+    },
+    {
+      "q": "What if the hour value could have up to 9 decimal places instead of 2?",
+      "a": "The binary search is unchanged, but the floating-point comparison `time <= hour` needs an epsilon tolerance (e.g., 1e-9) to avoid precision errors when the total time is extremely close to hour. TC and SC stay the same."
+    },
+    {
+      "q": "What if you want to minimize total energy (sum of dist[i] * speed^2) while arriving on time?",
+      "a": "Since energy increases monotonically with speed, the minimum speed that arrives on time also minimizes energy. The same binary search gives the energy-optimal answer with no modification. TC and SC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSpeedOnTime(vector<int>& dist, double hour) {\n        int n = dist.size();\n        if (hour <= n - 1) return -1;\n        \n        int lo = 1, hi = 10000000;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            double time = 0;\n            for (int i = 0; i < n - 1; i++) {\n                time += (dist[i] + mid - 1) / mid;\n            }\n            time += (double)dist[n - 1] / mid;\n            if (time <= hour) {\n                hi = mid;\n            } else {\n                lo = mid + 1;\n            }\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

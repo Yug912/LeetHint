@@ -1,0 +1,40 @@
+{
+  "slug": "course-schedule-iv",
+  "title": "Course Schedule IV",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Transitive Closure via BFS",
+  "tc": "O(V·(V+E) + Q)",
+  "sc": "O(V²)",
+  "spaceBreakdown": "- vector<vector<int>> adj: O(V + E) entries\n- vector<vector<bool>> isReachable: V × V = O(V²)\n- queue<int> q: at most O(V) elements at a time\n- vector<bool> answer: O(Q) - not counted (returned output)\n- not counted: input prerequisites, input queries",
+  "approach": "Since numCourses ≤ 100 but queries can be up to 10^4, we precompute the full transitive closure of the prerequisite relation once. Build an adjacency list where edge a→b means \"a is a prerequisite of b,\" then run BFS from every course i, marking isReachable[i][j] = true for every course j reached. Each query [u,v] is then answered in O(1) by looking up isReachable[u][v]. This is correct because the prerequisite relation is exactly the reachability relation in this DAG, and BFS explores all transitively reachable nodes.",
+  "hints": [
+    "With numCourses capped at 100 but up to 10^4 queries, what property of the prerequisite relation could you exploit so you never traverse the graph more than once per course?",
+    "Run BFS from each course i and mark every course j you reach. In Example 3, BFS from course 1 reaches 2 then 0, so isReachable[1][2] and isReachable[1][0] are both true.",
+    "```\nbuild adjacency list: edge a→b for each [a, b]\nfor each course i from 0 to V-1:\n    BFS from i\n    for each visited course j:\n        isReachable[i][j] = true\nfor each query [u, v]:\n    answer = isReachable[u][v]\n```",
+    "**Empty graph** - No prerequisites exist, so no course is a prerequisite of any other.\n`numCourses = 2, prerequisites = [], queries = [[0,1]]` → `Expected: [false]`\n⚠️ Bug: leaving isReachable uninitialized (e.g., raw bool array without zeroing) → returns `[true]`\n\n**Chain** - Prerequisites form a linked list; transitivity across multiple hops must be captured.\n`numCourses = 4, prerequisites = [[0,1],[1,2],[2,3]], queries = [[0,3]]` → `Expected: [true]`\n⚠️ Bug: checking only direct edges (adjacency lookup, no closure) → returns `[false]`\n\n**Reversed edge** - The pair [a, b] means a is a prerequisite of b, not the reverse.\n`numCourses = 2, prerequisites = [[1,0]], queries = [[0,1]]` → `Expected: [false]`\n⚠️ Bug: building edge b→a (treating [a,b] as \"b before a\") → returns `[true]`\n\n**Disconnected** - A course with no path to the queried target.\n`numCourses = 3, prerequisites = [[0,1]], queries = [[0,2]]` → `Expected: [false]`\n⚠️ Bug: assuming BFS from any node reaches all nodes → returns `[true]`"
+  ],
+  "followUps": [
+    {
+      "q": "If numCourses grows to 10^5 and queries to 10^5, how would you adapt?",
+      "a": "O(V²) precomputation is too large. Group queries by their source u, then run BFS only from distinct sources that appear. Use a bitset for the visited set so each BFS costs O(E/64) per source, giving O(distinct_sources · E/64 + Q) total."
+    },
+    {
+      "q": "If queries arrive as an unbounded stream and you cannot store them all, how would you handle it?",
+      "a": "Precompute the full transitive closure once in O(V·(V+E)), then answer each incoming query in O(1) with a lookup. Memory stays O(V²) regardless of how many queries stream in."
+    },
+    {
+      "q": "If the graph could contain cycles, how would the problem change?",
+      "a": "A cycle means two courses are mutually prerequisites, which makes a valid schedule impossible. First run cycle detection (DFS with three-color marking or Kahn's algorithm); if a cycle exists, report an error instead of answering queries."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<bool> checkIfPrerequisite(int numCourses, vector<vector<int>>& prerequisites, vector<vector<int>>& queries) {\n        vector<vector<int>> adj(numCourses);\n        for (auto& p : prerequisites) {\n            adj[p[0]].push_back(p[1]);\n        }\n        \n        vector<vector<bool>> isReachable(numCourses, vector<bool>(numCourses, false));\n        \n        for (int i = 0; i < numCourses; i++) {\n            queue<int> q;\n            q.push(i);\n            while (!q.empty()) {\n                int u = q.front();\n                q.pop();\n                for (int v : adj[u]) {\n                    if (!isReachable[i][v]) {\n                        isReachable[i][v] = true;\n                        q.push(v);\n                    }\n                }\n            }\n        }\n        \n        vector<bool> answer;\n        answer.reserve(queries.size());\n        for (auto& query : queries) {\n            answer.push_back(isReachable[query[0]][query[1]]);\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

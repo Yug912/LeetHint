@@ -1,0 +1,40 @@
+{
+  "slug": "naming-a-company",
+  "title": "Naming a Company",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Grouping by Suffix with Bitmask",
+  "tc": "O(n*L)",
+  "sc": "O(n*L)",
+  "spaceBreakdown": "- unordered_map<string,int> suffixMask: up to n entries, keys up to 9 chars → O(n)\n- long long cnt[26][26]: 676 entries on stack → O(1)\n- long long ans: single variable → O(1)\n- recursion depth: none\n- not counted: input vector, returned value",
+  "approach": "Group ideas by their suffix (all characters after the first letter). For each suffix group, store a bitmask of which first letters appear. Two ideas with first letters i and j form a valid ordered pair iff idea A's suffix group excludes j and idea B's suffix group excludes i. Precompute cnt[i][j] = number of suffix groups containing letter i but not letter j. The answer is Σ over i≠j of cnt[i][j] × cnt[j][i], since each valid ordered pair (A,B) corresponds to choosing A from a group with i but not j, and B from a group with j but not i.",
+  "hints": [
+    "When two names swap first letters, each new name keeps one original's suffix and borrows the other's first letter. What must be true about a name's suffix group and the partner's first letter for the swapped result to be new?",
+    "Group names by suffix and store a 26-bit mask of first letters per group. For (\"coffee\",\"donuts\"), suffix \"offee\" has mask {c} and suffix \"onuts\" has mask {d} - neither mask contains the other's letter, so the swap is valid.",
+    "```\ngroup ideas by suffix, storing bitmask of first letters per suffix\nfor each suffix group with mask m:\n    for each letter i present in m:\n        for each letter j absent from m:\n            cnt[i][j] += 1\nanswer = sum over all i != j of cnt[i][j] * cnt[j][i]\n```",
+    "**All same suffix** - Two ideas share a suffix, so swapping first letters recreates an existing name.\n`Input: ideas = [\"ab\",\"bb\"]` → `Expected: 0`\n⚠️ Bug: counting all ordered pairs without checking existence of swapped names → returns 2\n\n**Single-character names** - The suffix is empty, so both swapped names already exist.\n`Input: ideas = [\"a\",\"b\"]` → `Expected: 0`\n⚠️ Bug: treating empty suffix as a special case that skips the existence check → returns 2\n\n**Hidden collision** - A third idea blocks an otherwise valid pair.\n`Input: ideas = [\"ab\",\"cd\",\"cb\"]` → `Expected: 0`\n⚠️ Bug: only checking whether newA exists but not newB → returns 1\n\n**Overflow** - With n = 5×10⁴ split across 8 first-letter groups of 6250 each with distinct suffixes, the answer is 56 × 6250² = 2,187,500,000.\n`Input: ideas = 50000 strings, 8 groups of 6250, all suffixes distinct` → `Expected: 2187500000`\n⚠️ Bug: using int for the answer accumulator → returns -2107467296"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet is expanded to all 256 ASCII characters?",
+      "a": "A 256-bit bitmask no longer fits in a single integer. Use a bitset<256> per suffix group and a 256×256 count matrix. The inner loop per suffix becomes O(256²) = O(65536), giving total O(n × 65536) which may TLE for large n. Switch to storing first-letter sets as sorted vectors and computing set differences via two-pointer intersection."
+    },
+    {
+      "q": "What if ideas can contain duplicates?",
+      "a": "Deduplicate the input first using a set. Duplicate ideas with the same suffix and first letter contribute only one bit to the mask, so the formula and complexity remain unchanged after deduplication."
+    },
+    {
+      "q": "What if we need to return the actual valid company names instead of just the count?",
+      "a": "For each valid letter pair (i, j), enumerate ideas starting with i whose suffix group excludes j, paired with ideas starting with j whose suffix group excludes i. The output size can be O(n²) in the worst case, so the time complexity becomes O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long distinctNames(vector<string>& ideas) {\n        unordered_map<string, int> suffixMask;\n        for (const string& s : ideas) {\n            string suffix = s.substr(1);\n            int firstLetter = s[0] - 'a';\n            suffixMask[suffix] |= (1 << firstLetter);\n        }\n        \n        long long cnt[26][26] = {};\n        \n        for (auto& [_, mask] : suffixMask) {\n            for (int i = 0; i < 26; i++) {\n                if (mask & (1 << i)) {\n                    for (int j = 0; j < 26; j++) {\n                        if (!(mask & (1 << j))) {\n                            cnt[i][j]++;\n                        }\n                    }\n                }\n            }\n        }\n        \n        long long ans = 0;\n        for (int i = 0; i < 26; i++) {\n            for (int j = 0; j < 26; j++) {\n                if (i != j) {\n                    ans += cnt[i][j] * cnt[j][i];\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

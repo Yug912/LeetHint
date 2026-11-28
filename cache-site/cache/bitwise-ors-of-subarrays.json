@@ -1,0 +1,40 @@
+{
+  "slug": "bitwise-ors-of-subarrays",
+  "title": "Bitwise ORs of Subarrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bounded State DP",
+  "tc": "O(n * B)",
+  "sc": "O(n * B)",
+  "spaceBreakdown": "- unordered_set<int> result: up to ~30n distinct OR values → O(n)\n- unordered_set<int> cur: at most 31 entries → O(1)\n- unordered_set<int> next_cur: at most 31 entries → O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "For subarrays ending at index i, the OR values form a non-decreasing sequence (in terms of bits set) as the subarray extends left, because OR only sets bits. Since each value has at most 30 bits, there are at most 31 distinct OR values ending at any position. We maintain a set `cur` of distinct ORs ending at the current index, updating it each step by ORing each existing value with arr[i] and adding arr[i] itself. All values are collected into a global result set whose size is the answer.",
+  "hints": [
+    "The array can have up to 5×10^4 elements. For subarrays ending at index i, as you extend to the left, what happens to the OR value, and how many distinct values can appear?",
+    "Maintain a set of distinct OR values for subarrays ending at the current index. For arr = [1,2,4]: at index 1, the set is {2, 3}; at index 2, OR each with 4 to get {4, 6, 7}.",
+    "```\nresult = empty set\ncur = empty set\nfor each x in arr:\n    next = {x}\n    for each v in cur:\n        add (v | x) to next\n    add all of next to result\n    cur = next\nreturn size of result\n```",
+    "**Single element** - Only one subarray exists.\n`Input: arr = [0]` → `Expected: 1`\n⚠️ Bug: not inserting x itself into next_cur (only inserting v|x for v in cur) → returns 0\n\n**All zeros** - OR of any subarray is 0.\n`Input: arr = [0,0,0]` → `Expected: 1`\n⚠️ Bug: skipping zeros with `if (x == 0) continue;` → returns 0\n\n**Powers of two** - Each element sets a new bit, maximizing distinct ORs.\n`Input: arr = [1,2,4]` → `Expected: 6`\n⚠️ Bug: tracking only the cumulative OR (single running value) instead of all distinct ORs ending at i → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Return all distinct OR values in sorted order instead of just the count.",
+      "a": "Collect all values in the result set, then sort and return as a vector. The algorithm structure stays the same. TC: O(n * B + R log R) where R is the number of distinct ORs. SC: O(R) for the output."
+    },
+    {
+      "q": "What if arr[i] can be up to 10^18?",
+      "a": "Use long long instead of int. The number of bits increases to ~60, so cur can have up to 61 elements per step. TC: O(60n). SC: O(60n) for the result set."
+    },
+    {
+      "q": "Process elements as a stream - after each new element, report the running count of distinct ORs.",
+      "a": "The algorithm already processes elements sequentially. After each element, return the current size of the result set. Maintain cur and result incrementally. TC: O(n * B) total, O(B) per query. SC: O(n * B) for the result set."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int subarrayBitwiseORs(vector<int>& arr) {\n        unordered_set<int> result;\n        unordered_set<int> cur;\n        for (int x : arr) {\n            unordered_set<int> next_cur;\n            next_cur.insert(x);\n            result.insert(x);\n            for (int v : cur) {\n                int val = v | x;\n                next_cur.insert(val);\n                result.insert(val);\n            }\n            cur = move(next_cur);\n        }\n        return result.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

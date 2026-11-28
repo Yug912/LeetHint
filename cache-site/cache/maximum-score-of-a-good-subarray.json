@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-score-of-a-good-subarray",
+  "title": "Maximum Score of a Good Subarray",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers / Greedy Expansion",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, i, j, minVal): O(1)\n- long long ans: O(1)\n- no containers, no recursion\n- not counted: input vector nums",
+  "approach": "Start with a window of just index k and expand outward one element at a time. At each step, extend toward whichever neighbor (left or right) has the larger value - this delays the minimum from dropping, maximizing length at each minimum level. Track the running minimum and compute the score at every expansion. This greedy is correct because when the minimum reaches any value m, the window has already absorbed all elements ≥ m reachable from k without crossing an element < m, so the window is at least as wide as any optimal subarray with that minimum.",
+  "hints": [
+    "The subarray must include index k. As you grow a subarray outward from k one element at a time, what determines how much the minimum drops with each expansion?",
+    "Two pointers starting at k, expanding toward the larger neighbor each step. For nums = [1,4,3,7,4,5], k = 3: start at 7, extend right to index 4 (nums[4]=4 > nums[2]=3), min becomes 4, score = 4×2 = 8.",
+    "```\ni = j = k\nminVal = nums[k]\nans = nums[k]\nwhile i > 0 or j < n-1:\n    if i == 0:          j++, extend right\n    elif j == n-1:      i--, extend left\n    elif nums[i-1] > nums[j+1]:  i--, extend left\n    else:               j++, extend right\n    minVal = min(minVal, newly added element)\n    ans = max(ans, minVal * (j - i + 1))\nreturn ans\n```",
+    "**Single element** - loop body never executes, ans must be initialized to nums[k]\n`Input: nums = [5], k = 0` → `Expected: 5`\n⚠️ Bug: initializing ans to 0 instead of nums[k] → returns 0\n\n**k at first index** - left boundary reached immediately, only rightward expansion possible\n`Input: nums = [5,4,3,2,1], k = 0` → `Expected: 9`\n⚠️ Bug: using `&&` instead of `||` in the loop condition → loop never runs, returns 5\n\n**k at last index** - right boundary reached immediately, only leftward expansion possible\n`Input: nums = [1,2,3,4,5], k = 4` → `Expected: 9`\n⚠️ Bug: using `&&` instead of `||` in the loop condition → loop never runs, returns 5\n\n**All equal values** - minimum never changes, answer is value × n\n`Input: nums = [3,3,3,3], k = 1` → `Expected: 12`\n⚠️ Bug: computing ans only once before the loop instead of updating inside → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need the maximum score for every possible k (0 to n-1), not just one fixed k?",
+      "a": "Use a monotonic stack to find, for each index m, the largest interval [l, r] where nums[m] is the minimum. For each such interval, any k in [l, r] can achieve score nums[m] × (r − l + 1). Process intervals in decreasing order of minimum, filling unfilled k positions. O(n) time, O(n) space."
+    },
+    {
+      "q": "What if nums can contain negative numbers?",
+      "a": "The greedy expansion still works unchanged - the minimum can be negative, and the algorithm correctly tracks it. Initialize ans to nums[k] (not 0) since the best score can be negative. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if you need to answer many queries, each with a different k, on the same static array?",
+      "a": "Precompute with a monotonic stack the interval where each element is the minimum. Build a sparse table or segment tree over those intervals to answer, for a given k, the maximum of nums[m] × (r_m − l_m + 1) over all m whose interval contains k. O(n log n) preprocessing, O(log n) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumScore(vector<int>& nums, int k) {\n        int n = nums.size();\n        int i = k, j = k;\n        int minVal = nums[k];\n        long long ans = nums[k];\n        while (i > 0 || j < n - 1) {\n            if (i == 0) {\n                j++;\n                minVal = min(minVal, nums[j]);\n            } else if (j == n - 1) {\n                i--;\n                minVal = min(minVal, nums[i]);\n            } else if (nums[i - 1] > nums[j + 1]) {\n                i--;\n                minVal = min(minVal, nums[i]);\n            } else {\n                j++;\n                minVal = min(minVal, nums[j]);\n            }\n            ans = max(ans, (long long)minVal * (j - i + 1));\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

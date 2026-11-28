@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-score-of-a-path-between-two-cities",
+  "title": "Minimum Score of a Path Between Two Cities",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Graph Traversal (BFS)",
+  "tc": "O(n + E)",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- adj (adjacency list): up to 2E pairs across n+1 vectors → O(n + E)\n- visited: n+1 booleans → O(n)\n- queue: up to n integers → O(n)\n- not counted: input roads, return value",
+  "approach": "Since the path can revisit cities and roads, any edge in the connected component containing city 1 can be included in a path from 1 to n (and n is guaranteed to be in the same component). The score of a path is its minimum edge weight, so to minimize the score we want the smallest edge weight available in that component. BFS from city 1 explores its entire component while tracking the minimum edge weight encountered - that minimum is the answer.",
+  "hints": [
+    "With the freedom to traverse any road multiple times, what determines which roads can appear in a path from city 1 to city n?",
+    "Use BFS from city 1 to explore its connected component, tracking the minimum edge weight seen. In Example 1, BFS from 1 reaches city 2 (edge 9) and city 4 (edge 7); from city 2 it reaches city 3 (edge 6) and city 4 (edge 5) - the minimum is 5.",
+    "```\nbuild adjacency list from roads\nqueue = [1], visited[1] = true\nans = infinity\nwhile queue not empty:\n    u = queue.pop()\n    for each (v, d) in adj[u]:\n        ans = min(ans, d)\n        if not visited[v]:\n            visited[v] = true\n            queue.push(v)\nreturn ans\n```",
+    "**Minimum input** - Only two cities connected by a single road.\n`Input: n = 2, roads = [[1,2,3]]` → `Expected: 3`\n⚠️ Bug: initializing ans to 0 instead of INT_MAX → returns 0\n\n**Non-tree minimum edge** - The smallest edge connects two nodes already visited via other paths.\n`Input: n = 4, roads = [[1,2,5],[1,3,5],[2,3,1],[3,4,5]]` → `Expected: 1`\n⚠️ Bug: only updating the minimum when pushing an unvisited neighbor → returns 5\n\n**Disconnected extra component** - A separate component contains an edge smaller than any in city 1's component.\n`Input: n = 5, roads = [[1,2,9],[2,5,7],[3,4,1]]` → `Expected: 7`\n⚠️ Bug: taking the global minimum edge across all components → returns 1\n\n**Skewed chain** - A linked-list-shaped graph with n = 10^5 nodes.\n`Input: n = 100000, roads = [[1,2,1],[2,3,1],...,[99999,100000,1]]` → `Expected: 1`\n⚠️ Bug: using recursive DFS → stack overflow at depth 100000, crashes"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to answer multiple queries for different pairs of cities?",
+      "a": "Precompute connected components with BFS/DFS, storing the minimum edge weight per component. Each query becomes an O(1) lookup: find the component of the source city and return its stored minimum. Preprocessing is O(n + E), space O(n + E)."
+    },
+    {
+      "q": "What if edges can be added dynamically between queries?",
+      "a": "Use Union-Find where each root stores the minimum edge weight in its component. On each edge addition, union the two endpoints and update the root's minimum. Find and union are O(α(n)) amortized per operation, space O(n)."
+    },
+    {
+      "q": "What if you must return the actual path achieving the minimum score?",
+      "a": "During BFS, store parent pointers. After finding the minimum-weight edge (u, v), reconstruct a path from 1 to u, traverse edge (u,v), then reconstruct a path from v to n using parent pointers. Same O(n + E) time and space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minScore(int n, vector<vector<int>>& roads) {\n        vector<vector<pair<int,int>>> adj(n + 1);\n        for (auto& r : roads) {\n            adj[r[0]].push_back({r[1], r[2]});\n            adj[r[1]].push_back({r[0], r[2]});\n        }\n        vector<bool> visited(n + 1, false);\n        queue<int> q;\n        q.push(1);\n        visited[1] = true;\n        int ans = INT_MAX;\n        while (!q.empty()) {\n            int u = q.front();\n            q.pop();\n            for (auto& p : adj[u]) {\n                ans = min(ans, p.second);\n                if (!visited[p.first]) {\n                    visited[p.first] = true;\n                    q.push(p.first);\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

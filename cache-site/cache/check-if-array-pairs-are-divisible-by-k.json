@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-array-pairs-are-divisible-by-k",
+  "title": "Check If Array Pairs Are Divisible by k",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Remainder Counting / Frequency Matching",
+  "tc": "O(n + k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> freq(k, 0): up to k entries → O(k)\n- recursion depth: none\n- not counted: input arr, returned bool",
+  "approach": "For a pair (a, b) to have sum divisible by k, their remainders mod k must be complementary: r and k−r (or both 0). We count the frequency of each normalized remainder ((x % k) + k) % k across the array. Then freq[0] must be even (elements with remainder 0 pair among themselves), and for every i from 1 to k/2, freq[i] must equal freq[k−i] (or be even when i == k−i, which happens when k is even). If all checks pass, a valid pairing always exists.",
+  "hints": [
+    "For two numbers to sum to a multiple of k, what must be true about their remainders when divided by k? The array length n can be up to 10^5, so checking every possible pair is too slow.",
+    "Use a frequency array of size k counting normalized remainders ((x % k) + k) % k. For arr = [1,2,3,4,5,10,6,7,8,9], k = 5, the remainders are [1,2,3,4,0,0,1,2,3,4], so freq[1]=2 must match freq[4]=2.",
+    "```\nfreq = array of size k, all zeros\nfor each x in arr:\n    r = ((x % k) + k) % k\n    freq[r] += 1\nif freq[0] is odd: return false\nfor i from 1 to k/2:\n    if i == k - i:\n        if freq[i] is odd: return false\n    else if freq[i] != freq[k - i]:\n        return false\nreturn true\n```",
+    "**Negatives** - C++ `%` on negative numbers yields a negative remainder.\n`Input: arr = [-1,1], k = 5` → `Expected: true`\n⚠️ Bug: using `x % k` directly without `((x % k) + k) % k` → freq[-1] is out-of-bounds → undefined behavior or wrong output.\n\n**Middle remainder when k is even** - remainder k/2 must pair with itself.\n`Input: arr = [5,5,5,3], k = 10` → `Expected: false`\n⚠️ Bug: only checking `freq[i] == freq[k-i]` without special-casing `i == k-i` → freq[5]==freq[5] is always true → returns true (wrong).\n\n**k = 1** - every integer is divisible by 1, so any even-length array works.\n`Input: arr = [7,3], k = 1` → `Expected: true`\n⚠️ Bug: loop `for i from 1 to k/2` with `k/2 == 0` never executes, but if freq[0] check is skipped → returns false (wrong).\n\n**All elements equal** - all remainders identical, must pair among themselves.\n`Input: arr = [5,5,5,5], k = 10` → `Expected: true`\n⚠️ Bug: not checking that freq[5] is even when k is even → returns false (wrong)."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^9 instead of 10^5?",
+      "a": "Replace the size-k frequency array with an unordered_map<int,int>. The logic stays identical: count normalized remainders, then verify complementary counts. TC becomes O(n) expected, SC becomes O(min(n, k)) since at most n distinct remainders appear."
+    },
+    {
+      "q": "What if you must return the actual pairs, not just true/false?",
+      "a": "Store indices alongside each remainder in the frequency map (e.g., vector<vector<int>> buckets of size k). After verifying feasibility, greedily pair indices from bucket[i] with bucket[k-i]. TC stays O(n + k), SC stays O(n + k) for storing indices."
+    },
+    {
+      "q": "What if the array arrives as a streaming input of unknown length and you must answer after each even-numbered element?",
+      "a": "Maintain the frequency map incrementally: on each new element, update its remainder count, then re-run the complementary checks. Each query costs O(k) for the full scan, or O(1) amortized if you track a running count of \"unmatched\" remainders. SC is O(k) for the map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canArrange(vector<int>& arr, int k) {\n        vector<int> freq(k, 0);\n        for (int x : arr) {\n            int r = ((x % k) + k) % k;\n            freq[r]++;\n        }\n        if (freq[0] % 2 != 0) return false;\n        for (int i = 1; i <= k / 2; i++) {\n            if (i == k - i) {\n                if (freq[i] % 2 != 0) return false;\n            } else {\n                if (freq[i] != freq[k - i]) return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

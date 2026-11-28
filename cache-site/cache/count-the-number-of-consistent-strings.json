@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-consistent-strings",
+  "title": "Count the Number of Consistent Strings",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask Set Membership",
+  "tc": "O(|allowed| + Σ|words[i]|)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int mask: 4 bytes → O(1)\n- int count: 4 bytes → O(1)\n- no recursion, no containers\n- not counted: input strings, returned int",
+  "approach": "Build a 26-bit mask from `allowed` where bit `i` is set if the character `'a'+i` is allowed. For each word, scan its characters and check the corresponding bit; if any bit is unset, the word is inconsistent. Count the consistent ones. This is correct because consistency is exactly \"every character's bit is set in the mask,\" and the fixed 26-letter alphabet makes membership checks O(1).",
+  "hints": [
+    "The allowed string contains only lowercase English letters - at most 26 distinct values exist in the entire alphabet. What could you compute once from `allowed` so that answering \"is this character allowed?\" for any character takes constant time afterward?",
+    "Use a 26-bit integer mask (or boolean array of size 26) marking allowed characters. For `allowed = \"ab\"`, set bits 0 and 1; then `\"aaab\"` passes because every character's bit is set, while `\"ad\"` fails on `'d'` (bit 3 unset).",
+    "```\nmask = 0\nfor c in allowed:\n    mask |= (1 << (c - 'a'))\ncount = 0\nfor w in words:\n    ok = true\n    for c in w:\n        if (mask >> (c - 'a')) & 1 == 0:\n            ok = false\n            break\n    if ok: count += 1\nreturn count\n```",
+    "**Smallest input** - one allowed char, one consistent word.\n`allowed = \"a\", words = [\"a\"]` → `Expected: 1`\n⚠️ Bug: initialising `count = 1` instead of `0` → returns `2`.\n\n**Disallowed-only word** - the single character is not in allowed.\n`allowed = \"ab\", words = [\"c\"]` → `Expected: 0`\n⚠️ Bug: initialising `mask = ~0` (all bits set) and never building it from `allowed` → returns `1`.\n\n**Disallowed char at the end** - early characters pass, last one fails.\n`allowed = \"ab\", words = [\"aac\"]` → `Expected: 0`\n⚠️ Bug: only checking the first character of each word (loop from `i = 1`) → returns `1`.\n\n**All 26 letters allowed** - every character is permitted.\n`allowed = \"abcdefghijklmnopqrstuvwxyz\", words = [\"z\"]` → `Expected: 1`\n⚠️ Bug: using `mask == (1 << (c - 'a'))` (equality) instead of `mask & (1 << (c - 'a'))` → for `\"z\"`, mask has all 26 bits set so equality with `1<<25` is false → returns `0`."
+  ],
+  "followUps": [
+    {
+      "q": "If `words` arrives as a stream and cannot all be stored in memory, how would you adapt?",
+      "a": "Keep the precomputed 26-bit mask in memory (O(1)) and process each word as it arrives, incrementing a running counter. Time per word is O(|word|); total time and auxiliary space are unchanged."
+    },
+    {
+      "q": "If `allowed` can change between batches of queries, how do you avoid recomputing per word?",
+      "a": "Recompute only the 26-bit mask when `allowed` changes (O(|allowed|) = O(26)), then reuse it for every word in that batch. Per-word work stays O(|word|)."
+    },
+    {
+      "q": "If each `words[i]` could be up to 10^6 characters, does the approach still hold?",
+      "a": "Yes - you must inspect each character at least once, so O(total characters) is optimal. Early-exit on the first disallowed character keeps the average case fast, though the worst case remains O(total characters)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countConsistentStrings(string allowed, vector<string>& words) {\n        int mask = 0;\n        for (char c : allowed) {\n            mask |= (1 << (c - 'a'));\n        }\n        int count = 0;\n        for (const string& w : words) {\n            bool ok = true;\n            for (char c : w) {\n                if (((mask >> (c - 'a')) & 1) == 0) {\n                    ok = false;\n                    break;\n                }\n            }\n            if (ok) ++count;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

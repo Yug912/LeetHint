@@ -1,0 +1,40 @@
+{
+  "slug": "filling-bookcase-shelves",
+  "title": "Filling Bookcase Shelves",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Contiguous Segments (Suffix DP)",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp(n + 1, 0): n+1 entries → O(n)\n- no recursion, no other containers\n- not counted: input books, returned int",
+  "approach": "The books on any shelf form a contiguous segment of the input sequence. We define `dp[i]` = minimum total height for placing books `i` through `n-1`. For each starting index `i`, we try every valid ending index `j` (where the cumulative thickness of books `i..j` stays within `shelfWidth`), compute the maximum book height on that shelf, and add `dp[j+1]` for the remaining books. We take the minimum over all valid `j`. This explores every valid contiguous partition and guarantees the optimal total height.",
+  "hints": [
+    "The books on any single shelf always form a contiguous segment of the original sequence. If book `i` starts a new shelf, which books can join it before the shelf runs out of width?",
+    "Dynamic programming with a suffix array: `dp[i]` = minimum height for books `i:`. For example, with `books = [[1,3],[2,4],[3,2]]` and `shelfWidth = 6`, computing `dp[1]` tries book 1 alone (`4 + dp[2]`) or books 1-2 together (`max(4,2) + dp[3] = 4`), picking the smaller.",
+    "```\ndp[n] = 0\nfor i from n-1 down to 0:\n    width = 0, maxH = 0\n    dp[i] = infinity\n    for j from i to n-1:\n        width += thickness[j]\n        if width > shelfWidth: break\n        maxH = max(maxH, height[j])\n        dp[i] = min(dp[i], maxH + dp[j+1])\nreturn dp[0]\n```",
+    "**Single book** - only one book to place, answer is its height\n`Input: books = [[3,5]], shelfWidth = 4` → `Expected: 5`\n⚠️ Bug: initializing `dp` to 0 and using `dp[i] = min(dp[i], ...)` without resetting `dp[i]` to a large value first → returns 0\n\n**Exact shelf fill** - book thickness equals shelfWidth, must still be placed\n`Input: books = [[4,1],[4,3],[4,2]], shelfWidth = 4` → `Expected: 6`\n⚠️ Bug: using `width >= shelfWidth` to break instead of `width > shelfWidth` → returns 2147483647, because the first book's width equals shelfWidth and the loop breaks before processing it\n\n**Greedy overfill** - filling each shelf to maximum width is suboptimal\n`Input: books = [[1,1],[2,3],[2,3],[1,1],[1,1],[1,1],[1,2]], shelfWidth = 4` → `Expected: 6`\n⚠️ Bug: greedy that fills each shelf to maximum width before starting a new one → returns 8\n\n**Max height per shelf** - must track max height of all books on current shelf\n`Input: books = [[1,3],[2,4],[3,2]], shelfWidth = 6` → `Expected: 4`\n⚠️ Bug: using `books[i][1]` instead of `books[j][1]` when updating maxH → returns 3, underestimating shelf height because it always uses the first book's height"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can choose from multiple available shelf widths for each level?",
+      "a": "Add a loop over the available widths in the inner DP step. For each candidate width `w`, run the same inner loop with `shelfWidth = w`. TC becomes O(n² × W) where W is the number of available widths; SC stays O(n)."
+    },
+    {
+      "q": "What if the bookcase can use at most K shelves?",
+      "a": "Add a second dimension: `dp[i][k]` = minimum height for books `i:` using at most `k` shelves. The recurrence is the same but tracks remaining shelf count. TC becomes O(n² × K); SC becomes O(n × K)."
+    },
+    {
+      "q": "What if books arrive in an online stream and you must commit each book to a shelf immediately?",
+      "a": "The optimal offline DP is no longer possible. A greedy approach (fill the current shelf until the next book doesn't fit) gives a competitive ratio but can be off by a factor of Θ(n) in the worst case. No online algorithm achieves better than Ω(log n) competitive ratio for this variant."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minHeightShelves(vector<vector<int>>& books, int shelfWidth) {\n        int n = books.size();\n        vector<int> dp(n + 1, 0);\n        for (int i = n - 1; i >= 0; --i) {\n            int width = 0;\n            int maxH = 0;\n            dp[i] = INT_MAX;\n            for (int j = i; j < n; ++j) {\n                width += books[j][0];\n                if (width > shelfWidth) break;\n                maxH = max(maxH, books[j][1]);\n                dp[i] = min(dp[i], maxH + dp[j + 1]);\n            }\n        }\n        return dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

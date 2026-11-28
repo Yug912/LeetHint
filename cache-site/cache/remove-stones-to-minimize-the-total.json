@@ -1,0 +1,40 @@
+{
+  "slug": "remove-stones-to-minimize-the-total",
+  "title": "Remove Stones to Minimize the Total",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Array with Downward Pointer",
+  "tc": "O(n + V + k)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- vector<int> freq(V+1): up to 10001 entries → O(V)\n- recursion depth: none\n- not counted: input piles, returned int",
+  "approach": "Greedy is optimal: always reduce the largest pile, since floor(v/2) is non-decreasing in v, so operating on the largest pile removes the most stones. Because pile values are bounded by 10^4, we use a frequency array of size V+1 (V = max(piles)) and a pointer that starts at V and only moves downward - each operation takes from freq[p] and adds to freq[ceil(p/2)] = freq[(p+1)/2], which is always less than p, so the pointer never needs to go back up. This yields O(n + V + k) time, beating the heap's O((n+k) log n).",
+  "hints": [
+    "After one operation, a pile's new stone count is always strictly less than its old count (for piles with at least 2 stones). Given that every pile value stays within [1, 10^4], what does this tell you about how the current maximum moves over the k operations?",
+    "Use a frequency array of size max(piles)+1 with a pointer starting at the largest value, moving only downward. Example: piles=[5,4,9], k=2 - freq[9]=1, reduce 9→5, pointer drops to 5, reduce 5→3, total=3+4+5=12.",
+    "```\nfreq = array of size V+1 filled with 0\nfor each x in piles: freq[x]++\np = V\nrepeat k times:\n    while p > 1 and freq[p] == 0: p = p - 1\n    if p <= 1: break\n    freq[p] = freq[p] - 1\n    freq[(p + 1) / 2] = freq[(p + 1) / 2] + 1\nreturn sum of v * freq[v] for v from 1 to V\n```",
+    "**Minimum pile** - A pile of 1 cannot be reduced since floor(1/2)=0.\n`Input: piles = [1], k = 5` → `Expected: 1`\n⚠️ Bug: using p/2 as the new value instead of (p+1)/2 → 1/2=0, freq[0] becomes 1 → returns 0\n\n**Single odd pile** - Odd values expose the ceil-vs-floor difference.\n`Input: piles = [5], k = 1` → `Expected: 3`\n⚠️ Bug: using p/2 as the new value → 5/2=2 → returns 2\n\n**All odd, k equals n** - Every pile gets reduced once; floor vs ceil compounds across piles.\n`Input: piles = [3,3,3], k = 3` → `Expected: 6`\n⚠️ Bug: using p/2 as the new value → each 3 becomes 1 → returns 3\n\n**Example 2 with halving bug** - Mixed odd/even values where the bug shifts multiple piles.\n`Input: piles = [4,3,6,7], k = 3` → `Expected: 12`\n⚠️ Bug: using p/2 as the new value → 7→3, 6→3, 4→2, total=3+3+3+2=11 → returns 11"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "Each pile reaches 1 after at most ceil(log2(piles[i])) ≤ 14 halvings, so the effective operation count is at most n × 14 ≈ 1.4×10^6. Cap k at n × ceil(log2(V)) before running the same algorithm. TC: O(n + V + n·logV), SC: O(V)."
+    },
+    {
+      "q": "What if piles[i] can be up to 10^9?",
+      "a": "The frequency array would need 10^9 entries - too much memory. Switch to a max-heap storing each pile individually; each operation pops the max, halves it, pushes back. TC: O((n + k) log n), SC: O(n)."
+    },
+    {
+      "q": "What if piles arrive as a stream and you can only store O(V) integers?",
+      "a": "The frequency array already uses O(V) space and reads each element once, so it handles streaming naturally - increment freq[x] as each value arrives, then run the downward pointer. If V is also unbounded, fall back to a heap of size n. TC: O(n + V + k), SC: O(V)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minStoneSum(vector<int>& piles, int k) {\n        int V = 0;\n        for (int x : piles) if (x > V) V = x;\n        vector<int> freq(V + 1, 0);\n        for (int x : piles) freq[x]++;\n        int p = V;\n        for (int i = 0; i < k; i++) {\n            while (p > 1 && freq[p] == 0) p--;\n            if (p <= 1) break;\n            freq[p]--;\n            freq[(p + 1) / 2]++;\n        }\n        long long total = 0;\n        for (int v = 1; v <= V; v++) total += (long long)v * freq[v];\n        return (int)total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

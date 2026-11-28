@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-zero-filled-subarrays",
+  "title": "Number of Zero-Filled Subarrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Running Counter / Single Pass",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long ans: single scalar → O(1)\n- int consec: single scalar → O(1)\n- loop index: single scalar → O(1)\n- no containers, no recursion → O(1) total\n- not counted: input vector",
+  "approach": "Scan left to right, tracking the length of the current run of consecutive zeros ending at the current index. When `nums[i] == 0`, that zero extends the run by one, and exactly `consec` new zero-filled subarrays end at this position (one for each starting point within the run). Add `consec` to the answer; on any non-zero, reset the run to 0. This works because every zero-filled subarray is counted exactly once - at its rightmost zero.",
+  "hints": [
+    "When you scan left to right and meet a zero that extends an existing run of consecutive zeros, how many *new* zero-filled subarrays appear that end exactly at this new zero?",
+    "Single pass with a running counter of consecutive zeros. In `[1,3,0,0,2,0,0,4]`, at index 3 (the second `0`), the run is 2 long, so 2 new subarrays end here: `[0]` (index 3) and `[0,0]` (indices 2-3) - add 2 to the answer.",
+    "```\nans = 0\nconsec = 0\nfor each x in nums:\n    if x == 0:\n        consec = consec + 1\n        ans = ans + consec\n    else:\n        consec = 0\nreturn ans\n```",
+    "**Single element** - n = 1, the smallest valid input.\n`Input: [0]` → `Expected: 1`\n⚠️ Bug: looping from `i = 1` instead of `i = 0` → returns `0`\n\n**All zeros, overflow** - 10^5 zeros; answer = 100000·100001/2 = 5,000,050,000 > 2^31−1.\n`Input: [0,0,…,0]` (100000 zeros) → `Expected: 5000050000`\n⚠️ Bug: declaring `ans` as `int` → wraps to `705082704`\n\n**Separated zero runs** - non-zero breaks the run; counter must reset.\n`Input: [0,0,2,0,0]` → `Expected: 6`\n⚠️ Bug: not resetting `consec` to 0 on non-zero → consec goes 1,2,2,3,4, ans = 1+2+3+4 = `10`\n\n**No zeros at all** - answer should stay 0 throughout.\n`Input: [2,10,2019]` → `Expected: 0`\n⚠️ Bug: initialising `ans = 1` instead of `0` → returns `1`"
+  ],
+  "followUps": [
+    {
+      "q": "Count subarrays where every element is equal (any value, not just zero).",
+      "a": "Same single-pass pattern. Track the current run length of equal consecutive elements: if `nums[i] == nums[i-1]`, increment the run; otherwise reset to 1. Add the run length to the answer at each step. TC O(n), SC O(1)."
+    },
+    {
+      "q": "The array arrives as a stream of unknown length; report the running count after each element.",
+      "a": "Keep `consec` and `ans` as persistent state. For each incoming element, update `consec` (increment on zero, reset on non-zero) and add it to `ans`, then emit `ans`. Each step is O(1) time and O(1) extra space."
+    },
+    {
+      "q": "Answer queries: how many zero-filled subarrays lie entirely within `nums[l..r]`?",
+      "a": "Precompute a prefix-sum array `P` where `P[i]` is the contribution (`consec` value) at index `i`. For a query, sum `P[l..r]`, then subtract subarrays that start before `l` but end inside the range - these are bounded by the run length crossing `l`. Store run-start positions to compute the correction in O(1). TC O(n) preprocess, O(1) per query, SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long zeroFilledSubarray(vector<int>& nums) {\n        long long ans = 0;\n        int consec = 0;\n        for (int x : nums) {\n            if (x == 0) {\n                ++consec;\n                ans += consec;\n            } else {\n                consec = 0;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

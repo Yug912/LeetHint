@@ -1,0 +1,40 @@
+{
+  "slug": "divide-a-string-into-groups-of-size-k",
+  "title": "Divide a String Into Groups of Size k",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation / String Partitioning",
+  "tc": "O(n + k)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<string> result: returned output, not counted\n- string& group: reference into result, no extra allocation\n- scalar variables (n, i, end): O(1)\n- no recursion, no other containers",
+  "approach": "Iterate through s in steps of k. For each step, construct a group directly in the output vector by appending the available characters from s, then pad with fill characters until the group reaches size k. Building each group in-place in the returned vector avoids any temporary string allocation. This processes each character of s once and adds at most k−1 fill characters, giving O(n + k) time with O(1) auxiliary space.",
+  "hints": [
+    "If you take k characters at a time from s, what determines whether the final group has fewer than k characters from s?\ns.length ≤ 100 and k ≤ 100.",
+    "Direct index-based iteration: step through s by k, build each group in the output vector, pad the last if needed.\nExample: s = \"abcdefghij\", k = 3 → at i=9, only 'j' remains, pad to \"jxx\".",
+    "```\nfor i = 0 to n step k:\n    append empty string to result\n    group = reference to last element of result\n    append s[i .. min(i+k, n)] to group\n    while group.size < k:\n        append fill to group\nreturn result\n```",
+    "**Exact division** - s.length is a multiple of k, no padding needed.\n`Input: s = \"abcdefghi\", k = 3, fill = \"x\"` → `Expected: [\"abc\",\"def\",\"ghi\"]`\n⚠️ Bug: using `i <= n` as loop condition → returns `[\"abc\",\"def\",\"ghi\",\"xxx\"]` (extra padded group at i=9)\n\n**Partial last group** - s.length is not a multiple of k, padding required.\n`Input: s = \"abcdefghij\", k = 3, fill = \"x\"` → `Expected: [\"abc\",\"def\",\"ghi\",\"jxx\"]`\n⚠️ Bug: using `i + k <= n` as loop condition → returns `[\"abc\",\"def\",\"ghi\"]` (skips the partial last group)\n\n**Maximum padding** - s has 1 character, k is large.\n`Input: s = \"a\", k = 5, fill = \"x\"` → `Expected: [\"axxxx\"]`\n⚠️ Bug: using `if` instead of `while` for padding → returns `[\"ax\"]` (only 1 fill char added)\n\n**k equals 1** - each group is a single character.\n`Input: s = \"ab\", k = 1, fill = \"x\"` → `Expected: [\"a\",\"b\"]`\n⚠️ Bug: using `i + k < n` as loop condition → returns `[\"a\"]` (i=1: 1+1<2 is false, skips \"b\")"
+  ],
+  "followUps": [
+    {
+      "q": "What if each group can have a different size, given by an array groupSizes[0], groupSizes[1], ...?",
+      "a": "Instead of stepping by a fixed k, step by groupSizes[groupIndex] for each group. Track the current position in s and increment the group index. If the array is exhausted before s, stop or use a default. Time: O(n), Space: O(1)."
+    },
+    {
+      "q": "What if s is a stream of unknown length, too large to fit in memory?",
+      "a": "Buffer up to k characters at a time from the stream. When the stream ends with fewer than k characters buffered, pad with fill. This uses O(k) memory instead of O(n). Time: O(n), Space: O(k)."
+    },
+    {
+      "q": "What if you need to answer queries for the i-th group without precomputing all groups?",
+      "a": "The i-th group starts at index i*k in s. Return s.substr(i*k, k), padding if i*k + k > n. Each query is O(k) time, O(1) space, with no precomputation needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> divideString(string s, int k, char fill) {\n        vector<string> result;\n        int n = s.size();\n        for (int i = 0; i < n; i += k) {\n            result.emplace_back();\n            string& group = result.back();\n            int end = i + k < n ? i + k : n;\n            group.append(s, i, end - i);\n            while ((int)group.size() < k) {\n                group.push_back(fill);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

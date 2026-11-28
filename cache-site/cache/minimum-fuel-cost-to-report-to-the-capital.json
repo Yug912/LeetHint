@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-fuel-cost-to-report-to-the-capital",
+  "title": "Minimum Fuel Cost to Report to the Capital",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Tree Post-Order Traversal (Subtree Aggregation)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> adj: 2(n-1) entries → O(n)\n- vector<int> parent: n entries → O(n)\n- vector<long long> sz: n entries → O(n)\n- vector<int> order: n entries → O(n)\n- vector<int> q (BFS queue): n entries → O(n)\n- vector<bool> visited: n entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input roads, returned long long",
+  "approach": "Root the tree at the capital (city 0). For every edge connecting a subtree to its parent, all representatives in that subtree must cross that edge to reach the capital. The minimum cars needed for that crossing is ceil(subtreeSize / seats), and each car burns 1 liter on that edge. So the answer is the sum, over all edges, of ceil(subtreeSize / seats). Compute subtree sizes via a BFS/DFS order and process children before parents (post-order), accumulating sizes bottom-up. Iterative BFS avoids stack overflow on skewed trees of size 10^5.",
+  "hints": [
+    "When representatives from a whole subtree must all cross the same road to get closer to the capital, how many cars must traverse that road, given each car holds `seats` people?",
+    "Do a BFS/DFS from the capital to root the tree, then process nodes in reverse BFS order so each node's subtree size is known before its parent uses it. For example, in Example 2, node 3's subtree has 2 people (cities 2 and 3) and seats=2, so the edge 3→1 costs ceil(2/2)=1 liter.",
+    "```\nroot tree at 0 via BFS, record parent[] and order[]\nsize[u] = 1 for all u\nans = 0\nfor u in reversed(order):\n    if parent[u] != -1:\n        ans += ceil(size[u] / seats)\n        size[parent[u]] += size[u]\nreturn ans\n```",
+    "**Single city** - `roads` is empty, n=1, no one travels.\n`Input: roads = [], seats = 1` → `Expected: 0`\n⚠️ Bug: indexing `roads[0]` without checking emptiness → undefined behavior / crash.\n\n**Skewed tree, seats=1** - a linked-list-shaped tree forces deepest subtree sizes to accumulate.\n`Input: roads = [[0,1],[1,2],[2,3]], seats = 1` → `Expected: 6`\n⚠️ Bug: recursive DFS on a 10^5-deep skewed tree → stack overflow / runtime error.\n\n**Overflow on large skewed tree** - with n=10^5 and seats=1, the answer is 1+2+...+99999 = 4,999,950,000 > 2^31-1.\n`Input: roads = [[0,1],[1,2],...,[99998,99999]], seats = 1` → `Expected: 4999950000`\n⚠️ Bug: storing `ans` as `int` → wraps to a negative value.\n\n**Full fuel per edge rounding** - ceil division must round up, not down.\n`Input: roads = [[0,1],[1,2]], seats = 2` → `Expected: 2` (edge 1→0 carries 2 people = 1 car, edge 2→1 carries 1 person = 1 car)\n⚠️ Bug: using `size[u] / seats` (integer floor) instead of `(size[u] + seats - 1) / seats` → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if the capital can be chosen as any city to minimize total fuel?",
+      "a": "For each candidate root, the answer is the sum of ceil(subtreeSize/seats) over all edges in that rooting. Use rerooting: compute the answer for root 0, then in a second DFS, when moving the root from u to child v, subtract v's contribution and add u's new subtree contribution. TC stays O(n), SC O(n)."
+    },
+    {
+      "q": "What if each city's car has a different seat count given by an array seats[i]?",
+      "a": "When representatives from a subtree of size s cross edge (u→parent), they can use any combination of cars available at u and below; the minimum cars is still ceil(s / maxSeatsInSubtree) if cars pool at u, but if cars cannot be reused across edges the greedy still picks ceil(s/seats[u]) per edge. TC O(n), SC O(n)."
+    },
+    {
+      "q": "What if edges arrive as a stream and memory is limited to O(sqrt(n))?",
+      "a": "A tree cannot be processed in arbitrary edge order without storing it, so buffer edges in O(sqrt(n)) batches, build partial forests, and merge subtree sizes incrementally; this raises TC to O(n·sqrt(n)) and keeps SC O(sqrt(n))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimumFuelCost(vector<vector<int>>& roads, int seats) {\n        int n = roads.size() + 1;\n        vector<vector<int>> adj(n);\n        for (auto& r : roads) {\n            adj[r[0]].push_back(r[1]);\n            adj[r[1]].push_back(r[0]);\n        }\n        long long ans = 0;\n        vector<int> parent(n, -1);\n        vector<long long> sz(n, 1);\n        vector<int> order;\n        order.reserve(n);\n        vector<int> q;\n        q.reserve(n);\n        q.push_back(0);\n        vector<char> visited(n, 0);\n        visited[0] = 1;\n        for (int i = 0; i < (int)q.size(); i++) {\n            int u = q[i];\n            order.push_back(u);\n            for (int v : adj[u]) {\n                if (!visited[v]) {\n                    visited[v] = 1;\n                    parent[v] = u;\n                    q.push_back(v);\n                }\n            }\n        }\n        for (int i = n - 1; i >= 0; i--) {\n            int u = order[i];\n            if (parent[u] != -1) {\n                ans += (sz[u] + seats - 1) / seats;\n                sz[parent[u]] += sz[u];\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

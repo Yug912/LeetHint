@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-absolute-differences-in-a-sorted-array",
+  "title": "Sum of Absolute Differences in a Sorted Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total, leftSum, rightSum: scalars → O(1)\n- vector<int> result: returned output, not counted → O(1) auxiliary\n- not counted: input nums, returned vector",
+  "approach": "Since the array is sorted, for each index `i`, all elements to the left are ≤ `nums[i]` and all to the right are ≥ `nums[i]`. This lets us drop the absolute values: the left contribution is `nums[i]*i - (sum of left elements)` and the right contribution is `(sum of right elements) - nums[i]*(n-i-1)`. We compute a running `leftSum` in one pass after precomputing the total sum, giving each `result[i]` in O(1).",
+  "hints": [
+    "Since the array is sorted, for a given index i, what determines whether |nums[i] - nums[j]| equals nums[i] - nums[j] versus nums[j] - nums[i]? The array has up to 10^5 elements, so checking every pair is too slow.",
+    "Use a prefix sum. For nums = [1,4,6,8,10] and i=2 (value 6): left part = 6×2 − (1+4) = 7, right part = (8+10) − 6×2 = 6, result = 13.",
+    "```\ntotal = sum of all nums\nleftSum = 0\nfor i in 0..n-1:\n    rightSum = total - leftSum - nums[i]\n    result[i] = nums[i]*i - leftSum + rightSum - nums[i]*(n-i-1)\n    leftSum += nums[i]\nreturn result\n```",
+    "**Smallest input** - n=2, only one other element per index\n`Input: nums = [1,2]` → `Expected: [1,1]`\n⚠️ Bug: using `n - i` instead of `n - i - 1` for the right-side count → returns `[0,-1]`\n\n**All elements equal** - every absolute difference is 0\n`Input: nums = [5,5,5]` → `Expected: [0,0,0]`\n⚠️ Bug: computing rightSum as `total - leftSum` (omitting `- nums[i]`) → returns `[5,5,5]`\n\n**Boundary index** - first element has zero left-side terms\n`Input: nums = [1,4,6,8,10]` → `Expected: [24,15,13,15,21]`\n⚠️ Bug: computing left count as `i+1` instead of `i` → returns `[25,19,19,23,31]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is not sorted?",
+      "a": "Sort it first in O(n log n), then apply the same prefix-sum approach. Store the original indices before sorting so you can place each result back in its original position. TC becomes O(n log n), SC stays O(n) for the index mapping."
+    },
+    {
+      "q": "What if elements can be updated and you need to recompute results after each update?",
+      "a": "Maintain a Fenwick tree (BIT) over the value range for point updates and prefix-sum queries. A single update costs O(log V) and recomputing one element's result costs O(log V). Full recompute of all results is O(n log V), SC O(V) where V is the value range."
+    },
+    {
+      "q": "Which single element minimizes the total absolute difference sum?",
+      "a": "The median. For a sorted array, the element at index n/2 minimizes sum(|x - nums[j]|). Compute just result[n/2] using the same formula in O(n) time and O(1) extra space, without computing all results."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getSumAbsoluteDifferences(vector<int>& nums) {\n        int n = nums.size();\n        long long total = 0;\n        for (int x : nums) total += x;\n        \n        vector<int> result(n);\n        long long leftSum = 0;\n        for (int i = 0; i < n; i++) {\n            long long rightSum = total - leftSum - nums[i];\n            long long res = (long long)nums[i] * i - leftSum\n                          + rightSum - (long long)nums[i] * (n - i - 1);\n            result[i] = (int)res;\n            leftSum += nums[i];\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

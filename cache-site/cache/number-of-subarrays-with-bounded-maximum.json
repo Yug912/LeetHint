@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-subarrays-with-bounded-maximum",
+  "title": "Number of Subarrays with Bounded Maximum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Inclusion-Exclusion with Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers allocated; only scalar variables (count, lastInvalid, n, loop index i)\n- No recursion\n- Not counted: input vector `nums`",
+  "approach": "Use inclusion-exclusion: the count of subarrays with max in [left, right] equals (subarrays with max ≤ right) minus (subarrays with max ≤ left−1). To count subarrays with max ≤ bound, scan left to right tracking `lastInvalid` (the most recent index where `nums[i] > bound`). For each position `i` with `nums[i] ≤ bound`, every subarray ending at `i` and starting after `lastInvalid` is valid, contributing `i − lastInvalid` to the count. This is correct because any subarray containing an element > bound has max > bound, so valid subarrays must lie entirely within a segment of elements all ≤ bound.",
+  "hints": [
+    "If you could count subarrays whose maximum is at most some value X, how would you combine two such counts to get subarrays whose maximum is in [left, right]?",
+    "Use inclusion-exclusion: answer = count(max ≤ right) − count(max ≤ left−1). For count(max ≤ bound), scan left to right tracking the last index where nums[i] > bound. Example: nums=[2,1,4,3], bound=3 → at i=3, lastInvalid=2, add 3−2=1, total=4.",
+    "```\ncountLE(bound):\n    count = 0, lastInvalid = -1\n    for i in 0..n-1:\n        if nums[i] > bound:\n            lastInvalid = i\n        else:\n            count += i - lastInvalid\n    return count\nreturn countLE(right) - countLE(left - 1)\n```",
+    "**Single element** - n=1, the only element equals both left and right\n`Input: nums = [5], left = 5, right = 5` → `Expected: 1`\n⚠️ Bug: using `>=` instead of `>` in the bound check → countLE(5) treats 5 as invalid → returns 0 → answer = 0 − 0 = 0\n\n**All equal** - every element equals left and right\n`Input: nums = [3,3,3], left = 3, right = 3` → `Expected: 6`\n⚠️ Bug: initializing lastInvalid to 0 instead of −1 → at i=0 adds 0−0=0 instead of 1 → countLE(3) returns 3 → answer = 3 − 0 = 3\n\n**left = 0** - left−1 = −1, all elements are ≥ 0 so none satisfy max ≤ −1\n`Input: nums = [0,1,2], left = 0, right = 1` → `Expected: 3`\n⚠️ Bug: subtracting countLE(left) instead of countLE(left−1) → countLE(0)=1 → answer = 3 − 1 = 2\n\n**Overflow** - n = 10^5, all elements = 10^9, left = right = 10^9; countLE(right) = 10^5 × 10^5 / 2 ≈ 5×10^9 which exceeds 2^31−1\n`Input: nums = [1000000000 × 100000], left = 1000000000, right = 1000000000` → `Expected: 0`\n⚠️ Bug: using `int` for the running count → signed overflow → undefined behavior, likely a large negative or wrong positive"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums arrives as a stream and you must report the running count after each new element?",
+      "a": "Maintain `lastInvalid` and a running `count` incrementally. Each new element either resets `lastInvalid` (if > right) or adds `i − lastInvalid` to the running total. Time O(1) per element, space O(1)."
+    },
+    {
+      "q": "What if you must answer many (left, right) queries on the same fixed array?",
+      "a": "Precompute for each element the range where it is the strict maximum using a monotonic stack, giving each element's contribution as (i − L[i]) × (R[i] − i). Sort elements by value and answer queries offline with a Fenwick tree over contributions. Time O((n + q) log n), space O(n)."
+    },
+    {
+      "q": "What if elements can be updated (point assignments) between queries?",
+      "a": "Use a segment tree where each node stores its segment's max, count of valid subarrays, and prefix/suffix lengths of elements ≤ bound to merge children. Each update and query is O(log n). Space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSubarrayBoundedMax(vector<int>& nums, int left, int right) {\n        return (int)(countLE(nums, right) - countLE(nums, left - 1));\n    }\nprivate:\n    long long countLE(vector<int>& nums, int bound) {\n        long long count = 0;\n        int lastInvalid = -1;\n        int n = (int)nums.size();\n        for (int i = 0; i < n; i++) {\n            if (nums[i] > bound) {\n                lastInvalid = i;\n            } else {\n                count += (i - lastInvalid);\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

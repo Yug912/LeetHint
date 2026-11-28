@@ -1,0 +1,40 @@
+{
+  "slug": "create-binary-tree-from-descriptions",
+  "title": "Create Binary Tree From Descriptions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Construction",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, TreeNode*> nodes: up to 2n entries → O(n)\n- unordered_set<int> children: up to n entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input vector, returned tree",
+  "approach": "The root is the only node value that never appears as a child. We use a hash map (value → TreeNode*) to create and reuse nodes, and a hash set to track all child values. For each description, we create parent/child nodes on demand, link them by `isLeft`, and record the child. After processing all descriptions, we scan the map for the one value absent from the children set - that is the root.",
+  "hints": [
+    "Among all values appearing in the descriptions, what property does the root node's value have that no other value has?",
+    "Use a hash map (value → TreeNode*) to create/reuse nodes and a hash set to track every value that appears as a child. For `[[20,15,1],[50,20,1]]`: children = {15, 20}, so 50 is the root.",
+    "```\nnodes = empty map, children = empty set\nfor each (parent, child, isLeft) in descriptions:\n    if parent not in nodes: nodes[parent] = new TreeNode(parent)\n    if child not in nodes:  nodes[child]  = new TreeNode(child)\n    if isLeft: nodes[parent].left  = nodes[child]\n    else:      nodes[parent].right = nodes[child]\n    children.add(child)\nfor each value in nodes:\n    if value not in children: return nodes[value]\n```",
+    "**Reordered descriptions** - a parent in one row appears as a child in a later row\n`Input: [[20,15,1],[50,20,1]]` → `Expected: [50,20,null,15]`\n⚠️ Bug: returning the first parent value in the array as root (20) → returns `[20,15]`\n\n**Both children** - one parent has both a left and a right child\n`Input: [[1,2,1],[1,3,0]]` → `Expected: [1,2,3]`\n⚠️ Bug: ignoring `isLeft` and always assigning to `left` → returns `[1,3,null]`\n\n**Skewed chain** - each node is the left child of the previous one\n`Input: [[1,2,1],[2,3,1],[3,4,1]]` → `Expected: [1,2,null,3,null,4]`\n⚠️ Bug: creating a new TreeNode for the child on each row instead of looking up existing nodes → returns `[1,2,null]` (subtrees orphaned)\n\n**Right child only** - single description with `isLeft = 0`\n`Input: [[5,10,0]]` → `Expected: [5,null,10]`\n⚠️ Bug: writing `if (isLeft = 1)` (assignment) instead of `if (isLeft)` → always treats as left child, returns `[5,10,null]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input may be invalid (a node assigned two left children, or no root exists)?",
+      "a": "During construction, check whether the target child pointer is already non-null before assigning - if so, return nullptr. After building, verify exactly one map key is absent from the children set. TC stays O(n), SC stays O(n)."
+    },
+    {
+      "q": "What if node values can be up to 10^9 instead of 10^5?",
+      "a": "The hash map and hash set handle arbitrary int keys, so the approach is unchanged. Values are only used as keys (never summed or multiplied), so there is no overflow risk. TC: O(n) average, SC: O(n)."
+    },
+    {
+      "q": "What if descriptions arrive as a stream and you may only store O(h) extra space where h is the tree height?",
+      "a": "First stream through once to identify the root (the value appearing as a parent but never as a child), then build top-down by re-streaming and filtering descriptions level by level. TC becomes O(n²) in the worst case (skewed tree), SC: O(h)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* createBinaryTree(vector<vector<int>>& descriptions) {\n        unordered_map<int, TreeNode*> nodes;\n        unordered_set<int> children;\n        for (auto& d : descriptions) {\n            int p = d[0], c = d[1], isLeft = d[2];\n            if (!nodes.count(p)) nodes[p] = new TreeNode(p);\n            if (!nodes.count(c)) nodes[c] = new TreeNode(c);\n            if (isLeft) nodes[p]->left = nodes[c];\n            else nodes[p]->right = nodes[c];\n            children.insert(c);\n        }\n        for (auto& kv : nodes) {\n            if (!children.count(kv.first)) return kv.second;\n        }\n        return nullptr;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

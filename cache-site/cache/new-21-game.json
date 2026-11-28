@@ -1,0 +1,40 @@
+{
+  "slug": "new-21-game",
+  "title": "New 21 Game",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window DP",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<double> dp: n+1 entries → O(n)\n- windowSum, answer (scalars): O(1)\n- recursion depth: none\n- not counted: input parameters, return value",
+  "approach": "Let dp[x] be the probability that Alice's score is x at the moment she stops (for x ≥ k) or while still playing (for x < k). The recurrence is unified: dp[x] = (1/maxPts) × sum of dp[j] for j in [max(0, x−maxPts), min(k−1, x−1)], because only scores below k can transition forward. We maintain this window sum incrementally with a sliding window, adding dp[x] when x < k and removing dp[x−maxPts] when it falls out of range. The answer is the sum of dp[x] for x from k to n.",
+  "hints": [
+    "If Alice is at score x, which previous scores could she have come from in her last draw, and how many such scores exist?\nEach draw adds an integer from 1 to maxPts, and Alice stops once she reaches k or more.",
+    "Use a sliding-window DP where dp[x] = (sum of dp over the last maxPts valid scores) / maxPts, maintaining the sum incrementally.\nFor n=6, k=1, maxPts=10: dp[1]=dp[0]/10=0.1, and since k=1 every score 1-10 has probability 0.1, so P(≤6)=6×0.1=0.6.",
+    "```\ndp[0] = 1\nwindowSum = 1\nanswer = 0\nfor x = 1 to n:\n    dp[x] = windowSum / maxPts\n    if x >= k:\n        answer += dp[x]\n    if x < k:\n        windowSum += dp[x]\n    if x - maxPts >= 0 and x - maxPts < k:\n        windowSum -= dp[x - maxPts]\nreturn answer\n```",
+    "**k = 0** - Alice stops immediately with 0 points, which is always ≤ n.\n`Input: n = 0, k = 0, maxPts = 1` → `Expected: 1.00000`\n⚠️ Bug: not handling k=0 separately, answer initialized to 0 and loop from 1 to 0 never runs → returns 0.00000\n\n**Integer division** - probabilities are fractions, not integers.\n`Input: n = 6, k = 1, maxPts = 10` → `Expected: 0.60000`\n⚠️ Bug: declaring windowSum as `int` and computing `windowSum / maxPts` with integer division → 1/10 = 0 → returns 0.00000\n\n**Window removal off-by-one** - the window must drop dp[x − maxPts] exactly when x − maxPts = 0.\n`Input: n = 4, k = 3, maxPts = 3` → `Expected: 0.85185`\n⚠️ Bug: using `x - maxPts > 0` instead of `>= 0` for the removal condition → dp[0] stays in the window at x=3 → returns 1.18519\n\n**Boundary: x = k** - the first stopping score is exactly k.\n`Input: n = 1, k = 1, maxPts = 10` → `Expected: 0.10000`\n⚠️ Bug: using `x > k` instead of `x >= k` when adding dp[x] to the answer → dp[1] is skipped → returns 0.00000"
+  ],
+  "followUps": [
+    {
+      "q": "What if maxPts can be up to 10^9?",
+      "a": "The sliding window still works because we only iterate x from 1 to n (≤ 10^4). When maxPts > n, the condition x − maxPts ≥ 0 is never true, so the window never removes old values and just accumulates dp values for x < k. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if we want the probability of scoring exactly n instead of ≤ n?",
+      "a": "Return dp[n] directly instead of summing dp[k] through dp[n]. The recurrence and sliding window are identical; only the final aggregation changes from a running sum to a single lookup. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if draws come from a non-uniform distribution given as an array prob[1..maxPts]?",
+      "a": "Replace the uniform 1/maxPts factor with prob[x−j] for each term in the window. The simple sliding window no longer works because each term has a different weight, so compute each dp[x] by iterating over the window directly. TC: O(n · maxPts), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double new21Game(int n, int k, int maxPts) {\n        if (k == 0) return 1.0;\n        if (n >= k - 1 + maxPts) return 1.0;\n        \n        vector<double> dp(n + 1);\n        dp[0] = 1.0;\n        double windowSum = 1.0;\n        double answer = 0.0;\n        \n        for (int x = 1; x <= n; x++) {\n            dp[x] = windowSum / maxPts;\n            if (x >= k) {\n                answer += dp[x];\n            }\n            if (x < k) {\n                windowSum += dp[x];\n            }\n            if (x - maxPts >= 0 && x - maxPts < k) {\n                windowSum -= dp[x - maxPts];\n            }\n        }\n        \n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

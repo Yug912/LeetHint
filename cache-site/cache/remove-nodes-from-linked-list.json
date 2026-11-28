@@ -1,0 +1,40 @@
+{
+  "slug": "remove-nodes-from-linked-list",
+  "title": "Remove Nodes From Linked List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack (via list reversal)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode* prev, curr, next in reverse: 3 pointers → O(1)\n- int maxVal: 1 integer → O(1)\n- ListNode* prev, curr in removeNodes: 2 pointers → O(1)\n- recursion depth: none\n- not counted: input list, returned list (modified in place)",
+  "approach": "Reverse the list so we can process nodes from right to left. Walk forward through the reversed list tracking the maximum value seen so far; any node whose value is strictly less than that maximum has a greater node to its right (in original order) and is unlinked. Reverse the list back to restore original order. This works because in reversed order, \"everything to the right in the original list\" becomes \"everything already visited.\"",
+  "hints": [
+    "Looking at the surviving nodes in Example 1 - 13 and 8 - how does each one's value compare to every node that originally appeared after it?",
+    "Reverse the linked list, walk forward tracking the running maximum, drop nodes below it, then reverse back. For [5,2,13,3,8]: reversed gives 8→3→13→2→5; with max=8 drop 3, max=13 drop 2 and 5, leaving 8→13; reverse to get 13→8.",
+    "```\nreverse the list\nmaxVal = 0; prev = null; curr = head\nwhile curr is not null:\n    if curr.val < maxVal: prev.next = curr.next\n    else: maxVal = curr.val; prev = curr\n    curr = curr.next\nreverse the list; return head\n```",
+    "**All elements equal** - every node has the same value, none should be removed\n`Input: head = [1,1,1,1]` → `Expected: [1,1,1,1]`\n⚠️ Bug: using `curr.val <= maxVal` as the removal condition instead of `curr.val < maxVal` → returns [1]\n\n**Smallest input** - only one node, nothing to its right\n`Input: head = [7]` → `Expected: [7]`\n⚠️ Bug: reverse helper returning nullptr for a single-node list (base case `return nullptr` instead of `return head`) → returns null\n\n**Already sorted (ascending)** - every node except the last has a greater value to its right\n`Input: head = [1,2,3]` → `Expected: [3]`\n⚠️ Bug: iterating left-to-right tracking a forward maximum instead of reversing first → returns [1,2,3]\n\n**Reverse sorted (descending)** - no node has a greater value to its right\n`Input: head = [3,2,1]` → `Expected: [3,2,1]`\n⚠️ Bug: omitting the second reverse call → returns [1,2,3]"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must keep only nodes that are strictly greater than all nodes to their right (remove nodes with an equal or greater value to the right)?",
+      "a": "Change the removal condition from `curr.val < maxVal` to `curr.val <= maxVal` during the reversed pass. Everything else stays the same. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if node values can be negative?",
+      "a": "Initialize maxVal to INT_MIN instead of 0, since values may be negative and the first node in the reversed list must always survive. The rest of the algorithm is unchanged. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if the list arrives as a forward-only stream and you cannot reverse it?",
+      "a": "Buffer all node values in an array, compute the suffix maximum array in one backward pass, then emit only nodes whose value is at least the suffix maximum at their position. Time O(n), space O(n) for the buffer and suffix maximum array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* reverse(ListNode* head) {\n        ListNode* prev = nullptr;\n        ListNode* curr = head;\n        while (curr) {\n            ListNode* next = curr->next;\n            curr->next = prev;\n            prev = curr;\n            curr = next;\n        }\n        return prev;\n    }\n\n    ListNode* removeNodes(ListNode* head) {\n        head = reverse(head);\n        int maxVal = 0;\n        ListNode* curr = head;\n        ListNode* prev = nullptr;\n        while (curr) {\n            if (curr->val < maxVal) {\n                prev->next = curr->next;\n            } else {\n                maxVal = curr->val;\n                prev = curr;\n            }\n            curr = curr->next;\n        }\n        head = reverse(head);\n        return head;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

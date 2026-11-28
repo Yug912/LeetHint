@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-increment-to-make-array-unique",
+  "title": "Minimum Increment to Make Array Unique",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort",
+  "tc": "O(n + V)",
+  "sc": "O(n + V)",
+  "spaceBreakdown": "- vector<int> count: size maxVal + n + 1 ≤ 2·10^5 + 1 → O(n + V)\n- no recursion, no heap, no other containers\n- not counted: input nums",
+  "approach": "Use a frequency (counting) array indexed by value. Process values from smallest to largest: whenever a value v has more than one occurrence, the extra copies each need at least one increment to move to v+1, so we add the extra count to the move total and push those extras into count[v+1]. This cascade continues naturally, and because we always push duplicates to the very next slot, every increment is necessary and sufficient - no element is moved further than it must be. The count array is sized maxVal + n + 1 to accommodate the worst-case cascade where all n duplicates push past the original maximum.",
+  "hints": [
+    "When two elements share the same value, where must the \"extra\" copies eventually land relative to that value?\nEach move increments exactly one element by 1, and nums[i] ranges from 0 to 10^5.",
+    "Use a frequency array indexed by value. For [3,2,1,2,1,7], value 1 appears twice: push one copy to value 2 (cost 1), making value 2 appear three times total, then push two copies to value 3 (cost 2), and so on cascading upward.",
+    "```\ncount = frequency array of size maxVal + n + 1\nfor v from 0 to size - 2:\n    if count[v] > 1:\n        extra = count[v] - 1\n        moves += extra\n        count[v + 1] += extra\nreturn moves\n```",
+    "**Single element** - no duplicates exist\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: initializing moves to 1 instead of 0 → returns 1\n\n**All equal** - every element is the same value\n`Input: [1,1,1]` → `Expected: 3`\n⚠️ Bug: count array sized maxVal+1 (=2), count[2] and count[3] accessed out of bounds → crash\n\n**All zeros** - minimum value boundary\n`Input: [0,0,0,0]` → `Expected: 6`\n⚠️ Bug: loop starting at v=1 instead of v=0 → skips count[0] entirely, returns 0\n\n**Cascade beyond maxVal** - duplicates push past the largest original value\n`Input: [3,3,3,3]` → `Expected: 6`\n⚠️ Bug: count array sized maxVal+1 (=4), count[4..6] accessed out of bounds → crash"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^9 instead of 10^5?",
+      "a": "The frequency array becomes too large. Sort the array, then greedily process in sorted order: for each element, if it is ≤ the last assigned value, set it to last+1 and add the difference to moves. This gives O(n log n) time and O(1) extra space with an in-place sort."
+    },
+    {
+      "q": "What if you must also return the final unique array, not just the move count?",
+      "a": "After the counting pass determines how many copies land at each value, do a second pass over the original array: for each element, assign it to the smallest unused value ≥ its original value, tracked via the residual count array. Time and space complexity remain O(n + V)."
+    },
+    {
+      "q": "What if the array arrives as a stream of unknown length and you must output the running total after each element?",
+      "a": "Maintain the frequency array and a pointer to the current \"frontier\" value. When a new element arrives, increment its count; if that creates a duplicate, cascade from that value upward exactly as before, adding to the running total. Each insertion triggers at most O(V) cascade work amortized, giving O(n + V) total time and O(V) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minIncrementForUnique(vector<int>& nums) {\n        int n = nums.size();\n        int maxVal = 0;\n        for (int x : nums) maxVal = max(maxVal, x);\n        int size = maxVal + n + 1;\n        vector<int> count(size, 0);\n        for (int x : nums) count[x]++;\n        long long moves = 0;\n        for (int v = 0; v < size - 1; v++) {\n            if (count[v] > 1) {\n                int extra = count[v] - 1;\n                moves += extra;\n                count[v + 1] += extra;\n            }\n        }\n        return (int)moves;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

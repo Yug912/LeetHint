@@ -1,0 +1,40 @@
+{
+  "slug": "count-unreachable-pairs-of-nodes-in-an-undirected-graph",
+  "title": "Count Unreachable Pairs of Nodes in an Undirected Graph",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find / Disjoint Set Union",
+  "tc": "O((n + m)·α(n))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- DSU::parent (vector<int>): n entries → O(n)\n- DSU::rank_ (vector<int>): n entries → O(n)\n- unordered_map<int,int> compSize: up to n entries → O(n)\n- recursion depth: none (iterative find)\n- not counted: input edges, returned long long",
+  "approach": "Two nodes are unreachable from each other iff they belong to different connected components. We use Union-Find (DSU with path halving and union by rank) to identify all connected components. The answer equals total pairs minus reachable pairs: n*(n-1)/2 − Σ(size_i*(size_i-1)/2) for each component. This avoids O(n²) pair enumeration.",
+  "hints": [
+    "With n up to 10^5, checking every pair directly is too slow. What single piece of information about each node would let you count its unreachable partners without checking them one by one?",
+    "Use Union-Find (Disjoint Set Union) to identify connected components. In Example 2, after processing all 5 edges, the components have sizes 4, 2, and 1.",
+    "```\nbuild DSU with n nodes\nfor each edge (u, v): unite(u, v)\nfor each node i: find its root, increment that component's size\ntotal_pairs = n * (n - 1) / 2\nreachable = sum of size * (size - 1) / 2 for each component\nreturn total_pairs - reachable\n```",
+    "**Overflow** - n=100000 with no edges; every pair is unreachable.\n`Input: n = 100000, edges = []` → `Expected: 4999950000`\n⚠️ Bug: `int total = n * (n - 1) / 2` → 100000 × 99999 = 9999900000 overflows int32 → returns 704982704\n\n**Stale parent** - after unions, some nodes' parent field still points to an old root.\n`Input: n = 4, edges = [[0,1],[2,3],[0,2]]` → `Expected: 0`\n⚠️ Bug: grouping by `parent[i]` instead of `find(i)` → node 3 has parent 2 (not root 0), splitting one component into two → returns 3\n\n**Double counting** - each unreachable pair is counted from both components' perspectives.\n`Input: n = 3, edges = [[0,1]]` → `Expected: 2`\n⚠️ Bug: summing `s * (n - s)` per component without dividing by 2 → 2×1 + 1×2 = 4 → returns 4\n\n**Empty edges** - with no edges, every node is its own component of size 1.\n`Input: n = 5, edges = []` → `Expected: 10`\n⚠️ Bug: `if (edges.empty()) return 0;` → returns 0 instead of 10"
+  ],
+  "followUps": [
+    {
+      "q": "What if edges can be added dynamically between queries asking for the current count?",
+      "a": "DSU already supports incremental additions. Maintain a running total: when uniting two components of sizes a and b, subtract a*b from the answer (those pairs become reachable). Each edge addition is O(α(n)), each query is O(1). TC: O(m·α(n)), SC: O(n)."
+    },
+    {
+      "q": "What if edges can also be removed between queries?",
+      "a": "Process queries offline using divide-and-conquer over time on a segment tree. Each edge is active during a time interval; traverse the segment tree, unioning active edges at each node and rolling back at exit. Answer queries at leaves. TC: O((m+q)·log m·α(n)), SC: O(n + m)."
+    },
+    {
+      "q": "What if n is up to 10^9 but edges.length ≤ 2×10^5?",
+      "a": "At most 4×10^5 distinct nodes appear in edges; the rest are isolated. Use a hash map for the DSU, tracking only nodes in edges. Compute component sizes among those nodes, then add isolated nodes as size-1 components. The formula n*(n-1)/2 − Σ(size_i*(size_i-1)/2) still works with long long. TC: O(m·α(m)), SC: O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct DSU {\n        vector<int> parent, rank_;\n        DSU(int n) : parent(n), rank_(n, 0) {\n            for (int i = 0; i < n; i++) parent[i] = i;\n        }\n        int find(int x) {\n            while (parent[x] != x) {\n                parent[x] = parent[parent[x]];\n                x = parent[x];\n            }\n            return x;\n        }\n        void unite(int x, int y) {\n            int rx = find(x), ry = find(y);\n            if (rx == ry) return;\n            if (rank_[rx] < rank_[ry]) swap(rx, ry);\n            parent[ry] = rx;\n            if (rank_[rx] == rank_[ry]) rank_[rx]++;\n        }\n    };\npublic:\n    long long countPairs(int n, vector<vector<int>>& edges) {\n        DSU dsu(n);\n        for (auto& e : edges) dsu.unite(e[0], e[1]);\n\n        unordered_map<int, int> compSize;\n        for (int i = 0; i < n; i++) compSize[dsu.find(i)]++;\n\n        long long reachable = 0;\n        for (auto& [r, s] : compSize) {\n            reachable += (long long)s * (s - 1) / 2;\n        }\n        long long total = (long long)n * (n - 1) / 2;\n        return total - reachable;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

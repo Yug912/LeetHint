@@ -1,0 +1,40 @@
+{
+  "slug": "distinct-subsequences-ii",
+  "title": "Distinct Subsequences II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Strings with Deduplication",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- lastVal[26]: fixed-size array of long long, 26 entries → O(1)\n- seen[26]: fixed-size array of bool, 26 entries → O(1)\n- dp, prevDp, newDp, c: scalar variables → O(1)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "Use dynamic programming where `dp` tracks the number of distinct subsequences (including the empty one) of the prefix processed so far. When adding character `c`, the count doubles (each existing subsequence either stays as-is or appends `c`), but if `c` appeared before, we subtract the `dp` value from just before that previous occurrence to remove duplicates. The answer is `dp - 1` (excluding the empty subsequence), all modulo 10⁹ + 7.",
+  "hints": [
+    "If you process the string left to right and track how many distinct subsequences exist so far, what goes wrong when a character repeats? The string length can reach 2000.",
+    "Use dynamic programming: let `dp` = number of distinct subsequences (including empty) of the prefix so far. For `s = \"aba\"`, after processing `'a','b'` we have `dp=4` ({`''`, `'a'`, `'b'`, `'ab'`}); adding the second `'a'` gives `2·4=8`, but `'a'` and `'ab'` are duplicates from the first `'a'`, so subtract `dp` from just before that first `'a'` (= 1), giving `dp=7`, answer = 6.",
+    "```\ndp = 1  # empty subsequence\nfor each char c in s:\n    prev = dp\n    dp = (2 * dp) mod MOD\n    if c seen before:\n        dp = (dp - lastVal[c] + MOD) mod MOD\n    lastVal[c] = prev\n    mark c as seen\nreturn (dp - 1) mod MOD\n```",
+    "**Single character** - only one non-empty subsequence exists\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: returning `dp` without subtracting 1 for the empty subsequence → returns 2\n\n**All identical characters** - every repeat creates duplicates that must be removed\n`Input: s = \"aaa\"` → `Expected: 3`\n⚠️ Bug: skipping the subtraction when a character is seen again → returns 7 (= 2³ − 1)\n\n**Overflow** - `dp` grows exponentially and `2 * dp` exceeds 2³¹−1 for moderately long inputs\n`Input: s = \"abababababababababababababababababababababab\"` → `Expected: 971215057`\n⚠️ Bug: using `int` for `dp`, `2 * 1836311902` overflows at step 44 → returns a negative garbage value\n\n**Off-by-one in subtraction** - must subtract the `dp` value from *before* the previous occurrence, not after\n`Input: s = \"abab\"` → `Expected: 11`\n⚠️ Bug: storing `lastVal[c] = dp` (the value *after* update) instead of `prev` (the value *before*) → returns 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if `s` can contain any Unicode character, not just lowercase English letters?",
+      "a": "Replace the fixed-size `lastVal[26]` and `seen[26]` arrays with a hash map keyed by character. Time complexity stays O(n); space becomes O(min(n, |Σ|)) where |Σ| is the alphabet size."
+    },
+    {
+      "q": "What if `s` arrives as a streaming input too large to store in memory?",
+      "a": "The algorithm already processes one character at a time with O(1) state beyond the alphabet arrays, so it works unchanged on a stream. Time O(n), space O(|Σ|) with no need to buffer the string."
+    },
+    {
+      "q": "What if you must return the number of distinct subsequences of exactly length `k`?",
+      "a": "Use 2D DP where `dp[i][j]` = distinct subsequences of length `j` from the first `i` characters. The transition adds `dp[i-1][j-1]` (append `s[i]`) and subtracts the duplicate contribution from the previous occurrence of `s[i]` at the same length. Time O(n·k), space O(k) with a rolling array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int distinctSubseqII(string s) {\n        const long long MOD = 1e9 + 7;\n        long long dp = 1; // includes empty subsequence\n        long long lastVal[26] = {};\n        bool seen[26] = {};\n        for (char ch : s) {\n            int c = ch - 'a';\n            long long prevDp = dp;\n            long long newDp = (2 * dp) % MOD;\n            if (seen[c]) {\n                newDp = (newDp - lastVal[c] + MOD) % MOD;\n            }\n            lastVal[c] = prevDp;\n            seen[c] = true;\n            dp = newDp;\n        }\n        return (int)((dp - 1 + MOD) % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

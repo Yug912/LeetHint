@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-ice-cream-bars",
+  "title": "Maximum Ice Cream Bars",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy + Counting Sort",
+  "tc": "O(n + max_cost)",
+  "sc": "O(max_cost)",
+  "spaceBreakdown": "- vector<int> count(100001, 0): 100001 ints → O(10^5)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Since we want to maximize the *number* of bars (not total value), it is always optimal to buy the cheapest bars first. The constraint `costs[i] ≤ 10^5` makes counting sort ideal: build a frequency array indexed by price, then scan prices from 1 upward, buying as many bars at each price as the remaining coins allow. This avoids an O(n log n) comparison sort entirely.",
+  "hints": [
+    "Every price falls between 1 and 10^5. What does this narrow range let you do with the bars that you couldn't if prices went up to 10^9?",
+    "Counting sort: tally how many bars cost each price from 1 to 10^5, then scan prices upward. For `costs = [1,3,2,4,1]` with 7 coins: price 1 has 2 bars → buy both (spend 2), price 2 → buy 1 (spend 2), price 3 → buy 1 (spend 3) = 4 bars for 7 coins.",
+    "```\ncount = array[1..100000] of zeros\nfor each cost in costs:\n    count[cost] += 1\nans = 0\nfor price = 1 to 100000:\n    if coins < price: break\n    buy = min(count[price], coins / price)\n    ans += buy\n    coins -= buy * price\nreturn ans\n```",
+    "**Single element, exact budget** - n = 1 and coins exactly equals the only price.\n`Input: costs = [5], coins = 5` → `Expected: 1`\n⚠️ Bug: breaking when `coins <= price` instead of `coins < price` → returns 0\n\n**All elements equal, partial buy** - every bar has the same price but you can only afford some.\n`Input: costs = [3,3,3,3], coins = 10` → `Expected: 3`\n⚠️ Bug: buying only 1 bar per price level instead of `min(count[price], coins/price)` → returns 1\n\n**Cannot afford any bar** - the cheapest bar costs more than the entire budget.\n`Input: costs = [10,6,8,7,7,8], coins = 5` → `Expected: 0`\n⚠️ Bug: initializing `ans = 1` instead of `ans = 0` → returns 1\n\n**Maximum price value** - a bar costs exactly 10^5, the upper bound.\n`Input: costs = [100000], coins = 100000` → `Expected: 1`\n⚠️ Bug: allocating `count` with size 100000 instead of 100001 → out-of-bounds write at index 100000, returns 0 or crashes"
+  ],
+  "followUps": [
+    {
+      "q": "What if `costs[i]` can be as large as 10^9?",
+      "a": "The frequency array would be far too large. Fall back to a comparison-based sort (O(n log n)) and then greedily buy cheapest-first. TC becomes O(n log n), SC becomes O(1) if sorting in place."
+    },
+    {
+      "q": "What if the bars arrive in a stream and you must report the current maximum after each arrival?",
+      "a": "Maintain a max-heap of all affordable bars and a running sum. When a new bar arrives, push it and add its cost; while the sum exceeds coins, pop the most expensive bar. Each step is O(log n), total O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if you must buy exactly k bars or report that it is impossible?",
+      "a": "After counting sort, buy the k cheapest bars and check whether their total cost ≤ coins. If yes return k; otherwise return -1. TC stays O(n + max_cost), SC stays O(max_cost)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxIceCream(vector<int>& costs, int coins) {\n        const int MAX_PRICE = 100000;\n        vector<int> count(MAX_PRICE + 1, 0);\n        for (int c : costs) count[c]++;\n        int ans = 0;\n        for (int price = 1; price <= MAX_PRICE; price++) {\n            if (count[price] == 0) continue;\n            if (coins < price) break;\n            int canBuy = min(count[price], coins / price);\n            ans += canBuy;\n            coins -= canBuy * price;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

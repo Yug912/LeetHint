@@ -1,0 +1,40 @@
+{
+  "slug": "find-players-with-zero-or-one-losses",
+  "title": "Find Players With Zero or One Losses",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Direct Indexing / Counting Array",
+  "tc": "O(n + V)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- int losses[100001]: fixed array of 100001 ints → O(V)\n- recursion depth: none\n- not counted: input matches, returned vector<vector<int>> ans",
+  "approach": "Since player IDs are bounded in [1, 10^5], we use a fixed-size array indexed by player ID to track loss counts, with -1 meaning \"hasn't played.\" For each match, we mark both players as played (if not already) and increment the loser's loss count. A final scan from ID 1 to 10^5 collects players with 0 losses into answer[0] and 1 loss into answer[1], naturally in sorted order - no sorting needed.",
+  "hints": [
+    "The constraints bound every player ID between 1 and 10^5. If you could look up each player's loss count using their ID directly as a position, what would scanning positions 1, 2, 3, …, 10^5 give you automatically?",
+    "Use a fixed-size integer array of size 10^5+1, indexed by player ID, initialized to -1 (unplayed). For match [1,3]: set losses[1]=0 and losses[3]=0, then increment losses[3] to 1.",
+    "```\ninitialize losses[1..V] = -1\nfor each (winner, loser) in matches:\n    if losses[winner] == -1: losses[winner] = 0\n    if losses[loser] == -1: losses[loser] = 0\n    losses[loser] += 1\nfor i from 1 to V:\n    if losses[i] == 0: add i to answer[0]\n    elif losses[i] == 1: add i to answer[1]\nreturn answer\n```",
+    "**Minimum input** - Only one match exists.\n`Input: [[1,2]]` → `Expected: [[1],[2]]`\n⚠️ Bug: initializing losses to 0 instead of -1 → returns `[[1,3,4,5,...,100000],[2]]` (every unplayed ID wrongly added to answer[0])\n\n**Repeated winner** - One player wins multiple matches without losing.\n`Input: [[1,2],[1,3],[1,4]]` → `Expected: [[1],[2,3,4]]`\n⚠️ Bug: incrementing losses[winner] on each win instead of setting it to 0 once → losses[1]=3, returns `[[],[2,3,4]]`\n\n**Boundary ID** - A player with ID equal to the maximum 10^5.\n`Input: [[100000,1]]` → `Expected: [[100000],[1]]`\n⚠️ Bug: allocating array of size 100000 instead of 100001 → index 100000 is out of bounds, undefined behavior\n\n**Both lists empty** - Every player loses at least twice.\n`Input: [[1,2],[1,3],[2,1],[2,3],[3,1],[3,2]]` → `Expected: [[],[]]`\n⚠️ Bug: checking `losses[i] <= 1` instead of `losses[i] == 0` or `losses[i] == 1` → unplayed IDs (losses[i] == -1) satisfy -1 <= 1, so answer[0] = [4,5,...,100000]"
+  ],
+  "followUps": [
+    {
+      "q": "What if player IDs can be up to 10^9 instead of 10^5?",
+      "a": "A fixed array of size 10^9 is infeasible (4 GB). Switch to a hash map mapping player ID to loss count, then sort the two result lists. Time becomes O(n log n), space O(n) where n is the number of distinct players."
+    },
+    {
+      "q": "What if matches arrive one at a time and you must answer \"who has 0/1 losses?\" after each insertion?",
+      "a": "Keep the loss-count array and maintain two sets tracking 0-loss and 1-loss players. When a player's loss count changes, move them between sets or remove them. Each update is O(1) with the array; each query returns the current sets, which are already sorted if you scan the array."
+    },
+    {
+      "q": "What if you must return players with exactly k losses for a given k, not just 0 or 1?",
+      "a": "Generalize to k+1 output lists. The array scan checks if losses[i] is in {0, 1, ..., k} and routes the player to the corresponding list. Time stays O(n + V), space O(V + total output size)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> findWinners(vector<vector<int>>& matches) {\n        const int MAXP = 100001;\n        int losses[MAXP];\n        for (int i = 0; i < MAXP; i++) losses[i] = -1;\n        \n        for (auto& m : matches) {\n            int w = m[0], l = m[1];\n            if (losses[w] == -1) losses[w] = 0;\n            if (losses[l] == -1) losses[l] = 0;\n            losses[l]++;\n        }\n        \n        vector<vector<int>> ans(2);\n        for (int i = 1; i < MAXP; i++) {\n            if (losses[i] == 0) ans[0].push_back(i);\n            else if (losses[i] == 1) ans[1].push_back(i);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-ways-to-form-a-target-string-given-a-dictionary",
+  "title": "Number of Ways to Form a Target String Given a Dictionary",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Frequency Precomputation",
+  "tc": "O(L*n + L*m)",
+  "sc": "O(L + m)",
+  "spaceBreakdown": "- vector<vector<int>> freq (L × 26): O(L)\n- vector<long long> dp (m+1): O(m)\n- recursion depth: none\n- not counted: input words, target, returned int",
+  "approach": "Precompute, for each column index k, the frequency of each character across all words (freq[k][c]). Then use 1D DP where dp[i] = number of ways to form target[0..i-1] using the columns processed so far. For each column k (left to right), update dp[i] for i from m down to 1: dp[i] += dp[i-1] * freq[k][target[i-1]]. The \"down to 1\" order ensures each column is used at most once. The answer is dp[m] mod 10^9+7.",
+  "hints": [
+    "When you pick the i-th target character at column k, you choose one word's k-th character - but after that choice, does it matter which specific word it came from, or only how many words had the right character at column k?",
+    "Use a 2D frequency table freq[k][c] = count of words with character c at column k, then 1D DP. For Example 1, column 3 has freq[3]['a']=2 and freq[3]['b']=1; when processing column 3, dp[3] += dp[2] * 2 (forming the final 'a').",
+    "```\nfreq[L][26] = count of each char per column\ndp[0..m] = 0; dp[0] = 1\nfor k in 0..L-1:\n    for i in m down to 1:\n        c = target[i-1]\n        dp[i] = (dp[i] + dp[i-1] * freq[k][c]) % MOD\nreturn dp[m]\n```",
+    "**Forward update order** - updating dp[i] from i=1 upward lets the same column be reused.\n`words = [\"aa\"], target = \"aa\"` → `Expected: 1`\n⚠️ Bug: iterating i from 1 to m instead of m down to 1 → returns 3\n\n**Integer overflow** - dp values approach 10^9, freq up to 1000, product ~10^12.\n`words` = 1000 words of length 1000, `target` = 1000 chars → `Expected: some value mod 10^9+7`\n⚠️ Bug: using `int` for dp instead of `long long` → overflow wraps to a wrong negative/garbage value\n\n**Base case initialization** - dp[0] must represent \"empty target formed in exactly 1 way.\"\n`words = [\"a\"], target = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing dp[0] = 0 → returns 0\n\n**Target longer than words** - no valid column assignment exists.\n`words = [\"ab\"], target = \"abc\"` → `Expected: 0`\n⚠️ Bug: looping k only up to m (not L) and short-circuiting → may miss columns or return a stale nonzero value"
+  ],
+  "followUps": [
+    {
+      "q": "What if words can have different lengths?",
+      "a": "For each column k, only count words whose length exceeds k when building freq. The DP stays identical. TC: O(total_chars + L*m), SC: O(L + m) where L = max word length."
+    },
+    {
+      "q": "What if you must answer many target queries on the same fixed words?",
+      "a": "Build freq once in O(L*n), then run the O(L*m) DP independently per query. SC per query drops to O(m) since freq is shared. Total TC: O(L*n + Q*L*m) for Q queries."
+    },
+    {
+      "q": "What if words arrive in a stream and you must answer queries online?",
+      "a": "Maintain freq[k][c] incrementally - each new word of length L adds O(L) updates. Recompute the DP from scratch per query in O(L*m). TC: O(L) per word insertion, O(L*m) per query. SC: O(L*26 + m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numWays(vector<string>& words, string target) {\n        const long long MOD = 1000000007;\n        int L = words[0].size();\n        int n = words.size();\n        int m = target.size();\n\n        vector<vector<int>> freq(L, vector<int>(26, 0));\n        for (int k = 0; k < L; k++) {\n            for (int j = 0; j < n; j++) {\n                freq[k][words[j][k] - 'a']++;\n            }\n        }\n\n        vector<long long> dp(m + 1, 0);\n        dp[0] = 1;\n        for (int k = 0; k < L; k++) {\n            for (int i = m; i >= 1; i--) {\n                int c = target[i - 1] - 'a';\n                dp[i] = (dp[i] + dp[i - 1] * freq[k][c]) % MOD;\n            }\n        }\n        return (int)dp[m];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "unique-length-3-palindromic-subsequences",
+  "title": "Unique Length-3 Palindromic Subsequences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "First/Last Occurrence + Character Set",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int first[26], last[26]: fixed 26 ints → O(1)\n- bool seen[26]: fixed 26 bools → O(1)\n- recursion depth: none\n- not counted: input string s, returned int",
+  "approach": "A length-3 palindrome has the form \"xyx\": the same outer character x on both ends and any middle character y. For each of the 26 letters x, find its first and last occurrence in s; if they differ, every distinct letter appearing strictly between them can serve as y, each yielding a unique \"xyx\". Summing these distinct-middle counts over all x gives the answer. This is correct because using the earliest first and latest last occurrence of x maximizes the middle window, so any valid y for any pair of x-occurrences is captured, and distinct middle letters produce distinct 3-letter strings.",
+  "hints": [
+    "A length-3 palindrome is always of the form \"xyx\". For a fixed outer character x that appears several times in s, which two of its occurrences would leave the most room for middle characters y between them? (n ≤ 10^5 rules out checking every triplet.)",
+    "For each of the 26 letters, store its first and last index in s. In \"aabca\", 'a' has first=0 and last=4; any letter appearing in s[1..3] (\"abc\") forms a valid \"aya\" palindrome, contributing 3.",
+    "```\nfor each letter c in 'a'..'z':\n    first[c] = first index of c in s\n    last[c]  = last index of c in s\n    if first[c] < last[c]:\n        mark every distinct letter in s[first[c]+1 .. last[c]-1]\n        add the count of marked letters to answer\nreturn answer\n```",
+    "**All same characters** - every position holds the same letter\n`Input: s = \"aaaa\"` → `Expected: 1`\n⚠️ Bug: counting each index triple (i,j,k) with i<j<k and s[i]==s[k] without deduplicating the resulting string → returns 4\n\n**Off-by-one on the right endpoint** - minimal valid palindrome\n`Input: s = \"aba\"` → `Expected: 1`\n⚠️ Bug: counting distinct letters in s[first+1 .. last] inclusive of the last endpoint → returns 2 (falsely counts 'a' as a middle char, yielding \"aaa\" which needs 3 a's)\n\n**Outer char appears twice with no room** - adjacent equal letters\n`Input: s = \"aab\"` → `Expected: 0`\n⚠️ Bug: iterating the middle range as s[first+1 .. last] inclusive (right off-by-one) → returns 1 (counts 'a' at index 1 as middle, but \"aaa\" is not a subsequence of \"aab\")\n\n**Multiple outer characters** - several letters each appear at both ends\n`Input: s = \"abacaba\"` → `Expected: 5`\n⚠️ Bug: not resetting the \"seen middle letters\" set between different outer characters → returns 6 (accumulates {a,b,c} from 'a' and reuses it for 'b')"
+  ],
+  "followUps": [
+    {
+      "q": "What if the palindrome length is 5 (form \"xyzyx\") instead of 3?",
+      "a": "For each ordered pair of outer characters (x, z), find the first x and last x, then within that window find the first z and last z, and count distinct middle characters y between them. Time becomes O(|Σ|² · n) = O(26² · n), space stays O(|Σ|). It generalizes to length L as O(|Σ|^(L/2) · n)."
+    },
+    {
+      "q": "What if the alphabet includes uppercase letters and digits (|Σ| = 62)?",
+      "a": "Replace the size-26 arrays with size-62 (or 128) arrays; the algorithm is unchanged. Time becomes O(62 · n), space O(62). For an unbounded alphabet (Unicode), use hash maps for first/last and a hash set for middle characters, giving O(n · |distinct chars|) time."
+    },
+    {
+      "q": "What if you must answer many queries counting unique length-3 palindromic subsequences on arbitrary substrings s[l..r]?",
+      "a": "Precompute per-character sorted position lists and a prefix bitmask of letters seen up to each index. For a query, for each letter c binary-search its first and last occurrence within [l..r], then use prefix bitmasks to count distinct letters strictly between them in O(1). Preprocessing O(n), each query O(|Σ| · log n), space O(n + |Σ|)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPalindromicSubsequence(string s) {\n        int n = s.size();\n        int first[26], last[26];\n        for (int i = 0; i < 26; i++) {\n            first[i] = -1;\n            last[i] = -1;\n        }\n        for (int i = 0; i < n; i++) {\n            int c = s[i] - 'a';\n            if (first[c] == -1) first[c] = i;\n            last[c] = i;\n        }\n        int ans = 0;\n        for (int c = 0; c < 26; c++) {\n            if (first[c] == -1 || first[c] == last[c]) continue;\n            bool seen[26] = {false};\n            for (int i = first[c] + 1; i < last[c]; i++) {\n                seen[s[i] - 'a'] = true;\n            }\n            for (int y = 0; y < 26; y++) {\n                if (seen[y]) ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

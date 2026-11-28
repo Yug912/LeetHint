@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-to-merge-stones",
+  "title": "Minimum Cost to Merge Stones",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Intervals",
+  "tc": "O(n³/k)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<vector<int>> dp: n×n → O(n²)\n- vector<int> prefix: n+1 entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input stones",
+  "approach": "Each merge reduces the pile count by exactly k−1, so the task is feasible only when (n−1)%(k−1)==0. We use interval DP: dp[i][j] = minimum cost to reduce stones[i..j] to the fewest piles possible (which is (j−i)%(k−1)+1 piles). We split at every m stepping by k−1 (so the left half collapses to exactly 1 pile), and whenever (j−i)%(k−1)==0 the segment fully merges into one pile, so we add the segment's stone sum (via prefix sums). The answer is dp[0][n−1].",
+  "hints": [
+    "Each merge replaces k piles with 1, reducing the count by k−1. Starting from n piles, what must be true about n and k for the count to ever reach exactly 1?",
+    "Use interval DP where dp[i][j] is the minimum cost to reduce stones[i..j] to its fewest possible piles; when (j−i) is divisible by (k−1) those piles collapse to one and you add the segment sum. For [3,2,4,1] with k=2, dp[0][1] = 0 + (3+2) = 5.",
+    "```\nif (n-1) % (k-1) != 0: return -1\ncompute prefix sums\nfor len in 2..n:\n  for i in 0..n-len:\n    j = i + len - 1\n    dp[i][j] = min over m (step k-1, m from i to j-1) of dp[i][m] + dp[m+1][j]\n    if (j-i) % (k-1) == 0:\n      dp[i][j] += prefix[j+1] - prefix[i]\nreturn dp[0][n-1]\n```",
+    "**Single pile** - n=1, already one pile, no merge needed.\n`Input: stones = [5], k = 2` → `Expected: 0`\n⚠️ Bug: returning -1 when n < k → returns -1\n\n**Impossible merge** - pile count can never reach 1.\n`Input: stones = [3,2,4,1], k = 3` → `Expected: -1`\n⚠️ Bug: skipping the (n−1)%(k−1) feasibility check → returns 7\n\n**Wrong step size** - stepping m by 1 instead of k−1 breaks pile-count tracking.\n`Input: stones = [1,1,1,1,1], k = 3` → `Expected: 8`\n⚠️ Bug: stepping m by 1 instead of (k−1) in the inner loop → returns 5\n\n**Missing sum addition** - forgetting to add the segment sum on full merge.\n`Input: stones = [3,2,4,1], k = 2` → `Expected: 20`\n⚠️ Bug: not adding prefix[j+1]−prefix[i] when (j−i)%(k−1)==0 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can vary per merge (you choose any k between 2 and K each time)?",
+      "a": "The DP state stays the same but the inner loop must try every valid k for the current split, and the addition condition becomes checking whether the combined pile count equals the chosen k. Time complexity becomes O(n³·K)."
+    },
+    {
+      "q": "What if n can be up to 500?",
+      "a": "The O(n³/k) DP becomes too slow. You would need Knuth-like optimization or exploit the problem structure further; for k=2 specifically, this reduces to optimal matrix chain multiplication which has no known sub-cubic exact solution, so you'd need an approximation or a different problem formulation."
+    },
+    {
+      "q": "What if stones can be negative?",
+      "a": "The DP structure is unchanged since costs are still additive, but the optimal merge order may favor delaying negative-sum merges. The feasibility check (n−1)%(k−1)==0 is unaffected. Use long long to avoid overflow from accumulated negative sums."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int mergeStones(vector<int>& stones, int k) {\n        int n = stones.size();\n        if ((n - 1) % (k - 1) != 0) return -1;\n        vector<int> prefix(n + 1, 0);\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + stones[i];\n        vector<vector<int>> dp(n, vector<int>(n, 0));\n        for (int len = 2; len <= n; len++) {\n            for (int i = 0; i + len - 1 < n; i++) {\n                int j = i + len - 1;\n                dp[i][j] = INT_MAX;\n                for (int m = i; m < j; m += k - 1) {\n                    dp[i][j] = min(dp[i][j], dp[i][m] + dp[m + 1][j]);\n                }\n                if ((j - i) % (k - 1) == 0) {\n                    dp[i][j] += prefix[j + 1] - prefix[i];\n                }\n            }\n        }\n        return dp[0][n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

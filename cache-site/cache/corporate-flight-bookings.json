@@ -1,0 +1,40 @@
+{
+  "slug": "corporate-flight-bookings",
+  "title": "Corporate Flight Bookings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Difference Array",
+  "tc": "O(n + m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> ans: size n+1 → O(n) (this is the returned output; by LeetCode convention not counted as auxiliary, so auxiliary SC = O(1))\n- recursion depth: none\n- not counted: input bookings, returned vector",
+  "approach": "Use a difference array: for each booking [l, r, s], add s at index l−1 and subtract s at index r. After processing all bookings, compute the prefix sum to recover each flight's total. The prefix sum propagates each addition forward and stops it at the subtraction point, exactly matching the contiguous range. This avoids O(m·n) brute force.",
+  "hints": [
+    "Each booking adds the same seat count to every flight in a contiguous range. With up to 2×10^4 bookings and 2×10^4 flights, updating each flight individually per booking could take 4×10^8 steps. What property of contiguous ranges lets you avoid touching every flight in each range?",
+    "Use a difference array. For each booking [l, r, s], add s at index l−1 and subtract s at index r. For booking [1,2,10] with n=5: diff[0]+=10, diff[2]-=10. Then compute the running prefix sum to get each flight's total.",
+    "```\ndiff = array of size n+1, all zeros\nfor each booking [l, r, s]:\n    diff[l-1] += s\n    diff[r] -= s\nfor i from 1 to n-1:\n    diff[i] += diff[i-1]\nremove last element\nreturn diff\n```",
+    "**Single flight** - n=1, the minimum input size.\n`Input: bookings = [[1,1,5]], n = 1` → `Expected: [5]`\n⚠️ Bug: allocating `ans` with size n instead of n+1, then writing `ans[b[1]]` when b[1]=1 → out-of-bounds access at index 1.\n\n**Boundary index** - a booking ending at flight n writes at index n, one past the answer length.\n`Input: bookings = [[1,2,10],[2,2,15]], n = 2` → `Expected: [10,25]`\n⚠️ Bug: using `ans[r-1] -= s` instead of `ans[r] -= s` → prefix sum gives [10,0] instead of [10,25].\n\n**Overlapping ranges** - multiple bookings share flights, testing correct accumulation.\n`Input: bookings = [[1,2,10],[2,3,20],[2,5,25]], n = 5` → `Expected: [10,55,45,25,25]`\n⚠️ Bug: using `ans[r-1] -= s` instead of `ans[r] -= s` → prefix sum gives [10,45,25,25,0] instead of [10,55,45,25,25].\n\n**Duplicate bookings** - the same booking repeated, testing accumulation vs assignment.\n`Input: bookings = [[1,1,5],[1,1,5]], n = 1` → `Expected: [10]`\n⚠️ Bug: using `ans[l-1] = s` instead of `ans[l-1] += s` → returns [5] instead of [10]."
+  ],
+  "followUps": [
+    {
+      "q": "What if bookings arrive in a stream and you need to query the seat count for a specific flight at any time?",
+      "a": "Replace the difference array with a Fenwick tree (BIT). Each booking [l, r, s] becomes two point updates: add s at l and subtract s at r+1. A query for flight i is a prefix sum query on the BIT. TC: O((m + q) log n) for q queries, SC: O(n)."
+    },
+    {
+      "q": "What if you also need to support booking cancellations (removing a previously made booking)?",
+      "a": "Use the same Fenwick tree. To cancel booking [l, r, s], apply the inverse updates: subtract s at l and add s at r+1. Each add or cancel is O(log n). TC: O((m + c) log n) where c is the number of cancellations, SC: O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^9 but bookings.length stays at 2×10^4?",
+      "a": "Use coordinate compression on the boundary points (all l and r+1 values across bookings). Build a difference array over the compressed coordinates, then expand back to answer queries. TC: O(m log m), SC: O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> corpFlightBookings(vector<vector<int>>& bookings, int n) {\n        vector<int> ans(n + 1, 0);\n        for (const auto& b : bookings) {\n            ans[b[0] - 1] += b[2];\n            ans[b[1]] -= b[2];\n        }\n        for (int i = 1; i < n; i++) {\n            ans[i] += ans[i - 1];\n        }\n        ans.pop_back();\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

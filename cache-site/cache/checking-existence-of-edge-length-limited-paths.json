@@ -1,0 +1,40 @@
+{
+  "slug": "checking-existence-of-edge-length-limited-paths",
+  "title": "Checking Existence of Edge Length Limited Paths",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Offline Union-Find with Sorted Processing",
+  "tc": "O((E + Q) log(E + Q) + (E + Q) α(n))",
+  "sc": "O(n + Q)",
+  "spaceBreakdown": "- vector<int> parent: n entries → O(n)\n- vector<int> rank_: n entries → O(n)\n- vector<int> qidx: Q entries → O(Q)\n- sort() stack: O(log E + log Q) → O(log n)\n- not counted: input edgeList/queries (modified in place), returned vector<bool> ans",
+  "approach": "Sort edges by distance and queries by limit. Process queries in increasing limit order, using a Union-Find structure. For each query, first add all edges with distance strictly less than the query's limit (these edges never need to be removed since later queries have higher limits), then check if the two query endpoints share the same root. Store answers at original query indices to preserve order. This works because a higher limit includes every edge a lower limit does, so we only add edges monotonically.",
+  "hints": [
+    "If you could answer the queries in any order you choose, which property of the limit values would let you reuse work from one query to the next? The constraints allow up to 10^5 edges and 10^5 queries.",
+    "Sort edges by distance and queries by limit, then use a Union-Find (disjoint set) structure. For Example 1, query [0,2,5] is answered after adding edges with distance < 5 (edges [0,1,2] and [1,2,4]); nodes 0 and 2 then share a root, so the answer is true.",
+    "```\nsort edges by distance\nsort query indices by limit\nei = 0\nfor each query idx in sorted order:\n    while ei < num_edges and edges[ei].dist < queries[idx].limit:\n        union(edges[ei].u, edges[ei].v)\n        ei = ei + 1\n    answer[idx] = (find(queries[idx].p) == find(queries[idx].q))\n```",
+    "**Strict inequality** - edge distance equals query limit, must not be included\n`Input: n=2, edgeList=[[0,1,5]], queries=[[0,1,5]]` → `Expected: [false]`\n⚠️ Bug: using `<=` instead of `<` in the edge-adding condition → returns [true]\n\n**Multiple edges between same pair** - shorter edge may satisfy a query that the longer one does not\n`Input: n=2, edgeList=[[0,1,16],[0,1,2]], queries=[[0,1,5]]` → `Expected: [true]`\n⚠️ Bug: deduplicating edges by node pair and keeping only the first occurrence → keeps [0,1,16], misses [0,1,2] → returns [false]\n\n**Query order preservation** - answers must be returned in original query order\n`Input: n=3, edgeList=[[0,1,2],[1,2,4]], queries=[[0,2,5],[0,1,2]]` → `Expected: [true,false]`\n⚠️ Bug: writing answers in sorted-query order instead of using original indices → returns [false,true]\n\n**Disconnected nodes** - query asks about nodes in different components\n`Input: n=3, edgeList=[[0,1,5]], queries=[[0,2,100]]` → `Expected: [false]`\n⚠️ Bug: checking only whether any edge with distance < limit exists, not whether p and q are connected → returns [true]"
+  ],
+  "followUps": [
+    {
+      "q": "What if queries arrive online (one at a time) and cannot be reordered?",
+      "a": "Sort edges by distance and build a segment tree over edge indices where each node stores the edges covering its range. Run a DFS on the segment tree with a rollback Union-Find: enter a node to union its edges, answer all queries whose cutoff falls in that node's range, then rollback on exit. TC: O((E + Q) log E · α(n)), SC: O(n + E log E)."
+    },
+    {
+      "q": "What if edges can be deleted over time (fully dynamic connectivity)?",
+      "a": "This becomes a fully dynamic connectivity problem. Use a link-cut tree or Euler-tour tree to maintain connected components under both insertions and deletions. Each operation costs O(log² n) amortized. The offline sorting trick no longer applies because edges are not monotonically added."
+    },
+    {
+      "q": "What if n can be up to 10^9 but only 10^5 edges and queries exist?",
+      "a": "Apply coordinate compression: collect all node IDs appearing in edgeList and queries, map them to a dense range [0, 2·10^5). Run the same algorithm on the compressed IDs. TC: O((E + Q) log(E + Q)), SC: O(E + Q) instead of O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> parent;\n    vector<int> rank_;\n    \n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n    \n    void unite(int x, int y) {\n        int rx = find(x), ry = find(y);\n        if (rx == ry) return;\n        if (rank_[rx] < rank_[ry]) swap(rx, ry);\n        parent[ry] = rx;\n        if (rank_[rx] == rank_[ry]) rank_[rx]++;\n    }\n    \n    vector<bool> distanceLimitedPathsExist(int n, vector<vector<int>>& edgeList, vector<vector<int>>& queries) {\n        parent.resize(n);\n        rank_.resize(n, 0);\n        for (int i = 0; i < n; i++) parent[i] = i;\n        \n        int m = edgeList.size();\n        int q = queries.size();\n        \n        sort(edgeList.begin(), edgeList.end(), [](const vector<int>& a, const vector<int>& b) {\n            return a[2] < b[2];\n        });\n        \n        vector<int> qidx(q);\n        for (int i = 0; i < q; i++) qidx[i] = i;\n        sort(qidx.begin(), qidx.end(), [&](int a, int b) {\n            return queries[a][2] < queries[b][2];\n        });\n        \n        vector<bool> ans(q, false);\n        int ei = 0;\n        for (int i = 0; i < q; i++) {\n            int idx = qidx[i];\n            int limit = queries[idx][2];\n            while (ei < m && edgeList[ei][2] < limit) {\n                unite(edgeList[ei][0], edgeList[ei][1]);\n                ei++;\n            }\n            ans[idx] = (find(queries[idx][0]) == find(queries[idx][1]));\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

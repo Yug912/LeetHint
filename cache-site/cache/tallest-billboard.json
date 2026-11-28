@@ -1,0 +1,40 @@
+{
+  "slug": "tallest-billboard",
+  "title": "Tallest Billboard",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Difference",
+  "tc": "O(n * S)",
+  "sc": "O(S)",
+  "spaceBreakdown": "- dp vector: 2*S+1 integers → O(S)\n- ndp vector: 2*S+1 integers → O(S)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Track the difference d = left_support − right_support instead of individual heights. Use DP where dp[d] = maximum left-support height for that difference. For each rod, either add it to the left (d increases by rod, left height increases by rod), add it to the right (d decreases by rod, left height unchanged), or skip it. The answer is dp[0], the maximum left height when both supports are equal.",
+  "hints": [
+    "When assembling two supports rod by rod, what single number tells you how far apart the two sides are at any step? (The total length of all rods is at most 5000.)",
+    "Dynamic programming on the difference d = left − right, where dp[d] = maximum left-support height achieving that difference. For rod 3 in [1,2,3,6]: from state dp[0]=0, adding rod 3 to the left gives dp[3]=3 and adding to the right gives dp[−3]=0.",
+    "```\ndp[0] = 0, all other dp[d] = −1\nfor each rod r:\n    ndp = copy of dp\n    for each d where dp[d] ≥ 0:\n        ndp[d + r] = max(ndp[d + r], dp[d] + r)\n        ndp[d − r] = max(ndp[d − r], dp[d])\n    dp = ndp\nreturn dp[0]\n```",
+    "**Single rod** - n=1, cannot split one rod into two equal supports.\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: updating dp in-place without copying → same rod used on both sides → returns 5\n\n**All equal values** - duplicates allow multiple valid pairings.\n`Input: [100,100,100]` → `Expected: 100`\n⚠️ Bug: using dp[d]+r for the right-add transition instead of dp[d] → left height overcounted → returns 200\n\n**Maximum sum** - sum = 5000, array must cover index range 0..10000.\n`Input: [250,250,250,250,250,250,250,250,250,250,250,250,250,250,250,250,250,250,250,250]` → `Expected: 2500`\n⚠️ Bug: allocating array of size 2*total instead of 2*total+1 → out-of-bounds access at d=2*total\n\n**No valid partition** - no two disjoint subsets with equal sum.\n`Input: [1,2]` → `Expected: 0`\n⚠️ Bug: initializing dp[offset] to −1 instead of 0 → empty-set baseline missing → returns −1"
+  ],
+  "followUps": [
+    {
+      "q": "If sum(rods) could be up to 10^6 (but n ≤ 20), how would you adapt?",
+      "a": "Replace the fixed-size array with a hash map keyed by difference, storing only reachable states. Each rod at most doubles the number of reachable differences, so the map stays small in practice. Time becomes O(n · R) where R is the number of reachable differences, and space is O(R)."
+    },
+    {
+      "q": "If rods arrive in a stream and you must output the best answer after each new rod, how would you modify the solution?",
+      "a": "The DP already processes rods one at a time, so persist the dp array (or map) across calls. After each new rod, run one DP update step and return dp[0]. Each update costs O(S) with the array approach or O(R) with a map."
+    },
+    {
+      "q": "If the billboard needs three equal-height supports instead of two, how would you generalize?",
+      "a": "Track two differences: d1 = support1 − support3 and d2 = support2 − support3. State becomes dp[d1][d2] = max height of support3. Each rod can go to support1, support2, support3, or be skipped (4 choices). Answer is dp[0][0]. Time is O(n · S²) and space O(S²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int tallestBillboard(vector<int>& rods) {\n        int total = 0;\n        for (int r : rods) total += r;\n        int offset = total;\n        vector<int> dp(2 * total + 1, -1);\n        dp[offset] = 0;\n        for (int r : rods) {\n            vector<int> ndp = dp;\n            for (int d = 0; d <= 2 * total; d++) {\n                if (dp[d] < 0) continue;\n                ndp[d + r] = max(ndp[d + r], dp[d] + r);\n                ndp[d - r] = max(ndp[d - r], dp[d]);\n            }\n            dp = ndp;\n        }\n        return dp[offset];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

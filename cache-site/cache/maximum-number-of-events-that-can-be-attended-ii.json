@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-events-that-can-be-attended-ii",
+  "title": "Maximum Number of Events That Can Be Attended II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Binary Search",
+  "tc": "O(n·k + n log n)",
+  "sc": "O(n·k)",
+  "spaceBreakdown": "- vector<vector<int>> dp: (n+1)×(k+1) ints → O(n·k)\n- sort(): introsort stack → O(log n)\n- not counted: input events, returned int",
+  "approach": "Sort events by start day. Define dp[i][j] = max value obtainable from events[i..n-1] using at most j picks. For event i, either skip it (dp[i+1][j]) or take it: its value plus dp[next][j-1], where next is the first event whose start is strictly greater than events[i]'s end (found by binary search since the array is sorted by start). The end day is inclusive, so the next event must start at end+1 or later, i.e., start > end. Answer is dp[0][k].",
+  "hints": [
+    "After you commit to attending one event, what single property of every other event decides whether it is still available to you? The end day is inclusive, so the next event must start strictly later than the current one ends.",
+    "Sort events by start day, then for each event binary-search the first later event whose start exceeds the current end. DP over (index, remaining picks) chooses take-or-skip. For event [1,2,4] in Example 1, the resume index points to [3,4,3], so taking it yields 4 + dp[that index][k-1].",
+    "```\nsort events by start\nfor i from n-1 down to 0:\n    next = first index with events[next].start > events[i].end\n    for j in 1..k:\n        dp[i][j] = max(dp[i+1][j], events[i].value + dp[next][j-1])\nreturn dp[0][k]\n```",
+    "**Shared boundary day** - one event ends on day d, another starts on day d; they conflict\n`Input: events = [[1,2,5],[2,3,5]], k = 2` → `Expected: 5`\n⚠️ Bug: using `events[mid][0] >= events[i][1]` instead of `>` in the binary search → returns 10\n\n**Single event** - minimal input, n = 1\n`Input: events = [[1,1,7]], k = 1` → `Expected: 7`\n⚠️ Bug: outer loop starting at `i = n` instead of `i = n-1` → skips the only event → returns 0\n\n**k exceeds attendable count** - more budget than non-overlapping events available\n`Input: events = [[1,5,10],[2,6,20]], k = 3` → `Expected: 20`\n⚠️ Bug: inner loop `for j in 1..min(k, n-i)` so dp[0][3] is never written → returns 0\n\n**All events identical and fully overlapping** - only one can be chosen\n`Input: events = [[1,3,5],[1,3,5],[1,3,5]], k = 3` → `Expected: 5`\n⚠️ Bug: binary search searching for `start >= end` and finding a same-start event → allows reuse → returns 15"
+  ],
+  "followUps": [
+    {
+      "q": "What if k is unbounded-attend as many non-overlapping events as you want for maximum value?",
+      "a": "This becomes weighted interval scheduling. Collapse the j dimension: dp[i] = max(dp[i+1], value[i] + dp[next]). TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "How would you cut the O(n·k) DP table down to O(n) space?",
+      "a": "Transpose the loops-iterate j (1..k) as the outer loop and i (n-1..0) as the inner. Layer j only reads layer j-1, so keep two 1D arrays of size n+1. TC stays O(n·k), SC drops to O(n)."
+    },
+    {
+      "q": "What if events arrive in an online stream and you must report the answer after each insertion?",
+      "a": "Coordinate-compress end days and maintain a segment tree storing, for each count j, the best value ending at each day. On each new event, query the best value among days before its start for every j, then update. TC O(n·k·log n), SC O(n·k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxValue(vector<vector<int>>& events, int k) {\n        int n = events.size();\n        sort(events.begin(), events.end());\n        vector<vector<int>> dp(n + 1, vector<int>(k + 1, 0));\n        for (int i = n - 1; i >= 0; i--) {\n            int lo = i + 1, hi = n;\n            while (lo < hi) {\n                int mid = (lo + hi) / 2;\n                if (events[mid][0] > events[i][1]) hi = mid;\n                else lo = mid + 1;\n            }\n            int next = lo;\n            for (int j = 1; j <= k; j++) {\n                dp[i][j] = max(dp[i + 1][j], events[i][2] + dp[next][j - 1]);\n            }\n        }\n        return dp[0][k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

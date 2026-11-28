@@ -1,0 +1,40 @@
+{
+  "slug": "most-profit-assigning-work",
+  "title": "Most Profit Assigning Work",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting + Prefix Max + Two Pointers",
+  "tc": "O(n log n + m log m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> jobs: n entries → O(n)\n- sort() introsort stack: O(log n)\n- no recursion, no other containers\n- not counted: input arrays, returned int",
+  "approach": "Sort jobs by difficulty and replace each profit with the running maximum profit up to that difficulty (so each job's stored profit becomes the best achievable at or below its difficulty). Sort workers by ability. Sweep through both with two pointers: for each worker, advance through jobs while difficulty ≤ ability, tracking the best profit seen. Since workers are sorted, the best profit carries forward. Sum the best profit for each worker.",
+  "hints": [
+    "For a worker with ability w, what determines the maximum profit they can earn among all jobs they're capable of completing?",
+    "Sort jobs by difficulty, replace each profit with the running maximum profit up to that difficulty, then sort workers and sweep both with two pointers. In Example 1, after prefix-max the jobs are [(2,10),(4,20),(6,30),(8,40),(10,50)]; worker 5 gets profit 20 since difficulty 6 exceeds 5.",
+    "```\nsort jobs by difficulty\nfor each job: profit = max(profit, running max so far)\nsort workers by ability\nbest = 0, j = 0\nfor each worker w:\n    while j < n and jobs[j].difficulty <= w:\n        best = jobs[j].profit\n        j = j + 1\n    total = total + best\nreturn total\n```",
+    "**Non-monotonic profit** - harder job pays less than an easier one\n`Input: difficulty = [2,4], profit = [10,5], worker = [4]` → `Expected: 10`\n⚠️ Bug: taking profit of the hardest completable job instead of prefix max → returns 5\n\n**No completable job** - all difficulties exceed worker ability\n`Input: difficulty = [85,47,57], profit = [24,66,99], worker = [40,25,25]` → `Expected: 0`\n⚠️ Bug: initializing bestProfit to jobs[0].second instead of 0 → returns 198\n\n**Repeated worker ability** - same ability appears multiple times\n`Input: difficulty = [1,2], profit = [10,20], worker = [100,100]` → `Expected: 40`\n⚠️ Bug: using `if` instead of `while` to advance job pointer → returns 30\n\n**Single element** - minimum input size\n`Input: difficulty = [1], profit = [5], worker = [1]` → `Expected: 5`\n⚠️ Bug: using `j < n-1` instead of `j < n` as loop bound → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Workers arrive one at a time in a stream and must be assigned immediately. You cannot sort workers. How do you adapt?",
+      "a": "Preprocess jobs identically: sort by difficulty and compute prefix-max profit. For each incoming worker, binary search for the rightmost job with difficulty ≤ ability and read its prefix-max profit. TC: O(n log n + m log n), SC: O(n)."
+    },
+    {
+      "q": "Each job can be completed at most once (no repetition). How does the approach change?",
+      "a": "Sort workers by ability descending and jobs by difficulty. Use a max-heap of profits: for each worker (most capable first), push all newly-accessible jobs into the heap, then pop the highest-profit available job. TC: O((n + m) log n), SC: O(n)."
+    },
+    {
+      "q": "Each worker can complete up to k jobs instead of just one. Maximize total profit.",
+      "a": "The preprocessing is identical. For each worker, add k × (best profit they can achieve) to the total, since they can repeat the best job k times. TC: O(n log n + m log m), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxProfitAssignment(vector<int>& difficulty, vector<int>& profit, vector<int>& worker) {\n        int n = difficulty.size();\n        vector<pair<int,int>> jobs(n);\n        for (int i = 0; i < n; i++) {\n            jobs[i] = {difficulty[i], profit[i]};\n        }\n        sort(jobs.begin(), jobs.end());\n        \n        int maxProfit = 0;\n        for (int i = 0; i < n; i++) {\n            maxProfit = max(maxProfit, jobs[i].second);\n            jobs[i].second = maxProfit;\n        }\n        \n        sort(worker.begin(), worker.end());\n        \n        long long total = 0;\n        int j = 0;\n        int bestProfit = 0;\n        for (int w : worker) {\n            while (j < n && jobs[j].first <= w) {\n                bestProfit = jobs[j].second;\n                j++;\n            }\n            total += bestProfit;\n        }\n        \n        return (int)total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

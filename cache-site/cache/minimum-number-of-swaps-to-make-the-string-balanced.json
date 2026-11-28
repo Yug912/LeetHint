@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-swaps-to-make-the-string-balanced",
+  "title": "Minimum Number of Swaps to Make the String Balanced",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Single Pass",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int balance, swaps: scalars → O(1)\n- no containers, no recursion → O(1) total auxiliary\n- not counted: input string s (in place, read-only)",
+  "approach": "Scan left to right maintaining a balance counter (`[` = +1, `]` = −1). Whenever the balance drops below 0, the current `]` has no matching `[` to its left, so we must swap it with some `[` from the right half; doing so conceptually turns this position into `[` and resets balance to 1. Each such event is one unavoidable swap, and one swap can fix exactly one negative-dip, so the count of these events is the answer. Correctness follows because the total counts of `[` and `]` are equal, guaranteeing enough `[`s exist on the right to perform every needed swap.",
+  "hints": [
+    "Scanning left to right, track how many `[` you have seen minus how many `]`. What does it signal each time this running count first dips below zero, given that the total number of `[` and `]` in the whole string is equal?",
+    "Use a single integer balance counter in one pass. On `\"][][\"`: after the first `]` balance = −1, so count one swap and reset balance to 1; the rest never goes negative, so the answer is 1.",
+    "balance = 0, swaps = 0\nfor each char c in s:\n    if c == '[': balance += 1\n    else:        balance -= 1\n    if balance < 0:\n        swaps += 1\n        balance = 1\nreturn swaps",
+    "**Already balanced** - no imbalance ever occurs\n`Input: s = \"[]\"` → `Expected: 0`\n⚠️ Bug: initialising `swaps = 1` \"to be safe\" → returns 1\n\n**Single leading `]`** - balance dips negative on the very first character\n`Input: s = \"][\"` → `Expected: 1`\n⚠️ Bug: skipping the swap when `balance == -1` instead of `balance < 0` → returns 0\n\n**Alternating starting with `]`** - one dip, fixable in one swap\n`Input: s = \"][][\"` → `Expected: 1`\n⚠️ Bug: incrementing `swaps` by `−balance` instead of by 1 → returns 1 here but 3 on `\"]]][[[\"` instead of 2\n\n**Maximum size, all `]` then all `[`** - n = 10^6, balance dips n/2 times\n`Input: s = \"]]]]...[[[[\"` (500000 of each) → `Expected: 250000`\n⚠️ Bug: using `int` for the loop index is fine, but returning `balance/2` style math without the reset step → wrong count"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string could contain other characters (e.g., letters) that must stay in place, and you can only swap brackets?",
+      "a": "Still scan with a balance counter, but when balance dips below 0, find the next `[` strictly to the right of the current position (precompute or scan) and swap; each dip still costs one swap. Time stays O(n), space O(1) if you scan from the right end with a pointer."
+    },
+    {
+      "q": "What if a swap costs the distance between the two indices - minimize total cost instead of swap count?",
+      "a": "Greedy by count no longer suffices; you would pair each unmatched `]` (in order) with the closest unmatched `[` to its right, which becomes a matching problem solvable in O(n) with two pointers since both groups are ordered. Time O(n), space O(n) to store unmatched positions."
+    },
+    {
+      "q": "What if the string arrives as a stream and you cannot store it - return the answer after seeing all of it?",
+      "a": "Maintain only the running balance and the swap counter; since each decision is local (reset balance to 1 on a dip), the streaming version is identical to the offline one. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSwaps(string s) {\n        int balance = 0;\n        int swaps = 0;\n        for (char c : s) {\n            if (c == '[') {\n                balance++;\n            } else {\n                balance--;\n            }\n            if (balance < 0) {\n                swaps++;\n                balance = 1;\n            }\n        }\n        return swaps;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

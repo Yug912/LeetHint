@@ -1,0 +1,40 @@
+{
+  "slug": "longest-path-with-different-adjacent-characters",
+  "title": "Longest Path With Different Adjacent Characters",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Tree DP (post-order)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- children: vector<vector<int>> holding n-1 total entries → O(n)\n- order: vector<int> of size n → O(n)\n- stk: vector<int> up to n → O(n)\n- down: vector<int> of size n → O(n)\n- recursion depth: none (iterative)",
+  "approach": "For each node, compute the longest downward path (in nodes) starting at it whose adjacent characters all differ. When combining at a node, only children whose character differs from the node's can extend the path. The longest path whose highest point is the current node equals 1 (itself) plus the two largest valid child-downward-lengths; track the global maximum. Process nodes in reverse pre-order so every child is computed before its parent, avoiding recursion-stack overflow on skewed trees of size 10^5.",
+  "hints": [
+    "For any path, look at its highest node in the rooted tree. From that node, into how many of its children's subtrees can the path descend?",
+    "Post-order tree DP: each node returns the longest valid downward path starting at it. In Example 1, node 1 ('b') has child 3 ('c', different) giving length 1 and child 4 ('b', same, skipped), so it returns 2 and contributes 2 to node 0's path of length 3.",
+    "```\nbuild children lists from parent[]\norder = reverse of pre-order traversal from root\nfor u in order (children before parents):\n    first = second = 0\n    for v in children[u]:\n        if s[v] != s[u]:\n            update top-two of down[v]\n    down[u] = 1 + first\n    ans = max(ans, 1 + first + second)\nreturn ans\n```",
+    "**Single node** - n=1, no edges exist.\n`Input: parent = [-1], s = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing ans to 0 instead of 1 → returns 0\n\n**All identical characters** - every edge connects equal characters, so none is usable.\n`Input: parent = [-1,0,0], s = \"aaa\"` → `Expected: 1`\n⚠️ Bug: extending without checking s[v] != s[u] → returns 3\n\n**Skewed tree** - parent array forms a chain of length 10^5.\n`Input: parent = [-1,0,1,2,...,99998], s = \"ababab...\"` → `Expected: 100000`\n⚠️ Bug: recursive DFS → stack overflow / runtime error\n\n**Tie between two equal-length child branches** - two children both offer the same longest downward length.\n`Input: parent = [-1,0,0], s = \"abc\"` → `Expected: 3`\n⚠️ Bug: tracking only the single largest child length, not the top two → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is given as undirected edges instead of a parent array?",
+      "a": "Pick any node as root, run a BFS/DFS to orient edges into children lists, then apply the same post-order DP. Time stays O(n), space O(n)."
+    },
+    {
+      "q": "What if you may change up to k node characters to maximize the path?",
+      "a": "Use tree DP with state (node, k_remaining) returning the longest valid downward path; combine the two best children as before. Time O(n·k), space O(n·k)."
+    },
+    {
+      "q": "What if n is up to 10^7 and memory is tight?",
+      "a": "Build children lists in CSR form from one degree-count pass, and keep only the down[] array plus a small per-node top-two buffer. Time O(n), space O(n) with a much smaller constant."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestPath(vector<int>& parent, string s) {\n        int n = parent.size();\n        vector<vector<int>> children(n);\n        for (int i = 1; i < n; i++) {\n            children[parent[i]].push_back(i);\n        }\n        \n        vector<int> order;\n        order.reserve(n);\n        vector<int> stk;\n        stk.reserve(n);\n        stk.push_back(0);\n        while (!stk.empty()) {\n            int u = stk.back();\n            stk.pop_back();\n            order.push_back(u);\n            for (int v : children[u]) {\n                stk.push_back(v);\n            }\n        }\n        \n        vector<int> down(n, 1);\n        int ans = 1;\n        for (int i = n - 1; i >= 0; i--) {\n            int u = order[i];\n            int first = 0, second = 0;\n            for (int v : children[u]) {\n                if (s[v] != s[u]) {\n                    int len = down[v];\n                    if (len > first) {\n                        second = first;\n                        first = len;\n                    } else if (len > second) {\n                        second = len;\n                    }\n                }\n            }\n            down[u] = 1 + first;\n            int through = 1 + first + second;\n            if (through > ans) ans = through;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

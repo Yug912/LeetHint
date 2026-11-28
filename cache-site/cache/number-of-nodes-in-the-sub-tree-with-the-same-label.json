@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-nodes-in-the-sub-tree-with-the-same-label",
+  "title": "Number of Nodes in the Sub-Tree With the Same Label",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Post-order DFS on Tree",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- adj (adjacency list): 2(n-1) entries → O(n)\n- cnt (n × 26 count arrays): 26n integers → O(n)\n- par (parent array): n integers → O(n)\n- order (traversal order): n integers → O(n)\n- stk (DFS stack): up to n integers → O(n)\n- recursion depth: none (iterative)\n- not counted: input edges/labels, returned ans vector",
+  "approach": "Perform a post-order DFS from root 0. Each node maintains a 26-element count array tracking how many nodes in its subtree have each label. A node initializes its own label count to 1, then merges all children's count arrays by element-wise addition. The answer for node i is simply its own count array entry for labels[i]. An iterative DFS avoids stack overflow on skewed trees with up to 10^5 nodes.",
+  "hints": [
+    "What does a parent node need to know about each child's subtree to compute its own answer? The tree has up to 10^5 nodes, so visiting every node once is feasible but O(n²) approaches are not.",
+    "Post-order DFS where each node returns a 26-element integer array of label frequencies in its subtree. In Example 1, node 0 merges arrays from children 1 and 2, finding 2 nodes labeled 'a'.",
+    "```\nbuild undirected adjacency list from edges\nDFS from root 0, record parent and traversal order\nfor each node in reverse traversal order:\n  set own label count to 1\n  for each child:\n    add child's count array to own\n  answer = own count for own label\nreturn answers\n```",
+    "**Single node** - n=1, no edges, the tree is just the root\n`Input: n = 1, edges = [], labels = \"a\"` → `Expected: [1]`\n⚠️ Bug: returning an empty vector when edges is empty → returns []\n\n**Skewed tree** - tree is a straight line, depth equals n\n`Input: n = 4, edges = [[0,1],[1,2],[2,3]], labels = \"aaaa\"` → `Expected: [4,3,2,1]`\n⚠️ Bug: recursive DFS with no depth limit → stack overflow on n = 10^5\n\n**All same labels** - every node shares one label\n`Input: n = 4, edges = [[0,1],[1,2],[0,3]], labels = \"bbbb\"` → `Expected: [4,2,1,1]`\n⚠️ Bug: initializing own label count to 0 instead of 1 → returns [0,0,0,0]\n\n**Reversed edge** - edge given as [child, parent] instead of [parent, child]\n`Input: n = 2, edges = [[1,0]], labels = \"ab\"` → `Expected: [1,1]`\n⚠️ Bug: building adjacency list as directed edges only (adj[e[0]].push_back(e[1])) → returns [1,0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if labels could be any Unicode character instead of just lowercase English letters?",
+      "a": "Replace the fixed 26-element array with a hash map per node. Each node merges children's maps. Time becomes O(n · k) where k is the average distinct labels per subtree, worst case O(n²). Space becomes O(n · k)."
+    },
+    {
+      "q": "What if the tree can be modified (nodes added or removed) and you need to answer queries online?",
+      "a": "Use Euler tour to map each subtree to a contiguous range, then maintain a segment tree storing label counts per range. Updates cost O(log² n) and queries O(log n), with O(n · 26) space."
+    },
+    {
+      "q": "What if you need to answer queries asking \"how many nodes in node i's subtree have label c\" for arbitrary (i, c) pairs?",
+      "a": "The count arrays already store this - answer each query in O(1) by looking up cnt[i][c]. Preprocessing is O(n · 26). If memory is a concern, use Euler tour with offline Mo's algorithm for O((n + q) · √n · 26)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> countSubTrees(int n, vector<vector<int>>& edges, string labels) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        \n        vector<int> ans(n);\n        vector<vector<int>> cnt(n, vector<int>(26, 0));\n        vector<int> par(n, -1);\n        vector<int> order;\n        order.reserve(n);\n        \n        vector<int> stk;\n        stk.reserve(n);\n        stk.push_back(0);\n        while (!stk.empty()) {\n            int u = stk.back();\n            stk.pop_back();\n            order.push_back(u);\n            for (int v : adj[u]) {\n                if (v != par[u]) {\n                    par[v] = u;\n                    stk.push_back(v);\n                }\n            }\n        }\n        \n        for (int i = n - 1; i >= 0; i--) {\n            int u = order[i];\n            cnt[u][labels[u] - 'a'] = 1;\n            for (int v : adj[u]) {\n                if (v != par[u]) {\n                    for (int c = 0; c < 26; c++) {\n                        cnt[u][c] += cnt[v][c];\n                    }\n                }\n            }\n            ans[u] = cnt[u][labels[u] - 'a'];\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

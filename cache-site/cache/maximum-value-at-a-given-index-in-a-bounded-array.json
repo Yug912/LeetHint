@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-value-at-a-given-index-in-a-bounded-array",
+  "title": "Maximum Value at a Given Index in a Bounded Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(log(maxSum))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers, arrays, or strings allocated\n- No recursion (iterative binary search)\n- All variables are scalars (lo, hi, mid, leftLen, rightLen, total)",
+  "approach": "Binary search on the target value for `nums[index]`. For a fixed target, the minimum-sum array is uniquely determined: values decrease by 1 moving away from `index` (clamped at 1). Compute this minimum sum in O(1) using arithmetic-series formulas for the left segment (length `index+1`) and right segment (length `n-index`), subtracting the double-counted peak. If the minimum sum ≤ `maxSum`, the target is feasible. Since feasibility is monotonic, binary search finds the maximum feasible target.",
+  "hints": [
+    "If you fix `nums[index]` to some value, what is the cheapest way to fill every other position while respecting the adjacency rule? The constraint `1 <= n <= maxSum <= 10^9` means you cannot build the array element by element.",
+    "Binary search on the answer. For Example 1 (n=4, index=2, maxSum=6), testing target=2 gives the minimum-sum array [1,1,2,1] with sum 5 ≤ 6, so 2 is feasible; testing target=3 gives sum 8 > 6, so 3 is not.",
+    "```\nlo, hi = 1, maxSum\nwhile lo < hi:\n    mid = (lo + hi + 1) / 2\n    leftSum  = seriesSum(index + 1, mid)\n    rightSum = seriesSum(n - index, mid)\n    total = leftSum + rightSum - mid\n    if total <= maxSum: lo = mid\n    else: hi = mid - 1\nreturn lo\n```",
+    "**Single element** - n=1, the array has exactly one element.\n`Input: n=1, index=0, maxSum=5` → `Expected: 5`\n⚠️ Bug: using `mid = (lo + hi) / 2` with `lo = mid` (lower-mid template) → infinite loop, returns TLE.\n\n**Overflow** - n and maxSum up to 10^9; intermediate products reach ~2×10^18.\n`Input: n=1000000000, index=0, maxSum=1000000000` → `Expected: 1`\n⚠️ Bug: using `int` for the return type of `sumSegment` → `(2*v - cnt + 1) * cnt` overflows 32-bit int, returns garbage.\n\n**Index at boundary** - index=0, the left segment has length 1.\n`Input: n=4, index=0, maxSum=6` → `Expected: 2`\n⚠️ Bug: computing `leftLen = index` instead of `index + 1` → leftLen=0, sumSegment returns 0, total is too small, returns 3.\n\n**All ones** - maxSum equals n, every element must be 1.\n`Input: n=5, index=2, maxSum=5` → `Expected: 1`\n⚠️ Bug: starting `lo = 0` instead of `lo = 1` → returns 0, violating the positive-integer constraint."
+  ],
+  "followUps": [
+    {
+      "q": "What if array values can be zero instead of strictly positive?",
+      "a": "Change the binary search lower bound from 1 to 0, and in the sum formula clamp the decreasing sequence at 0 instead of 1. The structure is identical. Time: O(log(maxSum)), Space: O(1)."
+    },
+    {
+      "q": "What if you must maximize the sum of values at two given indices instead of just one?",
+      "a": "Fix one index's value via outer binary search, then binary search the second value, computing the minimum sum with a modified formula that accounts for the valley between the two peaks. Time: O(log²(maxSum)), Space: O(1)."
+    },
+    {
+      "q": "What if n can be up to 10^18?",
+      "a": "Use `__int128` (or `unsigned long long` with careful bounds) for the arithmetic-series products to avoid overflow. The formulas and binary search are unchanged. Time: O(log(maxSum)), Space: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    long long sumSegment(long long cnt, long long v) {\n        // Sum of a segment of length cnt with peak v at one end,\n        // decreasing by 1 per step, clamped at 1.\n        if (v >= cnt) {\n            // Strictly decreasing: v, v-1, ..., v-cnt+1\n            return (2 * v - cnt + 1) * cnt / 2;\n        } else {\n            // Decreasing to 1, then flat at 1: v, v-1, ..., 1, 1, ..., 1\n            return v * (v + 1) / 2 + (cnt - v);\n        }\n    }\npublic:\n    int maxValue(int n, int index, int maxSum) {\n        long long lo = 1, hi = maxSum;\n        while (lo < hi) {\n            long long mid = (lo + hi + 1) / 2;\n            long long leftLen = index + 1;\n            long long rightLen = (long long)n - index;\n            long long total = sumSegment(leftLen, mid) + sumSegment(rightLen, mid) - mid;\n            if (total <= maxSum) {\n                lo = mid;\n            } else {\n                hi = mid - 1;\n            }\n        }\n        return (int)lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

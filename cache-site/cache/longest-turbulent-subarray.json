@@ -1,0 +1,40 @@
+{
+  "slug": "longest-turbulent-subarray",
+  "title": "Longest Turbulent Subarray",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming (two-state rolling)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int inc, dec, ans, n, i: scalar variables → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input vector arr",
+  "approach": "A turbulent subarray requires consecutive comparison signs to strictly alternate between `<` and `>`, with no equal adjacent pairs. We track two running lengths: `inc` = longest turbulent subarray ending at index `i` where the last comparison was `arr[i-1] < arr[i]`, and `dec` = longest where `arr[i-1] > arr[i]`. When the sign flips, the new state extends the opposite state by 1; when it doesn't flip or elements are equal, both reset to 1. The answer is the maximum value seen across both states.",
+  "hints": [
+    "In a turbulent subarray, what relationship must hold between every pair of consecutive comparison signs (the sign between arr[k] and arr[k+1] versus the sign between arr[k+1] and arr[k+2])? The array length can be up to 4 × 10^4.",
+    "Use dynamic programming with two rolling variables: `inc` for subarrays ending with a `<` comparison, `dec` for those ending with `>`. For arr = [9,4,2,10,...], at index 3 where 2 < 10, `inc` becomes the previous `dec` + 1 = 3.",
+    "```\ninc = 1, dec = 1, ans = 1\nfor i from 1 to n-1:\n    if arr[i-1] < arr[i]:\n        inc = dec + 1\n        dec = 1\n    elif arr[i-1] > arr[i]:\n        dec = inc + 1\n        inc = 1\n    else:\n        inc = 1\n        dec = 1\n    ans = max(ans, inc, dec)\nreturn ans\n```",
+    "**Single element** - no adjacent pairs exist to compare\n`Input: [100]` → `Expected: 1`\n⚠️ Bug: returning 0 when n == 1 instead of 1 → returns 0\n\n**All equal elements** - every adjacent pair is equal, no turbulence beyond length 1\n`Input: [5,5,5,5]` → `Expected: 1`\n⚠️ Bug: using `<=` instead of `<` in the increasing check (treating equal as increasing) → returns 2\n\n**Strictly increasing** - all comparisons point the same direction, never alternating\n`Input: [4,8,12,16]` → `Expected: 2`\n⚠️ Bug: incrementing `inc` with `inc++` instead of `inc = dec + 1; dec = 1` → returns 4\n\n**Adjacent duplicates mid-array** - equal elements break the turbulence chain\n`Input: [9,4,2,10,7,8,8,1,9]` → `Expected: 5`\n⚠️ Bug: omitting the `else` branch that resets `inc` and `dec` to 1 on equality → returns 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the actual turbulent subarray, not just its length?",
+      "a": "Track the starting index alongside the maximum length. When `inc` or `dec` exceeds the current best, record both the start index and the length. At the end, extract `arr[start..start+best-1]`. Time stays O(n); space becomes O(1) for indices or O(n) if you copy the subarray for the return value."
+    },
+    {
+      "q": "What if the array is circular, so arr[n-1] wraps around to arr[0]?",
+      "a": "Conceptually concatenate arr with itself and run the same two-state DP, but cap the running length at n to prevent counting any element twice. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if you may remove up to K elements from the array to maximize the turbulent subarray length?",
+      "a": "Use a sliding window with a counter of \"breaks\" (equal pairs or same-sign consecutive comparisons). Expand the right pointer freely; whenever breaks exceed K, shrink from the left until breaks ≤ K. Track the maximum window size. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxTurbulenceSize(vector<int>& arr) {\n        int n = arr.size();\n        if (n == 1) return 1;\n        \n        int inc = 1, dec = 1, ans = 1;\n        \n        for (int i = 1; i < n; i++) {\n            if (arr[i - 1] < arr[i]) {\n                inc = dec + 1;\n                dec = 1;\n            } else if (arr[i - 1] > arr[i]) {\n                dec = inc + 1;\n                inc = 1;\n            } else {\n                inc = 1;\n                dec = 1;\n            }\n            ans = max(ans, max(inc, dec));\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

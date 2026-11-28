@@ -1,0 +1,40 @@
+{
+  "slug": "race-car",
+  "title": "Race Car",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming",
+  "tc": "O(target · log target)",
+  "sc": "O(target)",
+  "spaceBreakdown": "- vector<int> dp(target+1, 0): up to 10001 entries → O(target)\n- no recursion, no auxiliary containers",
+  "approach": "Accelerating k times in a row lands you at position 2^k − 1. Any optimal instruction sequence decomposes into: accelerate forward n times, reverse, accelerate backward m times, reverse, then solve the remaining distance. We use bottom-up DP where dp[t] = minimum instructions to reach position t. For each t we try (1) overshooting with k A's to 2^k − 1, then reversing and solving the leftover, and (2) undershooting with k−1 A's, reversing, going back m A's, reversing, and solving the remainder. This is correct because every optimal path has this segment structure, and we enumerate all relevant (k, m) pairs.",
+  "hints": [
+    "If you press only A repeatedly, which positions can you reach, and what is the closed form of the k-th one?",
+    "Dynamic programming: dp[t] = minimum instructions to reach position t. For target 6, accelerate 3 times to position 7 (overshoot), reverse, then solve dp[1] = 1, giving 3 + 1 + 1 = 5.",
+    "for t = 1 to target:\n    k = bit-length of t\n    if t == 2^k - 1: dp[t] = k\n    else:\n        dp[t] = k + 1 + dp[2^k - 1 - t]          # overshoot\n        for m = 0 to k-2:                          # undershoot\n            dp[t] = min(dp[t], k + m + 1 + dp[t - 2^(k-1) + 2^m])",
+    "**Smallest input** - target is exactly 2^1 − 1, solvable with a single A.\n`Input: 1` → `Expected: 1`\n⚠️ Bug: skipping the exact-match check and using the overshoot formula → returns 1 + 1 + dp[0] = 2\n\n**Exact power-of-two-minus-one** - target equals 2^k − 1, so no reverse is needed.\n`Input: 3` → `Expected: 2`\n⚠️ Bug: not checking `t == (1<<k)-1` first, falling through to overshoot → returns 2 + 1 + dp[0] = 3\n\n**Undershoot required** - the optimal path undershoots, reverses, goes back, reverses again.\n`Input: 5` → `Expected: 7`\n⚠️ Bug: only considering the overshoot case → returns 3 + 1 + dp[2] = 4 + 4 = 8\n\n**Wrong backward-step range** - allowing m up to k−1 creates a self-referential subproblem.\n`Input: 5` → `Expected: 7`\n⚠️ Bug: using `m < k` instead of `m < k-1` → m = 2 yields k+m+1+dp[5−4+4] = 6+dp[5] = 6+0 = 6, which is wrongly smaller than 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if target can be up to 10^9?",
+      "a": "Switch to memoized recursion with the same recurrence. Each recursive call reduces t to at most t/2, and at each level there are O(log t) branches, giving O(log² target) distinct subproblems. Time becomes O(log³ target), space O(log² target)."
+    },
+    {
+      "q": "What if you must also return the actual instruction sequence, not just its length?",
+      "a": "Store the optimal (k, m) pair alongside each dp[t], then reconstruct the path by following choices from dp[target] down to dp[0], emitting A's, R's, A's, R's per segment. Space increases to O(target) for the choice array; time is unchanged."
+    },
+    {
+      "q": "What if there are q queries with different targets?",
+      "a": "Precompute dp[1..max_target] once in O(max_target · log max_target), then answer each query in O(1). Total time O(max_target · log max_target + q), space O(max_target)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int racecar(int target) {\n        vector<int> dp(target + 1, 0);\n        for (int t = 1; t <= target; t++) {\n            int k = 32 - __builtin_clz(t);\n            if (t == (1 << k) - 1) {\n                dp[t] = k;\n                continue;\n            }\n            // Overshoot: k A's to 2^k - 1, then R, then solve remaining\n            dp[t] = k + 1 + dp[(1 << k) - 1 - t];\n            // Undershoot: (k-1) A's to 2^(k-1)-1, R, m A's backward, R, solve remaining\n            for (int m = 0; m < k - 1; m++) {\n                dp[t] = min(dp[t], k + m + 1 + dp[t - (1 << (k - 1)) + (1 << m)]);\n            }\n        }\n        return dp[target];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

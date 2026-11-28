@@ -1,0 +1,40 @@
+{
+  "slug": "profitable-schemes",
+  "title": "Profitable Schemes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "0-1 Knapsack DP",
+  "tc": "O(m · n · P)",
+  "sc": "O(n · P)",
+  "spaceBreakdown": "- dp: (n+1) × (minProfit+1) array of long long → O(n · P)\n- recursion: none\n- not counted: input arrays group/profit, returned int",
+  "approach": "This is a 0-1 knapsack with two capacity dimensions: members (≤ n) and profit (≥ minProfit). We maintain dp[j][k] = number of ways to select crimes using exactly j members with profit k, where k is capped at minProfit (any profit ≥ minProfit is stored as minProfit). For each crime (g, p), we iterate j downward (to avoid reusing a crime) and push dp[j-g][k] into dp[j][min(k+p, minProfit)]. The answer is the sum of dp[j][minProfit] over all j from 0 to n, since schemes can use any number of members up to n.",
+  "hints": [
+    "What two quantities determine whether a subset of crimes is a valid scheme, and does the exact profit matter once it reaches the threshold minProfit?",
+    "Use a 2D DP table dp[members][profit] updated like a 0-1 knapsack, iterating members downward. For crime 0 in Example 1 (group=2, profit=2): dp[2][2] += dp[0][0] = 1.",
+    "```\ndp[0][0] = 1\nfor each crime (g, p):\n    for j from n down to g:\n        for k from 0 to minProfit:\n            newK = min(k + p, minProfit)\n            dp[j][newK] += dp[j - g][k]\nreturn sum of dp[j][minProfit] for j in 0..n\n```",
+    "**minProfit = 0** - The empty subset (no crimes) is automatically profitable.\n`Input: n = 5, minProfit = 0, group = [2], profit = [3]` → `Expected: 2`\n⚠️ Bug: initializing dp[0][0] = 0 instead of 1 → returns 1\n\n**Zero-profit crime** - A crime uses members but adds no profit.\n`Input: n = 3, minProfit = 1, group = [1, 1], profit = [0, 1]` → `Expected: 2`\n⚠️ Bug: skipping crimes with profit[i] = 0 → returns 1\n\n**Forward member loop** - Iterating j upward lets one crime be taken multiple times.\n`Input: n = 5, minProfit = 3, group = [2], profit = [3]` → `Expected: 1`\n⚠️ Bug: looping j from g to n instead of n down to g → returns 2\n\n**Only exact-n answer** - Schemes using fewer than n members are also valid.\n`Input: n = 5, minProfit = 3, group = [2,2], profit = [2,3]` → `Expected: 2`\n⚠️ Bug: returning dp[n][minProfit] instead of summing dp[0..n][minProfit] → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if each crime can be committed multiple times (unbounded knapsack)?",
+      "a": "Change the inner member loop to iterate j from g upward instead of downward, so each crime can contribute to multiple j levels in the same pass. TC remains O(m·n·P), SC unchanged."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "Since group[i] ≤ 100 and there are at most 100 crimes, the maximum total members any subset can use is 10^4. If n > 10^4, the member constraint is never binding, so reduce to a 1D DP on profit only: dp[k] = number of subsets with profit k (capped at minProfit). TC: O(m·P), SC: O(P)."
+    },
+    {
+      "q": "What if we need schemes with profit exactly equal to minProfit (not at least)?",
+      "a": "Don't cap profit at minProfit; track exact profit up to the sum of all profits (at most 100·100 = 10^4). The DP table becomes dp[j][k] for k up to totalProfit. TC: O(m·n·totalProfit) ≈ O(10^8), SC: O(n·totalProfit)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int profitableSchemes(int n, int minProfit, vector<int>& group, vector<int>& profit) {\n        const int MOD = 1000000007;\n        int m = group.size();\n        vector<vector<long long>> dp(n + 1, vector<long long>(minProfit + 1, 0));\n        dp[0][0] = 1;\n        \n        for (int i = 0; i < m; i++) {\n            int g = group[i];\n            int p = profit[i];\n            for (int j = n; j >= g; j--) {\n                for (int k = 0; k <= minProfit; k++) {\n                    int newK = (k + p < minProfit) ? k + p : minProfit;\n                    dp[j][newK] = (dp[j][newK] + dp[j - g][k]) % MOD;\n                }\n            }\n        }\n        \n        long long ans = 0;\n        for (int j = 0; j <= n; j++) {\n            ans = (ans + dp[j][minProfit]) % MOD;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

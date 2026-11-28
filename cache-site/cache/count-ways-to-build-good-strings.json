@@ -1,0 +1,40 @@
+{
+  "slug": "count-ways-to-build-good-strings",
+  "title": "Count Ways To Build Good Strings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Circular Buffer DP",
+  "tc": "O(high)",
+  "sc": "O(max(zero, one))",
+  "spaceBreakdown": "- vector<int> buf: size max(zero, one) → O(max(zero, one))\n- scalar variables (ans, val, i, M, MOD): O(1)\n- no recursion, no other containers",
+  "approach": "The number of distinct strings of length `i` depends only on the counts for lengths `i-zero` and `i-one`, since the last operation either appended `zero` zeros or `one` ones. We iterate `i` from 1 to `high`, computing `dp[i] = dp[i-zero] + dp[i-one]` (mod 1e9+7) and accumulating those with `i` in `[low, high]`. Because we only look back at most `max(zero, one)` steps, a circular buffer of that size suffices - we read both dependencies before overwriting the slot.",
+  "hints": [
+    "What single property of a partially built string determines the set of lengths it can reach in the next step? The constraint high ≤ 10^5 means every length from 1 to high can be examined individually.",
+    "Use a circular buffer of size max(zero, one) storing dp[i] = number of distinct strings of length i. For Example 2 (zero=1, one=2): dp[2] = dp[1] + dp[0] = 1 + 1 = 2.",
+    "```\nbuf[0] = 1, M = max(zero, one)\nfor i from 1 to high:\n    val = 0\n    if i >= zero: val += buf[(i - zero) % M]\n    if i >= one:  val += buf[(i - one)  % M]\n    buf[i % M] = val mod MOD\n    if i >= low: ans = (ans + val) mod MOD\nreturn ans\n```",
+    "**Smallest input** - only one length falls in the range.\n`Input: low=1, high=1, zero=1, one=1` → `Expected: 2`\n⚠️ Bug: initializing buf[0] to 0 instead of 1 → returns 0\n\n**Equal step sizes** - zero and one are identical, so every dp[i] = 2·dp[i-step].\n`Input: low=1, high=2, zero=1, one=1` → `Expected: 6`\n⚠️ Bug: dividing dp[i] by 2 when zero=one (assuming double-counting) → returns 3\n\n**Buffer too small** - the circular buffer must hold max(zero, one) slots, not one fewer.\n`Input: low=2, high=2, zero=2, one=2` → `Expected: 2`\n⚠️ Bug: allocating buffer of size max(zero,one)-1 → overwrites dp[0] at i=1, returns 0\n\n**Range boundary** - the accumulation condition must use inclusive lower bound.\n`Input: low=3, high=3, zero=1, one=2` → `Expected: 3`\n⚠️ Bug: using `i > low` instead of `i >= low` → skips dp[3], returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also return one actual good string of valid length, not just the count?",
+      "a": "Store a parent pointer for each length i indicating whether the last step came from i-zero or i-one. After the DP pass, pick any i in [low, high] with dp[i] > 0 and backtrack to reconstruct the string. Time stays O(high); space becomes O(high) for the parent array."
+    },
+    {
+      "q": "What if there are k different characters, each appending a different length len[j]?",
+      "a": "The recurrence becomes dp[i] = sum of dp[i - len[j]] over all j. Each step costs O(k), giving O(k · high) total time. The circular buffer size becomes max(len[j]) and space stays O(max(len[j]))."
+    },
+    {
+      "q": "What if you must count strings where the total number of '0' characters is exactly t?",
+      "a": "Add a second dimension: dp[i][j] = strings of length i with exactly j zeros. When appending the zero-block, j increases by zero; when appending the one-block, j is unchanged. Time becomes O(high · t), space O(max(zero, one) · t) with a rolling 2D buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countGoodStrings(int low, int high, int zero, int one) {\n        const int MOD = 1000000007;\n        int M = max(zero, one);\n        vector<int> buf(M, 0);\n        buf[0] = 1; // dp[0] = 1: one way to build the empty string\n        long long ans = 0;\n        for (int i = 1; i <= high; i++) {\n            long long val = 0;\n            if (i >= zero) val += buf[(i - zero) % M];\n            if (i >= one)  val += buf[(i - one)  % M];\n            val %= MOD;\n            buf[i % M] = (int)val; // write after both reads are done\n            if (i >= low) ans = (ans + val) % MOD;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

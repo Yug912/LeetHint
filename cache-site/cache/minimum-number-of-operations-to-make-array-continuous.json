@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-operations-to-make-array-continuous",
+  "title": "Minimum Number of Operations to Make Array Continuous",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window with Binary Search",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(nums): in-place introsort, O(log n) stack frames\n- unique + erase: in-place, O(1) auxiliary\n- loop variables: O(1)\n- not counted: input vector (modified in place)",
+  "approach": "The final array must be `n` consecutive unique integers `[L, L+n-1]`. We want to maximize how many original unique values already fall inside such a window, since the answer is `n - max_kept`. Sort and deduplicate `nums`, then for each unique value as the left endpoint `L`, binary-search how many unique values lie in `[L, L+n+1]`. The optimal `L` is always a unique value from `nums` because shifting `L` right to the smallest element in the window never loses any kept element.",
+  "hints": [
+    "The final array is always `n` consecutive integers like `[L, L+n-1]`. For a fixed `L`, which original elements can you avoid replacing?",
+    "Sort and deduplicate `nums`, then for each unique value as the left endpoint, use `upper_bound` to count how many unique values fall within `[L, L+n-1]`. Example: `nums=[1,2,3,5,6]`, `n=5`, `L=1` → range `[1,5]` → 4 values kept → 1 operation.",
+    "```\nsort and deduplicate nums into u\nmaxKept = 0\nfor i in 0..len(u)-1:\n    right = u[i] + n - 1\n    j = upper_bound(u, right)\n    maxKept = max(maxKept, j - i)\nreturn n - maxKept\n```",
+    "**Duplicates** - All elements identical; only one can stay in a continuous array.\n`Input: nums = [1,1,1,1]` → `Expected: 3`\n⚠️ Bug: skipping deduplication, counting duplicates as kept → returns 0\n\n**Right endpoint inclusive** - The window `[L, L+n-1]` includes both endpoints.\n`Input: nums = [1,2,3,4]` → `Expected: 0`\n⚠️ Bug: using `lower_bound` instead of `upper_bound` for the right boundary → returns 1\n\n**Single element** - `n=1` is trivially continuous.\n`Input: nums = [42]` → `Expected: 0`\n⚠️ Bug: initialising `maxKept` to 1 instead of 0 and then taking `max` → returns 0 (correct by accident), but with `n - maxKept` where `maxKept` starts at `n` → returns 0 (also correct by accident); the real bug: skipping the loop when `m < n` and returning `n - 0 = n` → returns 1\n\n**Large values near 10^9** - `nums[i] + n - 1` can reach ~10^9 + 10^5.\n`Input: nums = [1000000000, 999999999]` → `Expected: 0`\n⚠️ Bug: storing `right` in a 32-bit `int` without checking - here it fits, but if constraints allowed `nums[i]` up to `2*10^9`, overflow would wrap negative and `upper_bound` returns 0 → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if each replacement has a cost `c[i]` and you want to minimize total cost instead of count?",
+      "a": "For each window `[L, L+n-1]`, elements already in range cost 0; the remaining `n - kept` slots are filled by replacing the cheapest elements outside the window. Sort costs, build prefix sums, and for each window sum the smallest `(n - kept)` costs among out-of-range elements. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if `nums[i]` can be up to 10^18?",
+      "a": "Use `long long` for the `right` endpoint calculation. Everything else - sorting, binary search, deduplication - stays identical. TC: O(n log n), SC: O(log n)."
+    },
+    {
+      "q": "What if `nums` arrives as a stream and you must report the answer after each insertion?",
+      "a": "Maintain a balanced BST (e.g., `std::set`) of unique values. On each insertion, check windows starting at the inserted value and its neighbors, using order-statistics to count elements in range. TC: O(log n) amortized per insertion, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums) {\n        int n = nums.size();\n        sort(nums.begin(), nums.end());\n        nums.erase(unique(nums.begin(), nums.end()), nums.end());\n        int m = nums.size();\n        int maxKept = 0;\n        for (int i = 0; i < m; i++) {\n            long long right = (long long)nums[i] + n - 1;\n            int j = upper_bound(nums.begin(), nums.end(), right) - nums.begin();\n            maxKept = max(maxKept, j - i);\n        }\n        return n - maxKept;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

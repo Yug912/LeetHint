@@ -1,0 +1,40 @@
+{
+  "slug": "length-of-longest-fibonacci-subsequence",
+  "title": "Length of Longest Fibonacci Subsequence",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "2D Dynamic Programming with Hash Map",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- unordered_map<int,int> idx: up to n entries → O(n)\n- vector<vector<int>> dp: n × n integers → O(n²)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "In a Fibonacci-like sequence, any two consecutive elements determine the entire sequence. We use 2D DP where `dp[i][j]` = length of the longest Fibonacci-like subsequence ending with `arr[i]`, `arr[j]`. For each pair `(i, j)`, we look up `target = arr[j] - arr[i]` in a value→index hash map; if `target < arr[i]` and exists at index `k`, then `dp[i][j] = dp[k][i] + 1`, otherwise `dp[i][j] = 2`. The answer is the maximum `dp[i][j]` that is ≥ 3.",
+  "hints": [
+    "In a Fibonacci-like sequence, once you know any two consecutive terms, every other term is forced. With at most 1000 elements, how many ordered pairs of elements could serve as the last two terms of a Fibonacci-like subsequence?",
+    "Use a 2D table `dp[i][j]` = length of the longest Fibonacci-like subsequence ending with `arr[i]`, `arr[j]`. Look up `arr[j] − arr[i]` in a value→index map to find the element before `arr[i]`. Example: for `arr = [1,2,3,5,8]`, pair `(i=3, j=4)` gives target `8−5=3` at index 2, so `dp[3][4] = dp[2][3] + 1 = 5`.",
+    "```\nbuild value→index map\nfor j in 1..n-1:\n  for i in 0..j-1:\n    target = arr[j] - arr[i]\n    if target < arr[i] and target in map:\n      k = map[target]\n      dp[i][j] = dp[k][i] + 1\n    else:\n      dp[i][j] = 2\n    ans = max(ans, dp[i][j])\nreturn ans if ans >= 3 else 0\n```",
+    "**No valid subsequence** - no three elements form a Fibonacci-like triple.\n`Input: arr = [1,3,5]` → `Expected: 0`\n⚠️ Bug: returning `ans` without the `ans >= 3` guard → returns 2.\n\n**Target equals arr[i]** - `arr[j] − arr[i]` equals `arr[i]` itself, so the predecessor index would be `i`, not a distinct earlier element.\n`Input: arr = [1,2,4]` → `Expected: 0`\n⚠️ Bug: using `target <= arr[i]` instead of `target < arr[i]` → finds `k = i`, sets `dp[1][2] = dp[1][1] + 1 = 3`, returns 3.\n\n**Minimum valid input** - exactly three elements that do form a Fibonacci triple.\n`Input: arr = [1,2,3]` → `Expected: 3`\n⚠️ Bug: initializing `dp` entries to 0 instead of 2 → `dp[0][1] = 0`, `dp[1][2] = dp[0][1] + 1 = 1`, returns 0.\n\n**Non-adjacent subsequence** - the longest Fibonacci-like subsequence skips elements, so checking only adjacent index pairs misses it.\n`Input: arr = [1,2,3,4,5,6,7,8]` → `Expected: 5`\n⚠️ Bug: only checking `i = j−1` (adjacent pairs) → misses `[1,2,3,5,8]` at indices 0,1,2,4,7, returns 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is not guaranteed to be strictly increasing and may contain duplicates?",
+      "a": "Sort the array first, then build the value→index map using the last occurrence of each value. The DP logic stays the same since we still need `target < arr[i]` to ensure a valid predecessor. Time complexity becomes O(n log n) for sorting plus O(n²) for DP."
+    },
+    {
+      "q": "What if arr.length can be up to 10^5?",
+      "a": "Since Fibonacci grows exponentially, any valid subsequence has at most ~45 elements (log₂ of 10^9). For each element, store a map of (previous value → best length). When processing arr[j], look up arr[j] − arr[i] for each prior element arr[i], but prune since only O(log M) chains can pass through any value. This reduces time to O(n · log M) ≈ O(n · 45)."
+    },
+    {
+      "q": "What if you must use only O(n) auxiliary space?",
+      "a": "Replace the n×n DP table with a hash map keyed by (arr[i], arr[j]) → length, storing only pairs where length ≥ 3. Since each Fibonacci chain has at most O(log M) elements, the number of stored entries is O(n · log M) in practice, which is O(n) for fixed M. Time complexity stays O(n²) in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int lenLongestFibSubseq(vector<int>& arr) {\n        int n = arr.size();\n        unordered_map<int, int> idx;\n        for (int i = 0; i < n; i++) idx[arr[i]] = i;\n        \n        vector<vector<int>> dp(n, vector<int>(n, 2));\n        int ans = 0;\n        for (int j = 1; j < n; j++) {\n            for (int i = 0; i < j; i++) {\n                int target = arr[j] - arr[i];\n                if (target < arr[i] && idx.count(target)) {\n                    int k = idx[target];\n                    dp[i][j] = dp[k][i] + 1;\n                }\n                if (dp[i][j] > ans) ans = dp[i][j];\n            }\n        }\n        return ans >= 3 ? ans : 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

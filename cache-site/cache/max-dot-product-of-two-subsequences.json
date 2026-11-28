@@ -1,0 +1,40 @@
+{
+  "slug": "max-dot-product-of-two-subsequences",
+  "title": "Max Dot Product of Two Subsequences",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming (Space-Optimized)",
+  "tc": "O(n1 * n2)",
+  "sc": "O(min(n1, n2))",
+  "spaceBreakdown": "- vector<int> dp: size min(n1,n2)+1 → O(min(n1, n2))\n- recursion depth: none\n- not counted: input arrays nums1/nums2, return value",
+  "approach": "Define dp[i][j] as the maximum dot product of non-empty subsequences drawn from suffixes nums1[i..] and nums2[j..]. At each (i,j) we either pair nums1[i] with nums2[j] (and optionally extend into dp[i+1][j+1] only if that extension is positive), skip nums1[i] (take dp[i+1][j]), or skip nums2[j] (take dp[i][j+1]). Since dp[i][j] depends only on row i+1 and the current row, we collapse to a single 1D array indexed by j, using a `diag` variable to preserve the overwritten dp[i+1][j+1] value. We swap the arrays first so the inner dimension is the shorter one, giving O(min(n1,n2)) space.",
+  "hints": [
+    "When you look at the first remaining element of each array, what are the distinct ways an optimal pairing can treat that specific pair of elements? Both arrays have at most 500 elements.",
+    "Dynamic programming on suffixes with a 1D rolling array. For nums1=[2,1,-2,5], nums2=[3,0,-6]: at i=0,j=0, pairing 2 with 3 gives 6, extending with the best from (1,1) which is 12, yielding 18 - better than skipping either side.",
+    "```\nensure nums2 is the shorter array\nfor i from n1-1 down to 0:\n    diag = dp[n2]\n    for j from n2-1 down to 0:\n        temp = dp[j]\n        prod = nums1[i] * nums2[j]\n        extend = (diag > 0) ? prod + diag : prod\n        dp[j] = max(extend, temp, dp[j+1])\n        diag = temp\nreturn dp[0]\n```",
+    "**Smallest input** - both arrays have a single element.\n`Input: nums1 = [5], nums2 = [3]` → `Expected: 15`\n⚠️ Bug: initializing the dp array to 0 instead of INT_MIN/2 → returns 0 (treats the empty subsequence as valid).\n\n**All negatives vs all positives** - every single product is negative, so the answer is the least negative product.\n`Input: nums1 = [-1,-1], nums2 = [1,1]` → `Expected: -1`\n⚠️ Bug: using 0 as the base case for empty suffixes → returns 0 instead of -1.\n\n**Extend only when beneficial** - pairing the current two and stopping can beat extending into a negative suffix.\n`Input: nums1 = [5,3], nums2 = [5,-100]` → `Expected: 25`\n⚠️ Bug: always computing extend = prod + diag instead of prod + max(0, diag) → returns 15.\n\n**Zero products** - a zero product can be the optimal answer.\n`Input: nums1 = [0,0], nums2 = [1,2]` → `Expected: 0`\n⚠️ Bug: only considering pairs where prod > 0 → returns INT_MIN/2 (base value never updated)."
+  ],
+  "followUps": [
+    {
+      "q": "What if you also needed to return the actual paired indices, not just the maximum dot product?",
+      "a": "Store a parent pointer alongside each dp cell indicating which of the three choices was taken (pair, skip i, or skip j), then backtrack from dp[0][0]. Time stays O(n1·n2); space increases to O(n1·n2) for the pointer table unless you reconstruct via divide-and-conquer on the rolling array."
+    },
+    {
+      "q": "What if nums1 and nums2 could each be up to 10^5 elements?",
+      "a": "The O(n1·n2) DP is too slow. If all values are non-negative, the answer is simply the dot product of the full arrays. With mixed signs you would need a different structure (e.g., exploiting value-range limits or FFT-based convolution for fixed subsequence lengths), but the general problem becomes much harder and may require approximation."
+    },
+    {
+      "q": "What if nums2 arrives as a streaming input (one element at a time) and you must answer after each element?",
+      "a": "Maintain the 1D dp array across arrivals: when nums2[j] arrives, update dp from right to left using the same recurrence. Each new element costs O(n1) to process, giving O(n1) per query and O(n1) total space - the rolling array naturally supports incremental updates."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxDotProduct(vector<int>& nums1, vector<int>& nums2) {\n        if (nums1.size() < nums2.size()) {\n            swap(nums1, nums2);\n        }\n        int n1 = nums1.size();\n        int n2 = nums2.size();\n        const int NEG_INF = INT_MIN / 2;\n        vector<int> dp(n2 + 1, NEG_INF);\n        for (int i = n1 - 1; i >= 0; i--) {\n            int diag = dp[n2];\n            for (int j = n2 - 1; j >= 0; j--) {\n                int temp = dp[j];\n                int prod = nums1[i] * nums2[j];\n                int extend = (diag > 0) ? prod + diag : prod;\n                dp[j] = max(extend, max(temp, dp[j + 1]));\n                diag = temp;\n            }\n        }\n        return dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

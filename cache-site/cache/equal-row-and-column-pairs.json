@@ -1,0 +1,40 @@
+{
+  "slug": "equal-row-and-column-pairs",
+  "title": "Equal Row and Column Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Table Frequency Count",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- unordered_map<vector<int>, int, VecHash> rowCount: up to n entries, each storing a vector<int> of length n → O(n²)\n- vector<int> col: length n → O(n)\n- not counted: input grid, returned int",
+  "approach": "Hash each row vector (with a custom hasher) into an `unordered_map<vector<int>, int>` that counts how many times each row appears. For each column, build the column vector and look up its frequency in the map, adding that count to the answer. This is correct because every (row, column) pair where the two vectors are identical is counted exactly once during the column lookup, and duplicate rows are handled via their frequency multiplier.",
+  "hints": [
+    "If the same row appears k times, how many pairs does a single matching column create with those k copies?",
+    "Use an `unordered_map<vector<int>, int>` with a custom hash to count row frequencies. In Example 2, row `[2,4,2,2]` appears twice; column 2 equals it, contributing 2 to the answer.",
+    "```\ncount = empty map: row-vector → frequency\nfor each row r in grid:\n    count[r] += 1\nans = 0\nfor each column c in grid:\n    ans += count[c]   (0 if c absent)\nreturn ans\n```",
+    "**Single element (n = 1)** - the lone row trivially equals the lone column.\n`Input: [[42]]` → `Expected: 1`\n⚠️ Bug: looping `for (int j = 1; j <= n; j++)` instead of `for (int j = 0; j < n; j++)` → returns 0\n\n**All elements equal** - every row matches every column, yielding n² pairs.\n`Input: [[5,5],[5,5]]` → `Expected: 4`\n⚠️ Bug: storing rows in a `set<vector<int>>` instead of a frequency map → returns 2\n\n**No matches** - no row equals any column.\n`Input: [[1,2],[3,4]]` → `Expected: 0`\n⚠️ Bug: accessing `it->second` without checking `it != rowCount.end()` → returns garbage (undefined behavior)\n\n**Duplicate rows and duplicate columns** - multiple identical rows match multiple identical columns.\n`Input: [[1,2,1],[2,3,2],[1,2,1]]` → `Expected: 5`\n⚠️ Bug: skipping columns already seen via a `set<vector<int>>` of column vectors → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "If the matrix is m × n (not necessarily square), how does the answer change?",
+      "a": "Rows have length n and columns have length m, so they can only be equal when m == n. If m ≠ n the answer is 0; otherwise the same hash-table approach applies unchanged. TC: O(n²), SC: O(n²)."
+    },
+    {
+      "q": "If extra memory is limited to O(n), how would you solve it?",
+      "a": "Drop the map entirely; for each column, compare it element-by-element against every row, incrementing a counter on a full match. This costs O(n³) time but only O(n) auxiliary space for the column buffer. TC: O(n³), SC: O(n)."
+    },
+    {
+      "q": "If you must return all matching (row_index, col_index) pairs instead of just the count, how does the complexity change?",
+      "a": "Store each row's list of indices in the map instead of a single count. For each column, look up matching rows and emit every (row_index, col_index) pair. The output itself can be O(n²) pairs in the worst case (all elements equal). TC: O(n²), SC: O(n²) for the output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int equalPairs(vector<vector<int>>& grid) {\n        int n = (int)grid.size();\n        struct VecHash {\n            size_t operator()(const vector<int>& v) const {\n                size_t h = 0;\n                for (int x : v) {\n                    h ^= (size_t)x + 0x9e3779b9 + (h << 6) + (h >> 2);\n                }\n                return h;\n            }\n        };\n        unordered_map<vector<int>, int, VecHash> rowCount;\n        for (int i = 0; i < n; i++) {\n            rowCount[grid[i]]++;\n        }\n        int ans = 0;\n        vector<int> col(n);\n        for (int j = 0; j < n; j++) {\n            for (int i = 0; i < n; i++) {\n                col[i] = grid[i][j];\n            }\n            auto it = rowCount.find(col);\n            if (it != rowCount.end()) {\n                ans += it->second;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

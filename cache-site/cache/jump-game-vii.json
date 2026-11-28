@@ -1,0 +1,40 @@
+{
+  "slug": "jump-game-vii",
+  "title": "Jump Game VII",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window DP",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<char> dp: n elements → O(n)\n- int pre, int i: O(1)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "Use DP where `dp[i]` indicates whether index `i` is reachable. Index `i` is reachable iff `s[i]=='0'` and at least one index in `[i-maxJump, i-minJump]` is reachable. As `i` increments by 1, this window shifts by exactly one position (one index enters, one leaves), so we maintain a running count `pre` of reachable indices inside the current window. This gives O(n) time and O(n) space.",
+  "hints": [
+    "As you examine each position from left to right, how does the set of earlier positions that could jump to the current one change between consecutive positions? The constraint maxJump < 10^5 means you cannot afford to re-scan that set for every index.",
+    "Maintain a sliding window count of reachable indices in `[i-maxJump, i-minJump]`. For `s = \"011010\"`, `minJump=2`, `maxJump=3`: at `i=3`, the window `[0,1]` contains `dp[0]=1`, so `pre=1` and `dp[3]=true`; at `i=4`, index 0 leaves the window so `pre` drops to 0.",
+    "```\ndp[0] = true\npre = 0\nfor i from 1 to n-1:\n    if i - minJump >= 0:  pre += dp[i - minJump]\n    if i - maxJump - 1 >= 0:  pre -= dp[i - maxJump - 1]\n    if s[i] == '0' and pre > 0:  dp[i] = true\nreturn dp[n-1]\n```",
+    "**Smallest input** - n = 2, only one possible jump\n`Input: s = \"00\", minJump = 1, maxJump = 1` → `Expected: true`\n⚠️ Bug: starting the loop at i = 0 instead of i = 1, so dp[0] gets overwritten: at i=0, pre=0, dp[0] = (s[0]=='0' && 0>0) = false → returns false\n\n**Destination blocked** - last character is '1'\n`Input: s = \"011\", minJump = 1, maxJump = 2` → `Expected: false`\n⚠️ Bug: not checking s[i] == '0' before setting dp[i] = true → at i=1, pre=1, sets dp[1]=true; at i=2, pre=2, sets dp[2]=true → returns true\n\n**Off-by-one in window exit** - subtracting the wrong index\n`Input: s = \"011010\", minJump = 2, maxJump = 3` → `Expected: true`\n⚠️ Bug: subtracting dp[i - maxJump] instead of dp[i - maxJump - 1] → at i=3, subtracts dp[0]=1 making pre=0, so dp[3]=false; cascade makes dp[5]=false → returns false\n\n**Unreachable gap** - a run of '1's wider than maxJump blocks all paths\n`Input: s = \"0111000\", minJump = 2, maxJump = 3` → `Expected: false`\n⚠️ Bug: never subtracting elements leaving the window (pre only grows) → at i=4, pre still carries dp[0]=1, sets dp[4]=true; cascade sets dp[6]=true → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can also jump backward to any j with |i−j| in [minJump, maxJump] and s[j]=='0'?",
+      "a": "This becomes a BFS reachability problem on an implicit graph. Use a queue and a visited array, expanding from index 0. Track the furthest explored index so each '0' is enqueued at most once, avoiding O(n·maxJump) edge scanning. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if s arrives as a stream and you must answer online whether each new position is reachable?",
+      "a": "Maintain the same sliding window count, but buffer only the last maxJump+1 dp values in a circular array. When a new character arrives, update pre using the circular buffer and output reachability. TC: O(n), SC: O(maxJump)."
+    },
+    {
+      "q": "What if minJump and maxJump vary per index (given as arrays minJ[i], maxJ[i])?",
+      "a": "The window bounds [i−maxJ[i], i−minJ[i]] now differ per position, so a fixed sliding window no longer works. Use a Fenwick tree or segment tree over dp to query whether any true exists in the variable range. TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canReach(string s, int minJump, int maxJump) {\n        int n = s.size();\n        if (s[n - 1] == '1') return false;\n        vector<char> dp(n, 0);\n        dp[0] = 1;\n        int pre = 0;\n        for (int i = 1; i < n; i++) {\n            if (i - minJump >= 0) pre += dp[i - minJump];\n            if (i - maxJump - 1 >= 0) pre -= dp[i - maxJump - 1];\n            if (s[i] == '0' && pre > 0) dp[i] = 1;\n        }\n        return dp[n - 1] == 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

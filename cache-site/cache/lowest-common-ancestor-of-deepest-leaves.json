@@ -1,0 +1,40 @@
+{
+  "slug": "lowest-common-ancestor-of-deepest-leaves",
+  "title": "Lowest Common Ancestor of Deepest Leaves",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Tree DP (Postorder)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call stack: up to h frames (h = tree height; worst case O(n) skewed, O(log n) balanced)\n- no containers/arrays allocated\n- not counted: input tree, returned node pointer",
+  "approach": "Postorder DFS returns a pair (max depth of deepest leaf in subtree, candidate LCA node) for each subtree. When both subtrees have equal max depth, the current node is the LCA of the deepest leaves in its subtree. When one subtree is deeper, the answer lies within that subtree, so we propagate its candidate. A null child returns depth -1 so it never ties with a real leaf (depth 0). The root's returned candidate is the final answer.",
+  "hints": [
+    "What distinguishes the answer node from every other node on the path from root to a deepest leaf?",
+    "Postorder DFS returning (max depth, candidate node) from each subtree. At node 2 in Example 1: both children return depth 0, so node 2 becomes the candidate with depth 1.",
+    "```\ndfs(node):\n  if node is null: return (-1, null)\n  (ld, ln) = dfs(node.left)\n  (rd, rn) = dfs(node.right)\n  if ld == rd: return (ld + 1, node)\n  if ld > rd:  return (ld + 1, ln)\n  return (rd + 1, rn)\nanswer = dfs(root).node\n```",
+    "**Single node** - root is the only node and also the deepest leaf\n`Input: [1]` → `Expected: [1]`\n⚠️ Bug: returning nullptr when both children are null → returns null\n\n**Skewed tree** - linked-list shape, one leaf at the bottom\n`Input: [1,null,2,null,3]` → `Expected: [3]`\n⚠️ Bug: returning current node when one child is null instead of propagating the non-null child's candidate → returns [1]\n\n**Two leaves at same depth** - both subtrees equally deep, LCA is the parent\n`Input: [1,2,3]` → `Expected: [1]`\n⚠️ Bug: using >= instead of == when comparing subtree depths → returns [2]\n\n**Balanced tree** - all leaves at same depth, LCA is root\n`Input: [1,2,3,4,5,6,7]` → `Expected: [1]`\n⚠️ Bug: using >= instead of == when comparing subtree depths → returns [4]"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to answer many queries, each asking for the LCA of leaves at a specific depth d?",
+      "a": "Precompute each node's max subtree depth in one postorder pass. For each query, collect all leaves at depth d, then compute their LCA using a binary lifting table built in O(n log n). Each query costs O(k log n) where k is the number of leaves at depth d."
+    },
+    {
+      "q": "What if the tree has 10^7 nodes and recursion may overflow the call stack?",
+      "a": "Convert the postorder DFS to an iterative version using an explicit stack. Each node still returns (depth, candidate) to its parent. TC: O(n), SC: O(h) with the stack on the heap instead of the call stack."
+    },
+    {
+      "q": "What if you need the LCA of the k deepest leaves rather than all deepest leaves?",
+      "a": "Find the maximum depth, collect all leaves at that depth, then take any k of them (they share the same depth). Compute their LCA by repeatedly applying pairwise LCA via binary lifting. TC: O(n + k log n), SC: O(n log n) for the lifting table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    pair<int, TreeNode*> dfs(TreeNode* node) {\n        if (!node) return {-1, nullptr};\n        auto l = dfs(node->left);\n        auto r = dfs(node->right);\n        if (l.first == r.first) return {l.first + 1, node};\n        if (l.first > r.first) return {l.first + 1, l.second};\n        return {r.first + 1, r.second};\n    }\npublic:\n    TreeNode* lcaDeepestLeaves(TreeNode* root) {\n        return dfs(root).second;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

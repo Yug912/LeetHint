@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-there-is-a-valid-partition-for-the-array",
+  "title": "Check if There is a Valid Partition For The Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear DP with rolling state",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- three rolling bools (prev3, prev2, prev1): O(1)\n- loop index i: O(1)\n- not counted: input vector nums",
+  "approach": "Use dynamic programming where dp[i] indicates whether the prefix of length i can be validly partitioned. dp[0]=true (empty prefix), and dp[i] becomes true if the last 2 elements are equal and dp[i-2] is true, OR the last 3 elements are equal (or consecutively increasing by 1) and dp[i-3] is true. Since each transition only looks back 2 or 3 steps, we keep just three rolling booleans for O(1) space.",
+  "hints": [
+    "Reading the array left to right, each subarray you cut off can only be of what possible lengths? With n up to 10^5, you cannot afford to try every combination of cut positions.",
+    "Use dynamic programming: dp[i] = true if the first i elements can be validly partitioned. For nums = [4,4,4,5,6], dp[2] = true (from [4,4]), and dp[5] = true because [4,5,6] is consecutively increasing and dp[2] was true.",
+    "dp[0] = true\nfor i from 2 to n:\n    dp[i] = false\n    if i>=2 and nums[i-2]==nums[i-1] and dp[i-2]: dp[i] = true\n    if i>=3 and nums[i-3]==nums[i-2]==nums[i-1] and dp[i-3]: dp[i] = true\n    if i>=3 and nums[i-3]+1==nums[i-2] and nums[i-2]+1==nums[i-1] and dp[i-3]: dp[i] = true\nreturn dp[n]",
+    "**Smallest input** - exactly two elements, the only valid form is a pair of equals.\n`Input: nums = [1,2]` → `Expected: false`\n⚠️ Bug: returning true whenever n>=2 without checking equality → returns true\n\n**All equal, length 4** - must split as 2+2, since 3+1 is impossible.\n`Input: nums = [7,7,7,7]` → `Expected: true`\n⚠️ Bug: only checking the 3-equal rule and forgetting the 2-equal rule → returns false\n\n**Consecutive triple blocked by bad prefix** - the triple is valid but the prefix before it is not.\n`Input: nums = [1,1,1,2]` → `Expected: false`\n⚠️ Bug: returning true as soon as any valid triple/pair is found anywhere, ignoring whether the leftover prefix is partitionable → returns true\n\n**Boundary at the start** - dp[1] must be false; a single element can never form a subarray.\n`Input: nums = [5,5,5]` → `Expected: true`\n⚠️ Bug: initialising dp[1] to true (treating length-1 as valid) → returns true on inputs like [1,2] as well\n\n**Largest values, no overflow** - nums[i] up to 10^6, only compared and incremented by 1, so int is safe.\n`Input: nums = [1000000,1000000]` → `Expected: true`\n⚠️ Bug: using `nums[i-3]+1 == nums[i-2]` with overflow fear and switching to long long comparisons incorrectly (e.g., comparing addresses) → wrong result"
+  ],
+  "followUps": [
+    {
+      "q": "What if subarrays of length exactly 4 with all equal elements were also allowed?",
+      "a": "Add a fourth transition: dp[i] is true if nums[i-4..i-1] are all equal and dp[i-4] is true. Keep four rolling booleans instead of three. Time stays O(n), space stays O(1)."
+    },
+    {
+      "q": "What if you had to return the number of distinct valid partitions instead of a boolean?",
+      "a": "Replace each boolean dp[i] with a count (mod 10^9+7 if needed) and sum the counts of all valid transitions instead of OR-ing them. Time O(n), space O(1) with rolling integers."
+    },
+    {
+      "q": "What if the array arrived as a stream and you could only keep O(1) memory but had to answer after each new element whether the prefix so far is validly partitionable?",
+      "a": "The same rolling-window idea works online: maintain the last three dp values and the last three nums elements; on each new element update the rolling state. Time O(1) per element, space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool validPartition(vector<int>& nums) {\n        int n = nums.size();\n        if (n < 2) return false;\n        if (n == 2) return nums[0] == nums[1];\n\n        // dp[i] = true iff prefix of length i is validly partitionable.\n        // We only keep the last three values: prev3=dp[i-3], prev2=dp[i-2], prev1=dp[i-1].\n        bool prev3 = true;                       // dp[0]\n        bool prev2 = false;                      // dp[1] (single element never valid)\n        bool prev1 = (nums[0] == nums[1]);       // dp[2]\n\n        for (int i = 3; i <= n; ++i) {\n            bool curr = false;\n            // 2 equal elements ending at i-1\n            if (nums[i - 2] == nums[i - 1] && prev2) curr = true;\n            // 3 equal elements ending at i-1\n            else if (nums[i - 3] == nums[i - 2] && nums[i - 2] == nums[i - 1] && prev3) curr = true;\n            // 3 consecutive increasing elements ending at i-1\n            else if (nums[i - 3] + 1 == nums[i - 2] && nums[i - 2] + 1 == nums[i - 1] && prev3) curr = true;\n\n            prev3 = prev2;\n            prev2 = prev1;\n            prev1 = curr;\n        }\n        return prev1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-k-consecutive-bit-flips",
+  "title": "Minimum Number of K Consecutive Bit Flips",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Sliding Window with In-Place Difference Array",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- current_flips (int): O(1)\n- ans (int): O(1)\n- loop index i (int): O(1)\n- in-place modification of nums (input array, not counted): marks flip starts by adding 2, restored when expired\n- not counted: input vector nums, return value",
+  "approach": "Scan left to right. At each position, the effective bit is the original bit XOR the parity of active flips covering it. If the effective bit is 0, we must start a flip here (greedy: no benefit to delaying). Track active flips using an in-place difference-array marker: when a flip starts at i, add 2 to nums[i]; when we pass position i−k, if nums[i−k] ≥ 2, that flip has expired so we decrement the active count and restore the value. If a flip is needed but i+k exceeds n, return −1.",
+  "hints": [
+    "As you scan the array from left to right, what determines whether the bit at position i is currently 0 or 1, given that some earlier flips may still be \"covering\" it? The constraint n ≤ 10^5 rules out trying every subset of flip positions.",
+    "Use a greedy left-to-right scan with an in-place difference array: mark a flip start by adding 2 to nums[i], and track a running count of active flips. In Example 3 (nums=[0,0,0,1,0,1,1,0], k=3), position 0 is 0 so we flip there (mark nums[0]+=2, active=1); position 3 sees nums[0]≥2 so active drops to 0.",
+    "```\nactive = 0, ans = 0\nfor i in 0..n-1:\n    if i >= k and nums[i-k] >= 2:\n        active -= 1\n        nums[i-k] -= 2\n    if (nums[i] + active) is even:   # effective bit is 0\n        if i + k > n: return -1\n        active += 1\n        nums[i] += 2\n        ans += 1\nreturn ans\n```",
+    "**Smallest input** - n=1, k=1, a single 0 needs exactly one flip.\n`Input: nums=[0], k=1` → `Expected: 1`\n⚠️ Bug: using `i + k >= n` instead of `i + k > n` → returns -1\n\n**k equals n** - the only valid flip covers the entire array.\n`Input: nums=[0,0,0], k=3` → `Expected: 1`\n⚠️ Bug: using `i + k >= n` instead of `i + k > n` → returns -1\n\n**Impossible at the tail** - the last 0 needs a flip but k positions do not fit.\n`Input: nums=[0,0,0], k=2` → `Expected: -1`\n⚠️ Bug: omitting the `i + k > n` bounds check → returns 2\n\n**Flip expiration** - a flip started k positions ago must stop affecting the current bit.\n`Input: nums=[0,1,0,1], k=2` → `Expected: 2`\n⚠️ Bug: never decrementing active when nums[i−k]≥2 → returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you cannot modify the input array?",
+      "a": "Replace the in-place marker with a deque storing flip start indices. When the front equals i−k, pop it; the deque size is the active flip count. Time stays O(n); space becomes O(k) for the deque."
+    },
+    {
+      "q": "What if you must also return the list of starting indices of each flip?",
+      "a": "Push i into a result vector every time you start a flip. The greedy logic is unchanged. Time stays O(n); space is O(n/k) for the output list in the worst case (every other position starts a flip)."
+    },
+    {
+      "q": "What if each position has its own target bit (given by a target array) instead of all 1s?",
+      "a": "Replace the \"effective bit is 0\" check with \"effective bit ≠ target[i]\". The same greedy flip-or-skip decision applies at each position. Time stays O(n), space stays O(1) in-place."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minKBitFlips(vector<int>& nums, int k) {\n        int n = nums.size();\n        int active = 0;\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            if (i >= k && nums[i - k] >= 2) {\n                active--;\n                nums[i - k] -= 2;\n            }\n            if ((nums[i] + active) % 2 == 0) {\n                if (i + k > n) return -1;\n                active++;\n                nums[i] += 2;\n                ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

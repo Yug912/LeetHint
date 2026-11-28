@@ -1,0 +1,40 @@
+{
+  "slug": "largest-color-value-in-a-directed-graph",
+  "title": "Largest Color Value in a Directed Graph",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Topological Sort + DP on DAG",
+  "tc": "O((n + m) * 26)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<vector<int>> adj: n lists holding m total edges → O(n + m)\n- vector<int> indegree: n entries → O(n)\n- vector<vector<int>> dp: n × 26 integers → O(n)\n- queue<int> q: at most n entries → O(n)\n- not counted: input colors string and edges vector",
+  "approach": "Use topological sort (Kahn's algorithm) to process nodes in an order where all predecessors of a node are handled before it. For each node, maintain a 26-element array counting the maximum occurrences of each color on any path ending at that node. When processing node u, increment the count for its own color, then propagate its counts to each neighbor by taking element-wise max. If not all nodes are processed, a cycle exists. The answer is the maximum single-color count seen at any node.",
+  "hints": [
+    "For any path ending at node v, the count of each color along that path depends on the counts along paths ending at v's predecessors. What ordering of nodes guarantees that every predecessor is examined before v?",
+    "Use topological sort (Kahn's algorithm) with a DP table dp[u][c] = max count of color c on any path ending at u. In Example 1, node 0 is processed first: dp[0]['a'] becomes 1, then this propagates to nodes 1 and 2.",
+    "```\ncompute indegrees, enqueue nodes with indegree 0\nwhile queue not empty:\n    u = dequeue\n    dp[u][color[u]] += 1\n    ans = max(ans, dp[u][color[u]])\n    for each neighbor v of u:\n        for each color c: dp[v][c] = max(dp[v][c], dp[u][c])\n        decrement indegree[v]; if 0, enqueue v\nif processed count != n: return -1\nreturn ans\n```",
+    "**Self-loop** - A node with an edge to itself has indegree ≥ 1, so it never enters the queue.\n`Input: colors = \"a\", edges = [[0,0]]` → `Expected: -1`\n⚠️ Bug: using DFS with a visited set that doesn't track the recursion stack → returns 1\n\n**Single node, no edges** - The only valid path is the single node itself.\n`Input: colors = \"x\", edges = []` → `Expected: 1`\n⚠️ Bug: initializing ans to 0 and only updating it inside the neighbor loop → returns 0\n\n**Disconnected with cycle** - One component is acyclic, another has a cycle; the entire graph is invalid.\n`Input: colors = \"ab\", edges = [[0,1],[1,1]]` → `Expected: -1`\n⚠️ Bug: returning the maximum color value found so far instead of checking processed count → returns 1\n\n**All same color chain** - Every node shares the same color; the answer equals the path length.\n`Input: colors = \"aaa\", edges = [[0,1],[1,2]]` → `Expected: 3`\n⚠️ Bug: propagating dp[u] to neighbors before incrementing dp[u][color[u]] → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph is undirected instead of directed?",
+      "a": "Finding the longest simple path in a general undirected graph is NP-hard. If the graph is a tree, use two DFS passes: find the farthest node from an arbitrary root, then find the farthest node from that node, tracking color counts along the way. Time stays O(n)."
+    },
+    {
+      "q": "What if colors are arbitrary integers up to 10^9 instead of 26 lowercase letters?",
+      "a": "Replace the fixed 26-element array with a hash map per node. Time becomes O((n + m) * k) where k is the average number of distinct colors per path. Alternatively, coordinate-compress all colors first to keep the array approach with O(n * distinct_colors) space."
+    },
+    {
+      "q": "What if you must return the actual path achieving the largest color value, not just the value?",
+      "a": "Store a backpointer for each (node, color) pair indicating which predecessor achieved the maximum. After topological sort, start from the node and color with the maximum count and follow backpointers to reconstruct the path. Space increases by O(n * 26) for backpointers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestPathValue(string colors, vector<vector<int>>& edges) {\n        int n = colors.size();\n        vector<vector<int>> adj(n);\n        vector<int> indegree(n, 0);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            indegree[e[1]]++;\n        }\n\n        vector<vector<int>> dp(n, vector<int>(26, 0));\n        queue<int> q;\n        for (int i = 0; i < n; i++) {\n            if (indegree[i] == 0) q.push(i);\n        }\n\n        int processed = 0;\n        int ans = 0;\n\n        while (!q.empty()) {\n            int u = q.front();\n            q.pop();\n            processed++;\n            int c = colors[u] - 'a';\n            dp[u][c]++;\n            ans = max(ans, dp[u][c]);\n            for (int v : adj[u]) {\n                for (int i = 0; i < 26; i++) {\n                    dp[v][i] = max(dp[v][i], dp[u][i]);\n                }\n                if (--indegree[v] == 0) q.push(v);\n            }\n        }\n\n        if (processed != n) return -1;\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

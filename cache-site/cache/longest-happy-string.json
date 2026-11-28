@@ -1,0 +1,40 @@
+{
+  "slug": "longest-happy-string",
+  "title": "Longest Happy String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Max-Selection",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[3], char ch[3]: fixed size 3 → O(1)\n- recursion depth: none\n- not counted: input ints, returned string",
+  "approach": "Build the string left to right. At each position, among the three letters that still have remaining quota, pick the one with the largest remaining count that does not create a triple (i.e., is not equal to the last two appended characters). If no letter is valid, stop. This greedy is correct because using the most abundant letter whenever possible never wastes a quota that a less abundant letter could have used, and the only thing that can force a switch is the triple rule, which we respect directly.",
+  "hints": [
+    "When you build the answer one character at a time from left to right, which of the three letters should you place next so that you can keep going as long as possible? The only thing that can stop you is forming \"aaa\", \"bbb\", or \"ccc\".",
+    "Use a greedy max-selection: each step, among letters with remaining quota, take the one with the largest count that does not match the last two appended chars. With a=1,b=1,c=7 you start with 'c' (largest), then 'c' again, then must switch because \"ccc\" is forbidden.",
+    "```\nres = \"\"\nloop:\n    best = -1\n    for each letter i with count[i] > 0:\n        if last two chars of res are both letter i: skip\n        if best == -1 or count[i] > count[best]: best = i\n    if best == -1: break\n    append letter[best] to res\n    count[best] -= 1\nreturn res\n```",
+    "**Single letter, triple forbidden** - only one letter type has a positive count.\n`Input: a = 0, b = 0, c = 3` → `Expected: \"cc\"`\n⚠️ Bug: checking only the last character (not the last two) for repeats → returns `\"ccc\"` (invalid).\n\n**Smallest non-empty input** - total count is 1.\n`Input: a = 0, b = 0, c = 1` → `Expected: \"c\"`\n⚠️ Bug: loop guard `while (a + b + c > 1)` instead of `> 0` → returns `\"\"`.\n\n**One dominant letter** - one count dwarfs the others.\n`Input: a = 10, b = 1, c = 0` → `Expected: \"aabaa\"`\n⚠️ Bug: always appending the largest-count letter without the last-two check → returns `\"aaaaaaaaaab\"` (contains \"aaa\").\n\n**All equal counts** - ties must resolve to any valid letter.\n`Input: a = 2, b = 2, c = 2` → `Expected: \"abcabc\"` (or any valid permutation)\n⚠️ Bug: breaking the loop on the first tie instead of picking one → returns `\"aabbcc\"` is fine, but skipping all ties → returns `\"\"`."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to k different letters, each with a quota, still forbidding three in a row.",
+      "a": "Same greedy loop, but scan k letters each step instead of 3. Time becomes O(n·k), space stays O(1) (excluding output). For large k, keep the counts in a max-heap and reinsert after each pick to get O(n log k)."
+    },
+    {
+      "q": "Forbid a run of length L (instead of 3) for any letter.",
+      "a": "Replace the \"last two chars equal\" check with \"last L−1 chars all equal to letter i\". Time stays O(n) for fixed L (check a suffix of length L−1), space O(1). The greedy choice rule is unchanged."
+    },
+    {
+      "q": "Counts can be up to 10^9; you cannot materialize the string. Return only its length.",
+      "a": "Observe the answer is min(total, 2·(sum of the other two) + 2) when one letter dominates, otherwise total. Compute this in O(1) time and O(1) space with no string construction."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string longestDiverseString(int a, int b, int c) {\n        string res;\n        int cnt[3] = {a, b, c};\n        char ch[3] = {'a', 'b', 'c'};\n        while (true) {\n            int best = -1;\n            int n = res.size();\n            for (int i = 0; i < 3; i++) {\n                if (cnt[i] == 0) continue;\n                if (n >= 2 && res[n - 1] == ch[i] && res[n - 2] == ch[i]) continue;\n                if (best == -1 || cnt[i] > cnt[best]) best = i;\n            }\n            if (best == -1) break;\n            res.push_back(ch[best]);\n            cnt[best]--;\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

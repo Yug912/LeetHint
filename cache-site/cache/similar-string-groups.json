@@ -1,0 +1,40 @@
+{
+  "slug": "similar-string-groups",
+  "title": "Similar String Groups",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find (Disjoint Set Union)",
+  "tc": "O(n²·(L+log n))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- int parent[300]: fixed array, up to n entries used → O(n)\n- recursion depth: none (iterative find with path halving)\n- not counted: input vector, returned int",
+  "approach": "Two strings are similar iff they differ in at most 2 positions (0 = identical, 2 = one swap; 1 is impossible for anagrams). With n ≤ 300, we can afford O(n²) pairwise comparisons, each O(L). We build a Union-Find over string indices: for every pair that is similar, union them. The answer is the number of distinct roots remaining.",
+  "hints": [
+    "Since n ≤ 300, every pair of strings can be compared directly. What does a \"group\" represent in terms of the pairwise similarity connections between strings?",
+    "Use Union-Find over string indices. For each pair, if they differ in ≤ 2 positions, union them. Example: \"tars\" vs \"rats\" differ at positions 0 and 2 → union(0, 1).",
+    "```\nparent[i] = i for all i\nfor i in 0..n-1:\n    for j in i+1..n-1:\n        if count_diffs(strs[i], strs[j]) <= 2:\n            union(i, j)\ncount i where find(i) == i\n```",
+    "**Single string** - only one element, no pairs to compare.\n`Input: [\"abc\"]` → `Expected: 1`\n⚠️ Bug: initialising groups = 0 and only incrementing inside the pair loop → returns 0\n\n**All identical** - every pair differs in 0 positions.\n`Input: [\"ab\",\"ab\",\"ab\"]` → `Expected: 1`\n⚠️ Bug: checking `diff == 2` instead of `diff <= 2` → returns 3\n\n**Disconnected anagrams** - anagrams that differ in 4 positions are not similar.\n`Input: [\"abcd\",\"badc\"]` → `Expected: 2`\n⚠️ Bug: assuming all anagrams of each other are automatically similar → returns 1\n\n**Duplicate strings** - duplicates create extra similar pairs, inflating pair count.\n`Input: [\"ab\",\"ba\",\"ab\"]` → `Expected: 1`\n⚠️ Bug: computing groups as n minus number of similar pairs (3 − 3) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if n could be up to 10^5 but each string has length at most 12?",
+      "a": "For each string, generate all O(L²) neighbors reachable by one swap and look them up in a hash map of seen strings. Union the current index with any neighbor found. TC: O(n · L²), SC: O(n · L) for the hash map."
+    },
+    {
+      "q": "What if \"similar\" meant differing in at most k positions instead of 2?",
+      "a": "The pairwise comparison still scans the string and counts differing positions, returning false once the count exceeds k. Union-Find is unchanged. TC: O(n² · L), SC: O(n)."
+    },
+    {
+      "q": "What if strings arrive one at a time in a stream and you must report the current group count after each insertion?",
+      "a": "Maintain the Union-Find and a hash map from string to index. For each new string, compare it against all previously seen strings (or generate neighbors if L is small), union with any similar one, then report the root count. TC: O(n² · L) total, SC: O(n · L)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int parent[300];\n\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n\n    void unite(int a, int b) {\n        int ra = find(a), rb = find(b);\n        if (ra != rb) parent[ra] = rb;\n    }\n\n    bool similar(const string& a, const string& b) {\n        int diff = 0;\n        for (int i = 0; i < (int)a.size(); i++) {\n            if (a[i] != b[i]) {\n                diff++;\n                if (diff > 2) return false;\n            }\n        }\n        return true;\n    }\n\n    int numSimilarGroups(vector<string>& strs) {\n        int n = strs.size();\n        for (int i = 0; i < n; i++) parent[i] = i;\n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                if (similar(strs[i], strs[j])) {\n                    unite(i, j);\n                }\n            }\n        }\n        int groups = 0;\n        for (int i = 0; i < n; i++) {\n            if (find(i) == i) groups++;\n        }\n        return groups;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

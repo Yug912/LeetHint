@@ -1,0 +1,40 @@
+{
+  "slug": "remove-covered-intervals",
+  "title": "Remove Covered Intervals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting + Linear Scan",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- No other containers allocated\n- not counted: input (modified in place)",
+  "approach": "Sort intervals by left endpoint ascending; for ties, sort by right endpoint descending. Then scan left to right, tracking the maximum right endpoint seen. An interval is covered if and only if its right endpoint is ≤ the current maximum right (since all intervals with a smaller-or-equal left have already been processed, and the one with the largest right among them is the only candidate that could cover it). Sorting right-descending on left-ties ensures the wider interval is processed first and sets the max, so the narrower one is correctly marked covered.",
+  "hints": [
+    "For two intervals where one covers the other, what must be true about their left endpoints? All the given intervals are unique.",
+    "Sort by left ascending and right descending, then scan tracking the maximum right endpoint seen. For [[1,4],[3,6],[2,8]], sorted becomes [[1,4],[2,8],[3,6]]; [1,4] sets maxRight=4, [2,8] sets maxRight=8, [3,6] has 6≤8 so it is covered.",
+    "```\nsort intervals by left asc, right desc\ncount = 0\nmaxRight = 0\nfor each interval [l, r]:\n    if r > maxRight:\n        count = count + 1\n        maxRight = r\nreturn count\n```",
+    "**Same left, different right** - the wider interval must be processed first so it covers the narrower one.\n`Input: [[1,2],[1,4]]` → `Expected: 1`\n⚠️ Bug: sorting by left ascending only without right descending on ties → processes [1,2] first (maxRight=2), then [1,4] (4>2, counted) → returns 2\n\n**Same right, different left** - the interval with smaller left covers the other.\n`Input: [[1,5],[2,5]]` → `Expected: 1`\n⚠️ Bug: using `>=` instead of `>` in the right-endpoint check → [2,5] has 5>=5, counted as not covered → returns 2\n\n**Reverse order** - the covering interval appears after the covered one in the input.\n`Input: [[2,3],[1,4]]` → `Expected: 1`\n⚠️ Bug: scanning in input order without sorting → [2,3] counted (maxRight=3), [1,4] counted (4>3) → returns 2\n\n**All disjoint** - no interval covers another, so all survive.\n`Input: [[1,2],[3,4],[5,6]]` → `Expected: 3`\n⚠️ Bug: initializing maxRight to intervals[0][1] and count to 0, starting loop at index 1 → skips first interval → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if intervals are not guaranteed to be unique (duplicates allowed)?",
+      "a": "Duplicate intervals cover each other. With the same sort, duplicates become adjacent; the first sets maxRight and the second has equal right, so it is covered. One copy survives. TC and SC are unchanged."
+    },
+    {
+      "q": "What if n can be up to 10^6?",
+      "a": "The O(n log n) sort-based approach still fits within time limits. A brute-force O(n²) pairwise check would TLE. TC remains O(n log n), SC O(log n)."
+    },
+    {
+      "q": "What if intervals arrive one at a time as a stream and you must report the count after each insertion?",
+      "a": "Maintain intervals in a balanced BST keyed by left endpoint. On each insertion, check whether the new interval is covered by its neighbors, and remove any existing intervals the new one covers. Each operation is O(log n), giving O(log n) per insertion and O(n) total space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int removeCoveredIntervals(vector<vector<int>>& intervals) {\n        sort(intervals.begin(), intervals.end(), [](const vector<int>& a, const vector<int>& b) {\n            if (a[0] != b[0]) return a[0] < b[0];\n            return a[1] > b[1];\n        });\n        int count = 0;\n        int maxRight = 0;\n        for (const auto& iv : intervals) {\n            if (iv[1] > maxRight) {\n                count++;\n                maxRight = iv[1];\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

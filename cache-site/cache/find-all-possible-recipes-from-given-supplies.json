@@ -1,0 +1,40 @@
+{
+  "slug": "find-all-possible-recipes-from-given-supplies",
+  "title": "Find All Possible Recipes from Given Supplies",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Topological Sort (Kahn's Algorithm)",
+  "tc": "O(n·m + k)",
+  "sc": "O(n·m + k)",
+  "spaceBreakdown": "- unordered_map<string, vector<string>> graph: up to n×m edges → O(n×m)\n- unordered_map<string, int> indegree: up to n entries → O(n)\n- unordered_set<string> supplySet: up to s entries → O(s)\n- queue<string> q: up to n entries at once → O(n)\n- not counted: input vectors, returned vector",
+  "approach": "Recipes and ingredients form a directed dependency graph: each recipe depends on its ingredients, some of which are themselves recipes. A recipe is makeable exactly when all its dependencies are satisfied. Using Kahn's topological sort, we count each recipe's unmet dependencies (ingredients not in the initial supplies) as its in-degree, seed the queue with in-degree-0 recipes, and process them - each processed recipe reduces the in-degree of recipes that depend on it. The set of recipes processed during the sort is exactly the answer.",
+  "hints": [
+    "When a recipe becomes makeable, which other recipes might suddenly become makeable too? Each recipe can list other recipes among its ingredients (n ≤ 100, up to 100 ingredients each).",
+    "Use topological sort (Kahn's algorithm) with a queue. In Example 3, \"bread\" has in-degree 0 (yeast and flour are both supplies), so it is processed first, which drops \"sandwich\" to in-degree 0, then \"burger\" to 0.",
+    "```\nbuild graph: for each recipe, for each ingredient not in supplies:\n    increment recipe in-degree\n    add edge ingredient → recipe\nseed queue with all recipes whose in-degree is 0\nwhile queue not empty:\n    cur = dequeue\n    add cur to result\n    for each recipe next that depends on cur:\n        decrement in-degree[next]\n        if in-degree[next] == 0:\n            enqueue next\nreturn result\n```",
+    "**Cyclic dependency** - two recipes list each other as ingredients, so neither can ever be made.\n`Input: recipes = [\"a\",\"b\"], ingredients = [[\"b\"],[\"a\"]], supplies = []` → `Expected: []`\n⚠️ Bug: DFS without cycle detection that marks nodes visited on first encounter → returns `[\"a\",\"b\"]`\n\n**Self-loop** - a recipe lists itself as an ingredient.\n`Input: recipes = [\"a\"], ingredients = [[\"a\"]], supplies = []` → `Expected: []`\n⚠️ Bug: DFS that marks a node makeable before checking all its dependencies → returns `[\"a\"]`\n\n**Missing ingredient** - a recipe needs an ingredient that is neither a supply nor a recipe.\n`Input: recipes = [\"bread\"], ingredients = [[\"yeast\",\"flour\"]], supplies = [\"yeast\"]` → `Expected: []`\n⚠️ Bug: checking `any_of` ingredients in supplies instead of `all_of` → returns `[\"bread\"]`\n\n**All supplies present** - every ingredient is an initial supply, so in-degree should be 0.\n`Input: recipes = [\"bread\"], ingredients = [[\"yeast\",\"flour\"]], supplies = [\"yeast\",\"flour\"]` → `Expected: [\"bread\"]`\n⚠️ Bug: counting all ingredients in in-degree without excluding supplies, and only seeding the queue with in-degree-0 recipes → bread has in-degree 2, never processed → returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if n could be up to 10^5 and each recipe lists up to 10^5 ingredients?",
+      "a": "The same topological sort works in O(V + E) time. Use hash-based adjacency lists for O(1) lookups. The total work is proportional to the sum of all ingredient lists across all recipes, which is the edge count E."
+    },
+    {
+      "q": "What if recipes can be made in parallel and you want the minimum number of rounds to make all possible recipes?",
+      "a": "Use level-based topological sort. Assign each recipe a round number equal to 1 + max(round of its dependencies). Process the queue layer by layer. Time stays O(V + E), space O(V) for the round array."
+    },
+    {
+      "q": "What if each supply unit is consumed when used (finite quantity per supply)?",
+      "a": "This becomes a resource-constrained scheduling problem. Track remaining quantities; a recipe is makeable only when every ingredient has quantity > 0. Process in topological order, decrementing supplies as you go. If recipes compete for the same limited supply, greedy topological order may not be optimal and backtracking or max-flow may be needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> findAllRecipes(vector<string>& recipes, vector<vector<string>>& ingredients, vector<string>& supplies) {\n        unordered_map<string, vector<string>> graph;\n        unordered_map<string, int> indegree;\n        unordered_set<string> supplySet(supplies.begin(), supplies.end());\n\n        for (int i = 0; i < (int)recipes.size(); i++) {\n            indegree[recipes[i]] = 0;\n        }\n\n        for (int i = 0; i < (int)recipes.size(); i++) {\n            for (const string& ing : ingredients[i]) {\n                if (supplySet.find(ing) == supplySet.end()) {\n                    indegree[recipes[i]]++;\n                    graph[ing].push_back(recipes[i]);\n                }\n            }\n        }\n\n        queue<string> q;\n        for (auto& [r, deg] : indegree) {\n            if (deg == 0) q.push(r);\n        }\n\n        vector<string> result;\n        while (!q.empty()) {\n            string cur = q.front();\n            q.pop();\n            result.push_back(cur);\n            for (const string& next : graph[cur]) {\n                if (--indegree[next] == 0) {\n                    q.push(next);\n                }\n            }\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "kth-ancestor-of-a-tree-node",
+  "title": "Kth Ancestor of a Tree Node",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Lifting",
+  "tc": "O((n + q) log n)",
+  "sc": "O(n log n)",
+  "spaceBreakdown": "- vector<vector<int>> up: n × LOG entries (LOG ≈ 16 for n = 5·10^4) → O(n log n)\n- int LOG: O(1)\n- No recursion, no other containers",
+  "approach": "Use binary lifting: precompute `up[node][j]` = the 2^j-th ancestor of `node`. Build the table bottom-up using `up[i][j] = up[up[i][j-1]][j-1]`. For a query `(node, k)`, decompose `k` into its set bits and jump upward by each power of two, returning -1 immediately if any jump lands on -1 (the root's parent). This gives O(n log n) preprocessing and O(log n) per query.",
+  "hints": [
+    "Each query asks for the kth ancestor, and k can be as large as 5·10^4. If walking up one parent at a time per query is too slow, what property of the integer k lets you decompose the climb into a few larger jumps?",
+    "Binary lifting (sparse table). Precompute `up[node][j]` = the 2^j-th ancestor of `node`. In the example, `up[3][0] = 1` (parent), `up[3][1] = up[1][0] = 0` (grandparent).",
+    "```\nLOG = smallest integer with 2^LOG > n\nup[i][0] = parent[i]\nfor j in 1..LOG-1:\n    for i in 0..n-1:\n        if up[i][j-1] != -1:\n            up[i][j] = up[up[i][j-1]][j-1]\n\nquery(node, k):\n    for j in 0..LOG-1:\n        if k has bit j set:\n            node = up[node][j]\n            if node == -1: return -1\n    return node\n```",
+    "**Single node** - tree has only the root, so every ancestor is -1\n`Input: TreeAncestor(1, [-1]), getKthAncestor(0, 1)` → `Expected: -1`\n⚠️ Bug: not checking `node == -1` inside the query loop → accesses `up[-1][j]`, undefined behavior\n\n**Skewed tree, k uses the highest bit** - linked-list-shaped tree where k needs the top power of 2\n`Input: TreeAncestor(7, [-1,0,1,2,3,4,5]), getKthAncestor(6, 6)` → `Expected: 0`\n⚠️ Bug: computing `LOG = floor(log2(n))` = 2 instead of 3 → loop misses j=2, returns 4\n\n**Root's ancestors** - root has no ancestors, so any k on node 0 returns -1\n`Input: TreeAncestor(7, [-1,0,0,1,1,2,2]), getKthAncestor(0, 4)` → `Expected: -1`\n⚠️ Bug: initializing `up` with 0 instead of -1 → `up[0][2]` stays 0, returns 0\n\n**k equals a power of 2** - only one bit is set in k\n`Input: TreeAncestor(7, [-1,0,0,1,1,2,2]), getKthAncestor(5, 2)` → `Expected: 0`\n⚠️ Bug: iterating `j` from `LOG-1` down to 0 but using `k & (1 << j)` with wrong shift direction → processes no bits, returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if a node's parent can be dynamically updated between queries?",
+      "a": "Binary lifting tables are static and don't support efficient single-edge updates. Use a Link-Cut Tree, which supports link/cut and path queries in O(log n) amortized time, or batch the updates and rebuild the sparse table periodically."
+    },
+    {
+      "q": "What if k can be up to 10^9 (far larger than n)?",
+      "a": "Any root-to-node path has at most n nodes, so k ≥ n always yields -1. Clamp k to n before querying; the table still only needs LOG = ceil(log2(n)) levels, so preprocessing and per-query time are unchanged."
+    },
+    {
+      "q": "What if memory is tight and you cannot afford the full n × log n table?",
+      "a": "Use long-path (ladder) decomposition: store jump pointers only at the top of each long path. This reduces space to O(n) while keeping O(log n) query time, trading a constant factor in query speed for a logarithmic factor in memory."
+    }
+  ],
+  "code": {
+    "cpp": "class TreeAncestor {\n    vector<vector<int>> up;\n    int LOG;\npublic:\n    TreeAncestor(int n, vector<int>& parent) {\n        LOG = 0;\n        while ((1 << LOG) <= n) LOG++;\n        up.assign(n, vector<int>(LOG, -1));\n        for (int i = 0; i < n; i++) {\n            up[i][0] = parent[i];\n        }\n        for (int j = 1; j < LOG; j++) {\n            for (int i = 0; i < n; i++) {\n                if (up[i][j - 1] != -1) {\n                    up[i][j] = up[up[i][j - 1]][j - 1];\n                }\n            }\n        }\n    }\n\n    int getKthAncestor(int node, int k) {\n        for (int j = 0; j < LOG; j++) {\n            if (k & (1 << j)) {\n                node = up[node][j];\n                if (node == -1) return -1;\n            }\n        }\n        return node;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

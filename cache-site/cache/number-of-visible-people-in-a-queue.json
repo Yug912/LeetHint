@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-visible-people-in-a-queue",
+  "title": "Number of Visible People in a Queue",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> stk: up to n entries → O(n)\n- not counted: input heights, returned answer vector",
+  "approach": "Iterate from right to left, maintaining a monotonic decreasing stack of indices. For each person i, pop everyone shorter than heights[i] from the stack - each popped person is visible to i. If the stack is non-empty after popping, the top is the first person taller than i, which i can also see (but who blocks everything beyond). So answer[i] = (number popped) + (1 if stack non-empty else 0). Push i onto the stack. This works because the stack always holds, in decreasing order, the \"candidates\" that could be visible to anyone to the left.",
+  "hints": [
+    "For a fixed person i, write down the heights of everyone they can see to their right. What ordering do those visible heights follow, and what kind of person stops the chain?",
+    "Use a monotonic decreasing stack, scanning right to left. For heights = [10,6,8,5,11,9], at i=0 (height 10) the stack holds [11,8,6]; pop 6 and 8 (both shorter), then 11 remains taller - so person 0 sees 3 people.",
+    "```\nstack = empty\nfor i from n-1 down to 0:\n    count = 0\n    while stack not empty and heights[stack.top] < heights[i]:\n        stack.pop()\n        count += 1\n    if stack not empty:\n        count += 1\n    answer[i] = count\n    stack.push(i)\n```",
+    "**Single element** - no one exists to the right.\n`Input: heights = [7]` → `Expected: [0]`\n⚠️ Bug: accessing stack.back() without checking emptiness → undefined behavior / crash\n\n**Strictly increasing** - each person sees only the immediately next taller one.\n`Input: heights = [1,2,3,4]` → `Expected: [1,1,1,0]`\n⚠️ Bug: counting all remaining elements to the right → returns [3,2,1,0]\n\n**Strictly decreasing** - person 0 sees only person 1, not everyone, because person 1 blocks the rest.\n`Input: heights = [4,3,2,1]` → `Expected: [1,1,1,0]`\n⚠️ Bug: assuming the tallest sees everyone to the right → returns [3,1,1,0]\n\n**Tallest at the end** - every person sees through to the last, but the +1 for the blocking taller element matters.\n`Input: heights = [5,1,2,3,10]` → `Expected: [4,1,1,1,0]`\n⚠️ Bug: not adding +1 when a taller blocker remains on the stack → returns [3,0,0,0,0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if heights are not guaranteed to be distinct - how does the visibility condition change?",
+      "a": "When heights[i] == heights[j], min(heights[i], heights[j]) equals that value, and any person of equal height in between would make the max equal too, so the strict inequality fails. The stack comparison must use <= instead of < so that equal-height people block each other. Time and space complexity remain O(n)."
+    },
+    {
+      "q": "What if you must count visible people in both directions (left and right)?",
+      "a": "Run the same monotonic stack algorithm once right-to-left for the right count, then once left-to-right for the left count, and sum the two arrays. Each pass is O(n), so total time is O(n) and space is O(n) for the two passes plus the answer."
+    },
+    {
+      "q": "What if the queue arrives as a stream and you must output each person's count immediately when they are added at the right end?",
+      "a": "You cannot compute a person's full count until all people to their right are known, so you must buffer the entire stream. Once the stream ends, run the same right-to-left stack pass. If partial answers are needed online, you can maintain the stack incrementally and update earlier people's counts as new taller people arrive, but worst-case time degrades to O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> canSeePersonsCount(vector<int>& heights) {\n        int n = heights.size();\n        vector<int> answer(n, 0);\n        vector<int> stk;\n        stk.reserve(n);\n        for (int i = n - 1; i >= 0; i--) {\n            int count = 0;\n            while (!stk.empty() && heights[stk.back()] < heights[i]) {\n                stk.pop_back();\n                count++;\n            }\n            if (!stk.empty()) {\n                count++;\n            }\n            answer[i] = count;\n            stk.push_back(i);\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

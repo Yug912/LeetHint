@@ -1,0 +1,40 @@
+{
+  "slug": "greatest-sum-divisible-by-three",
+  "title": "Greatest Sum Divisible by Three",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Remainders (mod 3)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<long long> dp: size 3 → O(1)\n- vector<long long> ndp: size 3 → O(1)\n- recursion depth: none\n- not counted: input nums",
+  "approach": "Use DP over remainders modulo 3: maintain `dp[r]` = maximum sum achievable so far whose total is congruent to `r` mod 3. For each number `x`, transition `dp[(r+x)%3] = max(dp[(r+x)%3], dp[r]+x)` using the previous state. The answer is `dp[0]`. This is correct because the only thing that matters for future divisibility by 3 is the current sum's remainder, and we always keep the maximum sum for each remainder.",
+  "hints": [
+    "What single property of a running sum determines whether adding a new number keeps the total divisible by 3? The array has up to 4 × 10^4 elements.",
+    "Dynamic programming with a 3-element array where `dp[r]` is the best sum with remainder `r` mod 3. For `nums = [3,6,5,1,8]`, after processing 3 and 6, `dp = [9, −∞, −∞]`; adding 5 (remainder 2) sets `dp[2] = dp[0] + 5 = 14`.",
+    "```\ndp = [0, -inf, -inf]\nfor each x in nums:\n    ndp = copy(dp)\n    r = x mod 3\n    for i in 0..2:\n        prev = (i - r + 3) mod 3\n        if dp[prev] != -inf:\n            ndp[i] = max(ndp[i], dp[prev] + x)\n    dp = ndp\nreturn dp[0]\n```",
+    "**Smallest input, no valid non-empty subset** - single element with remainder 1 mod 3\n`Input: nums = [4]` → `Expected: 0`\n⚠️ Bug: initializing dp[1] and dp[2] to 0 instead of INT_MIN → returns 4\n\n**No valid non-empty subset** - two elements, both with remainder 1 mod 3\n`Input: nums = [1,1]` → `Expected: 0`\n⚠️ Bug: updating dp in place without a copy → returns 3\n\n**Multiple valid answers, greedy picks wrong one** - removing two small remainder-2 elements (2+2=4) beats removing one large remainder-1 element (10)\n`Input: nums = [2,2,100,10,10]` → `Expected: 120`\n⚠️ Bug: greedy that only removes the single smallest element with the target remainder → returns 114"
+  ],
+  "followUps": [
+    {
+      "q": "What if we need divisibility by k instead of 3?",
+      "a": "Same DP approach with k states instead of 3. `dp[r]` tracks the best sum with remainder `r` mod k, and for each element we compute `prev = (i - r + k) % k`. Time O(n·k), space O(k)."
+    },
+    {
+      "q": "What if the array arrives as a stream and we cannot store all elements?",
+      "a": "The solution already processes elements one at a time and only keeps 3 states, so it works as-is for streaming. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if we need to return the actual subset of elements chosen, not just the sum?",
+      "a": "Store a parent pointer for each state at each step indicating which previous state and element produced it, then backtrack from dp[0] at the end. Time O(n), space O(n) for the parent pointers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSumDivThree(vector<int>& nums) {\n        const long long NEG = LLONG_MIN;\n        vector<long long> dp(3, NEG);\n        dp[0] = 0;\n        for (int x : nums) {\n            vector<long long> ndp = dp;\n            for (int r = 0; r < 3; r++) {\n                if (dp[r] != NEG) {\n                    int nr = (r + x) % 3;\n                    ndp[nr] = max(ndp[nr], dp[r] + x);\n                }\n            }\n            dp = ndp;\n        }\n        return (int)dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

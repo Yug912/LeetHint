@@ -1,0 +1,40 @@
+{
+  "slug": "count-sub-islands",
+  "title": "Count Sub Islands",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Flood Fill (BFS)",
+  "tc": "O(m × n)",
+  "sc": "O(m × n)",
+  "spaceBreakdown": "- queue<pair<int,int>> q: up to m×n entries in worst case → O(m × n)\n- dx[4], dy[4]: constant size → O(1)\n- recursion depth: none (iterative BFS)\n- not counted: grid1 and grid2 inputs; grid2 modified in place",
+  "approach": "The key insight is that an island in grid2 is a sub-island if and only if every cell in that island is also land (1) in grid1. We iterate through grid2, and whenever we find an unvisited land cell, we perform BFS to explore the entire island, marking visited cells by setting them to 0 in grid2. During the BFS, we check whether every cell is also 1 in grid1; if any cell is 0 in grid1, the island is not a sub-island. After exploring each island, we increment the count only if all cells were land in grid1.",
+  "hints": [
+    "When you trace all the cells of one connected island in grid2, what must be true about the corresponding cells in grid1 for that island to qualify as a sub-island? The grid dimensions are at most 500 × 500.",
+    "Use BFS flood fill on grid2. For the island starting at grid2[3][0] in Example 1, every cell visited has grid1 equal to 1, so it counts as a sub-island.",
+    "```\nfor each cell (i, j) in grid2:\n    if grid2[i][j] == 1:\n        isSub = true\n        BFS from (i, j), marking each visited cell in grid2 as 0\n        for each cell (x, y) popped from queue:\n            if grid1[x][y] == 0: isSub = false\n        if isSub: count++\nreturn count\n```",
+    "**Single cell, not a sub-island** - grid2 has one land cell where grid1 has water\n`Input: grid1 = [[0]], grid2 = [[1]]` → `Expected: 0`\n⚠️ Bug: Counting every island in grid2 without checking grid1 → returns 1\n\n**Short-circuit DFS skipping cells** - a grid2 island where an early cell is water in grid1, so DFS returns before marking remaining cells\n`Input: grid1 = [[1,1,0,1,1]], grid2 = [[1,1,1,1,1]]` → `Expected: 0`\n⚠️ Bug: Using `return grid1[x][y]==1 && dfs(right) && ...` (short-circuit &&) → returns 1 (unmarked cells form a new qualifying \"island\")\n\n**All land in both grids** - entire 2×2 grid is one sub-island\n`Input: grid1 = [[1,1],[1,1]], grid2 = [[1,1],[1,1]]` → `Expected: 1`\n⚠️ Bug: Using a separate visited array but checking only grid2[i][j]==1 in the outer loop (not visited[i][j]) → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if grid1 can change between queries (dynamic updates), and you must answer sub-island counts for multiple grid2 versions?",
+      "a": "Precompute connected component IDs for grid1 using union-find or flood fill, storing an ID per cell. For each grid2 island, check that all cells share the same non-zero grid1 component ID. Preprocessing is O(m×n) per grid1 update; each query is O(m×n)."
+    },
+    {
+      "q": "What if the grids are too large to fit in memory and arrive row-by-row as a stream?",
+      "a": "Maintain a sliding window of two consecutive rows from grid1 and grid2. Use union-find with path compression on the current row pair, carrying component IDs forward. When a row scrolls out, finalize any completed islands. Time stays O(m×n); space drops to O(n)."
+    },
+    {
+      "q": "What if you must count sub-islands for K different grid2 matrices against the same grid1?",
+      "a": "Precompute grid1's connected components once with unique IDs (O(m×n)). For each grid2, run BFS and verify all cells in each island map to the same non-zero grid1 ID. Total time is O(K·m×n) with O(m×n) one-time preprocessing; space is O(m×n) for the ID map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countSubIslands(vector<vector<int>>& grid1, vector<vector<int>>& grid2) {\n        int m = grid1.size();\n        int n = grid1[0].size();\n        int count = 0;\n        int dx[] = {0, 0, 1, -1};\n        int dy[] = {1, -1, 0, 0};\n\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid2[i][j] == 1) {\n                    bool isSub = true;\n                    queue<pair<int,int>> q;\n                    q.push({i, j});\n                    grid2[i][j] = 0;\n                    while (!q.empty()) {\n                        auto [x, y] = q.front();\n                        q.pop();\n                        if (grid1[x][y] == 0) isSub = false;\n                        for (int d = 0; d < 4; d++) {\n                            int nx = x + dx[d];\n                            int ny = y + dy[d];\n                            if (nx >= 0 && nx < m && ny >= 0 && ny < n && grid2[nx][ny] == 1) {\n                                grid2[nx][ny] = 0;\n                                q.push({nx, ny});\n                            }\n                        }\n                    }\n                    if (isSub) count++;\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

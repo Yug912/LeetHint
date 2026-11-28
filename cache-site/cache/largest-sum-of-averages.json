@@ -1,0 +1,40 @@
+{
+  "slug": "largest-sum-of-averages",
+  "title": "Largest Sum of Averages",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "1D Dynamic Programming with Prefix Sums",
+  "tc": "O(n²·k)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> pref: n+1 entries → O(n)\n- vector<double> dp: n+1 entries → O(n)\n- recursion depth: none\n- not counted: input nums, returned double",
+  "approach": "The key insight is that if the last group of an optimal partition covers positions t+1 through i, then positions 1..t must themselves form an optimal partition into one fewer group. This yields the recurrence dp[j][i] = max over t<j of dp[j-1][t] + average(t+1..i). Since row j depends only on row j-1, a single 1D array updated with i descending reuses the previous row (dp[t] for t<i is untouched when computing dp[i]). Prefix sums give O(1) average queries. Because every nums[i] ≥ 1, splitting never hurts, so using exactly k groups is optimal and the answer is dp[n] after k iterations.",
+  "hints": [
+    "In example 1's optimal partition [9],[1,2,3],[9], what does each prefix [9] and [9,1,2,3] represent in terms of the number of groups used so far? The constraint n ≤ 100 leaves room to consider many (prefix-length, group-count) pairs.",
+    "1D dynamic programming over prefixes with a prefix-sum array. After filling dp[] for j-1 groups, update dp[i] (i descending) = max over t<i of dp[t] + average(t+1..i). For nums=[9,1,2,3,9], k=3: at j=3, dp[5] = dp[4] + avg(5..5) = 11 + 9 = 20.",
+    "```\npref[0] = 0; pref[i] = pref[i-1] + nums[i-1]\ndp[0] = 0; dp[i>0] = -inf\nfor j = 1..k:\n    for i = n down to 1:\n        dp[i] = max over t in [j-1, i-1]:\n                    dp[t] + (pref[i] - pref[t]) / (i - t)\nreturn dp[n]\n```",
+    "**Single group (k = 1)** - the whole array is one group, answer is the overall average.\n`Input: nums = [9,1,2,3,9], k = 1` → `Expected: 4.80000`\n⚠️ Bug: initializing dp[i>0] to 0 instead of -inf → at j=1, dp[5] picks t=4 giving 0+9=9, returns 9.00000\n\n**Integer division** - averages must stay fractional throughout.\n`Input: nums = [1,2,3], k = 2` → `Expected: 4.50000`\n⚠️ Bug: computing (pref[i]-pref[t])/(i-t) with int operands → [1,2],[3] gives 3/2=1, returns 4.00000\n\n**Descending update order** - 1D row reuse requires i descending so dp[t] (t<i) still holds the previous row.\n`Input: nums = [9,1,2,3,9], k = 3` → `Expected: 20.00000`\n⚠️ Bug: inner loop i ascending → dp[1] is overwritten to -inf before dp[2] reads it, cascading to dp[5]=-1e18\n\n**k equals n** - every element is its own group, answer is the total sum.\n`Input: nums = [3,7,2], k = 3` → `Expected: 12.00000`\n⚠️ Bug: writing the group loop as `for (j=1; j<k; j++)` (off-by-one) → only 2 groups used, dp[3]=7.50000"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums can contain negative numbers - is using exactly k groups still optimal?",
+      "a": "No. A lone negative element lowers the score, so fewer groups may beat more. After each j iteration, take a running maximum of dp[n] over j=1..k and return that, instead of only dp[n] after k iterations. Time stays O(n²·k), space O(n)."
+    },
+    {
+      "q": "What if you must use exactly k groups rather than at most k?",
+      "a": "The current code already returns dp[n] for exactly k groups, since the recurrence builds j groups explicitly. With all-positive input this equals the at-most-k answer; with negatives, exactly-k is what the code computes and at-most-k needs the running max from the previous follow-up. Complexity unchanged."
+    },
+    {
+      "q": "What if n = 10^5 and k is small (k ≤ 10)?",
+      "a": "O(n²·k) ≈ 10^11 is too slow. The inner max over t can be accelerated with a divide-and-conquer optimization when the optimal split point is monotonic in i, reducing to O(n·k·log n); prefix sums still give O(1) averages. Space remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double largestSumOfAverages(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> pref(n + 1, 0);\n        for (int i = 0; i < n; i++) pref[i + 1] = pref[i] + nums[i];\n        \n        vector<double> dp(n + 1, -1e18);\n        dp[0] = 0.0;\n        \n        for (int j = 1; j <= k; j++) {\n            for (int i = n; i >= 1; i--) {\n                double best = -1e18;\n                for (int t = j - 1; t < i; t++) {\n                    double avg = (double)(pref[i] - pref[t]) / (double)(i - t);\n                    double val = dp[t] + avg;\n                    if (val > best) best = val;\n                }\n                dp[i] = best;\n            }\n        }\n        return dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

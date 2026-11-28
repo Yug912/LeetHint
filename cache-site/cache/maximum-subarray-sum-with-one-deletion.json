@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-subarray-sum-with-one-deletion",
+  "title": "Maximum Subarray Sum with One Deletion",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Kadane's Algorithm (DP, two states)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- noDelete, oneDelete, ans, newNoDelete, newOneDelete: scalar long longs → O(1)\n- no containers, no recursion\n- not counted: input vector arr",
+  "approach": "Track two running Kadane states while scanning left to right: `noDelete` = best subarray sum ending at the current index with no element dropped, and `oneDelete` = best subarray sum ending at the current index with exactly one element dropped. At each index i, either we drop arr[i] (taking the previous `noDelete`) or we already dropped something earlier and extend by arr[i]. The answer is the max over all positions of both states. This is correct because every valid subarray-with-≤1-deletion ending at i falls into exactly one of these two cases, and Kadane's optimality is preserved in each.",
+  "hints": [
+    "For a subarray ending at index i with at most one deletion, how many distinct situations about whether a deletion has already happened must you distinguish? Note n can reach 10^5, which rules out checking every subarray and every deletion inside it.",
+    "Extend Kadane's algorithm with a second running state. For arr = [1,-2,0,3] at index 1 (value -2): no-deletion state = max(-2, 1+(-2)) = -1; one-deletion state = previous no-deletion = 1 (we drop -2).",
+    "```\nnoDel = arr[0]\noneDel = -infinity\nans = arr[0]\nfor i from 1 to n-1:\n    newNoDel = max(arr[i], noDel + arr[i])\n    newOneDel = max(noDel, oneDel + arr[i])\n    noDel = newNoDel\n    oneDel = newOneDel\n    ans = max(ans, noDel, oneDel)\nreturn ans\n```",
+    "**Single negative element** - n = 1, no deletion is allowed because the subarray must stay non-empty.\n`Input: arr = [-5]` → `Expected: -5`\n⚠️ Bug: initialising oneDelete to 0 and including it in the answer → returns 0.\n\n**All negatives** - every element is negative, so the best subarray is the single largest element.\n`Input: arr = [-1,-1,-1,-1]` → `Expected: -1`\n⚠️ Bug: initialising ans to 0 → returns 0.\n\n**Overflow sentinel** - n up to 10^5 and arr[i] down to -10^4; using INT_MIN as the \"no deletion yet\" sentinel and then computing oneDelete + arr[i] causes signed integer overflow.\n`Input: arr = [1, -10000]` → `Expected: 1`\n⚠️ Bug: using INT_MIN for oneDelete and computing oneDelete + arr[i] → undefined behavior, may return a garbage large value.\n\n**Deletion essential** - dropping one negative element yields a higher sum than any no-deletion subarray.\n`Input: arr = [1,-2,0,3]` → `Expected: 4`\n⚠️ Bug: running standard Kadane without a deletion state → returns 3."
+  ],
+  "followUps": [
+    {
+      "q": "Generalise to at most k deletions instead of one.",
+      "a": "Keep k+1 Kadane states where state j means \"j deletions used so far\"; transition state j at index i as max(prev state j-1, state j + arr[i]). Time O(n·k), space O(k)."
+    },
+    {
+      "q": "Return the actual subarray (start/end indices and which element was deleted) instead of just the sum.",
+      "a": "Alongside each state store its start index and the deleted index; when a state is extended or reset, copy/overwrite these tags. Time O(n), space O(1)."
+    },
+    {
+      "q": "Elements arrive in a stream one at a time; after each element, report the current answer.",
+      "a": "The two-state recurrence only needs the previous step's values, so process each new element online and update ans incrementally. O(1) time per element, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumSum(vector<int>& arr) {\n        int n = arr.size();\n        long long noDelete = arr[0];\n        long long oneDelete = LLONG_MIN / 2; // cannot delete from a single element\n        long long ans = arr[0];\n        for (int i = 1; i < n; i++) {\n            long long newNoDelete = max((long long)arr[i], noDelete + arr[i]);\n            long long newOneDelete = max(noDelete, oneDelete + arr[i]);\n            noDelete = newNoDelete;\n            oneDelete = newOneDelete;\n            ans = max(ans, max(noDelete, oneDelete));\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

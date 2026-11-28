@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-penalty-for-a-shop",
+  "title": "Minimum Penalty for a Shop",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int totalY, penalty, minPenalty, bestHour, n: each O(1)\n- no containers, no recursion\n- not counted: input string",
+  "approach": "The penalty at closing hour j equals (count of 'N' in hours 0..j−1) + (count of 'Y' in hours j..n−1). Instead of recomputing this for every j, start with the penalty at j=0 (which is just the total count of 'Y'), then sweep left to right: when moving past hour j, if customers[j] is 'Y' the penalty drops by 1 (that 'Y' is no longer penalized as closed), and if it is 'N' the penalty rises by 1 (that 'N' is now penalized as open). Track the minimum penalty and the earliest hour achieving it.",
+  "hints": [
+    "When the closing time shifts from hour j to hour j+1, how many characters in the string change their contribution to the penalty? The string length can be up to 10^5.",
+    "Use prefix count of 'N' plus suffix count of 'Y', tracked incrementally. For \"YYNY\" at j=2: prefix N count = 0, suffix Y count = 1, penalty = 1.",
+    "```\ntotalY = count of 'Y' in string\npenalty = totalY\nbestHour = 0\nminPenalty = totalY\nfor j from 0 to n-1:\n    if customers[j] == 'Y': penalty -= 1\n    else: penalty += 1\n    if penalty < minPenalty:\n        minPenalty = penalty\n        bestHour = j + 1\nreturn bestHour\n```",
+    "**Single N** - smallest input, optimal close at hour 0\n`Input: \"N\"` → `Expected: 0`\n⚠️ Bug: initializing bestHour to 1 instead of 0 → returns 1\n\n**All Y** - optimal close at the final hour n\n`Input: \"YYYY\"` → `Expected: 4`\n⚠️ Bug: loop condition `j < n - 1` instead of `j < n` → returns 3\n\n**Tie for minimum** - earliest hour required among equal penalties\n`Input: \"YYNY\"` → `Expected: 2`\n⚠️ Bug: using `<=` instead of `<` in penalty comparison → returns 4\n\n**All N** - no customers arrive, close at hour 0\n`Input: \"NNNNN\"` → `Expected: 0`\n⚠️ Bug: initializing minPenalty to INT_MAX instead of totalY → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "The string arrives as a stream of unknown length with no ability to re-read it. Can you still find the optimal closing time?",
+      "a": "Yes. Track a running sum starting at 0 where 'Y' subtracts 1 and 'N' adds 1. The penalty at hour j equals totalY plus this running sum, and since totalY is a constant offset, the optimal closing time is simply the index where the running sum is minimized (plus 1, or 0 if the minimum is at the start). TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if each hour i has a different penalty weight w_i (e.g., peak hours cost more)?",
+      "a": "Replace the +1/−1 adjustments with +w_j (for 'N') and −w_j (for 'Y'). The incremental sweep still works: start with penalty = sum of all w_i for 'Y' hours, then adjust by ±w_j as you pass each hour. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the shop can close and reopen at most k times, minimizing total penalty?",
+      "a": "Use DP where dp[i][j][state] = minimum penalty for the first i hours using j closures while currently open or closed. Transition either keeps the state or toggles it (incrementing j). TC: O(nk), SC: O(k) with a rolling array over i."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int bestClosingTime(string customers) {\n        int n = customers.size();\n        int totalY = 0;\n        for (char c : customers) {\n            if (c == 'Y') totalY++;\n        }\n        int minPenalty = totalY;\n        int bestHour = 0;\n        int penalty = totalY;\n        for (int j = 0; j < n; j++) {\n            if (customers[j] == 'Y') {\n                penalty--;\n            } else {\n                penalty++;\n            }\n            if (penalty < minPenalty) {\n                minPenalty = penalty;\n                bestHour = j + 1;\n            }\n        }\n        return bestHour;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

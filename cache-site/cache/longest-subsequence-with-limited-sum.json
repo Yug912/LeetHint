@@ -1,0 +1,40 @@
+{
+  "slug": "longest-subsequence-with-limited-sum",
+  "title": "Longest Subsequence With Limited Sum",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sort + Prefix Sum + Binary Search",
+  "tc": "O(n log n + m log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> prefix: n entries → O(n)\n- sort(): O(log n) stack (introsort) → O(log n)\n- not counted: input nums, queries; returned ans",
+  "approach": "The sum of a subsequence doesn't depend on element order, so to maximize the count of elements whose sum stays ≤ a budget, we should always pick the smallest available elements. Sort `nums`, build prefix sums, then for each query use `upper_bound` on the prefix array: the first prefix sum strictly greater than the query marks how many smallest elements fit. This is correct because prefix sums of a sorted array are monotonic, so the count of elements with cumulative sum ≤ q is exactly the insertion point of q via upper_bound.",
+  "hints": [
+    "The sum of a subsequence is independent of the order of its elements. With a fixed budget, which elements of `nums` let you fit the most of them into a subsequence?",
+    "Sort `nums` ascending, build prefix sums, then binary-search each query. For `nums = [4,5,2,1]` → sorted `[1,2,4,5]`, prefix `[1,3,7,12]`; query `10` lands between `7` and `12`, so 3 elements fit.",
+    "sort nums\nprefix[0] = nums[0]\nfor i in 1..n-1: prefix[i] = prefix[i-1] + nums[i]\nfor each q in queries:\n    idx = upper_bound(prefix, q)   # first prefix > q\n    answer = idx                   # count of elements with sum <= q",
+    "**Single element, too small** - n = 1 and the only element exceeds the query.\n`nums = [5], queries = [3]` → `Expected: [0]`\n⚠️ Bug: returning `idx + 1` instead of `idx` → returns `[1]`\n\n**Exact prefix match** - the query equals a prefix sum exactly.\n`nums = [1,2], queries = [3]` → `Expected: [2]`\n⚠️ Bug: using `lower_bound` instead of `upper_bound` → returns `[1]`\n\n**Query exceeds total** - query larger than the sum of all elements.\n`nums = [4,5,2,1], queries = [21]` → `Expected: [4]`\n⚠️ Bug: capping the answer at `n - 1` → returns `[3]`\n\n**All equal** - every element is identical.\n`nums = [2,2,2], queries = [5]` → `Expected: [2]`\n⚠️ Bug: deduplicating `nums` before computing prefix sums → returns `[1]`"
+  ],
+  "followUps": [
+    {
+      "q": "If m grows to 10^7 but n stays ≤ 1000, how does your approach scale?",
+      "a": "Sort once in O(n log n) and answer each query in O(log n) via binary search on the prefix array. Total O(n log n + m log n); the prefix array is reused across all queries, so space stays O(n)."
+    },
+    {
+      "q": "What if `nums` may contain negative values?",
+      "a": "Sorting and prefix sums break: adding a negative element increases the count while lowering the sum, so \"smallest first\" is no longer optimal. You would need a different selection strategy, likely DP or a value-range data structure."
+    },
+    {
+      "q": "What if elements can be inserted into `nums` between queries (online)?",
+      "a": "Maintain a Fenwick tree (or order-statistic structure) keyed by value with prefix sums; each insertion is O(log n) and each query is answered by binary-searching the Fenwick tree in O(log n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> answerQueries(vector<int>& nums, vector<int>& queries) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        vector<long long> prefix(n);\n        long long s = 0;\n        for (int i = 0; i < n; i++) {\n            s += nums[i];\n            prefix[i] = s;\n        }\n        vector<int> ans;\n        ans.reserve(queries.size());\n        for (int q : queries) {\n            int idx = upper_bound(prefix.begin(), prefix.end(), (long long)q) - prefix.begin();\n            ans.push_back(idx);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

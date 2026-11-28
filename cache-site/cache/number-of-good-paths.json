@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-good-paths",
+  "title": "Number of Good Paths",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find with Value-Ordered Processing",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> parent: n entries → O(n)\n- vector<int> rnk: n entries → O(n)\n- vector<vector<int>> adj: 2(n-1) total integers → O(n)\n- vector<int> nodes: n entries → O(n)\n- unordered_map<int,int> cnt: at most n entries per batch → O(n)\n- recursion stack for find: O(log n) with union-by-rank\n- sort(): O(log n) stack",
+  "approach": "Process nodes in increasing value order using Union-Find. When processing all nodes with value v, union each with neighbors whose value ≤ v (already activated). After unions, count how many value-v nodes share each component root; if a component has k such nodes, they form C(k,2) good paths (all intermediate nodes have value ≤ v by construction). Initialize the answer to n for single-node paths.",
+  "hints": [
+    "For a path whose endpoints both have value V, what must be true of every other node on that path? Given n ≤ 3·10^4, can you afford to check every pair of nodes directly?",
+    "Use Union-Find. Process nodes in increasing value order; when activating a node, union it with neighbors whose value is ≤ the current node's value. Example: for vals=[1,3,2,1,3], processing value 1 activates nodes 0,3 but unions nothing since their neighbors have higher values.",
+    "```\nsort nodes by value\nans = n  // single-node paths\nfor each group of nodes with same value v:\n    for each node u in group:\n        for each neighbor w of u with vals[w] <= v:\n            union(u, w)\n    count nodes with value v per component root\n    for each count c:\n        ans += c * (c - 1) / 2\nreturn ans\n```",
+    "**Single node** - n=1, no edges at all\n`Input: vals = [1], edges = []` → `Expected: 1`\n⚠️ Bug: initializing ans=0 instead of n → returns 0\n\n**All equal values** - every pair of nodes in the same component forms a good path\n`Input: vals = [2,2,2], edges = [[0,1],[1,2]]` → `Expected: 6`\n⚠️ Bug: initializing ans=0 instead of n → returns 3\n\n**Adjacent equal values** - two neighbors with the same value must be connected\n`Input: vals = [1,1], edges = [[0,1]]` → `Expected: 3`\n⚠️ Bug: using vals[w] < vals[u] instead of vals[w] <= vals[u] → skips the union of 0 and 1, returns 2\n\n**Equal values separated by higher value** - the higher-value node blocks the path\n`Input: vals = [1,5,1], edges = [[0,1],[1,2]]` → `Expected: 3`\n⚠️ Bug: unioning all neighbors regardless of value → connects 0 and 2 through node 1 (value 5), returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph is a general graph (may have cycles), not necessarily a tree?",
+      "a": "The same approach works unchanged. Union-Find on the subgraph of nodes with value ≤ V correctly identifies pairs that have a simple path through nodes with value ≤ V-any walk can be reduced to a simple path by removing cycles. TC remains O(n log n)."
+    },
+    {
+      "q": "What if you must answer Q queries, each asking for the count of good paths with endpoint value exactly V?",
+      "a": "Run the algorithm once, storing each value's contribution (c*(c-1)/2 per component) in a hash map keyed by value. Each query is then O(1) lookup. Precomputation: O(n log n), per query: O(1), space: O(n)."
+    },
+    {
+      "q": "What if nodes can be removed (deactivated) dynamically and you must report the count after each removal?",
+      "a": "Process removals offline in reverse as additions, using Union-Find with rollback (undo stack for parent/rank changes). Sort removals by value, replay in reverse order, and record the answer after each step. TC: O(n log n · α(n)), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfGoodPaths(vector<int>& vals, vector<vector<int>>& edges) {\n        int n = vals.size();\n        parent.resize(n);\n        rnk.resize(n, 0);\n        for (int i = 0; i < n; i++) parent[i] = i;\n        \n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        \n        vector<int> nodes(n);\n        iota(nodes.begin(), nodes.end(), 0);\n        sort(nodes.begin(), nodes.end(), [&](int a, int b) {\n            return vals[a] < vals[b];\n        });\n        \n        long long ans = n;\n        \n        int i = 0;\n        while (i < n) {\n            int j = i;\n            while (j < n && vals[nodes[j]] == vals[nodes[i]]) j++;\n            \n            for (int k = i; k < j; k++) {\n                int u = nodes[k];\n                for (int v : adj[u]) {\n                    if (vals[v] <= vals[u]) {\n                        unite(u, v);\n                    }\n                }\n            }\n            \n            unordered_map<int, int> cnt;\n            for (int k = i; k < j; k++) {\n                cnt[find(nodes[k])]++;\n            }\n            \n            for (auto& [root, c] : cnt) {\n                ans += (long long)c * (c - 1) / 2;\n            }\n            \n            i = j;\n        }\n        \n        return ans;\n    }\n    \nprivate:\n    vector<int> parent;\n    vector<int> rnk;\n    \n    int find(int x) {\n        if (parent[x] != x) parent[x] = find(parent[x]);\n        return parent[x];\n    }\n    \n    void unite(int x, int y) {\n        int px = find(x), py = find(y);\n        if (px == py) return;\n        if (rnk[px] < rnk[py]) swap(px, py);\n        parent[py] = px;\n        if (rnk[px] == rnk[py]) rnk[px]++;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "reordered-power-of-2",
+  "title": "Reordered Power of 2",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Digit Count Signature",
+  "tc": "O(log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- static int sigs[34][10]: 34 signatures × 10 ints → O(log n) (34 = O(log 10^9))\n- int cnt[10]: fixed 10 ints → O(1)\n- int m, bool init, loop vars: O(1)\n- recursion depth: none\n- not counted: input n, returned bool",
+  "approach": "Two numbers are digit-rearrangements of each other iff they share the same digit-count signature (count of each digit 0-9). Since n ≤ 10^9, there are only ~34 powers of 2 with at most 10 digits (2^0 through 2^33). We precompute each power's digit-count signature once (static), then compare n's signature against all of them. If any matches, n can be reordered into that power of 2; the leading-zero constraint is automatically satisfied because every real power of 2 has no leading zero.",
+  "hints": [
+    "Given that n ≤ 10^9, how many powers of two are small enough to be candidates for a rearrangement of n's digits?\nThe constraint 1 ≤ n ≤ 10^9 means n has at most 10 digits.",
+    "Use a 10-element digit-count array as a canonical signature for each number. Precompute signatures for all ~34 powers of two up to 10^9, then compare n's signature against each. For n = 10, the signature is [1,1,0,0,0,0,0,0,0,0] (one '0', one '1'); no power of two matches, so return false.",
+    "```\nprecompute digit-count signatures of all powers of 2 up to 10^9\ncount digits of n into cnt[0..9]\nfor each precomputed signature sig:\n    if sig equals cnt: return true\nreturn false\n```",
+    "**Smallest input** - n = 1 is itself 2^0.\n`Input: n = 1` → `Expected: true`\n⚠️ Bug: starting the power-of-two loop at 2^1 = 2 instead of 2^0 = 1 → returns false\n\n**Input with zero digit** - n = 10 has digits {1, 0}; no 2-digit power of 2 has these digits.\n`Input: n = 10` → `Expected: false`\n⚠️ Bug: treating a leading-zero permutation \"01\" as the number 1 (which is 2^0) → returns true\n\n**Reordering required** - n = 46 reorders to 64 = 2^6.\n`Input: n = 46` → `Expected: true`\n⚠️ Bug: only checking if n itself is a power of 2 → returns false\n\n**Largest input** - n = 10^9 has 10 digits (one 1, nine 0s); no power of 2 matches.\n`Input: n = 1000000000` → `Expected: false`\n⚠️ Bug: using int for the running power; 2^31 = 2147483648 overflows int → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^18 instead of 10^9?",
+      "a": "The same approach works - there are ~60 powers of 2 up to 10^18. Use long long for the running power and precompute ~60 signatures. TC stays O(log n), SC stays O(log n)."
+    },
+    {
+      "q": "What if you must answer Q independent queries efficiently?",
+      "a": "Precompute all signatures once, store them in a hash set (encode the 10-count array as a string or a base-11 integer). Each query then costs O(log n) to count digits plus O(1) lookup. Total: O(log n + Q · log n)."
+    },
+    {
+      "q": "What if instead of powers of 2, you must check whether n reorders to a power of an arbitrary base k?",
+      "a": "Enumerate powers of k up to 10^9 (there are O(log_k 10^9) of them), precompute their digit-count signatures, and compare. TC: O(log_k n), SC: O(log_k n). The approach is identical; only the set of target numbers changes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool reorderedPowerOf2(int n) {\n        static int sigs[34][10];\n        static bool init = false;\n        if (!init) {\n            long long p = 1;\n            for (int i = 0; i < 34; i++) {\n                long long q = p;\n                while (q) { sigs[i][q % 10]++; q /= 10; }\n                p *= 2;\n            }\n            init = true;\n        }\n        int cnt[10] = {0};\n        int m = n;\n        while (m) { cnt[m % 10]++; m /= 10; }\n        for (int i = 0; i < 34; i++) {\n            bool match = true;\n            for (int d = 0; d < 10; d++) {\n                if (sigs[i][d] != cnt[d]) { match = false; break; }\n            }\n            if (match) return true;\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

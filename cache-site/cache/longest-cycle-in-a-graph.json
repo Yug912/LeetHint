@@ -1,0 +1,40 @@
+{
+  "slug": "longest-cycle-in-a-graph",
+  "title": "Longest Cycle in a Graph",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Functional Graph Cycle Detection",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> visited(n, -1): up to n entries → O(n)\n- scalar variables (ans, step, curr, startStep, i): O(1)\n- no recursion, no additional containers\n- not counted: input edges, returned int",
+  "approach": "Since each node has at most one outgoing edge (functional graph), each node belongs to at most one cycle. Use a global timestamp array: for each unvisited node, follow its path, stamping each node with an incrementing counter. If we reach a node stamped in the current traversal, the cycle length is the difference between the current step and that node's stamp. If we reach a node from a previous traversal or -1, stop. Track the maximum cycle length found.",
+  "hints": [
+    "With at most one outgoing edge per node, how many different cycles could any single node belong to? The constraint `edges[i] != i` rules out self-loops.",
+    "Use an integer timestamp array `visited[]` (init -1). Walk from each unvisited node, stamping each with the current step counter. In Example 1, from node 0: stamp 0→0, 3→1, 2→2, 4→3, then hit 3 again (stamp 1) - cycle length = 4 − 1 = 3.",
+    "```\nfor each unvisited node i:\n    start = current step\n    curr = i\n    while curr != -1 and visited[curr] == -1:\n        visited[curr] = step; step++\n        curr = edges[curr]\n    if curr != -1 and visited[curr] >= start:\n        ans = max(ans, step - visited[curr])\n```",
+    "**No cycles** - all paths terminate at -1\n`Input: edges = [-1,-1,-1]` → `Expected: -1`\n⚠️ Bug: initializing `ans` to 0 instead of -1 → returns 0\n\n**Chain into cycle** - tail nodes before the cycle must be excluded\n`Input: edges = [1,2,3,4,3]` → `Expected: 2`\n⚠️ Bug: returning `step - startStep` instead of `step - visited[curr]` → returns 5\n\n**Multiple cycles, shorter found first** - must keep the maximum\n`Input: edges = [1,0,3,4,2]` → `Expected: 3`\n⚠️ Bug: returning the first cycle found without taking max → returns 2\n\n**Reaching a previously visited node** - must distinguish current vs past traversal\n`Input: edges = [1,2,0,0]` → `Expected: 3`\n⚠️ Bug: omitting the `visited[curr] >= startStep` check → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if each node can have up to 2 outgoing edges instead of 1?",
+      "a": "The functional graph property breaks, so the timestamp approach no longer guarantees each node is in at most one cycle. Use iterative DFS with white/gray/black coloring to detect back edges, and for each back edge compute the cycle length by walking back through the recursion stack. TC becomes O(V + E), SC O(V)."
+    },
+    {
+      "q": "What if you need to answer many queries: \"is node X on a cycle, and what is that cycle's length?\"",
+      "a": "Run the same timestamp traversal once to find all cycles, then store for each node its cycle length (or -1 if not on a cycle) in a separate array. Each query is O(1) lookup. Preprocess TC O(n), SC O(n), per-query TC O(1)."
+    },
+    {
+      "q": "What if edges can be added one at a time and you must report the longest cycle after each insertion?",
+      "a": "Maintain the timestamp array and component IDs. When an edge u→v is added, if u already had an outgoing edge, remove the old one first (may break a cycle). Then follow from u: if the path reaches a node in u's current component, a new cycle forms with length = step difference. Worst case TC O(n) per update, SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestCycle(vector<int>& edges) {\n        int n = edges.size();\n        vector<int> visited(n, -1);\n        int ans = -1;\n        int step = 0;\n        for (int i = 0; i < n; i++) {\n            if (visited[i] != -1) continue;\n            int curr = i;\n            int startStep = step;\n            while (curr != -1 && visited[curr] == -1) {\n                visited[curr] = step;\n                step++;\n                curr = edges[curr];\n            }\n            if (curr != -1 && visited[curr] >= startStep) {\n                ans = max(ans, step - visited[curr]);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

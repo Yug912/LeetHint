@@ -1,0 +1,39 @@
+{
+  "slug": "prefix-and-suffix-search",
+  "title": "Prefix and Suffix Search",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Trie with Combined Key",
+  "tc": "O(n·L² + Q·L)",
+  "sc": "O(n·L²)",
+  "spaceBreakdown": "- Trie nodes: up to n·(L+1)·(2L+1) ≈ 1.2M nodes, each with 27 pointers + 1 int → O(n·L²)\n- Temporary strings in constructor: O(L) each, reused → O(L)\n- Query string key: O(L) → O(L)\n- not counted: input words vector, returned int",
+  "approach": "Combine prefix and suffix into a single search key by inserting, for each word at index i, all strings of the form \"suffix{word\" into a trie. The delimiter '{' (ASCII 123, right after 'z') lets us use a 27-child trie. Each trie node stores the maximum word index passing through it, so any query \"suff{pref\" directly returns the largest matching index. Since words are inserted in index order and we keep the max, the stored weight is always the largest valid index.",
+  "hints": [
+    "What if you could transform the two-condition search (prefix AND suffix) into a single-condition search on a modified string? The constraint words[i].length ≤ 7 limits how many such modified strings each word generates.",
+    "Use a Trie. For \"apple\" at index 0, insert \"le{apple\" (among others). Query f(\"app\",\"le\") searches for \"le{app\" in the trie and returns the stored index.",
+    "```\nfor each word w at index i:\n    for j from 0 to len(w):\n        insert w[j:] + \"{\" + w into trie\n        at every node visited, set weight = max(weight, i)\n\nf(pref, suff):\n    search for suff + \"{\" + pref in trie\n    return weight at final node, or -1 if path breaks\n```",
+    "**Duplicate words** - same word appears at multiple indices\n`Input: [\"a\",\"a\"], f(\"a\",\"a\")` → `Expected: 1`\n⚠️ Bug: storing first-seen index instead of max at each trie node → returns 0\n\n**No valid match** - prefix matches a word but suffix does not\n`Input: [\"apple\"], f(\"app\",\"x\")` → `Expected: -1`\n⚠️ Bug: searching only the prefix portion and ignoring the suffix → returns 0\n\n**Full word as suffix** - suffix equals the entire word\n`Input: [\"apple\"], f(\"app\",\"apple\")` → `Expected: 0`\n⚠️ Bug: starting the suffix loop at j=1 instead of j=0, missing the full-word suffix → returns -1\n\n**Single character word** - word, prefix, and suffix all length 1\n`Input: [\"a\"], f(\"a\",\"a\")` → `Expected: 0`\n⚠️ Bug: using a 26-child array with no slot for delimiter '{' (index 26) → out-of-bounds access"
+  ],
+  "followUps": [
+    {
+      "q": "What if words can be added dynamically after construction?",
+      "a": "Expose an add(word, index) method that inserts all suffix+delimiter+word strings into the existing trie. Time per add: O(L²), query time unchanged at O(L)."
+    },
+    {
+      "q": "What if word lengths can be up to 10^5 instead of 7?",
+      "a": "The O(n·L²) construction becomes prohibitive. Use two separate tries (forward for prefix, reversed for suffix), store sorted index lists at each node, and binary-search the intersection. Time: O(n·L + Q·L·log n)."
+    },
+    {
+      "q": "What if memory is limited and you cannot afford O(n·L²) space?",
+      "a": "Replace the trie with a hash map: for each word, hash every suffix+delimiter+word combination to the word's index (keeping the max). Time: O(n·L²) preprocessing, O(L) per query, with lower constant-factor memory per entry."
+    }
+  ],
+  "code": {
+    "cpp": "class WordFilter {\n    struct TrieNode {\n        TrieNode* children[27];\n        int weight;\n        TrieNode() {\n            for (int i = 0; i < 27; i++) children[i] = nullptr;\n            weight = -1;\n        }\n    };\n    \n    TrieNode* root;\n    \n    void insert(const string& s, int w) {\n        TrieNode* node = root;\n        for (char c : s) {\n            int idx = c - 'a';\n            if (!node->children[idx]) {\n                node->children[idx] = new TrieNode();\n            }\n            node = node->children[idx];\n            if (w > node->weight) {\n                node->weight = w;\n            }\n        }\n    }\n    \npublic:\n    WordFilter(vector<string>& words) {\n        root = new TrieNode();\n        for (int i = 0; i < (int)words.size(); i++) {\n            string w = words[i];\n            for (int j = 0; j <= (int)w.size(); j++) {\n                string s = w.substr(j) + \"{\" + w;\n                insert(s, i);\n            }\n        }\n    }\n    \n    int f(string pref, string suff) {\n        string key = suff + \"{\" + pref;\n        TrieNode* node = root;\n        for (char c : key) {\n            int idx = c - 'a';\n            if (!node->children[idx]) return -1;\n            node = node->children[idx];\n        }\n        return node->weight;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

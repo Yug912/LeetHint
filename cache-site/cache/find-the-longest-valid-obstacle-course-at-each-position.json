@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-longest-valid-obstacle-course-at-each-position",
+  "title": "Find the Longest Valid Obstacle Course at Each Position",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Patience Sorting / LIS with Binary Search",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> tails: up to n elements → O(n)\n- vector<int> ans: returned output, not counted\n- no recursion, no other containers",
+  "approach": "For each index i, we need the length of the longest non-decreasing subsequence ending at i. We maintain a `tails` array where `tails[k]` is the minimum ending height of a non-decreasing subsequence of length k+1. For each obstacle height h, we use `upper_bound` on `tails` to find the first element strictly greater than h; its index j means there are j elements ≤ h, so the longest course ending at h has length j+1. We then place h at position j (extending or replacing), keeping `tails` sorted. Using `upper_bound` (not `lower_bound`) is critical because equal heights are allowed to extend a course.",
+  "hints": [
+    "For a new obstacle of height h at position i, what determines the longest course that can end here - is it every previous obstacle, or only some aggregate property of the courses seen so far?\nn can be up to 10^5, so comparing h against all previous obstacles for each position is too slow.",
+    "Binary search on a sorted \"tails\" array (patience sorting for non-decreasing subsequence).\nFor obstacles = [1,2,3,2], when processing the last 2, tails = [1,2,3]; upper_bound finds index 2 (first value > 2), so the answer is 3 and tails becomes [1,2,2].",
+    "```\ntails = empty list\nfor each height h in obstacles:\n    j = index of first element in tails strictly greater than h\n    ans[i] = j + 1\n    if j == size of tails:\n        append h to tails\n    else:\n        tails[j] = h\nreturn ans\n```",
+    "**All equal values** - every obstacle has the same height, so each should extend the course\n`Input: [3,3,3]` → `Expected: [1,2,3]`\n⚠️ Bug: using lower_bound instead of upper_bound → returns [1,1,1]\n\n**Single element** - smallest valid input, tails is empty\n`Input: [5]` → `Expected: [1]`\n⚠️ Bug: accessing tails[j] without checking if j equals tails.size() → out-of-bounds access\n\n**Strictly decreasing** - each element is smaller than all previous, so every answer is 1\n`Input: [5,4,3,2,1]` → `Expected: [1,1,1,1,1]`\n⚠️ Bug: returning j instead of j+1 → returns [0,0,0,0,0]\n\n**Duplicate extends sequence** - an equal-height obstacle should extend, not restart\n`Input: [1,2,2]` → `Expected: [1,2,3]`\n⚠️ Bug: using lower_bound instead of upper_bound → returns [1,2,2]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the course must be strictly increasing (each obstacle strictly taller than the previous)?",
+      "a": "Replace upper_bound with lower_bound in the binary search. This finds the first element >= h, so equal heights start a new course instead of extending. TC stays O(n log n), SC stays O(n)."
+    },
+    {
+      "q": "Return the actual obstacle course (the subsequence of indices), not just its length, for each position.",
+      "a": "Store a parent pointer: when computing index j for position i, record which previous position produced the subsequence of length j. Backtrack from each position i to reconstruct its course. TC: O(n log n + n) = O(n log n), SC: O(n) for the parent array."
+    },
+    {
+      "q": "Obstacles arrive in a stream and you must answer each query online before seeing the next value, with heights up to 10^9.",
+      "a": "Coordinate-compress all values seen so far (or pre-compress if known), then use a Fenwick tree (BIT) storing the maximum answer for each compressed height. For each new height h, query the prefix maximum over [1, rank(h)], then update the BIT at rank(h). TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> longestObstacleCourseAtEachPosition(vector<int>& obstacles) {\n        int n = obstacles.size();\n        vector<int> ans(n);\n        vector<int> tails;\n        for (int i = 0; i < n; i++) {\n            int h = obstacles[i];\n            int j = upper_bound(tails.begin(), tails.end(), h) - tails.begin();\n            ans[i] = j + 1;\n            if (j == (int)tails.size()) {\n                tails.push_back(h);\n            } else {\n                tails[j] = h;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

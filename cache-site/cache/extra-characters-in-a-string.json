@@ -1,0 +1,40 @@
+{
+  "slug": "extra-characters-in-a-string",
+  "title": "Extra Characters in a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on String with Trie Matching",
+  "tc": "O((n + D) · L)",
+  "sc": "O(D · L + n)",
+  "spaceBreakdown": "- trie nodes (vector<array<int,26>>): up to D·L nodes, each 26 ints → O(D·L)\n- isEnd vector: up to D·L entries → O(D·L)\n- dp vector: n+1 ints → O(n)\n- recursion depth: none (iterative)\n- not counted: input string s, input dictionary",
+  "approach": "Build a trie from the dictionary. Define dp[i] = minimum extra characters when optimally breaking s[0:i]. For each start position i, either leave s[i] as extra (dp[i+1] = dp[i]+1) or, by walking the trie from position i forward, every time a word ends at position j, relax dp[j+1] = min(dp[j+1], dp[i]). The trie lets each start position match all dictionary words in O(L) total instead of iterating every word, giving O(n·L) time.",
+  "hints": [
+    "When scanning s left to right, at each position you either leave the current character unused or start a dictionary word there. What does the optimal decision at position i depend on from the part of s you've already processed? s.length ≤ 50.",
+    "Use dynamic programming with a trie. dp[i] = min extra chars for prefix s[0:i]; from each start i, walk the trie along s[i..] and, whenever a word ends at j, relax dp[j+1] with dp[i]. For \"leetscode\" starting at i=0, the trie walk hits \"leet\" ending at j=3, so dp[4] becomes dp[0]=0.",
+    "build trie from dictionary\ndp[0] = 0, dp[1..n] = INF\nfor i in 0..n-1:\n    dp[i+1] = min(dp[i+1], dp[i] + 1)        # leave s[i] extra\n    node = root\n    for j in i..n-1:\n        node = trie.child(node, s[j])\n        if node is null: break\n        if node is word end:\n            dp[j+1] = min(dp[j+1], dp[i])\nreturn dp[n]",
+    "**Smallest input** - single character not in dictionary.\n`Input: s = \"a\", dictionary = [\"b\"]` → `Expected: 1`\n⚠️ Bug: initialising dp with 0 instead of INF and only relaxing via word matches → returns 0.\n\n**Whole string is one word** - the trie walk must continue past the first word end to catch longer words.\n`Input: s = \"leetcode\", dictionary = [\"leet\",\"leetcode\"]` → `Expected: 0`\n⚠️ Bug: breaking out of the trie walk on the first isEnd instead of continuing → dp[4]=0 but dp[8] stays INF, returns 4.\n\n**No character matches any word** - every position must fall through to the \"+1\" branch.\n`Input: s = \"xyz\", dictionary = [\"abc\"]` → `Expected: 3`\n⚠️ Bug: forgetting the dp[i+1] = dp[i]+1 relaxation → dp stays INF, returns garbage/INF.\n\n**Overlapping word choices** - shorter word leaves extra chars that a longer word avoids.\n`Input: s = \"leetscode\", dictionary = [\"leet\",\"code\",\"leetcode\"]` → `Expected: 1`\n⚠️ Bug: greedily taking the first matched word \"leet\" then failing to also try starting fresh at i=4 → returns 5 instead of 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if s.length can be up to 10^5 and dictionary up to 10^5 words of length up to 10^5?",
+      "a": "The trie-based DP still works in O(n·L) where L is the max word length, but L could be 10^5. Cap the inner walk at the maximum dictionary word length stored during trie build, so each start position does at most L work; total O(n·L) time, O(D·L) space."
+    },
+    {
+      "q": "What if dictionary words can be added and removed between queries on the same s?",
+      "a": "Keep the trie persistent and support insert/delete by maintaining a per-node count of words ending there; each query reruns the O(n·L) DP. With Q queries total time is O(Q·n·L), space stays O(D·L + n)."
+    },
+    {
+      "q": "What if s arrives as a streaming character stream and you must report the current minimum extra characters after each new character?",
+      "a": "Maintain dp incrementally: when character c arrives at position i, compute dp[i+1] from dp[i]+1 and from all word ends reachable by walking the trie backward from i. To avoid O(L) per character, store for each position the set of active trie states; time O(n·L) total, space O(n·L) for the active-state lists."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minExtraChar(string s, vector<string>& dictionary) {\n        int n = s.size();\n        // Trie as parallel arrays; node 0 is root, 0 in child slot means \"no child\".\n        vector<array<int,26>> ch;\n        vector<int> isEnd;\n        ch.push_back(array<int,26>{});\n        isEnd.push_back(0);\n        for (const string& w : dictionary) {\n            int node = 0;\n            for (char c : w) {\n                int idx = c - 'a';\n                if (ch[node][idx] == 0) {\n                    ch[node][idx] = (int)ch.size();\n                    ch.push_back(array<int,26>{});\n                    isEnd.push_back(0);\n                }\n                node = ch[node][idx];\n            }\n            isEnd[node] = 1;\n        }\n        const int INF = 1e9;\n        vector<int> dp(n + 1, INF);\n        dp[0] = 0;\n        for (int i = 0; i < n; i++) {\n            // Option 1: leave s[i] as an extra character.\n            if (dp[i] + 1 < dp[i + 1]) dp[i + 1] = dp[i] + 1;\n            // Option 2: match a dictionary word starting at i by walking the trie.\n            int node = 0;\n            for (int j = i; j < n; j++) {\n                int idx = s[j] - 'a';\n                int nxt = ch[node][idx];\n                if (nxt == 0) break;\n                node = nxt;\n                if (isEnd[node] && dp[i] < dp[j + 1]) {\n                    dp[j + 1] = dp[i];\n                }\n            }\n        }\n        return dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

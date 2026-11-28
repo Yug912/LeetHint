@@ -1,0 +1,40 @@
+{
+  "slug": "constrained-subsequence-sum",
+  "title": "Constrained Subsequence Sum",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Deque DP",
+  "tc": "O(n)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- deque<pair<int,int>> dq: at most k+1 entries → O(k)\n- not counted: input vector nums, returned int",
+  "approach": "Define dp[i] = max sum of a valid subsequence ending exactly at index i. Then dp[i] = nums[i] + max(0, max(dp[i-k..i-1])), and the answer is max(dp[i]). We maintain a monotonic deque (decreasing by dp value) of (index, dp value) pairs over the last k indices: pop stale front entries whose index < i-k, read the front as the window max, then pop back entries with value <= dp[i] before pushing (i, dp[i]). Each index enters and leaves the deque once, giving O(n) time and O(k) space with no separate dp array.",
+  "hints": [
+    "When extending a subsequence to include nums[i], which earlier indices are still allowed to be the previous element, and among those, what single quantity about them is enough to make the optimal choice?",
+    "Use a monotonic deque (decreasing by dp value) of (index, dp value) pairs over a sliding window of the last k indices. For nums=[10,2,-10,5,20], k=2: at i=3 the deque front holds dp[1]=12, so dp[3]=5+12=17.",
+    "```\nans = -inf\ndeque = empty\nfor i in 0..n-1:\n    while deque not empty and deque.front.index < i-k:\n        deque.pop_front()\n    best = deque.empty ? 0 : deque.front.value\n    cur = nums[i] + max(0, best)\n    while deque not empty and deque.back.value <= cur:\n        deque.pop_back()\n    deque.push_back((i, cur))\n    ans = max(ans, cur)\nreturn ans\n```",
+    "**Single element** - n=1, no predecessors available\n`Input: nums=[5], k=1` → `Expected: 5`\n⚠️ Bug: initializing ans to 0 instead of INT_MIN → returns 0\n\n**All negatives** - best subsequence is the single largest element\n`Input: nums=[-1,-2,-3], k=1` → `Expected: -1`\n⚠️ Bug: initializing ans to 0 → returns 0\n\n**Window boundary** - index exactly i-k must be excluded, index i-k+1..i-1 kept\n`Input: nums=[10,-5,10], k=2` → `Expected: 20`\n⚠️ Bug: using `<= i-k` instead of `< i-k` in the front-pop check → returns 15\n\n**Ties in dp values** - equal dp values must evict the older one to keep the window tight\n`Input: nums=[5,5,5,5], k=2` → `Expected: 20`\n⚠️ Bug: using `<` instead of `<=` when popping back → deque keeps stale equal entries, returns 20 here but fails on `nums=[3,3,-100,3,3], k=2` where stale equal front blocks a fresher equal value (returns 6 instead of 9)"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9 (effectively no constraint)?",
+      "a": "The deque window never shrinks, so it behaves like a global running max; the algorithm is unchanged and still O(n) time, O(n) space in the worst case since the deque can grow to n entries."
+    },
+    {
+      "q": "What if the array arrives as a stream and you must answer after each element?",
+      "a": "Process each element online with the same deque update; emit the current global max after each step. Time per element is amortized O(1), space O(k)."
+    },
+    {
+      "q": "What if you must also return the chosen subsequence indices, not just the sum?",
+      "a": "Store a parent pointer: when computing dp[i], record the front deque index as the predecessor. After finding the max dp[i], walk back through parents. Time stays O(n), space becomes O(n) for the parent array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int constrainedSubsetSum(vector<int>& nums, int k) {\n        int n = nums.size();\n        deque<pair<int,int>> dq; // (index, dp value), strictly decreasing by value\n        int ans = INT_MIN;\n        for (int i = 0; i < n; i++) {\n            while (!dq.empty() && dq.front().first < i - k) {\n                dq.pop_front();\n            }\n            int best = dq.empty() ? 0 : dq.front().second;\n            int cur = nums[i] + (best > 0 ? best : 0);\n            while (!dq.empty() && dq.back().second <= cur) {\n                dq.pop_back();\n            }\n            dq.push_back({i, cur});\n            if (cur > ans) ans = cur;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

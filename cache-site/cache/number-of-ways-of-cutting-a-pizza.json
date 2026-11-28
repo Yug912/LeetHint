@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-ways-of-cutting-a-pizza",
+  "title": "Number of Ways of Cutting a Pizza",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Sub-rectangles with Prefix Sum",
+  "tc": "O(rows · cols · k · (rows + cols))",
+  "sc": "O(rows · cols · k)",
+  "spaceBreakdown": "- vector<vector<int>> ps: (rows+1)·(cols+1) ints → O(rows·cols)\n- vector<vector<vector<int>>> dp: rows·cols·k ints → O(rows·cols·k)\n- recursion call-stack depth: up to k → O(k)\n- std::function wrapper: O(1)\n- not counted: input pizza, returned int",
+  "approach": "After every cut the remaining piece always keeps its lower-right corner at (rows-1, cols-1), so a sub-problem is fully described by its upper-left corner (r, c) and the number of cuts still to make. Define `solve(r, c, cuts)` = number of valid ways to finish. Try every horizontal cut (give rows r..i) and every vertical cut (give cols c..j), only recursing when the given-away piece contains an apple; the base case `cuts == 0` returns 1 iff the remaining rectangle has an apple. A 2-D prefix sum of apple counts answers \"does this rectangle contain an apple?\" in O(1).",
+  "hints": [
+    "After each cut the piece you keep always keeps its lower-right corner fixed at (rows-1, cols-1). What is the smallest set of numbers that uniquely identifies the piece you are currently holding?",
+    "Use 3-D memoized recursion on state (top row, left col, cuts remaining) plus a 2-D prefix sum of apple counts for O(1) \"rectangle has an apple?\" queries. For pizza [\"A..\",\"AAA\",\"...\"], k=3, the top call solve(0,0,2) tries a horizontal cut after row 0 (upper piece \"A..\" has an apple) and recurses into solve(1,0,1).",
+    "```\nsolve(r, c, cuts):\n    if not hasApple(r, c, R-1, C-1): return 0\n    if cuts == 0: return 1\n    total = 0\n    for i in r .. R-2:\n        if hasApple(r, c, i, C-1):\n            total += solve(i+1, c, cuts-1)\n    for j in c .. C-2:\n        if hasApple(r, c, R-1, j):\n            total += solve(r, j+1, cuts-1)\n    return total mod MOD\n```",
+    "**k = 1, no cuts needed** - the answer is just \"does the whole pizza have an apple?\".\n`Input: pizza = [\"A..\",\"A..\",\"...\"], k = 1` → `Expected: 1`\n⚠️ Bug: base case `if (cuts == 0) return 1;` placed before the `hasApple` check → returns 1 even for an all-empty pizza.\n\n**All-empty pizza** - every piece must contain an apple, so the answer is 0 for any k.\n`Input: pizza = [\"...\",\"...\",\"...\"], k = 1` → `Expected: 0`\n⚠️ Bug: omitting the `hasApple(r,c,R-1,C-1)` guard at the top of `solve` → returns 1.\n\n**Single cell** - loop bounds must produce zero iterations.\n`Input: pizza = [\"A\"], k = 1` → `Expected: 1`\n⚠️ Bug: writing the horizontal loop as `for (i = r; i <= R-1; i++)` instead of `i < R-1` → attempts a cut that gives an empty piece and recurses out of bounds.\n\n**Overflow on large inputs** - k=10, rows=cols=50, all 'A'. Each dp value is < 10^9+7 and up to 98 transitions sum into one accumulator: 98·(10^9+7) ≈ 9.8·10^10 > 2^31-1.\n`Input: pizza = 50×50 grid of 'A', k = 10` → `Expected: (some value mod 10^9+7)`\n⚠️ Bug: accumulating into an `int` instead of `long long` → signed overflow, wrong modulo result."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 1000?",
+      "a": "The state count becomes rows·cols·k = 50·50·1000 = 2.5M, and with up to 98 transitions each that is ~2.5·10^8 operations - borderline but feasible in C++. To stay safe, precompute for each (r, c) the list of valid horizontal/vertical cut positions so the inner loops skip empty pieces without re-checking. Time becomes O(rows·cols·k · (rows+cols)) in the worst case but with a much smaller constant."
+    },
+    {
+      "q": "What if apples can appear or disappear between cuts?",
+      "a": "The static 2-D prefix sum no longer reflects the current pizza, so you must recompute apple counts from the live grid inside each state, raising the per-transition cost to O(rows·cols) and total time to O(rows²·cols²·k). The DP shape (r, c, cuts) stays identical; only the hasApple query changes."
+    },
+    {
+      "q": "What if you must return one concrete sequence of cuts instead of the count?",
+      "a": "Keep a parent pointer table `par[r][c][cuts]` storing which (i or j, direction) led to the chosen successor, then walk from solve(0,0,k-1) down to a base case, emitting each cut. Time and space stay O(rows·cols·k·(rows+cols)) and O(rows·cols·k) respectively; reconstruction itself is O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int ways(vector<string>& pizza, int k) {\n        int rows = (int)pizza.size();\n        int cols = (int)pizza[0].size();\n        const int MOD = 1000000007;\n\n        // 2-D prefix sum of apple counts.\n        // ps[i][j] = apples in pizza[0..i-1][0..j-1]\n        vector<vector<int>> ps(rows + 1, vector<int>(cols + 1, 0));\n        for (int i = 0; i < rows; ++i) {\n            for (int j = 0; j < cols; ++j) {\n                ps[i+1][j+1] = ps[i][j+1] + ps[i+1][j] - ps[i][j]\n                               + (pizza[i][j] == 'A' ? 1 : 0);\n            }\n        }\n\n        auto hasApple = [&](int r1, int c1, int r2, int c2) -> bool {\n            int cnt = ps[r2+1][c2+1] - ps[r1][c2+1] - ps[r2+1][c1] + ps[r1][c1];\n            return cnt > 0;\n        };\n\n        // dp[r][c][cuts] = number of ways to finish when the current piece\n        // has upper-left (r,c), lower-right (rows-1, cols-1), and `cuts`\n        // cuts still to make.\n        vector<vector<vector<int>>> dp(rows,\n            vector<vector<int>>(cols, vector<int>(k, -1)));\n\n        function<int(int,int,int)> solve = [&](int r, int c, int cuts) -> int {\n            if (!hasApple(r, c, rows-1, cols-1)) return 0;\n            if (cuts == 0) return 1;\n            int& memo = dp[r][c][cuts];\n            if (memo != -1) return memo;\n\n            long long total = 0;\n            // Horizontal cut after row i: give away rows r..i (upper part).\n            for (int i = r; i < rows - 1; ++i) {\n                if (hasApple(r, c, i, cols-1)) {\n                    total += solve(i+1, c, cuts-1);\n                }\n            }\n            // Vertical cut after col j: give away cols c..j (left part).\n            for (int j = c; j < cols - 1; ++j) {\n                if (hasApple(r, c, rows-1, j)) {\n                    total += solve(r, j+1, cuts-1);\n                }\n            }\n\n            memo = (int)(total % MOD);\n            return memo;\n        };\n\n        return solve(0, 0, k - 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

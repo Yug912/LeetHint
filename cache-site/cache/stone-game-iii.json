@@ -1,0 +1,40 @@
+{
+  "slug": "stone-game-iii",
+  "title": "Stone Game III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Minimax DP with Rolling Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long a, b, c: 3 rolling-window variables → O(1)\n- loop variable i and temp variables best, sum2, sum3: O(1)\n- not counted: input vector, returned string",
+  "approach": "The key insight is that this is a zero-sum game: what one player gains, the other loses. Define dp[i] as the maximum score difference (current player minus opponent) achievable from index i onward. The current player picks k∈{1,2,3} stones, gains their sum, then the opponent plays optimally from i+k, so dp[i] = max(sum[i..i+k-1] − dp[i+k]). Since dp[i] only depends on dp[i+1], dp[i+2], dp[i+3], we replace the O(n) array with a rolling window of 4 variables. If dp[0] > 0 Alice wins, < 0 Bob wins, = 0 Tie.",
+  "hints": [
+    "Since both players draw from the same row and one's gain is the other's loss, what single number captures who is ahead at any point? The row has up to 5×10^4 stones.",
+    "Backward dynamic programming with a 4-variable rolling window: dp[i] = max over k∈{1,2,3} of (sum[i..i+k-1] − dp[i+k]). For [1,2,3,7]: dp[3]=7, dp[0]=max(1−12, 3−10, 6−7)=−1 → Bob.",
+    "```\na = b = c = 0\nfor i from n-1 downto 0:\n    best = stone[i] - a\n    if i+1 < n: best = max(best, stone[i]+stone[i+1] - b)\n    if i+2 < n: best = max(best, stone[i]+stone[i+1]+stone[i+2] - c)\n    c, b, a = b, a, best\nreturn \"Alice\" if a>0, \"Bob\" if a<0, else \"Tie\"\n```",
+    "**Single stone** - n=1, Alice takes the only stone.\n`Input: [5]` → `Expected: \"Alice\"`\n⚠️ Bug: initializing `best` to 0 instead of `stoneValue[i] - a` → returns \"Tie\" (0 instead of 5)\n\n**All zeros** - every stone value is 0, optimal play yields 0 difference.\n`Input: [0,0,0]` → `Expected: \"Tie\"`\n⚠️ Bug: using `a > 0 ? \"Alice\" : \"Bob\"` without checking `a == 0` → returns \"Bob\"\n\n**Negative single stone** - Alice is forced to take a negative-valued stone.\n`Input: [-5]` → `Expected: \"Bob\"`\n⚠️ Bug: initializing `best` to 0 instead of `stoneValue[i] - a` → returns \"Tie\" (0 instead of -5)\n\n**Two stones** - at i=0, Alice can take 1 or 2 stones but not 3.\n`Input: [1,2]` → `Expected: \"Alice\"` (Alice takes both: 3 vs 0)\n⚠️ Bug: guarding k=2 with `i + 2 < n` instead of `i + 1 < n` → skips k=2 at i=0, dp[0] = 1 − 2 = −1 → returns \"Bob\""
+  ],
+  "followUps": [
+    {
+      "q": "What if each player could take up to K stones instead of 3?",
+      "a": "Replace the 4-variable window with K+1 variables. dp[i] = max over k∈{1..K} of (sum[i..i+k-1] − dp[i+k]). Time O(n·K), space O(K)."
+    },
+    {
+      "q": "What if you must also return Alice's optimal first move?",
+      "a": "Record which k achieves the maximum when computing dp[0]. The rolling window already evaluates all three options - just track the argmax alongside the max. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if Alice wants to maximize her own score rather than the score difference?",
+      "a": "In a zero-sum game with a fixed total, maximizing your score equals maximizing the difference (since total = Alice + Bob is constant). The same DP applies unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string stoneGameIII(vector<int>& stoneValue) {\n        int n = stoneValue.size();\n        long long a = 0, b = 0, c = 0;\n        \n        for (int i = n - 1; i >= 0; i--) {\n            long long best = stoneValue[i] - a;\n            if (i + 1 < n) {\n                long long sum2 = (long long)stoneValue[i] + stoneValue[i + 1];\n                best = max(best, sum2 - b);\n            }\n            if (i + 2 < n) {\n                long long sum3 = (long long)stoneValue[i] + stoneValue[i + 1] + stoneValue[i + 2];\n                best = max(best, sum3 - c);\n            }\n            c = b;\n            b = a;\n            a = best;\n        }\n        \n        if (a > 0) return \"Alice\";\n        if (a < 0) return \"Bob\";\n        return \"Tie\";\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

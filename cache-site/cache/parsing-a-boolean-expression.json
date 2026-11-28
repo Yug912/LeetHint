@@ -1,0 +1,40 @@
+{
+  "slug": "parsing-a-boolean-expression",
+  "title": "Parsing A Boolean Expression",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Recursive Descent Parser",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string s: copy of input, up to n characters → O(n)\n- recursion call stack: worst case O(n) for deeply nested expressions like !(!(!(...))))\n- not counted: input parameter, returned bool",
+  "approach": "The expression follows a recursive grammar: each operator's arguments are themselves valid boolean expressions. A recursive descent parser with a shared index pointer processes the string left to right - when it sees an operator, it skips the operator and opening parenthesis, recursively evaluates each comma-separated sub-expression, skips the closing parenthesis, and combines results. This works because the grammar is unambiguous: each sub-expression is self-delimiting, and the parser knows exactly when one ends (the next character is either ',' or ')'). Each character is visited exactly once.",
+  "hints": [
+    "Every operator's arguments are themselves valid expressions following the same grammar. What does this self-similar, nested structure suggest about how you could break the problem into smaller sub-problems? The expression length is at most 2 × 10^4.",
+    "Use a recursive descent parser with a shared index that advances through the string. For `\"!(&(f,t))\"`, the parser sees `!`, skips `!(`, recursively evaluates `&(f,t)` → false, skips `)`, and returns `!false = true`.",
+    "```\nparse():\n  if 't': advance, return true\n  if 'f': advance, return false\n  if '!': return parse_not()\n  if '&': return parse_and()\n  if '|': return parse_or()\n\nparse_not():\n  advance past '!' and '('\n  val = parse()\n  advance past ')'\n  return not val\n\nparse_and():\n  advance past '&' and '('\n  result = parse()\n  while next char is ',':\n    advance past ','\n    result = result and parse()\n  advance past ')'\n  return result\n```",
+    "**Single operand** - no operators, just a bare value\n`Input: \"t\"` → `Expected: true`\n⚠️ Bug: parse() only dispatches to operator handlers, never checks for bare 't' or 'f' → crashes or returns false\n\n**Single-argument OR** - `|` with exactly one sub-expression, no commas\n`Input: \"|(t)\"` → `Expected: true`\n⚠️ Bug: initializing OR accumulator to `false` and only reading arguments after seeing a comma → skips 't', returns `false`\n\n**All-true AND** - every argument evaluates to true\n`Input: \"&(t,t,t)\"` → `Expected: true`\n⚠️ Bug: initializing AND accumulator to `false` instead of `true` → returns `false`\n\n**Deeply nested NOT** - four levels of negation\n`Input: \"!(!(!(!(t))))\"` → `Expected: true`\n⚠️ Bug: using a counter-based loop instead of recursive calls, miscounting the nesting depth → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed to short-circuit evaluation - stop as soon as `&` sees a `false` or `|` sees a `true`?",
+      "a": "In parse_and, return false immediately when any argument is false, but still advance the index past the remaining arguments by scanning to the matching ')'. In parse_or, return true immediately when any argument is true, similarly skipping the rest. TC stays O(n) worst case but improves on average; SC unchanged at O(n)."
+    },
+    {
+      "q": "What if the expression arrives as a character stream with no random access or known length?",
+      "a": "Replace the index-based recursion with an explicit stack. Push operators when seen, push operand values when 't'/'f' is parsed, and on ')' pop the operator and its arguments, compute, and push the result. TC remains O(n), SC remains O(n) for the stack."
+    },
+    {
+      "q": "What if you also had a binary XOR operator `^(subExpr_1, subExpr_2)` requiring exactly two arguments?",
+      "a": "Add a parse_xor function identical in structure to parse_and, but count arguments and return the XOR of exactly two. The recursive descent framework handles this with no structural changes. TC and SC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int idx;\n    string s;\n\n    bool parse() {\n        char c = s[idx];\n        if (c == 't') { idx++; return true; }\n        if (c == 'f') { idx++; return false; }\n        if (c == '!') return parseNot();\n        if (c == '&') return parseAnd();\n        return parseOr();\n    }\n\n    bool parseNot() {\n        idx += 2; // skip '!' and '('\n        bool val = parse();\n        idx++; // skip ')'\n        return !val;\n    }\n\n    bool parseAnd() {\n        idx += 2; // skip '&' and '('\n        bool result = parse();\n        while (s[idx] == ',') {\n            idx++; // skip ','\n            result &= parse();\n        }\n        idx++; // skip ')'\n        return result;\n    }\n\n    bool parseOr() {\n        idx += 2; // skip '|' and '('\n        bool result = parse();\n        while (s[idx] == ',') {\n            idx++; // skip ','\n            result |= parse();\n        }\n        idx++; // skip ')'\n        return result;\n    }\n\n    bool parseBoolExpr(string expression) {\n        s = expression;\n        idx = 0;\n        return parse();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

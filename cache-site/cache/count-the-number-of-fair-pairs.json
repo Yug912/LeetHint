@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-fair-pairs",
+  "title": "Count the Number of Fair Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting + Two Pointers",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): introsort recursion stack, O(log n) depth\n- countLE(): local variables left, right, count → O(1)\n- not counted: input vector (modified in place), returned long long",
+  "approach": "Sort the array, then count pairs with sum ≤ X using a two-pointer technique in O(n). The key insight: in a sorted array, if nums[left] + nums[right] ≤ X, then every element between left and right also forms a valid pair with nums[left] (since they're all ≤ nums[right]), so we can add (right − left) pairs at once and advance left. The answer is countLE(upper) − countLE(lower − 1), which gives exactly the pairs with sum in [lower, upper]. Sorting is valid because we only need the count of pairs, not their original indices, and the sum is commutative.",
+  "hints": [
+    "Given n up to 10^5, checking all n*(n−1)/2 pairs is too slow. For a fixed element, what determines the set of other elements whose sum with it falls within [lower, upper]?",
+    "Sort the array, then use two pointers to count pairs with sum ≤ X in O(n). For sorted [0,1,4,4,5,7] and target 6: left=0 (0), right=5 (7) → 0+7=7>6, move right to 4 (5) → 0+5=5≤6, so pairs (0,1),(0,2),(0,3),(0,4) all work-add 4, advance left.",
+    "```\nsort array\nfunction countLE(target):\n    left = 0, right = n-1, total = 0\n    while left < right:\n        if nums[left] + nums[right] <= target:\n            total += right - left\n            left += 1\n        else:\n            right -= 1\n    return total\nreturn countLE(upper) - countLE(lower - 1)\n```",
+    "**All equal at boundary** - every pair sums exactly to the boundary value.\n`Input: nums = [5,5,5,5], lower = 10, upper = 10` → `Expected: 6`\n⚠️ Bug: using `< target` instead of `<= target` in countLE → countLE(10) returns 0 → returns 0\n\n**Pair sums exactly to lower** - boundary inclusion matters.\n`Input: nums = [1,2,3], lower = 3, upper = 5` → `Expected: 3`\n⚠️ Bug: subtracting countLE(lower) instead of countLE(lower−1) → returns 2\n\n**No valid pairs** - all sums fall outside the range.\n`Input: nums = [1,2,3], lower = 100, upper = 200` → `Expected: 0`\n⚠️ Bug: returning countLE(upper) without subtracting countLE(lower−1) → returns 3\n\n**Many duplicates** - C(n,2) pairs are all valid.\n`Input: nums = [0,0,0,0,0], lower = 0, upper = 0` → `Expected: 10`\n⚠️ Bug: using `right − left + 1` instead of `right − left` when counting → returns 14"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to count fair triplets (i < j < k) with lower ≤ nums[i] + nums[j] + nums[k] ≤ upper?",
+      "a": "Sort the array, then for each middle index j, use two pointers on the left segment (0..j−1) and right segment (j+1..n−1) to count valid (i, k) pairs whose sum with nums[j] falls in range. This gives O(n²) time and O(1) auxiliary space."
+    },
+    {
+      "q": "What if the array arrives as a stream and cannot be sorted all at once?",
+      "a": "Maintain a sorted container (e.g., a balanced BST or sorted list with binary search). For each incoming element x, query how many previously seen elements fall in [lower−x, upper−x]. Each insertion and range query is O(log n), giving O(n log n) time and O(n) space."
+    },
+    {
+      "q": "What if there are q queries, each with different lower and upper values?",
+      "a": "Sort the array once upfront. For each query, run the two-pointer countLE in O(n), giving O(n log n + q·n) total time and O(log n) space. If q is very large, a Fenwick tree with coordinate compression can answer each query in O(log n) after O(n log n) preprocessing."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long countFairPairs(vector<int>& nums, int lower, int upper) {\n        sort(nums.begin(), nums.end());\n        return countLE(nums, upper) - countLE(nums, (long long)lower - 1);\n    }\n    \nprivate:\n    long long countLE(vector<int>& nums, long long target) {\n        long long count = 0;\n        int left = 0, right = (int)nums.size() - 1;\n        while (left < right) {\n            if ((long long)nums[left] + nums[right] <= target) {\n                count += right - left;\n                left++;\n            } else {\n                right--;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

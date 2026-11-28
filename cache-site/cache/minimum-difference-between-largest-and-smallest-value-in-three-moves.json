@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-difference-between-largest-and-smallest-value-in-three-moves",
+  "title": "Minimum Difference Between Largest and Smallest Value in Three Moves",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Selection of Extremes",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int small[4], large[4]: 8 fixed ints → O(1)\n- nth_element: in-place introselect on nums, O(1) auxiliary (modifies input, not counted)\n- not counted: input vector nums",
+  "approach": "With at most three moves, only the few smallest and few largest values can affect the final range - any \"interior\" element can never become a new endpoint after ≤3 removals. So we extract the four smallest and four largest values using `nth_element` (O(n), in-place), sort those two tiny groups (O(1)), and try the four ways to split three removals between the low end and the high end: `ans = min over i in 0..3 of (large[i] - small[i])`.",
+  "hints": [
+    "With only three moves available, which of the original elements could still end up as the final minimum or maximum? The array can hold up to 10^5 elements, so checking every triple of changes is too slow.",
+    "Use `nth_element` (introselect) to pull out the four smallest and four largest values in O(n) time. For `nums = [1,5,0,10,14]`, the four smallest are {0,1,5,10} and the four largest are {1,5,10,14}.",
+    "```\nif n <= 4: return 0\nselect 4 smallest values -> small[0..3], then sort them\nselect 4 largest  values -> large[0..3], then sort them\nans = min over i in 0..3 of (large[i] - small[i])\nreturn ans\n```",
+    "**Tiny input** - n ≤ 4 means at most n−1 ≤ 3 moves suffice to equalize everything.\n`Input: nums = [3,100,20]` → `Expected: 0`\n⚠️ Bug: skipping the n ≤ 4 guard and calling `nth_element(begin, begin+3, end)` with n=3 makes `begin+3 == end`, undefined behavior → crash.\n\n**Negatives** - the minimum and maximum sit on opposite sides of zero.\n`Input: nums = [-10,-5,0,5,10]` → `Expected: 5`\n⚠️ Bug: computing `abs(large[i]) - abs(small[i])` to \"handle signs\" → i=0 gives 10−10=0, returns 0 instead of 5.\n\n**Overlapping extremes** - with n between 5 and 7, the four smallest and four largest share elements.\n`Input: nums = [1,2,100,101,102,103]` → `Expected: 2`\n⚠️ Bug: only checking i=0 (remove three largest) → `large[0]-small[0] = 100-1 = 99`, returns 99.\n\n**Unsorted output** - `nth_element` leaves the four selected values in unspecified order.\n`Input: nums = [1,2,3,4,100,200,300,400]` → `Expected: 99`\n⚠️ Bug: not sorting `small[]`/`large[]` after `nth_element`; if `large` comes out as [400,300,200,100], min over i of `large[i]-small[i]` = 100−4 = 96, returns 96."
+  ],
+  "followUps": [
+    {
+      "q": "What if you could make at most k moves instead of 3?",
+      "a": "Extract the (k+1) smallest and (k+1) largest values with `nth_element`, sort each group, then take `min over i in 0..k of (large[i] - small[i])`. Time O(n), space O(k)."
+    },
+    {
+      "q": "What if nums arrives as a stream too large to store?",
+      "a": "Keep a max-heap of size k+1 for the smallest values and a min-heap of size k+1 for the largest as elements arrive. Time O(n log k), space O(k)."
+    },
+    {
+      "q": "What if each move can only decrease a value (never increase)?",
+      "a": "You can only shrink the range from the top; the answer is the (k+1)-th largest minus the global minimum, found via one `nth_element` call. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDifference(vector<int>& nums) {\n        int n = nums.size();\n        if (n <= 4) return 0;\n        nth_element(nums.begin(), nums.begin() + 3, nums.end());\n        int small[4];\n        for (int i = 0; i < 4; i++) small[i] = nums[i];\n        sort(small, small + 4);\n        nth_element(nums.begin(), nums.end() - 4, nums.end());\n        int large[4];\n        for (int i = 0; i < 4; i++) large[i] = nums[n - 4 + i];\n        sort(large, large + 4);\n        int ans = INT_MAX;\n        for (int i = 0; i < 4; i++) ans = min(ans, large[i] - small[i]);\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

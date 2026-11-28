@@ -1,0 +1,40 @@
+{
+  "slug": "count-triplets-that-can-form-two-arrays-of-equal-xor",
+  "title": "Count Triplets That Can Form Two Arrays of Equal XOR",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix XOR with Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, pair<int,int>> mp: up to n+1 entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Since a == b implies a ^ b == 0, and a ^ b equals the XOR of arr[i..k], we need subarrays whose XOR is 0. Using prefix XOR (prefix[r] = arr[0]^...^arr[r-1], prefix[0]=0), a subarray arr[i..k] has XOR 0 iff prefix[k+1] == prefix[i]. For each such pair (i, k+1) = (l, r) with l < r, there are (r-l-1) valid j positions. A hash map storing each prefix XOR's occurrence count and index sum lets us compute all contributions from prior equal-prefix indices in O(1) per step, yielding O(n) total.",
+  "hints": [
+    "For a fixed i and k, what must be true about the XOR of the entire subarray arr[i..k] for some split point j to make the two halves equal?",
+    "Use a hash map keyed by prefix XOR value, storing each value's occurrence count and the sum of its indices. For arr=[2,3,1,6,7], prefix XORs are [0,2,1,0,6,1]; when prefix 0 reappears at index 3, the earlier index 0 contributes 3−0−1 = 2 triplets.",
+    "```\nmap = {0: (count=1, sum=0)}\nprefix = 0, ans = 0\nfor r in 1..n:\n    prefix ^= arr[r-1]\n    if prefix in map:\n        ans += map[prefix].count * (r - 1) - map[prefix].sum\n    map[prefix].count += 1\n    map[prefix].sum += r\nreturn ans\n```",
+    "**Single element** - No valid triplet exists since the subarray needs length ≥ 2.\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: using `cnt * r - sum` instead of `cnt * (r - 1) - sum` → returns 1\n\n**No matching prefix** - All prefix XORs are distinct, so no subarray has XOR 0.\n`Input: [1,2,4]` → `Expected: 0`\n⚠️ Bug: initializing the map empty instead of seeding `{0: (1,0)}` → returns 0 (correct here, but breaks cases where prefix returns to 0)\n\n**All elements equal** - Many subarrays have XOR 0, producing many triplets.\n`Input: [1,1,1,1,1]` → `Expected: 10`\n⚠️ Bug: using `cnt * r - sum` instead of `cnt * (r - 1) - sum` → returns 20\n\n**Prefix returns to zero** - The initial seed entry for prefix 0 at index 0 is essential.\n`Input: [2,3,1]` → `Expected: 2`\n⚠️ Bug: not seeding `{0: (1,0)}` in the map → returns 0\n\n**Largest values** - arr[i] up to 10^8; XOR stays within int range, no overflow.\n`Input: [100000000,100000000]` → `Expected: 1`\n⚠️ Bug: using `int` for prefix XOR is fine, but storing index sum in `int` with n=300 is safe; the real risk is forgetting the seed → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if arr.length can be up to 10^6?",
+      "a": "The O(n) hash map approach already scales. Switch to a flat hash map (e.g., absl::flat_hash_map) to reduce constant factors from hash collisions. TC stays O(n), SC O(n)."
+    },
+    {
+      "q": "What if we must count quadruplets (i, j, k, l) splitting into three equal-XOR segments?",
+      "a": "Three equal segments means total XOR is 0 and we need two internal split points. Extend the hash map to track, for each prefix XOR, a second-level aggregation of index sums so each new occurrence contributes all valid prior pairs. TC O(n), SC O(n)."
+    },
+    {
+      "q": "What if the array arrives as a streaming input too large to store?",
+      "a": "Maintain only the running prefix XOR and the hash map; each incoming element updates the prefix and queries/updates the map in O(1) with no random access to past elements. TC O(n), SC O(n) for the map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countTriplets(vector<int>& arr) {\n        unordered_map<int, pair<int,int>> mp;\n        mp[0] = {1, 0};\n        int prefix = 0;\n        int ans = 0;\n        int n = arr.size();\n        for (int r = 1; r <= n; r++) {\n            prefix ^= arr[r - 1];\n            auto it = mp.find(prefix);\n            if (it != mp.end()) {\n                ans += it->second.first * (r - 1) - it->second.second;\n            }\n            mp[prefix].first++;\n            mp[prefix].second += r;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

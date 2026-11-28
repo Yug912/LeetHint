@@ -1,0 +1,40 @@
+{
+  "slug": "recover-a-tree-from-preorder-traversal",
+  "title": "Recover a Tree From Preorder Traversal",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack (stack maintaining the current DFS path)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- vector<pair<int, TreeNode*>> st: up to h entries (current root-to-leaf path) → O(h)\n- local ints (i, n, depth, val) and pointers (root, node, parent): O(1)\n- not counted: input string, returned tree nodes (output)",
+  "approach": "Parse the string into (depth, value) pairs by counting dashes before each number. Use a stack that stores (depth, node*) representing the current path from root to the deepest node. For each new node at depth D, pop the stack until the top has depth < D - the new top (at depth D−1) is the parent. Attach the new node as the left child if the parent has none, otherwise as the right child (the problem guarantees left comes first). Push the new node onto the stack. The first node parsed (depth 0) is the root.",
+  "hints": [
+    "In a preorder traversal, each node appears before its children. Given that the dashes encode depth, what does the depth of the next node tell you about how far back up the tree you must climb to find its parent?",
+    "Use a stack of (depth, node) pairs. For \"1-2--3--4\", when reading 4 at depth 2, pop the node at depth 2 (node 3) so the stack top is node 2 at depth 1 - that is the parent of 4.",
+    "```\nparse (depth, value) pairs left to right\nfor each (depth, value):\n    create node\n    while stack not empty and stack.top.depth >= depth:\n        stack.pop\n    if stack empty:\n        node is root\n    else:\n        parent = stack.top\n        if parent.left is null: parent.left = node\n        else: parent.right = node\n    stack.push(depth, node)\nreturn root\n```",
+    "**Single node** - input has no dashes at all\n`Input: \"5\"` → `Expected: [5]`\n⚠️ Bug: code that skips the first token when it has no leading dashes → returns `[]` (null)\n\n**Same-depth siblings** - two nodes at the same depth share a parent\n`Input: \"1-2--3--4\"` → `Expected: [1,2,null,3,4]`\n⚠️ Bug: using `>` instead of `>=` when popping the stack → attaches 4 as left child of 3, returning `[1,2,null,3,null,4]`\n\n**Multi-digit root** - root value spans multiple digits\n`Input: \"10\"` → `Expected: [10]`\n⚠️ Bug: reading only one character as the value → parses '1' then '0' as two separate roots, returning `[0]`\n\n**Single left child** - root has exactly one child, which must be the left\n`Input: \"1-2\"` → `Expected: [1,2]`\n⚠️ Bug: setting right child before checking left → returns `[1,null,2]`"
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle the case where the tree has up to 10^6 nodes and you want to minimize auxiliary space?",
+      "a": "Replace the stack with a fixed-size array of TreeNode* indexed by depth, storing only the last node seen at each depth. When a new node at depth D arrives, its parent is array[D−1]. This still uses O(h) space but avoids dynamic stack operations, giving O(n) time and O(h) space."
+    },
+    {
+      "q": "What if the traversal string used a different separator (e.g., dots) instead of dashes - what changes?",
+      "a": "Only the parsing step changes: replace the dash-counting loop with a dot-counting loop. The stack-based reconstruction logic is identical. Time and space complexity remain O(n) and O(h)."
+    },
+    {
+      "q": "How would you verify the reconstructed tree by re-serializing it and comparing to the original string?",
+      "a": "Run a preorder DFS that, for each node, appends depth-many dashes followed by the value. Compare the resulting string to the input. This costs O(n) time and O(h) recursion depth, and catches any structural error in the reconstruction."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* recoverFromPreorder(string traversal) {\n        int i = 0, n = traversal.size();\n        vector<pair<int, TreeNode*>> st;\n        TreeNode* root = nullptr;\n        while (i < n) {\n            int depth = 0;\n            while (i < n && traversal[i] == '-') { depth++; i++; }\n            int val = 0;\n            while (i < n && traversal[i] != '-') { val = val * 10 + (traversal[i] - '0'); i++; }\n            TreeNode* node = new TreeNode(val);\n            while (!st.empty() && st.back().first >= depth) st.pop_back();\n            if (st.empty()) {\n                root = node;\n            } else {\n                TreeNode* parent = st.back().second;\n                if (!parent->left) parent->left = node;\n                else parent->right = node;\n            }\n            st.push_back({depth, node});\n        }\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

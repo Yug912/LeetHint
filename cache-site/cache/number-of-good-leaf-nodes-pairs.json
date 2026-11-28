@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-good-leaf-nodes-pairs",
+  "title": "Number of Good Leaf Nodes Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Post-order DFS with Distance-Count Arrays",
+  "tc": "O(n * distance)",
+  "sc": "O(h * distance)",
+  "spaceBreakdown": "- vector<int> cnt (per frame): distance+1 ints → O(distance) per frame\n- vector<int> left (per frame): distance+1 ints → O(distance) per frame\n- vector<int> right (per frame): distance+1 ints → O(distance) per frame\n- vector<int> prefix (per frame): distance+2 ints → O(distance) per frame\n- Recursion call stack: up to h frames → O(h)\n- not counted: input tree, returned int",
+  "approach": "The shortest path between two leaves always passes through their lowest common ancestor. Using post-order DFS, each node returns an array where `cnt[d]` counts leaves at distance `d` (in edges) below it. When merging two children's arrays, a prefix sum over the right child's counts lets us compute, for each distance `d1` in the left child, the total number of right-subtree leaves within the remaining distance budget in O(1), making each merge O(distance) instead of O(distance²). The answer accumulates all good pairs found at every node during the merge step.",
+  "hints": [
+    "Every path between two leaves passes through their lowest common ancestor. What would you need to know about the leaves in each child's subtree to count good pairs at a given node?",
+    "Post-order DFS returning a distance-count array per node. In Example 2, node 2's children 4 and 5 each return [1,0,0,0] (one leaf at distance 0); since 0+0+2=2 ≤ 3, one good pair is counted.",
+    "```\ndfs(node):\n    if leaf: return array with count[0] = 1\n    left = dfs(node.left)\n    right = dfs(node.right)\n    build prefix sum of right\n    for each d1 in left:\n        add left[d1] * prefix_sum(right, 0..distance-d1-2) to answer\n    return merged array shifted by 1\n```",
+    "**Distance boundary** - path length exactly equals distance\n`Input: root = [1,2,3], distance = 2` → `Expected: 1`\n⚠️ Bug: using `d1 + d2 + 2 < distance` instead of `<=` → returns 0\n\n**Off-by-one formula** - wrong constant in path length computation\n`Input: root = [1,2,3], distance = 1` → `Expected: 0`\n⚠️ Bug: using `d1 + d2 + 1 <= distance` instead of `d1 + d2 + 2 <= distance` → returns 1\n\n**No shift on merge** - distances not incremented when combining children\n`Input: root = [1,2,3,4,5,6,7], distance = 3` → `Expected: 2`\n⚠️ Bug: `cnt[d] = left[d] + right[d]` instead of `cnt[d] = left[d-1] + right[d-1]` → returns 6\n\n**Prefix sum index** - off-by-one in prefix sum lookup\n`Input: root = [1,2,3,null,4], distance = 3` → `Expected: 1`\n⚠️ Bug: using `prefix[maxD2]` instead of `prefix[maxD2 + 1]` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must count pairs whose path length is exactly equal to distance, not ≤ distance?",
+      "a": "For each d1, instead of summing right[0..maxD2] via prefix sums, directly look up right[distance - d1 - 2]. This removes the prefix sum entirely and simplifies to O(n * distance) time with O(h * distance) space."
+    },
+    {
+      "q": "What if distance can be as large as 10^5?",
+      "a": "The distance-count array becomes too large. Instead, collect all leaves and run BFS from each leaf up to distance steps, counting reached leaves and dividing by 2. This is O(L * n) where L is leaf count. For n = 10^5 with L ≈ n/2, this is O(n²); centroid decomposition reduces it to O(n log n)."
+    },
+    {
+      "q": "What if the tree is given as a parent array (parent[i] is the parent of node i) instead of a pointer-based tree?",
+      "a": "Build an adjacency list from the parent array, then apply the same post-order DFS by processing nodes in reverse topological order (children before parents). The distance-count array approach works identically; time stays O(n * distance), space O(h * distance)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPairs(TreeNode* root, int distance) {\n        int ans = 0;\n        dfs(root, distance, ans);\n        return ans;\n    }\n    \nprivate:\n    vector<int> dfs(TreeNode* node, int distance, int& ans) {\n        vector<int> cnt(distance + 1, 0);\n        if (!node) return cnt;\n        \n        if (!node->left && !node->right) {\n            cnt[0] = 1;\n            return cnt;\n        }\n        \n        vector<int> left = dfs(node->left, distance, ans);\n        vector<int> right = dfs(node->right, distance, ans);\n        \n        vector<int> prefix(distance + 2, 0);\n        for (int i = 0; i <= distance; i++) {\n            prefix[i + 1] = prefix[i] + right[i];\n        }\n        \n        for (int d1 = 0; d1 <= distance; d1++) {\n            if (left[d1] == 0) continue;\n            int maxD2 = distance - d1 - 2;\n            if (maxD2 >= 0) {\n                ans += left[d1] * prefix[maxD2 + 1];\n            }\n        }\n        \n        for (int d = 1; d <= distance; d++) {\n            cnt[d] = left[d - 1] + right[d - 1];\n        }\n        \n        return cnt;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

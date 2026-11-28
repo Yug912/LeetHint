@@ -1,0 +1,39 @@
+{
+  "slug": "count-nodes-equal-to-average-of-subtree",
+  "title": "Count Nodes Equal to Average of Subtree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Post-order Tree Traversal",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call-stack: up to h deep (h = n for skewed tree, log n for balanced) → O(h)\n- pair<long long,int> return values: O(1) per active frame, already counted in stack\n- not counted: input tree, returned int",
+  "approach": "Use a post-order DFS that returns both the sum of values and the node count of each subtree. At every node, combine the left and right child results, add the node's own value and count 1, then check whether `node->val == sum / count` (integer division = floor for non-negative values). Increment a counter when it matches. One pass visits each node once, so it's linear.",
+  "hints": [
+    "For a given node, what two quantities about its subtree fully determine whether it satisfies the condition, and where does that information already exist once you've examined its children? The average is the sum divided by the count, rounded down.",
+    "Use a post-order DFS returning (subtreeSum, subtreeCount). In Example 1, node 8 gets left=(0,1), right=(1,1), so its subtree sum = 0+1+8 = 9 and count = 3; 9/3 = 3 ≠ 8, so it isn't counted.",
+    "function dfs(node, ans):\n    if node is null: return (0, 0)\n    (lSum, lCnt) = dfs(node.left, ans)\n    (rSum, rCnt) = dfs(node.right, ans)\n    sum = lSum + rSum + node.val\n    cnt = lCnt + rCnt + 1\n    if node.val == sum / cnt: ans += 1\n    return (sum, cnt)",
+    "**Single node** - only the root exists with no children.\n`Input: root = [1]` → `Expected: 1`\n⚠️ Bug: only counting leaf nodes → returns 0\n\n**Null count** - null children must contribute sum 0 and count 0, not count 1.\n`Input: root = [1]` → `Expected: 1`\n⚠️ Bug: returning (0, 1) for nullptr → root cnt becomes 2, 1/2 = 0, 1 ≠ 0 → returns 0\n\n**Floor division** - the average rounds down, so integer division matches the spec for non-negative values.\n`Input: root = [2,1,4]` → `Expected: 3`\n⚠️ Bug: comparing node.val == (double)sum / cnt with `==` → root: 7.0/3 = 2.333, 2 == 2.333 is false → returns 2\n\n**All equal values** - every node's subtree average equals that value, so all nodes count.\n`Input: root = [5,5,5]` → `Expected: 3`\n⚠️ Bug: forgetting to add node->val to the subtree sum → every avg becomes 0, 5 ≠ 0 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree values can be updated between queries and you must answer the count many times?",
+      "a": "Flatten the tree via Euler tour so each subtree is a contiguous range, then maintain two Fenwick trees (one for sums, one for counts) over that range. Each point update and subtree query is O(log n); recomputing the answer is O(n) per query unless you also track per-node match status in a segment tree."
+    },
+    {
+      "q": "What if node values can be negative?",
+      "a": "The DFS structure is unchanged, but C++ integer division truncates toward zero while the spec says round down (floor). Replace `sum / cnt` with a floor computation such as `sum >= 0 ? sum / cnt : -((-sum + cnt - 1) / cnt)`. Time and space stay O(n) and O(h)."
+    },
+    {
+      "q": "What if the tree is too large to hold in memory and arrives as a parent-pointer stream?",
+      "a": "A single forward pass cannot work because each node's answer depends on all descendants. Do two passes: first build a post-order traversal using a stack so each node's (sum, count) is computed and stored externally, then walk again to test the condition. Auxiliary disk space is O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    int averageOfSubtree(TreeNode* root) {\n        int ans = 0;\n        dfs(root, ans);\n        return ans;\n    }\nprivate:\n    pair<long long, int> dfs(TreeNode* node, int& ans) {\n        if (!node) return {0LL, 0};\n        auto [lSum, lCnt] = dfs(node->left, ans);\n        auto [rSum, rCnt] = dfs(node->right, ans);\n        long long sum = lSum + rSum + node->val;\n        int cnt = lCnt + rCnt + 1;\n        if (node->val == sum / cnt) ++ans;\n        return {sum, cnt};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

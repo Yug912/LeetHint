@@ -1,0 +1,40 @@
+{
+  "slug": "find-closest-node-to-given-two-nodes",
+  "title": "Find Closest Node to Given Two Nodes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Functional Graph Traversal",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dist1: n entries → O(n)\n- vector<int> dist2: n entries → O(n)\n- recursion depth: none\n- not counted: input edges, returned int",
+  "approach": "Since each node has at most one outgoing edge, the graph is a *functional graph*: from any start node there is exactly one path (a chain that either ends at -1 or enters a cycle). So we can compute the distance from node1 to every reachable node, and from node2 to every reachable node, by simply walking the single outgoing edge until we hit -1 or revisit a node. Then we scan all nodes, and for those reachable from both, we compute max(dist1[i], dist2[i]) and pick the node with the smallest such value (smallest index on ties). If no node is reachable from both, return -1.",
+  "hints": [
+    "Since each node has at most one outgoing edge, how many distinct paths can you follow starting from node1 - and how far can that path go before it must either stop or repeat a node?",
+    "Walk the single outgoing edge repeatedly from each start node, recording the step count in a distance array. From node 0 in Example 1: dist1[0]=0 → dist1[2]=1 → dist1[3]=2 → stop at -1.",
+    "```\nwalk from node1, fill dist1[] (stop at -1 or already-visited)\nwalk from node2, fill dist2[] (stop at -1 or already-visited)\nbest = INF, ans = -1\nfor i in 0..n-1:\n    if dist1[i] != -1 and dist2[i] != -1:\n        if max(dist1[i], dist2[i]) < best:\n            best = max(dist1[i], dist2[i])\n            ans = i\nreturn ans\n```",
+    "**Cycle** - the graph contains a cycle, so a naive walk never terminates.\n`Input: edges = [1,0], node1 = 0, node2 = 1` → `Expected: 0`\n⚠️ Bug: walking without checking `dist[cur] == -1` before writing → infinite loop, TLE.\n\n**No common reachable node** - the two start nodes reach disjoint sets.\n`Input: edges = [-1,2,-1], node1 = 0, node2 = 1` → `Expected: -1`\n⚠️ Bug: returning the first node where either distance is set (not both) → returns 0 instead of -1.\n\n**Tie broken by smallest index** - two nodes have the same max distance.\n`Input: edges = [1,0], node1 = 0, node2 = 1` → `Expected: 0`\n⚠️ Bug: using `<=` instead of `<` in the comparison → returns 1.\n\n**Same start node** - node1 and node2 are identical.\n`Input: edges = [1,2,-1], node1 = 1, node2 = 1` → `Expected: 1`\n⚠️ Bug: special-casing `node1 == node2` to return -1 → returns -1 instead of 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if each node can have multiple outgoing edges (a general directed graph)?",
+      "a": "Paths are no longer unique, so replace the single-chain walk with BFS from node1 and BFS from node2 to get true shortest distances. The final max-distance scan stays the same. TC: O(V+E), SC: O(V)."
+    },
+    {
+      "q": "What if there are k start nodes instead of 2, and you minimize the maximum distance over all k?",
+      "a": "Run BFS from each of the k starts, storing k distance arrays. For each node, take the max over all k distances and pick the node with the smallest max. TC: O(k·(V+E)), SC: O(k·V)."
+    },
+    {
+      "q": "What if you must answer many (node1, node2) queries on the same fixed functional graph?",
+      "a": "Precompute binary-lifting tables (successor at distance 2^j) so you can jump along the chain in O(log n). For each query, lift node1 and node2 to find their meeting point and distances. TC: O(n log n) preprocess, O(log n) per query, SC: O(n log n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int closestMeetingNode(vector<int>& edges, int node1, int node2) {\n        int n = edges.size();\n        vector<int> dist1(n, -1), dist2(n, -1);\n\n        int d = 0;\n        int cur = node1;\n        while (cur != -1 && dist1[cur] == -1) {\n            dist1[cur] = d;\n            d++;\n            cur = edges[cur];\n        }\n\n        d = 0;\n        cur = node2;\n        while (cur != -1 && dist2[cur] == -1) {\n            dist2[cur] = d;\n            d++;\n            cur = edges[cur];\n        }\n\n        int best = INT_MAX;\n        int ans = -1;\n        for (int i = 0; i < n; i++) {\n            if (dist1[i] != -1 && dist2[i] != -1) {\n                int mx = max(dist1[i], dist2[i]);\n                if (mx < best) {\n                    best = mx;\n                    ans = i;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

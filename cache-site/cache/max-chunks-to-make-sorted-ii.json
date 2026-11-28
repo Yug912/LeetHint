@@ -1,0 +1,40 @@
+{
+  "slug": "max-chunks-to-make-sorted-ii",
+  "title": "Max Chunks To Make Sorted II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Max & Suffix Min",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> prefixMax: n entries → O(n)\n- vector<int> suffixMin: n entries → O(n)\n- recursion depth: none\n- not counted: input arr, returned int",
+  "approach": "A chunk boundary at index i is valid iff every element in arr[0..i] is ≤ every element in arr[i+1..n-1], which is equivalent to max(arr[0..i]) ≤ min(arr[i+1..n-1]). We precompute a prefix-max array and a suffix-min array in two linear passes, then count every index i where prefixMax[i] ≤ suffixMin[i+1], plus one for the final chunk. This is correct because any subset of valid cuts can be applied simultaneously - each valid cut independently guarantees the left-to-right ordering property.",
+  "hints": [
+    "For a candidate split point k, what relationship between every element in arr[0..k] and every element in arr[k+1..n-1] guarantees that sorting each side independently yields the fully sorted array?",
+    "Use a prefix-max array and a suffix-min array. For arr = [2,1,3,4,4], prefixMax = [2,2,3,4,4] and suffixMin = [1,1,3,4,4]; a cut after index 1 is valid because prefixMax[1] = 2 ≤ suffixMin[2] = 3.",
+    "```\nprefixMax[i] = max(arr[0..i])\nsuffixMin[i] = min(arr[i..n-1])\ncount = 1\nfor i from 0 to n-2:\n    if prefixMax[i] <= suffixMin[i+1]:\n        count = count + 1\nreturn count\n```",
+    "**Single element** - n = 1, the loop body never runs.\n`Input: arr = [5]` → `Expected: 1`\n⚠️ Bug: initialising count = 0 instead of 1 → returns 0\n\n**All equal** - every split point is valid because max equals min everywhere.\n`Input: arr = [3,3,3]` → `Expected: 3`\n⚠️ Bug: using `<` instead of `<=` in the comparison → returns 1\n\n**Already sorted** - every index is a valid cut.\n`Input: arr = [1,2,3]` → `Expected: 3`\n⚠️ Bug: using `<` instead of `<=` → returns 1\n\n**Reverse sorted** - no valid cut exists except the final chunk.\n`Input: arr = [3,2,1]` → `Expected: 1`\n⚠️ Bug: initialising count = 0 and only counting valid splits → returns 0\n\n**Duplicates with interleaving** - duplicates span both sides of a potential cut.\n`Input: arr = [1,1,0,0,1]` → `Expected: 2`\n⚠️ Bug: comparing arr[i] directly to arr[i+1] instead of prefixMax/suffixMin → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if elements arrive one at a time in a stream, and you must report the max chunks after each element?",
+      "a": "Maintain a monotonic stack of chunk maximums. For each new element x, pop every chunk whose max exceeds x (they merge into one), then push x as a new chunk. The answer after each step is the stack size. O(n) total time, O(n) space."
+    },
+    {
+      "q": "What if you must return the actual split indices instead of just the count?",
+      "a": "Collect every index i where prefixMax[i] ≤ suffixMin[i+1] into a list. These are exactly the valid cut points; the chunk boundaries follow directly. Same O(n) time and O(n) space."
+    },
+    {
+      "q": "What if you need exactly k chunks - is it always possible?",
+      "a": "Any subset of valid cut points can be used simultaneously, because each valid cut guarantees all elements left of it are ≤ all elements right of it. So exactly k chunks is possible iff the number of valid cuts is ≥ k−1. O(n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxChunksToSorted(vector<int>& arr) {\n        int n = arr.size();\n        vector<int> prefixMax(n), suffixMin(n);\n        prefixMax[0] = arr[0];\n        for (int i = 1; i < n; i++) {\n            prefixMax[i] = max(prefixMax[i - 1], arr[i]);\n        }\n        suffixMin[n - 1] = arr[n - 1];\n        for (int i = n - 2; i >= 0; i--) {\n            suffixMin[i] = min(suffixMin[i + 1], arr[i]);\n        }\n        int count = 1;\n        for (int i = 0; i < n - 1; i++) {\n            if (prefixMax[i] <= suffixMin[i + 1]) {\n                count++;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

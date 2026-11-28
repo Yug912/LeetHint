@@ -1,0 +1,40 @@
+{
+  "slug": "meeting-rooms-iii",
+  "title": "Meeting Rooms III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation with Priority Queues",
+  "tc": "O(m log m + m log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> count(n): n entries → O(n)\n- priority_queue freeRooms: up to n entries → O(n)\n- priority_queue busy: up to n entries → O(n)\n- sort() stack: O(log m) → dominated by O(n) since n ≥ 1\n- not counted: input meetings (sorted in place)",
+  "approach": "Sort meetings by start time. Maintain two min-heaps: one for free room numbers, one for (endTime, roomNumber) of busy rooms. For each meeting in order, first free all rooms whose end time ≤ the meeting's start. If a room is free, assign the lowest-numbered one. Otherwise, pop the earliest-ending busy room and assign the meeting to it with a delayed end time = that room's end time + meeting duration. Track meeting counts per room and return the room with the most (lowest number on tie). Using long long for end times prevents overflow when many meetings stack up in one room.",
+  "hints": [
+    "If you could process meetings one at a time in some order, which ordering would let you always know which waiting meeting deserves the next freed room? All start_i values are unique.",
+    "Use two min-heaps: one for free room numbers, one for (endTime, roomNumber) of busy rooms. In Example 1 at time 2, both rooms are busy; pop room 1 (ends at 5) from the busy heap and assign meeting [2,7] to it with new end 5+(7−2)=10.",
+    "```\nsort meetings by start time\nfree = min-heap of room numbers 0..n-1\nbusy = min-heap of (endTime, room)\nfor each meeting (s, e):\n    while busy not empty and busy.top.endTime <= s:\n        free.push(busy.top.room); busy.pop()\n    if free not empty:\n        r = free.pop(); count[r]++; busy.push(e, r)\n    else:\n        (t, r) = busy.pop(); count[r]++; busy.push(t + (e-s), r)\nreturn room with max count (lowest on tie)\n```",
+    "**Half-closed interval boundary** - A meeting ending at time T frees the room for one starting at T.\n`Input: n = 2, meetings = [[0,5],[1,3],[5,6]]` → `Expected: 0`\n⚠️ Bug: using `<` instead of `<=` when freeing rooms → returns 1\n\n**End-time overflow** - With n=1 and 10^5 meetings each of duration up to 5×10^5, stacked end times reach 10^5 × 5×10^5 = 5×10^10 > 2^31−1.\n`Input: n = 1, meetings = [[0,500000],[1,500000],...,[99999,500000]]` → `Expected: 0`\n⚠️ Bug: using int instead of long long for end times → undefined behavior / wrong count\n\n**Tie in busy heap** - Two rooms ending at the same time must break ties by room number.\n`Input: n = 2, meetings = [[0,10],[1,3],[2,5]]` → `Expected: 1`\n⚠️ Bug: storing busy heap as (roomNumber, endTime) instead of (endTime, roomNumber) → returns 0\n\n**Single room** - All meetings must queue in the one room.\n`Input: n = 1, meetings = [[0,5],[1,3],[2,4]]` → `Expected: 0`\n⚠️ Bug: not handling the \"no free room\" branch → crashes or returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if multiple meetings can have the same start time?",
+      "a": "Sort by (start, end) to break ties deterministically. The rest of the algorithm stays the same. TC remains O(m log m)."
+    },
+    {
+      "q": "What if n can be up to 10^9 but meetings.length stays at 10^5?",
+      "a": "At most m rooms are ever used, so lazily assign room numbers starting from 0. Keep a min-heap of freed rooms; when it's empty, use the next unassigned number. SC drops to O(m) instead of O(n)."
+    },
+    {
+      "q": "What if meetings arrive in a streaming fashion and cannot all be sorted upfront?",
+      "a": "Buffer incoming meetings in a sorted structure keyed by start time. When a room frees, scan the buffer for any meeting whose start time has already passed and assign it. TC stays O(m log m) with a balanced tree for the buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int mostBooked(int n, vector<vector<int>>& meetings) {\n        sort(meetings.begin(), meetings.end());\n        \n        vector<int> count(n, 0);\n        \n        priority_queue<int, vector<int>, greater<int>> freeRooms;\n        for (int i = 0; i < n; i++) freeRooms.push(i);\n        \n        priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<pair<long long, int>>> busy;\n        \n        for (auto& m : meetings) {\n            long long start = m[0], end = m[1];\n            \n            while (!busy.empty() && busy.top().first <= start) {\n                freeRooms.push(busy.top().second);\n                busy.pop();\n            }\n            \n            if (!freeRooms.empty()) {\n                int room = freeRooms.top();\n                freeRooms.pop();\n                count[room]++;\n                busy.push({end, room});\n            } else {\n                auto [endTime, room] = busy.top();\n                busy.pop();\n                count[room]++;\n                busy.push({endTime + (end - start), room});\n            }\n        }\n        \n        int bestRoom = 0;\n        for (int i = 1; i < n; i++) {\n            if (count[i] > count[bestRoom]) bestRoom = i;\n        }\n        return bestRoom;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

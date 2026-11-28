@@ -1,0 +1,40 @@
+{
+  "slug": "get-equal-substrings-within-budget",
+  "title": "Get Equal Substrings Within Budget",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (left, right, cost, maxLen, n): O(1)\n- no containers or arrays allocated\n- not counted: input strings s and t",
+  "approach": "Compute the per-index cost |s[i] − t[i]| on the fly. Maintain a sliding window [left, right] and a running sum of costs within it. Expand right each step; when the sum exceeds maxCost, shrink from the left until it is valid again. Track the maximum window length seen. This is correct because extending rightward only increases the sum, so once a window becomes invalid the only way to restore validity while keeping contiguity is to advance left.",
+  "hints": [
+    "As you extend a candidate substring one character to the right, how does the total change cost behave, and what does that tell you about where the substring can start and end?",
+    "Sliding window. For Example 1 with costs [1,1,1,2] and maxCost 3: extend right to index 2 (cost 3, valid, length 3); adding index 3 makes cost 5 > 3, so advance left until cost ≤ 3 again.",
+    "```\nleft = 0, cost = 0, best = 0\nfor right from 0 to n-1:\n    cost += |s[right] - t[right]|\n    while cost > maxCost:\n        cost -= |s[left] - t[left]|\n        left += 1\n    best = max(best, right - left + 1)\nreturn best\n```",
+    "**Single character, no budget** - s and t differ at the only position, maxCost is 0\n`Input: s=\"a\", t=\"b\", maxCost=0` → `Expected: 0`\n⚠️ Bug: initializing maxLen to 1 instead of 0 → returns 1\n\n**Budget exactly met** - the valid window's total cost equals maxCost exactly\n`Input: s=\"abcd\", t=\"bcdf\", maxCost=3` → `Expected: 3`\n⚠️ Bug: using `cost >= maxCost` instead of `cost > maxCost` in the shrink condition → returns 2\n\n**Negative differences without abs** - s[i] < t[i] produces a negative cost without abs\n`Input: s=\"za\", t=\"az\", maxCost=25` → `Expected: 1`\n⚠️ Bug: computing `s[i] - t[i]` without abs → returns 2\n\n**Maximum window is in the middle** - the longest valid window is not the final window\n`Input: s=\"aabbb\", t=\"bbccc\", maxCost=2` → `Expected: 3`\n⚠️ Bug: returning `right - left + 1` at the end instead of tracking maxLen → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of one substring, find k disjoint substrings with maximum total length, each within budget.",
+      "a": "Use DP: dp[i][j] = max total length using j disjoint valid substrings from the first i characters. For each i, either skip it or binary-search prefix sums to find the earliest start of a valid window ending at i. TC: O(n·k·log n), SC: O(n·k)."
+    },
+    {
+      "q": "What if the chosen positions need not be contiguous (you can pick any subset of indices)?",
+      "a": "Sort all per-index costs and greedily pick the smallest ones until the budget is exhausted. The answer is the count of picked indices. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if s and t arrive as streams and you can only store O(window size) memory?",
+      "a": "Push each cost into a deque as you expand right; pop from the front when shrinking. The deque holds exactly the current window's costs. TC: O(n), SC: O(answer) which is O(n) in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int equalSubstring(string s, string t, int maxCost) {\n        int n = s.size();\n        int left = 0, cost = 0, maxLen = 0;\n        for (int right = 0; right < n; right++) {\n            cost += abs(s[right] - t[right]);\n            while (cost > maxCost) {\n                cost -= abs(s[left] - t[left]);\n                left++;\n            }\n            maxLen = max(maxLen, right - left + 1);\n        }\n        return maxLen;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "grumpy-bookstore-owner",
+  "title": "Grumpy Bookstore Owner",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, base, extra, best, loop index): constant count → O(1)\n- no containers, arrays, or recursion allocated\n- not counted: input vectors `customers` and `grumpy`",
+  "approach": "First compute the base number of satisfied customers: sum of `customers[i]` where `grumpy[i] == 0`. Then use a sliding window of size `minutes` to find the window where applying the technique rescues the most additional customers - i.e., the maximum sum of `customers[i]` where `grumpy[i] == 1` inside any contiguous block of length `minutes`. The answer is base + best window rescue. This is correct because the technique only changes outcomes for minutes where the owner was grumpy, and it covers exactly one contiguous block.",
+  "hints": [
+    "When the owner applies the technique over a block of minutes, some of those minutes were already going to satisfy customers and some were not. Which of those two groups actually determines whether this block is a good choice?",
+    "Sliding window of size `minutes`. In Example 1, the first window [0,1,2] rescues only `customers[1]=0` (the sole grumpy minute), giving 0 extra; the last window [5,6,7] rescues `customers[5]+customers[7]=1+5=6` extra.",
+    "```\nbase = sum of customers[i] where grumpy[i] == 0\nextra = sum of customers[i] where grumpy[i] == 1, for i in [0, minutes)\nbest = extra\nfor i from minutes to n-1:\n    if grumpy[i] == 1: extra += customers[i]\n    if grumpy[i - minutes] == 1: extra -= customers[i - minutes]\n    best = max(best, extra)\nreturn base + best\n```",
+    "**Smallest input with grumpy owner** - n = 1 and the owner is grumpy, so the technique must rescue the only minute.\n`customers = [5], grumpy = [1], minutes = 1` → `Expected: 5`\n⚠️ Bug: only updating `best` inside the sliding loop `for (i = minutes; i < n)` which never runs when `minutes == n` → returns `0`\n\n**All grumpy** - every minute the owner is grumpy, so base is 0 and the technique does all the work.\n`customers = [5,5,5], grumpy = [1,1,1], minutes = 2` → `Expected: 10`\n⚠️ Bug: computing `base` as the sum of ALL customers (ignoring the grumpy flag) then adding `best` → returns `25`\n\n**No grumpy minutes** - the owner is calm throughout, so the technique adds nothing.\n`customers = [3,4,5], grumpy = [0,0,0], minutes = 2` → `Expected: 12`\n⚠️ Bug: inverting the grumpy check in the base computation (summing where `grumpy[i] == 1`) → returns `0`\n\n**Off-by-one in window removal** - the element leaving the window is at index `i - minutes`, not `i - minutes + 1`.\n`customers = [1,2,3,4], grumpy = [1,1,0,1], minutes = 2` → `Expected: 7`\n⚠️ Bug: using `grumpy[i - minutes + 1]` instead of `grumpy[i - minutes]` for removal → returns `8`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the owner can use the technique twice (two non-overlapping windows of `minutes` each)?",
+      "a": "Compute the rescued sum for every window of size `minutes` using the same sliding window. Then build prefix-max and suffix-max arrays over those window sums. For each split point i, the best two-window rescue is prefix_max[i] + suffix_max[i+1]. O(n) time, O(n) space."
+    },
+    {
+      "q": "What if n can be up to 10^6 and customers[i] up to 10^9?",
+      "a": "The sliding window still runs in O(n) time. Use `long long` for base, extra, and best since 10^6 × 10^9 = 10^15 exceeds `int` range. Space stays O(1)."
+    },
+    {
+      "q": "What if grumpy[i] is a probability between 0 and 1 instead of binary?",
+      "a": "Replace the binary check with `customers[i] * grumpy[i]` for expected unsatisfied customers. Base becomes the sum of `customers[i] * (1 - grumpy[i])`, and the window sums `customers[i] * grumpy[i]`. Same sliding window, O(n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSatisfied(vector<int>& customers, vector<int>& grumpy, int minutes) {\n        int n = customers.size();\n        int base = 0;\n        for (int i = 0; i < n; i++) {\n            if (grumpy[i] == 0) base += customers[i];\n        }\n        \n        int extra = 0;\n        for (int i = 0; i < minutes; i++) {\n            if (grumpy[i] == 1) extra += customers[i];\n        }\n        int best = extra;\n        \n        for (int i = minutes; i < n; i++) {\n            if (grumpy[i] == 1) extra += customers[i];\n            if (grumpy[i - minutes] == 1) extra -= customers[i - minutes];\n            if (extra > best) best = extra;\n        }\n        \n        return base + best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

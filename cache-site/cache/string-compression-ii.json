@@ -1,0 +1,36 @@
+{
+  "slug": "string-compression-ii",
+  "title": "String Compression II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming (interval partitioning with deletion budget)",
+  "tc": "O(n²·k)",
+  "sc": "O(n·k)",
+  "spaceBreakdown": "- vector<vector<int>> dp: (n+1)×(k+1) entries → O(n·k)\n- recursion depth: none (iterative)\n- not counted: input string s",
+  "approach": "Use bottom-up DP where `dp[i][j]` = minimum RLE length for `s[i..n-1]` using at most `j` deletions. For each state, either delete `s[i]` (cost: `dp[i+1][j-1]`) or keep `s[i]` as the start of a run: scan forward to position `p`, counting characters equal to `s[i]` (`same`) and different ones (`diff`); if `diff ≤ j`, we can delete all non-matching chars in `s[i..p]` to form a contiguous run of length `same`, then recurse on `dp[p+1][j-diff]`. The RLE contribution of a run of length `c` is 1 if `c==1`, 2 if `2≤c≤9`, 3 if `10≤c≤99`, 4 if `c==100`. This is correct because any optimal solution partitions `s` into runs where each run's characters are kept and intervening different characters are deleted.",
+  "hints": [
+    "When you keep a character at position i, what determines how many characters you must delete in the range [i, m] to form a single run of that character, and what subproblem remains afterward?",
+    "Use 2D dynamic programming: `dp[i][j]` = minimum encoded length of `s[i..n-1]` with `j` deletions left. For `s = \"aaabcccd\"`, `k = 2`, keeping `'a'` at index 0 and scanning to index 2 gives a run of 3 a's (0 deletions needed), then `dp[3][2]` handles the suffix `\"bcccd\"`.",
+    "```\nfor i from n-1 down to 0:\n  for j from 0 to k:\n    dp[i][j] = dp[i+1][j-1]            # delete s[i], if j > 0\n    c = s[i]; cnt = 0; del = 0\n    for m from i to n-1:\n      if s[m] == c: cnt++\n      else: del++\n      if del > j: break\n      dp[i][j] = min(dp[i][j], enc(cnt) + dp[m+1][j-del])\n```",
+    "**Single char, full deletion** - The entire string is one character and k equals n.\n`Input: s = \"a\", k = 1` → `Expected: 0`\n⚠️ Bug: not offering the delete option (only extending runs) → returns 1\n\n**Encoding boundary at 10** - A run of exactly 10 identical characters produces a two-digit count.\n`Input: s = \"aaaaaaaaaa\", k = 0` → `Expected: 3`\n⚠️ Bug: `if (cnt <= 10) return 2` in enc() → returns 2\n\n**Encoding boundary at 100** - A run of exactly 100 identical characters produces a three-digit count.\n`Input: s = \"aaaaaaaaaa...a\" (100 a's), k = 0` → `Expected: 4`\n⚠️ Bug: `if (cnt <= 100) return 3` in enc() → returns 3\n\n**Merge across different chars** - Optimal solution requires deleting intervening characters to merge two runs of the same character.\n`Input: s = \"aabbaa\", k = 2` → `Expected: 2`\n⚠️ Bug: inner loop breaks as soon as a different character is found (only extends consecutive matches) → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "If you must return the actual compressed string (not just its length), how would you modify the solution?",
+      "a": "Store a parent pointer in each DP cell recording which transition was optimal - either \"delete s[i]\" or \"keep with endpoint m\". After filling the table, backtrack from dp[0][k] to reconstruct the set of deleted indices, then build the compressed string from the remaining characters. TC stays O(n²k); SC increases to O(nk) for the parent table."
+    },
+    {
+      "q": "If n can be up to 10^4, the O(n²k) DP is too slow. What changes?",
+      "a": "Precompute next-occurrence arrays for each character so"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int getLengthOfOptimalCompression(string s, int k) {\n        int n = s.size();\n        auto cost = [](int cnt) -> int {\n            if (cnt <= 1) return cnt;\n            if (cnt <= 9) return 2;\n            if (cnt <= 99) return 3;\n            return 4;\n        };\n        vector<vector<int>> dp(n + 1, vector<int>(k + 1, INT_MAX));\n        for (int j = 0; j <= k; j++) dp[n][j] = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            for (int j = 0; j <= k; j++) {\n                if (j > 0) dp[i][j] = dp[i + 1][j - 1];\n                int same = 0, diff = 0;\n                for (int p = i; p < n; p++) {\n                    if (s[p] == s[i]) same++;\n                    else diff++;\n                    if (diff > j) break;\n                    dp[i][j] = min(dp[i][j], cost(same) + dp[p + 1][j - diff]);\n                }\n            }\n        }\n        return dp[0][k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

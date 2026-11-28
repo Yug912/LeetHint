@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-sum-of-distinct-subarrays-with-length-k",
+  "title": "Maximum Sum of Distinct Subarrays With Length K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> freq(100001, 0): fixed size 100001 (constant, independent of n) → O(1)\n- scalar variables (n, sum, ans, distinct, i): O(1)\n- no recursion, no other containers",
+  "approach": "Use a sliding window of size k. Maintain a frequency array (indexed by value, since nums[i] ≤ 10^5), a running sum, and a count of distinct elements in the current window. When sliding, add the new element and remove the one that fell off, updating all three trackers in O(1). If the distinct count equals k (all elements unique), the window is valid - update the answer. This is correct because every length-k subarray is examined exactly once.",
+  "hints": [
+    "With n up to 10^5, checking every subarray from scratch is too slow. When you shift a length-k window one position to the right, how many elements actually enter and leave?",
+    "Sliding window with a frequency array. For nums = [1,5,4,2,9,9,9], k = 3: at index 2 the window [1,5,4] has 3 distinct values and sum 10; at index 4 the window [4,2,9] has 3 distinct values and sum 15.",
+    "```\nfreq = zeros, sum = 0, ans = 0, distinct = 0\nfor i = 0 to n-1:\n    if freq[nums[i]] == 0: distinct++\n    freq[nums[i]] += 1; sum += nums[i]\n    if i >= k:\n        freq[nums[i-k]] -= 1; sum -= nums[i-k]\n        if freq[nums[i-k]] == 0: distinct -= 1\n    if i >= k-1 and distinct == k: ans = max(ans, sum)\nreturn ans\n```",
+    "**Smallest input** - n = 1, k = 1, the single element is its own valid subarray.\n`Input: nums = [7], k = 1` → `Expected: 7`\n⚠️ Bug: initializing ans to -1 instead of 0 → returns -1\n\n**Overflow** - 10^5 distinct values summing to 100000×100001/2 = 5,000,050,000, which exceeds 2^31−1.\n`Input: nums = [1,2,3,...,100000], k = 100000` → `Expected: 5000050000`\n⚠️ Bug: using int for sum → returns 705082704\n\n**All duplicates** - no length-k subarray has all distinct elements.\n`Input: nums = [4,4,4], k = 3` → `Expected: 0`\n⚠️ Bug: updating ans whenever i >= k-1 without checking distinct == k → returns 12\n\n**First window boundary** - the first valid check must happen at index k-1.\n`Input: nums = [1,2,3], k = 3` → `Expected: 6`\n⚠️ Bug: using i > k-1 instead of i >= k-1 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if k is not fixed - find the maximum sum of any subarray where all elements are distinct?",
+      "a": "Use an expanding/shrinking sliding window. Expand the right end adding elements; when a duplicate enters, shrink from the left until all elements are distinct again. Track the maximum sum over all valid windows encountered. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if nums[i] can be negative?",
+      "a": "The window logic is unchanged, but initialize ans to LLONG_MIN and use a boolean flag to track whether any valid subarray was found. Return 0 only if no valid subarray exists; otherwise return the maximum sum even if negative. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the input is a stream and you must report the answer after each new element?",
+      "a": "Maintain the same frequency array, running sum, and distinct count, plus a circular buffer of size k to remember which element to evict. Each new element triggers one add and one remove in O(1). TC: O(1) per element, SC: O(k) for the circular buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumSubarraySum(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<int> freq(100001, 0);\n        long long sum = 0;\n        long long ans = 0;\n        int distinct = 0;\n        \n        for (int i = 0; i < n; i++) {\n            if (freq[nums[i]] == 0) distinct++;\n            freq[nums[i]]++;\n            sum += nums[i];\n            \n            if (i >= k) {\n                freq[nums[i - k]]--;\n                if (freq[nums[i - k]] == 0) distinct--;\n                sum -= nums[i - k];\n            }\n            \n            if (i >= k - 1 && distinct == k) {\n                ans = max(ans, sum);\n            }\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

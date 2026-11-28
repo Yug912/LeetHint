@@ -1,0 +1,40 @@
+{
+  "slug": "fair-distribution-of-cookies",
+  "title": "Fair Distribution of Cookies",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(k · 3^n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<int> sum: 2^n entries → O(2^n)\n- vector<int> dp: 2^n entries → O(2^n)\n- vector<int> ndp: 2^n entries, allocated inside loop, moved into dp → O(2^n)\n- recursion depth: none\n- not counted: input vector cookies",
+  "approach": "Since n ≤ 8, every subset of bags fits in a bitmask. Precompute `sum[mask]` = total cookies in bags selected by `mask`. Define `dp[mask]` = minimum achievable maximum load when distributing the bags in `mask` among the children processed so far. Base case (1 child): `dp[mask] = sum[mask]`. For each additional child, try every submask `sub ⊆ mask` as the bags given to that child: `dp_new[mask] = min over sub⊆mask of max(dp[mask \\ sub], sum[sub])`. The answer is `dp[(1<<n)-1]` after k children. Iterating all submasks of all masks costs 3^n per child, giving O(k·3^n) total.",
+  "hints": [
+    "With at most 8 bags, how many distinct subsets of bags could any single child end up holding?",
+    "Bitmask DP. Precompute `sum[mask]` = total cookies in bags selected by `mask`. For cookies = [8,15,10,20,8], `sum[10011₂]` = 8+15+8 = 31 (bags 0, 1, 4).",
+    "```\nprecompute sum[mask] for every mask 0..2^n-1\ndp[mask] = sum[mask]                  # one child takes all bags in mask\nfor c = 2 to k:\n    for each mask:\n        ndp[mask] = min over submask sub ⊆ mask of max(dp[mask ^ sub], sum[sub])\n    dp = ndp\nreturn dp[(1 << n) - 1]\n```",
+    "**Minimum input** - smallest valid n and k.\n`Input: cookies = [5,5], k = 2` → `Expected: 5`\n⚠️ Bug: iterating only `sub = mask` instead of all submasks of mask → returns max(dp[0], sum[full]) = max(0, 10) = 10\n\n**All equal values** - every bag has the same count.\n`Input: cookies = [3,3,3,3], k = 2` → `Expected: 6`\n⚠️ Bug: initializing ndp entries to 0 instead of INT_MAX → returns 0\n\n**k equals n** - each child receives exactly one bag.\n`Input: cookies = [1,5,3], k = 3` → `Expected: 5`\n⚠️ Bug: using `dp[mask]` instead of `dp[mask ^ submask]` in the max → returns max(dp[full], sum[sub]) = max(9, …) = 9\n\n**Single dominant bag** - one bag exceeds the sum of all others.\n`Input: cookies = [100,1,1,1], k = 2` → `Expected: 100`\n⚠️ Bug: returning `sum[full] / k` (integer division) as the answer → returns 51"
+  ],
+  "followUps": [
+    {
+      "q": "What if each child must receive at least one bag?",
+      "a": "Set dp[0] = INT_MAX for c ≥ 2 so the empty-submask transition is forbidden, and skip sub = 0 in the submask loop. The rest of the DP is unchanged. Time O(k·3^n), space O(2^n)."
+    },
+    {
+      "q": "What if n grows to 20?",
+      "a": "3^20 ≈ 3.5 billion is too slow. For k = 2, switch to meet-in-the-middle: enumerate all 2^(n/2) subsets of each half, sort one side, and binary-search the best complement for each subset of the other side. Time O(2^(n/2)·n), space O(2^(n/2))."
+    },
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "When k ≥ n, every child gets at most one bag, so the answer is max(cookies). For k < n with large k, binary-search the answer M and check feasibility via DFS bin-packing: assign each bag to one of k bins with capacity M. Time O(n·log(sum)·k^n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int distributeCookies(vector<int>& cookies, int k) {\n        int n = cookies.size();\n        int full = 1 << n;\n        vector<int> sum(full, 0);\n        for (int mask = 0; mask < full; mask++) {\n            int s = 0;\n            for (int i = 0; i < n; i++) {\n                if (mask & (1 << i)) s += cookies[i];\n            }\n            sum[mask] = s;\n        }\n        vector<int> dp = sum; // c = 1: one child gets all bags in mask\n        for (int c = 2; c <= k; c++) {\n            vector<int> ndp(full, INT_MAX);\n            for (int mask = 0; mask < full; mask++) {\n                for (int sub = mask; sub > 0; sub = (sub - 1) & mask) {\n                    int rest = mask ^ sub;\n                    int val = max(dp[rest], sum[sub]);\n                    if (val < ndp[mask]) ndp[mask] = val;\n                }\n                // sub = 0: child gets nothing, rest = mask\n                if (dp[mask] < ndp[mask]) ndp[mask] = dp[mask];\n            }\n            dp = move(ndp);\n        }\n        return dp[full - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "remove-max-number-of-edges-to-keep-graph-fully-traversable",
+  "title": "Remove Max Number of Edges to Keep Graph Fully Traversable",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find with Greedy Edge Selection",
+  "tc": "O(E · α(n))",
+  "sc": "O(n)",
+  "spaceBreakdown": "- parentA (vector<int>, size n+1): O(n)\n- parentB (vector<int>, size n+1): O(n)\n- rankA (vector<int>, size n+1): O(n)\n- rankB (vector<int>, size n+1): O(n)\n- recursion depth: none (iterative find)\n- not counted: input edges, returned int",
+  "approach": "Process edges in priority order: type 3 first (benefits both Alice and Bob), then type 1 (Alice only), then type 2 (Bob only). Maintain two Union-Find structures - one for Alice, one for Bob. An edge is removable if both endpoints are already in the same component for the relevant traverser(s). After all passes, both structures must have exactly one component; otherwise return -1. Three linear passes over the edge list (no sorting needed since edge type is a fixed 3-value enum) yield O(E·α(n)) time.",
+  "hints": [
+    "Among edges that help only Alice, only Bob, or both, which would you be most reluctant to remove, and why? The graph has up to 10^5 nodes and 10^5 edges.",
+    "Use a Union-Find (disjoint set union) structure - maintain one for Alice and one for Bob. For the type-3 edge [3,1,2] in Example 1, union nodes 1 and 2 in both structures simultaneously.",
+    "```\ninit two DSU structures (Alice, Bob), each with n components\nremoved = 0\nfor each type-3 edge (u,v):\n    if both DSUs already connect u,v: removed++\n    else: union u,v in both DSUs\nfor each type-1 edge (u,v):\n    if Alice's DSU already connects u,v: removed++\n    else: union in Alice's DSU\nfor each type-2 edge (u,v):\n    if Bob's DSU already connects u,v: removed++\n    else: union in Bob's DSU\nif either DSU has >1 component: return -1\nreturn removed\n```",
+    "**Single node** - n=1, no edges possible since u<v≤1 is impossible.\n`Input: n = 1, edges = []` → `Expected: 0`\n⚠️ Bug: initializing componentsA to 0 instead of n, then checking `componentsA == 0` → returns -1\n\n**Only one traverser connects** - Alice's edges don't span all nodes.\n`Input: n = 3, edges = [[1,1,2],[2,1,2],[2,2,3]]` → `Expected: -1`\n⚠️ Bug: only checking Bob's final component count, skipping Alice's → returns 0\n\n**Extra type-3 edges beyond spanning tree** - three type-3 edges on three nodes.\n`Input: n = 3, edges = [[3,1,2],[3,2,3],[3,1,3]]` → `Expected: 1`\n⚠️ Bug: not incrementing removed for redundant type-3 edges → returns 0\n\n**Exactly enough edges** - single type-3 edge on two nodes, nothing removable.\n`Input: n = 2, edges = [[3,1,2]]` → `Expected: 0`\n⚠️ Bug: incrementing removed for every type-3 edge unconditionally → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are k traversers, each with a set of edge types they can use, and edges can serve any subset of traversers?",
+      "a": "Maintain k DSU structures. Process edges in decreasing order of how many traversers they serve (still a fixed-bucket sort, no comparison sort needed). For each edge, union in every traverser's DSU that can use it; if all already connected, count as removable. Time: O(k · E · α(n)), Space: O(k · n)."
+    },
+    {
+      "q": "What if edges arrive online and you must answer \"is the graph fully traversable?\" after each insertion?",
+      "a": "DSU supports online unions. Maintain both structures incrementally - type 3 unions both, type 1 unions Alice, type 2 unions Bob. After each edge, check if both component counts equal 1. Time: O(E · α(n)) total, Space: O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^9 but edges.length ≤ 10^5?",
+      "a": "Replace the fixed-size parent/rank arrays with hash maps, lazily initializing each node's parent to itself on first access. Only nodes appearing in edges are ever stored. Time: O(E · α(E)), Space: O(E)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int find(vector<int>& parent, int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\npublic:\n    int maxNumEdgesToRemove(int n, vector<vector<int>>& edges) {\n        vector<int> parentA(n + 1), parentB(n + 1);\n        vector<int> rankA(n + 1, 0), rankB(n + 1, 0);\n        for (int i = 1; i <= n; i++) {\n            parentA[i] = i;\n            parentB[i] = i;\n        }\n\n        int componentsA = n, componentsB = n;\n        int removed = 0;\n\n        // Pass 1: type 3 edges (shared by Alice and Bob)\n        for (auto& e : edges) {\n            if (e[0] != 3) continue;\n            int ra = find(parentA, e[1]);\n            int rb = find(parentA, e[2]);\n            int rc = find(parentB, e[1]);\n            int rd = find(parentB, e[2]);\n            if (ra == rb && rc == rd) {\n                removed++;\n            } else {\n                if (ra != rb) {\n                    if (rankA[ra] < rankA[rb]) swap(ra, rb);\n                    parentA[rb] = ra;\n                    if (rankA[ra] == rankA[rb]) rankA[ra]++;\n                    componentsA--;\n                }\n                if (rc != rd) {\n                    if (rankB[rc] < rankB[rd]) swap(rc, rd);\n                    parentB[rd] = rc;\n                    if (rankB[rc] == rankB[rd]) rankB[rc]++;\n                    componentsB--;\n                }\n            }\n        }\n\n        // Pass 2: type 1 edges (Alice only)\n        for (auto& e : edges) {\n            if (e[0] != 1) continue;\n            int ra = find(parentA, e[1]);\n            int rb = find(parentA, e[2]);\n            if (ra == rb) {\n                removed++;\n            } else {\n                if (rankA[ra] < rankA[rb]) swap(ra, rb);\n                parentA[rb] = ra;\n                if (rankA[ra] == rankA[rb]) rankA[ra]++;\n                componentsA--;\n            }\n        }\n\n        // Pass 3: type 2 edges (Bob only)\n        for (auto& e : edges) {\n            if (e[0] != 2) continue;\n            int ra = find(parentB, e[1]);\n            int rb = find(parentB, e[2]);\n            if (ra == rb) {\n                removed++;\n            } else {\n                if (rankB[ra] < rankB[rb]) swap(ra, rb);\n                parentB[rb] = ra;\n                if (rankB[ra] == rankB[rb]) rankB[ra]++;\n                componentsB--;\n            }\n        }\n\n        if (componentsA != 1 || componentsB != 1) return -1;\n        return removed;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

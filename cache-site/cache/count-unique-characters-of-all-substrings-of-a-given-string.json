@@ -1,0 +1,40 @@
+{
+  "slug": "count-unique-characters-of-all-substrings-of-a-given-string",
+  "title": "Count Unique Characters of All Substrings of a Given String",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Contribution Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int last1[26]: 26 entries → O(1)\n- int last2[26]: 26 entries → O(1)\n- long long ans: scalar → O(1)\n- recursion depth: none\n- not counted: input string",
+  "approach": "Instead of iterating over substrings, count each character's contribution: for position i, sum the number of substrings where s[i] appears exactly once. A character at position i is unique in a substring iff the substring includes i but excludes the previous and next occurrence of the same character; if prev and next are the nearest same-character positions (or −1 and n if none), the count is (i − prev) × (next − i). Track the last two occurrences of each character in a single left-to-right pass; when a new occurrence appears, the previous one's \"next\" becomes known, finalizing its contribution. After the pass, finalize each character's last occurrence with next = n.",
+  "hints": [
+    "If you fix a single position i in s, which substrings containing s[i] would count s[i] as a unique character? The string length can reach 10^5.",
+    "Track the last two occurrence indices of each character in two arrays of size 26. When a new occurrence of character c appears at index i, the previous occurrence at last1[c] now has its \"next\" known, so add (last1[c] − last2[c]) × (i − last1[c]). For \"ABA\" at i=2, position 0's contribution = (0−(−1))×(2−0) = 2.",
+    "```\ninit last1[c] = last2[c] = -1 for all c\nans = 0\nfor i in 0..n-1:\n    c = s[i]\n    if last1[c] != -1:\n        ans += (last1[c] - last2[c]) * (i - last1[c])\n    last2[c] = last1[c]\n    last1[c] = i\nfor each c:\n    if last1[c] != -1:\n        ans += (last1[c] - last2[c]) * (n - last1[c])\nreturn ans\n```",
+    "**Single character** - n = 1, only one substring exists.\n`Input: \"A\"` → `Expected: 1`\n⚠️ Bug: omitting the final loop that processes each character's last occurrence → returns 0\n\n**All identical** - only length-1 substrings contribute a unique character.\n`Input: \"AAAA\"` → `Expected: 4`\n⚠️ Bug: swapping update order to `last1[c] = i; last2[c] = last1[c];` makes last2 always equal last1 → returns 0\n\n**Alternating pairs** - each character's contribution depends on correct prev/next tracking across multiple occurrences.\n`Input: \"ABAB\"` → `Expected: 12`\n⚠️ Bug: using `(last1[c] - last2[c] - 1) * (i - last1[c] - 1)` in the formula → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "Count the sum over all substrings of the number of characters appearing exactly twice.",
+      "a": "Track the last three occurrences per character. When a new occurrence at i appears, the occurrence at last1[c] now has exactly two occurrences in range (last2[c], i) excluding last3[c] and i; its contribution is (last2[c] − last3[c]) × (i − last1[c]). Time O(n), space O(1)."
+    },
+    {
+      "q": "s contains arbitrary Unicode characters, not just uppercase English letters.",
+      "a": "Replace the two fixed-size arrays with a hash map keyed by character, storing (last1, last2) pairs. The logic is identical. Time O(n), space O(min(n, alphabet_size))."
+    },
+    {
+      "q": "s arrives as a stream of unknown length; you cannot store the whole string.",
+      "a": "Maintain last1 and last2 per character. On each incoming character, finalize the previous occurrence's contribution immediately using the current index as \"next.\" When the stream ends, finalize all remaining last occurrences with next = total length seen. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int uniqueLetterString(string s) {\n        int n = s.size();\n        int last1[26], last2[26];\n        for (int i = 0; i < 26; i++) {\n            last1[i] = -1;\n            last2[i] = -1;\n        }\n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            int c = s[i] - 'A';\n            if (last1[c] != -1) {\n                ans += (long long)(last1[c] - last2[c]) * (i - last1[c]);\n            }\n            last2[c] = last1[c];\n            last1[c] = i;\n        }\n        for (int c = 0; c < 26; c++) {\n            if (last1[c] != -1) {\n                ans += (long long)(last1[c] - last2[c]) * (n - last1[c]);\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

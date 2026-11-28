@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-area-rectangle",
+  "title": "Minimum Area Rectangle",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Set + Diagonal Pair Enumeration",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> seen: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "An axis-aligned rectangle is fully determined by two diagonal corners (x1,y1) and (x2,y2) where x1≠x2 and y1≠y2; the other two corners are (x1,y2) and (x2,y1). Store all points in a hash set (encoded as x*40001+y for O(1) lookup), then enumerate every pair of points as a potential diagonal. For each valid diagonal pair, check whether both complementary corners exist in the set; if so, compute the area and track the minimum. Return 0 if no rectangle is found.",
+  "hints": [
+    "An axis-aligned rectangle uses exactly two distinct x-values and two distinct y-values among its four corners. Given any two points from the input that share neither coordinate, what are the coordinates of the other two corners?",
+    "Use a hash set to store all points (encoded as x * 40001 + y) for O(1) membership checks. For the pair (1,1) and (3,3) in Example 1, check whether (1,3) and (3,1) are in the set - they are, giving area 4.",
+    "```\nencode all points into a hash set\nans = infinity\nfor each pair of points (p1, p2):\n    if p1.x != p2.x and p1.y != p2.y:\n        if (p1.x, p2.y) in set and (p2.x, p1.y) in set:\n            ans = min(ans, |p1.x - p2.x| * |p1.y - p2.y|)\nreturn ans if ans != infinity else 0\n```",
+    "**Single point** - minimum input size, no pairs to check\n`Input: [[0,0]]` → `Expected: 0`\n⚠️ Bug: returning `ans` without checking `ans == INT_MAX` → returns 2147483647\n\n**Degenerate pair** - two points sharing x or y must not be treated as diagonal corners\n`Input: [[0,0],[0,2],[2,0],[2,2]]` → `Expected: 4`\n⚠️ Bug: not skipping pairs where x1 == x2 or y1 == y2 → pair (0,0)-(0,2) has complementary corners in set, area = 0, returns 0\n\n**Smallest valid rectangle** - area of 1\n`Input: [[0,0],[0,1],[1,0],[1,1]]` → `Expected: 1`\n⚠️ Bug: initializing `ans = 0` and using `area < ans` → `1 < 0` is false, returns 0\n\n**Encoding collision** - using BASE = 40000 instead of 40001 causes false positives\n`Input: [[0,0],[1,0],[1,40000]]` → `Expected: 0`\n⚠️ Bug: encoding as `x * 40000 + y` → (0,40000) and (1,0) both encode to 40000, false lookup hit returns 40000"
+  ],
+  "followUps": [
+    {
+      "q": "What if coordinates can be up to 10^9?",
+      "a": "The encoding x * 40001 + y overflows int. Encode as long long using x * 1000000001LL + y, or use unordered_set<pair<int,int>> with a custom hash. Time stays O(n²), space O(n)."
+    },
+    {
+      "q": "What if you need to count all rectangles instead of finding the minimum area?",
+      "a": "Same diagonal-pair approach: for each valid diagonal pair whose complementary corners exist, increment a counter. Each rectangle has two diagonals, so divide the total by 2. Time O(n²), space O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "Group points by x-coordinate into a map from x to set of y's. For each pair of x-values, iterate their common y-values; each pair of common y's forms a rectangle. Track the minimum y-gap per x-pair to avoid re-examining all pairs. Worst case is still O(n²) but much faster when points spread across many x-values."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minAreaRect(vector<vector<int>>& points) {\n        int n = points.size();\n        unordered_set<int> seen;\n        const int BASE = 40001;\n        for (auto& p : points) {\n            seen.insert(p[0] * BASE + p[1]);\n        }\n        int ans = INT_MAX;\n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                int x1 = points[i][0], y1 = points[i][1];\n                int x2 = points[j][0], y2 = points[j][1];\n                if (x1 != x2 && y1 != y2) {\n                    if (seen.count(x1 * BASE + y2) && seen.count(x2 * BASE + y1)) {\n                        int area = abs(x1 - x2) * abs(y1 - y2);\n                        if (area < ans) ans = area;\n                    }\n                }\n            }\n        }\n        return ans == INT_MAX ? 0 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

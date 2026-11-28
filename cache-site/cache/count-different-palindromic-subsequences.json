@@ -1,0 +1,40 @@
+{
+  "slug": "count-different-palindromic-subsequences",
+  "title": "Count Different Palindromic Subsequences",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Intervals",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- dp: n×n long long table → O(n²)\n- nxt: (n+1)×4 int array → O(n)\n- prv: n×4 int array → O(n)\n- recursion depth: none (iterative)\n- not counted: input string",
+  "approach": "Use interval DP: dp[i][j] = count of distinct non-empty palindromic subsequences in s[i..j]. When s[i]≠s[j], apply inclusion-exclusion over the two sub-intervals. When s[i]==s[j]==c, every palindrome inside s[i+1..j-1] can be wrapped with c…c to form a new one; the number of c's strictly between i and j determines whether we add 2, 1, or subtract a double-counted inner interval. Precompute next/prev occurrence arrays for O(1) inner-bound lookup, giving O(n²) total.",
+  "hints": [
+    "When s[i] == s[j], every palindrome inside s[i+1..j-1] can be wrapped with those two matching characters to form a new one. What property of that same character strictly between i and j determines whether some wrapped palindromes have already been counted?",
+    "Interval DP with precomputed next/prev occurrence arrays. For s = \"bccb\", dp[0][3] has s[0]==s[3]=='b'; since no 'b' lies between indices 1 and 2, dp[0][3] = 2·dp[1][2] + 2 = 6.",
+    "```\nfor len = 2 to n:\n  for i = 0 to n-len:\n    j = i + len - 1\n    if s[i] != s[j]:\n      dp[i][j] = dp[i+1][j] + dp[i][j-1] - dp[i+1][j-1]\n    else:\n      low = next occurrence of s[i] after i\n      high = prev occurrence of s[i] before j\n      if low > high:  dp[i][j] = 2*dp[i+1][j-1] + 2\n      elif low == high:  dp[i][j] = 2*dp[i+1][j-1] + 1\n      else:  dp[i][j] = 2*dp[i+1][j-1] - dp[low+1][high-1]\n```",
+    "**Single character** - n=1, the only palindrome is the character itself.\n`Input: \"a\"` → `Expected: 1`\n⚠️ Bug: initializing dp[i][i] to 0 → returns 0\n\n**All same characters** - \"aaa\" has only 3 distinct palindromic subsequences: 'a', 'aa', 'aaa'.\n`Input: \"aaa\"` → `Expected: 3`\n⚠️ Bug: using +2 (no-inner-match branch) instead of +1 when exactly one matching char lies inside → returns 4\n\n**Overflow** - Example 2's unmodded answer is 3104860382, exceeding 2³¹−1 = 2147483647.\n`Input: \"abcdabcdabcdabcdabcdabcdabcdabcddcbadcbadcbadcbadcbadcbadcbadcba\"` → `Expected: 104860361`\n⚠️ Bug: storing dp as int instead of long long → overflow wraps to a wrong value\n\n**Multiple inner matches** - \"aabaa\" has 7 distinct palindromic subsequences; the inner 'a' at indices 1 and 3 causes double-counting without subtraction.\n`Input: \"aabaa\"` → `Expected: 7`\n⚠️ Bug: not subtracting dp[low+1][high-1] in the low < high case → returns 8"
+  ],
+  "followUps": [
+    {
+      "q": "If s could contain all 26 lowercase letters instead of just 4, how would the approach change?",
+      "a": "The DP recurrence is identical; only the next/prev precomputation arrays grow from 4 to 26 columns. Time stays O(n²) and space stays O(n²) for the DP table, with O(26n) for precomputation."
+    },
+    {
+      "q": "Can you reduce the O(n²) space usage?",
+      "a": "The DP fills by increasing interval length, but the low < high case accesses dp[low+1][high-1] for an arbitrary inner sub-interval, requiring random access to all previously computed shorter lengths. This non-local access pattern prevents a straightforward rolling-array reduction to O(n)."
+    },
+    {
+      "q": "How would you modify the solution to return the actual distinct palindromic subsequences instead of just the count?",
+      "a": "Store sets of strings instead of counts in dp[i][j]. The recurrence structure stays the same, but both time and space blow up to O(n² · P) where P is the number of distinct palindromic subsequences, which can be exponential in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPalindromicSubsequences(string s) {\n        int n = s.size();\n        if (n == 0) return 0;\n        const long long MOD = 1000000007;\n        \n        // next[i][c] = smallest index >= i with s[index] == c, or n if none\n        vector<vector<int>> nxt(n + 1, vector<int>(4, n));\n        for (int i = n - 1; i >= 0; i--) {\n            for (int c = 0; c < 4; c++) nxt[i][c] = nxt[i + 1][c];\n            nxt[i][s[i] - 'a'] = i;\n        }\n        // prev[i][c] = largest index <= i with s[index] == c, or -1 if none\n        vector<vector<int>> prv(n, vector<int>(4, -1));\n        for (int i = 0; i < n; i++) {\n            if (i > 0)\n                for (int c = 0; c < 4; c++) prv[i][c] = prv[i - 1][c];\n            prv[i][s[i] - 'a'] = i;\n        }\n        \n        vector<vector<long long>> dp(n, vector<long long>(n, 0));\n        for (int i = 0; i < n; i++) dp[i][i] = 1;\n        \n        for (int len = 2; len <= n; len++) {\n            for (int i = 0; i + len <= n; i++) {\n                int j = i + len - 1;\n                if (s[i] != s[j]) {\n                    dp[i][j] = (dp[i + 1][j] + dp[i][j - 1] - dp[i + 1][j - 1] + MOD) % MOD;\n                } else {\n                    int c = s[i] - 'a';\n                    int low = nxt[i + 1][c];\n                    int high = prv[j - 1][c];\n                    if (low > high) {\n                        dp[i][j] = (2 * dp[i + 1][j - 1] + 2) % MOD;\n                    } else if (low == high) {\n                        dp[i][j] = (2 * dp[i + 1][j - 1] + 1) % MOD;\n                    } else {\n                        dp[i][j] = (2 * dp[i + 1][j - 1] - dp[low + 1][high - 1] + MOD) % MOD;\n                    }\n                }\n            }\n        }\n        return (int)dp[0][n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

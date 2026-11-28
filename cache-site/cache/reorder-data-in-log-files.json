@@ -1,0 +1,40 @@
+{
+  "slug": "reorder-data-in-log-files",
+  "title": "Reorder Data in Log Files",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Custom Stable Sort",
+  "tc": "O(n log n · L)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- stable_sort internal merge buffer: up to n/2 moved string objects (O(1) each, character data is pointer-transferred, not copied) → O(n)\n- temporary substrings ca, cb during each comparison: O(L) each, at most 2 alive simultaneously → O(L)\n- not counted: input vector (modified in place), returned vector",
+  "approach": "The key insight is that a single stable sort on the input vector handles both log types simultaneously: the comparator classifies each log as letter or digit by checking the character after the first space, sorts letter-logs by content (then identifier), and treats all digit-logs as equal (returning false), which preserves their relative order. This avoids creating a separate digits vector-stable_sort modifies the input in place using only O(n) internal buffer space.",
+  "hints": [
+    "In Example 1, the digit-logs \"dig1 8 1 5 1\" and \"dig2 3 6\" keep the same relative order in the input and output. What property of the ordering operation guarantees this for every pair of digit-logs?",
+    "Use stable_sort with a custom comparator on the input vector in place. Comparing \"let1 art can\" and \"let3 art zero\": both are letter-logs, so compare contents \"art can\" < \"art zero\" → true, placing let1 before let3.",
+    "```\nstable_sort(logs, comparator(a, b):\n    pa = first space position in a\n    pb = first space position in b\n    la = isalpha(a[pa+1])\n    lb = isalpha(b[pb+1])\n    if la and lb:\n        if content(a) != content(b): return content(a) < content(b)\n        return a < b  // tiebreak by identifier\n    return la  // letter < digit; both digit → false (stable)\n)\nreturn logs\n```",
+    "**Tie in content** - two letter-logs share the same content string but have different identifiers.\n`Input: [\"let2 art can\",\"let1 art can\"]` → `Expected: [\"let1 art can\",\"let2 art can\"]`\n⚠️ Bug: sorting only by content with no identifier tiebreaker → returns `[\"let2 art can\",\"let1 art can\"]`\n\n**Content priority over identifier** - a log with a smaller identifier has lexicographically larger content.\n`Input: [\"b1 art can\",\"a1 art zoo\"]` → `Expected: [\"b1 art can\",\"a1 art zoo\"]`\n⚠️ Bug: comparing full strings instead of content-then-identifier → returns `[\"a1 art zoo\",\"b1 art can\"]`\n\n**Digit-log before letter-log** - a digit-log appears first in the input array.\n`Input: [\"dig1 1 2\",\"let1 art can\"]` → `Expected: [\"let1 art can\",\"dig1 1 2\"]`\n⚠️ Bug: comparator returning false for all non-letter-letter pairs → returns `[\"dig1 1 2\",\"let1 art can\"]`\n\n**Digit-log relative order** - digit-logs have identifiers that are not in sorted order.\n`Input: [\"dig2 1 2\",\"let1 art can\",\"dig1 3 4\"]` → `Expected: [\"let1 art can\",\"dig2 1 2\",\"dig1 3 4\"]`\n⚠️ Bug: sorting digit-logs by identifier instead of preserving original order → returns `[\"let1 art can\",\"dig1 3 4\",\"dig2 1 2\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if there were a third log type (alphanumeric) that should appear between letter-logs and digit-logs, sorted by content?",
+      "a": "Extend the comparator to assign a type rank (0=letter, 1=alphanumeric, 2=digit). Compare by rank first; within the same rank, apply the existing content-then-identifier logic. Time stays O(n log n · L), space O(n)."
+    },
+    {
+      "q": "What if logs.length could be up to 10^6?",
+      "a": "The stable_sort approach scales directly-O(n log n · L) with n = 10^6 and L = 100 gives roughly 2 × 10^9 character comparisons, which is feasible. Replace substr with string_view comparisons to avoid heap allocations per comparison. Time O(n log n · L), space O(n)."
+    },
+    {
+      "q": "What if you can only hold k logs in memory at once?",
+      "a": "Use external k-way merge sort: partition logs into chunks of size k, stable_sort each chunk in memory, then merge the sorted chunks. Digit-log stability is preserved within each chunk and across the merge. Time O(n log n · L), space O(k) for in-memory sorting plus O(n) for the merge buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> reorderLogFiles(vector<string>& logs) {\n        stable_sort(logs.begin(), logs.end(), [](const string& a, const string& b) {\n            size_t pa = a.find(' '), pb = b.find(' ');\n            bool la = isalpha((unsigned char)a[pa + 1]);\n            bool lb = isalpha((unsigned char)b[pb + 1]);\n            if (la && lb) {\n                string ca = a.substr(pa + 1), cb = b.substr(pb + 1);\n                if (ca != cb) return ca < cb;\n                return a < b;\n            }\n            return la;\n        });\n        return logs;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

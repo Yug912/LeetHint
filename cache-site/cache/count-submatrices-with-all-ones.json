@@ -1,0 +1,40 @@
+{
+  "slug": "count-submatrices-with-all-ones",
+  "title": "Count Submatrices With All Ones",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack",
+  "tc": "O(m·n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> h: n entries → O(n)\n- vector<int> stk: at most n indices → O(n)\n- vector<int> dp: n entries → O(n)\n- recursion depth: none\n- not counted: input mat, returned int",
+  "approach": "For each row, maintain a height array `h[j]` = consecutive ones ending at `(row, j)` going upward. For each row, count all-ones submatrices whose bottom edge lies on that row using a monotonic increasing stack: when processing column `j`, pop all indices with height ≥ `h[j]`, then `dp[j] = dp[prev] + h[j] * (j - prev)` where `prev` is the nearest column to the left with strictly smaller height. This works because every starting column in `(prev, j]` contributes exactly `h[j]` submatrices ending at `j`, while columns ≤ `prev` contribute the same minimums already captured in `dp[prev]`.",
+  "hints": [
+    "Fix a row as the bottom edge of a submatrix. What information about each column would let you count all valid submatrices ending on that row in a single left-to-right pass? The matrix has at most 150 rows and 150 columns.",
+    "Monotonic increasing stack of column indices. In Example 1, row 1 gives heights [2,1,0]. At column 1 (height 1), pop column 0 (height 2 ≥ 1); the stack is now empty, so dp[1] = 0 + 1×2 = 2 submatrices end at column 1.",
+    "```\nfor each row i:\n    h[j] = mat[i][j]==1 ? h[j]+1 : 0   for all j\n    for each column j:\n        while stack non-empty and h[stack.top] >= h[j]:\n            pop stack\n        prev = stack.top if non-empty else -1\n        dp[j] = (prev<0 ? 0 : dp[prev]) + h[j] * (j - prev)\n        ans += dp[j]\n        push j onto stack\n```",
+    "**Smallest input** - one cell, the minimal matrix allowed by constraints.\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: computing width as `h[j] * (j - prev - 1)` instead of `h[j] * (j - prev)` → returns 0\n\n**All zeros** - no valid submatrices exist.\n`Input: [[0,0],[0,0]]` → `Expected: 0`\n⚠️ Bug: unconditionally doing `h[j]++` without checking `mat[i][j]` → returns 6\n\n**Zeros breaking column continuity** - a 0 must reset the height to 0.\n`Input: [[1,1],[0,1],[1,1]]` → `Expected: 10`\n⚠️ Bug: `h[j]++` without the zero-check makes row 1 heights [2,2] instead of [0,2] → returns 18\n\n**All ones square** - maximum density, every submatrix is valid.\n`Input: [[1,1],[1,1]]` → `Expected: 9`\n⚠️ Bug: only summing all cells (counting 1×1 submatrices) → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the matrix values are 0-9 and you need submatrices where every cell has the same value?",
+      "a": "Run the identical algorithm once per distinct value, treating cells equal to that value as 1 and all others as 0. Time becomes O(10·m·n), space stays O(n)."
+    },
+    {
+      "q": "What if the matrix arrives as a stream of rows and you can only store O(n) data?",
+      "a": "The current solution already satisfies this - it keeps only the height array, stack, and dp array of size n, and processes one row at a time. No modification is needed."
+    },
+    {
+      "q": "What if you need the area of the largest all-ones submatrix instead of the count?",
+      "a": "Replace the counting logic with the largest-rectangle-in-histogram computation: for each row's height array, use the monotonic stack to find the nearest smaller element on each side and compute max area. Time stays O(m·n), space stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSubmat(vector<vector<int>>& mat) {\n        int m = mat.size(), n = mat[0].size();\n        vector<int> h(n, 0);\n        int ans = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                h[j] = mat[i][j] ? h[j] + 1 : 0;\n            }\n            vector<int> stk;\n            vector<int> dp(n, 0);\n            for (int j = 0; j < n; j++) {\n                while (!stk.empty() && h[stk.back()] >= h[j]) {\n                    stk.pop_back();\n                }\n                int prev = stk.empty() ? -1 : stk.back();\n                dp[j] = (prev == -1 ? 0 : dp[prev]) + h[j] * (j - prev);\n                ans += dp[j];\n                stk.push_back(j);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

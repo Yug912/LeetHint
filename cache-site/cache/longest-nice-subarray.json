@@ -1,0 +1,40 @@
+{
+  "slug": "longest-nice-subarray",
+  "title": "Longest Nice Subarray",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, left, windowOr, ans, right): constant count → O(1)\n- no containers, no recursion, no heap allocation\n- not counted: input vector nums",
+  "approach": "The condition \"every pair has AND = 0\" is equivalent to \"no bit position is set in more than one element.\" We maintain a sliding window with a running bitwise OR: a new element can join iff its AND with the window OR is 0. When a conflict arises, we shrink from the left by XOR-ing out elements - safe because in a valid window each bit belongs to exactly one element, so XOR cleanly removes that element's contribution. This yields O(n) time and O(1) space.",
+  "hints": [
+    "If every pair in the subarray has bitwise AND equal to 0, what does that tell you about how many elements can share any single bit position? Since nums[i] ≤ 10^9 uses at most 30 bits, what bound does that place on the answer?",
+    "Use a sliding window with a running bitwise OR. For [1,3,8,48,10], when adding 10 with window OR = 59, since 59 & 10 ≠ 0, shrink from the left (XOR out elements) until the conflict clears.",
+    "```\nleft = 0, windowOr = 0, ans = 0\nfor right in 0..n-1:\n    while windowOr & nums[right] != 0:\n        windowOr ^= nums[left]\n        left += 1\n    windowOr |= nums[right]\n    ans = max(ans, right - left + 1)\nreturn ans\n```",
+    "**Single element** - smallest valid input.\n`Input: nums = [5]` → `Expected: 1`\n⚠️ Bug: initializing `ans` to 0 and only updating it inside the while loop → returns 0\n\n**All elements identical** - every pair shares all bits.\n`Input: nums = [7,7,7,7]` → `Expected: 1`\n⚠️ Bug: writing `while (windowOr & nums[right] == 0)` without parentheses - `==` binds tighter than `&`, so it evaluates `windowOr & (nums[right] == 0)` = `windowOr & 0` = 0, never shrinks → returns 4\n\n**Multiple shrinks needed** - one conflict removal is not enough.\n`Input: nums = [1,2,4,3,8]` → `Expected: 3`\n⚠️ Bug: using `if` instead of `while` for shrinking - when adding 3 conflicts with both 1 and 2, only 1 is removed, leaving 2 & 3 ≠ 0 undetected, so the window [2,4,3,8] is accepted → returns 4\n\n**All powers of 2** - no bits shared, entire array is nice.\n`Input: nums = [1,2,4,8,16]` → `Expected: 5`\n⚠️ Bug: using `ans = max(ans, right - left)` instead of `right - left + 1` → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual longest nice subarray, not just its length.",
+      "a": "Track `bestLeft` alongside `ans`; whenever `right - left + 1 > ans`, update both. Return `{nums.begin() + bestLeft, nums.begin() + bestLeft + ans}`. TC: O(n), SC: O(ans) for the output vector."
+    },
+    {
+      "q": "What if nums[i] can be up to 10^18 (60 bits)?",
+      "a": "Change `windowOr` to `long long`. The maximum nice subarray length becomes 60 instead of 30, but the algorithm is otherwise identical. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the array arrives as a stream too large to store?",
+      "a": "Maintain a circular buffer of the last 60 elements (since the window can never exceed 60). Process each element as it arrives, shrinking from the front of the buffer on conflict. TC: O(n), SC: O(60) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestNiceSubarray(vector<int>& nums) {\n        int n = nums.size();\n        int left = 0;\n        int windowOr = 0;\n        int ans = 0;\n        for (int right = 0; right < n; right++) {\n            while ((windowOr & nums[right]) != 0) {\n                windowOr ^= nums[left];\n                left++;\n            }\n            windowOr |= nums[right];\n            ans = max(ans, right - left + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
