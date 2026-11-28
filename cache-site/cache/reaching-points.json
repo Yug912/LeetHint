@@ -1,0 +1,40 @@
+{
+  "slug": "reaching-points",
+  "title": "Reaching Points",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Euclidean Algorithm (Reverse Simulation)",
+  "tc": "O(log(max(tx, ty)))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- local int variables tx, ty (modified copies): O(1)\n- no containers, no recursion, no heap",
+  "approach": "Work backwards from (tx, ty): the last operation must have added the smaller coordinate to the larger, so we can reverse it by subtracting. While both tx > sx and ty > sy, replace the larger of tx, ty with its remainder modulo the smaller (Euclidean-style). After the loop, one coordinate has reached its target; check if the other can be reduced to its target by repeated subtraction (i.e., the difference is a non-negative multiple of the matched coordinate).",
+  "hints": [
+    "From (tx, ty), what must the previous point have been - and which of tx, ty can you uniquely identify as the one that was just modified?",
+    "Use the Euclidean algorithm in reverse: repeatedly replace the larger coordinate by larger % smaller. Example: (3, 5) → (3, 2) → (1, 2), then check if (1, 2) reduces to (1, 1).",
+    "while tx > sx and ty > sy:\n    if tx > ty: tx = tx % ty\n    else:       ty = ty % tx\nif tx == sx and ty == sy: return true\nif tx == sx: return ty >= sy and (ty - sy) % tx == 0\nif ty == sy: return tx >= sx and (tx - sx) % ty == 0\nreturn false",
+    "**Already at target** - starting point equals target point\n`Input: sx = 1, sy = 1, tx = 1, ty = 1` → `Expected: true`\n⚠️ Bug: checking `tx > sx || ty > sy` before the modulo loop and returning false → returns false\n\n**Equal coordinates** - tx == ty with both greater than sx, sy\n`Input: sx = 1, sy = 1, tx = 2, ty = 2` → `Expected: false`\n⚠️ Bug: using `if (tx >= ty)` instead of `if (tx > ty)` causes ty = ty % tx = 0, then checking `(ty - sy) % tx` divides by tx=2 giving (0-1)%2 - but if you instead do `tx %= ty` when equal, tx becomes 0 and later `(tx - sx) % ty` divides by ty=2, producing wrong remainder → returns true\n\n**One coordinate already matched** - tx == sx but ty much larger\n`Input: sx = 1, sy = 1, tx = 1, ty = 1000000000` → `Expected: true`\n⚠️ Bug: only checking `ty == sy` after the loop and forgetting the `(ty - sy) % tx == 0` branch → returns false\n\n**Difference not a multiple** - remainder check fails\n`Input: sx = 2, sy = 2, tx = 5, ty = 7` → `Expected: false`\n⚠️ Bug: returning true whenever `ty == sy` without checking `(tx - sx) % ty == 0` → returns true\n\n**Modulo produces zero** - tx is a multiple of ty\n`Input: sx = 1, sy = 3, tx = 6, ty = 3` → `Expected: true`\n⚠️ Bug: after `tx %= ty` gives tx=0, then accessing `(ty - sy) % tx` divides by zero → undefined behavior / crash"
+  ],
+  "followUps": [
+    {
+      "q": "What if a third operation (x, y) → (x, 2y) were also allowed?",
+      "a": "Working backwards, the larger coordinate could have been halved (if even) or reduced by the smaller. You'd branch at each step, but since halving shrinks fast, the search tree is small. Time becomes O(log²(max(tx, ty))) in the worst case, space O(log(max(tx, ty))) for the recursion stack."
+    },
+    {
+      "q": "What if you needed to return the minimum number of operations instead of just true/false?",
+      "a": "During the backward Euclidean reduction, each modulo step `tx %= ty` corresponds to `tx / ty` forward operations. Sum these quotients at every step, plus `(ty - sy) / tx` (or the symmetric case) at the end. Time stays O(log(max(tx, ty))), space O(1)."
+    },
+    {
+      "q": "What if sx, sy, tx, ty could be up to 10^18?",
+      "a": "The same algorithm works unchanged since modulo handles arbitrarily large values efficiently. Use `long long` to avoid overflow. Time remains O(log(max(tx, ty))), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool reachingPoints(int sx, int sy, int tx, int ty) {\n        while (tx > sx && ty > sy) {\n            if (tx > ty) {\n                tx %= ty;\n            } else {\n                ty %= tx;\n            }\n        }\n        if (tx == sx && ty == sy) return true;\n        if (tx == sx) {\n            return ty >= sy && (ty - sy) % tx == 0;\n        }\n        if (ty == sy) {\n            return tx >= sx && (tx - sx) % ty == 0;\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

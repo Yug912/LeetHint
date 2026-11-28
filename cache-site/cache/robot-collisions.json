@@ -1,0 +1,40 @@
+{
+  "slug": "robot-collisions",
+  "title": "Robot Collisions",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> idx: n entries → O(n)\n- vector<int> st (stack): up to n entries → O(n)\n- vector<bool> alive: n entries → O(n)\n- sort(): introsort O(log n) stack\n- not counted: input arrays, returned vector",
+  "approach": "Sort robots by position so collisions are processed left-to-right. Use a stack of surviving robots: push right-moving robots; for a left-moving robot, repeatedly collide it with right-moving robots on the stack top (lower health dies, winner loses 1 HP, ties kill both). A left-moving robot that clears the stack is pushed on. After processing, collect survivors in original input order using a boolean alive-array.",
+  "hints": [
+    "If two robots ever collide, what must be true about their relative positions and their movement directions? The constraints allow up to 10^5 robots, so checking every pair is too slow.",
+    "Use a stack. Sort robots by position, then iterate: push right-movers; for a left-mover, collide it against right-movers on the stack top. In Example 2, robot at position 5 (L, health 10) meets robot at position 3 (R, health 10) on the stack - equal health removes both.",
+    "```\nsort robots by position\nstack = []\nfor each robot in sorted order:\n    if robot moves R:\n        push robot onto stack\n    else:  # moves L\n        alive = true\n        while stack not empty and top moves R:\n            if top.health > robot.health:\n                top.health -= 1; alive = false; break\n            elif top.health < robot.health:\n                pop top; robot.health -= 1\n            else:\n                pop top; alive = false; break\n        if alive: push robot onto stack\ncollect survivors in original index order\n```",
+    "**Single robot** - only one robot, no collision possible.\n`Input: positions = [1], healths = [5], directions = \"R\"` → `Expected: [5]`\n⚠️ Bug: returning empty when the stack has exactly one element → returns `[]`\n\n**Tie in health** - both robots removed when healths are equal.\n`Input: positions = [1,2], healths = [5,5], directions = \"RL\"` → `Expected: []`\n⚠️ Bug: using `healths[top] >= healths[robot]` instead of `>` → the R robot survives with health 4 → returns `[4]`\n\n**Chain collision** - one left-moving robot defeats multiple right-moving robots in sequence.\n`Input: positions = [1,2,3], healths = [1,1,5], directions = \"RRL\"` → `Expected: [3]`\n⚠️ Bug: breaking after the first collision instead of continuing the while loop → robot at position 1 survives with health 1, robot at position 3 survives with health 4 → returns `[1,4]`\n\n**Unsorted positions** - positions given out of order.\n`Input: positions = [3,1,2], healths = [10,5,3], directions = \"LRL\"` → `Expected: [9]`\n⚠️ Bug: processing robots in input order instead of sorted by position → robot 0 never collides with robot 1 → returns `[10,4]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if each robot has a different speed? How would collision order change?",
+      "a": "Collision order would depend on both position and speed, so you'd compute pairwise collision times and process them in chronological order using a min-heap. Each collision may create a new future collision, so you'd insert new events dynamically. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if robots arrive in a stream (one at a time) and you must report survivors after each insertion?",
+      "a": "Maintain a balanced BST keyed by position. On each insertion, check for R-L collision pairs with neighbors and resolve them using the same stack logic restricted to local segments. Cascading collisions propagate through the BST. TC: O(n log n) amortized, SC: O(n)."
+    },
+    {
+      "q": "What if surviving robots reverse direction after a collision instead of continuing straight?",
+      "a": "This becomes equivalent to robots passing through each other (exchanging identities) when healths are equal, but with unequal healths the direction reversal creates new collision opportunities. You'd need to track direction changes and re-evaluate collisions, potentially using an event-based simulation with a priority queue. TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> survivedRobotsHealths(vector<int>& positions, vector<int>& healths, string directions) {\n        int n = positions.size();\n        vector<int> idx(n);\n        for (int i = 0; i < n; i++) idx[i] = i;\n        sort(idx.begin(), idx.end(), [&](int a, int b) {\n            return positions[a] < positions[b];\n        });\n        \n        vector<int> st;\n        for (int i = 0; i < n; i++) {\n            int robot = idx[i];\n            if (directions[robot] == 'R') {\n                st.push_back(robot);\n            } else {\n                bool survived = true;\n                while (!st.empty() && directions[st.back()] == 'R') {\n                    int top = st.back();\n                    if (healths[top] > healths[robot]) {\n                        healths[top]--;\n                        survived = false;\n                        break;\n                    } else if (healths[top] < healths[robot]) {\n                        st.pop_back();\n                        healths[robot]--;\n                    } else {\n                        st.pop_back();\n                        survived = false;\n                        break;\n                    }\n                }\n                if (survived) st.push_back(robot);\n            }\n        }\n        \n        vector<bool> alive(n, false);\n        for (int r : st) alive[r] = true;\n        \n        vector<int> result;\n        for (int i = 0; i < n; i++) {\n            if (alive[i]) result.push_back(healths[i]);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

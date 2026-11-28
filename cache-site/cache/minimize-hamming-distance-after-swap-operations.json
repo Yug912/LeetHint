@@ -1,0 +1,40 @@
+{
+  "slug": "minimize-hamming-distance-after-swap-operations",
+  "title": "Minimize Hamming Distance After Swap Operations",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find",
+  "tc": "O(n + m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> parent: n entries → O(n)\n- unordered_map<int, vector<int>> components: n total indices across all vectors → O(n)\n- unordered_map<int,int> sourceFreq, targetFreq: up to n entries at any time → O(n)\n- recursion depth: none (iterative find with path halving)\n- not counted: input arrays, returned int",
+  "approach": "The allowed swaps define a graph on indices. Using Union-Find, indices in the same connected component can freely exchange their source values through any sequence of swaps. For each component, the minimum Hamming distance contribution equals the component size minus the count of values matchable between source and target (computed via frequency maps). This is correct because within a component, any permutation is achievable, so we maximize matches by pairing values greedily.",
+  "hints": [
+    "What determines whether a source value at index i can end up at index j after some sequence of swaps? Swaps can be applied multiple times in any order.",
+    "Use Union-Find to group indices into connected components. In Example 1, swaps [[0,1],[2,3]] form components {0,1} and {2,3}; within each, count matching source/target values by frequency.",
+    "```\nbuild union-find from allowedSwaps\ngroup indices by root\nfor each component:\n    build frequency maps for source and target values\n    common = sum of min(sourceFreq[v], targetFreq[v]) over all v\n    hamming += componentSize - common\nreturn hamming\n```",
+    "**Single element mismatch** - n=1 with no swaps and different values at the only position\n`Input: source = [1], target = [2], allowedSwaps = []` → `Expected: 1`\n⚠️ Bug: returning 0 when n=1 without comparing values → returns 0\n\n**Duplicate values in a component** - the same value appears multiple times, so counting distinct values is insufficient\n`Input: source = [1,1,2], target = [1,2,1], allowedSwaps = [[0,1],[1,2]]` → `Expected: 0`\n⚠️ Bug: using a set instead of a frequency map → common = 2, returns 3 - 2 = 1\n\n**No swaps allowed** - every index is isolated, no rearrangement is possible\n`Input: source = [1,2,3], target = [3,2,1], allowedSwaps = []` → `Expected: 2`\n⚠️ Bug: initializing parent[i] = 0 for all i instead of parent[i] = i → all indices merge into one component, common = 3, returns 0\n\n**Swaps enable full rearrangement** - all indices in one component, source is a permutation of target\n`Input: source = [1,2,3], target = [3,2,1], allowedSwaps = [[0,1],[1,2]]` → `Expected: 0`\n⚠️ Bug: comparing source[i] == target[i] per index without using swap connectivity → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if each swap has a cost and you want to minimize total cost while achieving minimum Hamming distance?",
+      "a": "After Union-Find identifies components, each component becomes a minimum-cost assignment problem: match source values to target positions with minimum total swap cost. Solve with the Hungarian algorithm in O(k^3) per component of size k, or min-cost max-flow for sparse cost structures."
+    },
+    {
+      "q": "What if source[i] and target[i] can be up to 10^9?",
+      "a": "No algorithmic change needed. The unordered_map handles arbitrary integer keys efficiently. If hash collisions become a concern, coordinate compression maps values to [0, n) first, then arrays replace hash maps."
+    },
+    {
+      "q": "What if you must also output the actual swap sequence achieving the minimum distance?",
+      "a": "Within each component, compute the optimal assignment of source values to target positions (a permutation). Decompose this permutation into transpositions using its cycle decomposition: each cycle of length L requires L-1 swaps. Total swaps across all components is at most n minus the number of matched positions."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int find(vector<int>& parent, int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n    \npublic:\n    int minimumHammingDistance(vector<int>& source, vector<int>& target, vector<vector<int>>& allowedSwaps) {\n        int n = source.size();\n        vector<int> parent(n);\n        for (int i = 0; i < n; i++) parent[i] = i;\n        \n        for (auto& sw : allowedSwaps) {\n            int pa = find(parent, sw[0]), pb = find(parent, sw[1]);\n            if (pa != pb) parent[pa] = pb;\n        }\n        \n        unordered_map<int, vector<int>> components;\n        for (int i = 0; i < n; i++) {\n            components[find(parent, i)].push_back(i);\n        }\n        \n        int hamming = 0;\n        for (auto& [root, indices] : components) {\n            unordered_map<int, int> sourceFreq, targetFreq;\n            for (int idx : indices) {\n                sourceFreq[source[idx]]++;\n                targetFreq[target[idx]]++;\n            }\n            int common = 0;\n            for (auto& [val, cnt] : sourceFreq) {\n                auto it = targetFreq.find(val);\n                if (it != targetFreq.end()) {\n                    common += min(cnt, it->second);\n                }\n            }\n            hamming += (int)indices.size() - common;\n        }\n        \n        return hamming;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

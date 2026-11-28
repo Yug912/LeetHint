@@ -1,0 +1,40 @@
+{
+  "slug": "left-and-right-sum-differences",
+  "title": "Left and Right Sum Differences",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total, leftSum, rightSum, diff: scalars → O(1)\n- vector<int> answer(n): returned output, not counted → O(1) auxiliary\n- recursion depth: none",
+  "approach": "Compute the total sum of the array once. Then walk left to right maintaining a running `leftSum` (initially 0). At each index `i`, `rightSum[i] = total − leftSum − nums[i]`, so `answer[i] = |leftSum − rightSum|`. Update `leftSum += nums[i]` after processing each index. This avoids a separate right-to-left pass and runs in linear time with constant auxiliary space.",
+  "hints": [
+    "For each index i, how does the sum of everything to its right relate to the sum of everything to its left, once you know the total of the entire array?",
+    "Use a running prefix sum (`leftSum`) plus the precomputed total. For `nums = [10,4,8,3]`, total = 25; at i = 1, `leftSum = 10`, so `rightSum = 25 − 10 − 4 = 11` and `|10 − 11| = 1`.",
+    "```\ntotal = sum of all nums\nleftSum = 0\nfor i in 0 .. n-1:\n    rightSum = total - leftSum - nums[i]\n    answer[i] = abs(leftSum - rightSum)\n    leftSum += nums[i]\nreturn answer\n```",
+    "**Single element** - n = 1, both left and right sums are 0.\n`Input: nums = [1]` → `Expected: [0]`\n⚠️ Bug: computing `rightSum = total - leftSum` without subtracting `nums[i]` → returns `[1]`\n\n**First index** - leftSum must start at 0, not at nums[0].\n`Input: nums = [10,4,8,3]` → `Expected: [15,1,11,22]`\n⚠️ Bug: initializing `leftSum = nums[0]` before the loop → returns `[5,19,31,42]`\n\n**Last index** - rightSum must be 0; leftSum must not be updated before computing the answer.\n`Input: nums = [10,4,8,3]` → `Expected: [15,1,11,22]`\n⚠️ Bug: updating `leftSum += nums[i]` before computing `rightSum` → last element becomes `28` instead of `22`\n\n**All equal values** - the middle element has equal left and right sums, so the answer there is 0.\n`Input: nums = [5,5,5]` → `Expected: [10,0,10]`\n⚠️ Bug: returning `leftSum + rightSum` instead of `|leftSum - rightSum|` → returns `[10,10,10]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array arrives as a streaming input and you cannot store all elements at once?",
+      "a": "You still need the total before emitting any answer, so make one pass to accumulate the total while buffering elements, then a second pass to compute and emit answers. Time stays O(n); space is O(n) for the buffer, or O(1) if the stream can be re-read."
+    },
+    {
+      "q": "What if you must answer many queries of the form |leftSum[i] − rightSum[i]| for arbitrary indices after a one-time preprocessing?",
+      "a": "Build a prefix sum array in O(n); then each query is O(1): leftSum[i] = prefix[i], rightSum[i] = prefix[n] − prefix[i+1]. Total cost is O(n + q) for q queries."
+    },
+    {
+      "q": "What if nums[i] can be negative?",
+      "a": "Nothing changes - the running sum and absolute value handle negatives identically. With |nums[i]| ≤ 10^5 and n ≤ 1000, the worst-case total magnitude is 10^8, which still fits in a 32-bit int, though using long long is safer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> leftRightDifference(vector<int>& nums) {\n        int n = nums.size();\n        long long total = 0;\n        for (int x : nums) total += x;\n        vector<int> answer(n);\n        long long leftSum = 0;\n        for (int i = 0; i < n; i++) {\n            long long rightSum = total - leftSum - nums[i];\n            long long diff = leftSum - rightSum;\n            if (diff < 0) diff = -diff;\n            answer[i] = (int)diff;\n            leftSum += nums[i];\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

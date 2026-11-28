@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-to-convert-string-i",
+  "title": "Minimum Cost to Convert String I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "All-Pairs Shortest Path (Floyd-Warshall)",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- dist[26][26]: 676 longs, constant size → O(1)\n- total: single long long → O(1)\n- not counted: input strings and arrays",
+  "approach": "Model the 26 lowercase letters as nodes in a directed weighted graph. Each conversion (original[i] → changed[i]) is an edge with weight cost[i]; if duplicate edges exist, keep the cheapest. Run Floyd-Warshall to compute all-pairs shortest paths between every pair of letters. For each position in the string, add the shortest-path cost from source[i] to target[i]; if any pair is unreachable, return -1.",
+  "hints": [
+    "Each position's conversion depends only on the character pair there, not the position. With only 26 lowercase letters, how many distinct character-to-character conversions could the whole string ever need?",
+    "Run Floyd-Warshall on a 26-node graph (one node per letter). In Example 1, the direct edge c→b costs 5, but the path c→e→b costs 1+2=3, so the shortest path c→b is 3.",
+    "```\ndist = 26x26 matrix, 0 on diagonal, INF elsewhere\nfor each edge (u,v,c): dist[u][v] = min(dist[u][v], c)\nfor k in 0..25, for i in 0..25, for j in 0..25:\n    dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])\ntotal = 0\nfor i in 0..n-1:\n    if dist[source[i]][target[i]] == INF: return -1\n    total += dist[source[i]][target[i]]\nreturn total\n```",
+    "**Overflow** - up to 10^5 positions each costing up to 10^6\n`Input: source = \"a\"×100000, target = \"b\"×100000, original = [\"a\"], changed = [\"b\"], cost = [1000000]` → `Expected: 100000000000`\n⚠️ Bug: accumulating total in `int` → returns 1215751792\n\n**Duplicate edges** - same character pair appears with different costs\n`Input: source = \"a\", target = \"b\", original = [\"a\",\"a\"], changed = [\"b\",\"b\"], cost = [10,3]` → `Expected: 3`\n⚠️ Bug: `dist[u][v] = c` instead of `min(dist[u][v], c)` → returns 10\n\n**Same character** - source[i] equals target[i], no change needed\n`Input: source = \"a\", target = \"a\", original = [\"a\"], changed = [\"b\"], cost = [5]` → `Expected: 0`\n⚠️ Bug: not initializing `dist[i][i] = 0` → returns -1\n\n**Multi-hop cheaper than direct** - shortest path needed, not just direct edge\n`Input: source = \"c\", target = \"b\", original = [\"c\",\"c\",\"e\"], changed = [\"b\",\"e\",\"b\"], cost = [5,1,2]` → `Expected: 3`\n⚠️ Bug: using only direct edge costs without Floyd-Warshall → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet were all Unicode characters instead of just 26 lowercase letters?",
+      "a": "Floyd-Warshall's O(V³) becomes infeasible. Instead, run Dijkstra from each distinct character that appears in source, caching results per character. With at most 2000 edges, each Dijkstra is O(E log V), and caching avoids redundant runs."
+    },
+    {
+      "q": "What if you could also insert or delete characters (weighted edit distance)?",
+      "a": "Use DP where dp[i][j] = min cost to convert source[0..i] to target[0..j]. Transitions are substitute (using precomputed char-to-char costs), insert, or delete. Complexity becomes O(n·m) where n and m are the two string lengths."
+    },
+    {
+      "q": "What if source and target are streamed and too large to store in memory?",
+      "a": "The Floyd-Warshall precomputation (O(26²) space) stays in memory. Process characters one at a time, accumulating the running total in O(1) extra space. Return -1 immediately if any character pair is unreachable."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimumCost(string source, string target, vector<char>& original, vector<char>& changed, vector<int>& cost) {\n        const long long INF = LLONG_MAX / 4;\n        long long dist[26][26];\n        for (int i = 0; i < 26; i++) {\n            for (int j = 0; j < 26; j++) {\n                dist[i][j] = (i == j) ? 0 : INF;\n            }\n        }\n        for (int i = 0; i < (int)original.size(); i++) {\n            int u = original[i] - 'a';\n            int v = changed[i] - 'a';\n            long long c = cost[i];\n            if (c < dist[u][v]) dist[u][v] = c;\n        }\n        for (int k = 0; k < 26; k++) {\n            for (int i = 0; i < 26; i++) {\n                for (int j = 0; j < 26; j++) {\n                    if (dist[i][k] < INF && dist[k][j] < INF) {\n                        if (dist[i][k] + dist[k][j] < dist[i][j]) {\n                            dist[i][j] = dist[i][k] + dist[k][j];\n                        }\n                    }\n                }\n            }\n        }\n        long long total = 0;\n        for (int i = 0; i < (int)source.size(); i++) {\n            int u = source[i] - 'a';\n            int v = target[i] - 'a';\n            if (dist[u][v] >= INF) return -1;\n            total += dist[u][v];\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

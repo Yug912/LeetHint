@@ -1,0 +1,40 @@
+{
+  "slug": "swap-adjacent-in-lr-string",
+  "title": "Swap Adjacent in LR String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int i, j: two scalars → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input strings start, result",
+  "approach": "The moves XL→LX and RX→XR mean L can only shift left through X's and R can only shift right through X's; L's and R's never cross each other. Two conditions are necessary and sufficient: (1) after removing all X's, both strings must be identical, and (2) each L in result is at an index ≤ its counterpart in start, and each R in result is at an index ≥ its counterpart in start. We verify both with a single two-pointer pass that skips X's and compares matching L/R positions.",
+  "hints": [
+    "If you delete every 'X' from both strings, what relationship must the two remaining sequences of L's and R's satisfy?",
+    "Use two pointers, one per string, each skipping X's to find the next L or R. In Example 1, the first R in start is at index 0 and the first R in result is at index 1 - R moved right, which is allowed.",
+    "```\ni = 0, j = 0\nwhile i < n or j < n:\n    advance i past X's in start\n    advance j past X's in result\n    if both exhausted: return true\n    if only one exhausted: return false\n    if start[i] != result[j]: return false\n    if L and i < j: return false   (L cannot move right)\n    if R and i > j: return false   (R cannot move left)\n    i++, j++\nreturn true\n```",
+    "**Character mismatch** - start and result have different non-X characters at the same position in the L/R sequence.\n`Input: start = \"R\", result = \"L\"` → `Expected: false`\n⚠️ Bug: skipping the `start[i] != result[j]` check → returns true\n\n**L cannot move right** - L in start is left of its counterpart in result, but L only moves left.\n`Input: start = \"LX\", result = \"XL\"` → `Expected: false`\n⚠️ Bug: checking `i > j` for L instead of `i < j` → returns true\n\n**R cannot move left** - R in start is right of its counterpart in result, but R only moves right.\n`Input: start = \"XR\", result = \"RX\"` → `Expected: false`\n⚠️ Bug: checking `i < j` for R instead of `i > j` → returns true\n\n**Trailing X's** - both strings end with X's after the last L/R, so one pointer hits the end first.\n`Input: start = \"RXX\", result = \"XXR\"` → `Expected: true`\n⚠️ Bug: returning false when one pointer reaches n before the other without skipping remaining X's → returns false\n\n**L and R cannot cross** - same character counts but different relative order.\n`Input: start = \"RL\", result = \"LR\"` → `Expected: false`\n⚠️ Bug: comparing only character counts instead of order → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must output an actual sequence of moves, not just whether one exists?",
+      "a": "Verify feasibility the same way, then construct moves greedily: process R's left to right, shifting each right to its target via RX→XR, then process L's right to left, shifting each left via XL→LX. The order avoids interference since L's and R's never cross. Time O(n²) in the worst case for the output size, space O(1) beyond the move list."
+    },
+    {
+      "q": "What if the strings are given run-length encoded (e.g., \"R2X3L1\") and can be up to 10^9 characters long?",
+      "a": "Process runs instead of individual characters. Maintain cumulative indices for both strings, and for each pair of matching non-X runs, check the position constraint using the run's start index. Time O(number of runs), space O(1)."
+    },
+    {
+      "q": "What if a third move is added: replacing \"RL\" with \"LR\" (L and R can now cross)?",
+      "a": "L's and R's can freely pass each other, so only the count of each character needs to match between start and result. The position constraints disappear entirely. Time O(n), space O(1), but the check simplifies to comparing character frequencies."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canTransform(string start, string result) {\n        int n = start.size();\n        int i = 0, j = 0;\n        while (i < n || j < n) {\n            while (i < n && start[i] == 'X') i++;\n            while (j < n && result[j] == 'X') j++;\n            if (i == n && j == n) return true;\n            if (i == n || j == n) return false;\n            if (start[i] != result[j]) return false;\n            if (start[i] == 'L' && i < j) return false;\n            if (start[i] == 'R' && i > j) return false;\n            i++;\n            j++;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

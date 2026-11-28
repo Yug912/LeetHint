@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-complete-components",
+  "title": "Count the Number of Complete Components",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find",
+  "tc": "O(n + E)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> parent: n entries → O(n)\n- vector<int> rank_: n entries → O(n)\n- vector<int> nodeCount: n entries → O(n)\n- vector<int> edgeCount: n entries → O(n)\n- recursion depth: none (iterative find with path compression)\n- not counted: input edges, returned int",
+  "approach": "Use Union-Find (DSU) to group vertices into connected components without building an adjacency list. After all unions, count the number of vertices and edges belonging to each component's root. A component with m vertices is complete if and only if it has exactly m*(m-1)/2 edges - the number of edges in a complete graph on m vertices. This avoids checking every pair of vertices directly.",
+  "hints": [
+    "For a connected component with m vertices, what single quantity besides the vertex count fully determines whether it is complete?",
+    "Use Union-Find (DSU) to group vertices into components, then count nodes and edges per component root. In Example 1, component {0,1,2} has 3 nodes and 3 edges; component {3,4} has 2 nodes and 1 edge.",
+    "```\ninitialize DSU with n elements\nfor each edge (a, b): union(a, b)\nfor each vertex i: nodeCount[find(i)]++\nfor each edge (a, b): edgeCount[find(a)]++\nans = 0\nfor each root r where find(r) == r:\n    if edgeCount[r] == nodeCount[r] * (nodeCount[r]-1) / 2: ans++\nreturn ans\n```",
+    "**Single isolated vertex** - n=1, no edges; a single vertex is trivially complete\n`Input: n=1, edges=[]` → `Expected: 1`\n⚠️ Bug: requiring edgeCount > 0 before checking completeness → returns 0\n\n**All isolated vertices** - n=3, no edges; each vertex forms its own complete component\n`Input: n=3, edges=[]` → `Expected: 3`\n⚠️ Bug: only discovering components by iterating over edges, missing isolated vertices → returns 0\n\n**Path graph (connected but not complete)** - n=3, edges form a path; missing edge 0-2\n`Input: n=3, edges=[[0,1],[1,2]]` → `Expected: 0`\n⚠️ Bug: treating \"connected\" as \"complete\" → returns 1\n\n**Double-counting edges** - n=3, complete triangle; incrementing edge count for both endpoints\n`Input: n=3, edges=[[0,1],[0,2],[1,2]]` → `Expected: 1`\n⚠️ Bug: incrementing edgeCount for both find(a) and find(b) → edgeCount=6, 6≠3, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The DSU approach already handles this in O(n + E·α(n)) time and O(n) space. No algorithmic change is needed. The value m*(m-1)/2 fits in a 64-bit integer since m ≤ 10^5 gives at most ~5×10^9."
+    },
+    {
+      "q": "What if edges are added one at a time and after each addition you must report the current count of complete components?",
+      "a": "Maintain DSU with per-component node and edge counts. On each edge addition, union the components and merge edge counts. Track a running count of complete components: decrement when a previously complete component gains an edge or merges, then recheck. Each update is O(α(n)) amortized."
+    },
+    {
+      "q": "What if the graph is directed and a component is complete only when every pair has edges in both directions?",
+      "a": "Use DSU on the underlying undirected graph to find components. Count directed edges per component. A component with m vertices is complete if it has exactly m*(m-1) directed edges (both directions for each pair). The DSU structure and counting logic remain the same; only the edge count threshold changes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<int> parent, rank_;\n\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n\n    void unite(int x, int y) {\n        int rx = find(x), ry = find(y);\n        if (rx == ry) return;\n        if (rank_[rx] < rank_[ry]) {\n            parent[rx] = ry;\n        } else if (rank_[rx] > rank_[ry]) {\n            parent[ry] = rx;\n        } else {\n            parent[ry] = rx;\n            rank_[rx]++;\n        }\n    }\n\npublic:\n    int countCompleteComponents(int n, vector<vector<int>>& edges) {\n        parent.resize(n);\n        rank_.assign(n, 0);\n        for (int i = 0; i < n; i++) parent[i] = i;\n\n        for (auto& e : edges) {\n            unite(e[0], e[1]);\n        }\n\n        vector<int> nodeCount(n, 0), edgeCount(n, 0);\n        for (int i = 0; i < n; i++) {\n            nodeCount[find(i)]++;\n        }\n        for (auto& e : edges) {\n            edgeCount[find(e[0])]++;\n        }\n\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            if (find(i) == i) {\n                int m = nodeCount[i];\n                if (edgeCount[i] == m * (m - 1) / 2) {\n                    ans++;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "poor-pigs",
+  "title": "Poor Pigs",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Base-(T+1) Encoding",
+  "tc": "O(log(buckets))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long states: single variable → O(1)\n- int x, T: single variables → O(1)\n- no containers, no recursion",
+  "approach": "Each pig has `T+1` possible outcomes, where `T = minutesToTest / minutesToDie` is the number of complete test rounds: it can die in round 1, round 2, …, round T, or survive all rounds. With `x` pigs, we can distinguish `(T+1)^x` distinct outcomes. We need the smallest `x` such that `(T+1)^x >= buckets`. We find it by iteratively multiplying by `(T+1)` starting from 1 until we reach `buckets`, counting the multiplications.",
+  "hints": [
+    "With T test rounds available, how many distinct fates can a single pig have by the end of all rounds?\nThe statement guarantees `minutesToDie ≤ minutesToTest`, so `minutesToTest / minutesToDie` complete rounds fit.",
+    "Base-(T+1) encoding: each pig encodes one digit in base (T+1). With buckets=4, minutesToDie=15, minutesToTest=15, T=1 so base=2; two pigs yield 2²=4 states, exactly enough for 4 buckets.",
+    "```\nT = minutesToTest / minutesToDie\nstates = 1\npigs = 0\nwhile states < buckets:\n    states = states * (T + 1)\n    pigs = pigs + 1\nreturn pigs\n```",
+    "**Single bucket** - no pig is needed at all.\n`Input: buckets=1, minutesToDie=15, minutesToTest=15` → `Expected: 0`\n⚠️ Bug: initializing `pigs=1` instead of `pigs=0` → returns `1`\n\n**Non-divisible time** - minutesToTest is not a multiple of minutesToDie.\n`Input: buckets=3, minutesToDie=15, minutesToTest=25` → `Expected: 2`\n⚠️ Bug: using `ceil((double)minutesToTest / minutesToDie)` for T → T=2, (T+1)¹=3 ≥ 3, returns `1`\n\n**Exact power boundary** - (T+1)^x equals buckets exactly.\n`Input: buckets=9, minutesToDie=15, minutesToTest=30` → `Expected: 2`\n⚠️ Bug: using `states <= buckets` in the loop condition → states reaches 9, 9 ≤ 9 is true, increments to pigs=3, returns `3`\n\n**Many rounds, large bucket count** - T is large so each pig is very informative.\n`Input: buckets=1000, minutesToDie=1, minutesToTest=100` → `Expected: 2`\n⚠️ Bug: using `1 << pigs` (bit shift) instead of `(T+1)^pigs` → computes 2^pigs, needs 2^10=1024 ≥ 1000, returns `10`"
+  ],
+  "followUps": [
+    {
+      "q": "What if up to 2 buckets are poisonous instead of exactly 1?",
+      "a": "There are C(buckets, 2) possible poisonous pairs. Each pig still has T+1 states, so we need (T+1)^x ≥ C(buckets, 2). Replace `buckets` with `buckets*(buckets-1)/2` in the loop condition. TC: O(log(buckets²)), SC: O(1)."
+    },
+    {
+      "q": "What if buckets can be up to 10^18?",
+      "a": "The iterative loop still works since x grows logarithmically - for T=1, x ≈ 60. Use `long long` for `states` and `buckets`. TC: O(log(buckets)), SC: O(1)."
+    },
+    {
+      "q": "What if each pig dies with probability p even from a non-poisonous bucket (false positive)?",
+      "a": "Each pig's outcome becomes noisy, so we need error-correcting redundancy. Use a code with minimum Hamming distance d > 2p·x to distinguish outcomes reliably, increasing the required number of pigs. The exact count depends on the noise model and desired confidence level. TC: O(x), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int poorPigs(int buckets, int minutesToDie, int minutesToTest) {\n        int T = minutesToTest / minutesToDie;\n        long long states = 1;\n        int pigs = 0;\n        while (states < buckets) {\n            states *= (T + 1);\n            pigs++;\n        }\n        return pigs;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "height-of-binary-tree-after-subtree-removal-queries",
+  "title": "Height of Binary Tree After Subtree Removal Queries",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Tree DP (two-pass: bottom-up heights, top-down propagation)",
+  "tc": "O(n + m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> height: up to n entries → O(n)\n- unordered_map<int,int> answer: up to n entries → O(n)\n- recursion depth (computeHeight + dfs): worst case O(n) for a skewed tree, O(log n) for balanced\n- result vector: not counted (returned output)",
+  "approach": "Precompute the height of every subtree with a post-order DFS. Then run a second DFS carrying `currentMax` - the tallest root-to-leaf path that avoids the current node's subtree entirely. When descending into a child, the new `currentMax` is `max(currentMax, depth + 1 + siblingSubtreeHeight)`, because any path through the sibling subtree is now available. Store `currentMax` as the answer for each node, then answer every query in O(1).",
+  "hints": [
+    "When a subtree is removed, the new height is the longest root-to-leaf path that avoids the removed node. What information about each node's ancestors and their other children would let you answer this in O(1) per query?",
+    "Precompute subtree heights with one post-order pass, then do a second DFS carrying the best height achievable outside the current subtree. For node 4 in Example 1, its sibling subtree (node 3) has height 1, so removing node 4 gives height = 0 + 1 + 1 = 2.",
+    "```\ncomputeHeight(node):\n    if node is null: return -1\n    h = 1 + max(computeHeight(node.left), computeHeight(node.right))\n    store height[node] = h\n    return h\n\ndfs(node, depth, currentMax):\n    if node is null: return\n    answer[node] = currentMax\n    leftH  = height of node.left  or -1\n    rightH = height of node.right or -1\n    dfs(node.left,  depth+1, max(currentMax, depth + 1 + rightH))\n    dfs(node.right, depth+1, max(currentMax, depth + 1 + leftH))\n```",
+    "**Skewed tree** - each node has only a left child, so null siblings appear everywhere\n`Input: root = [1,2,null,3], queries = [3]` → `Expected: [1]`\n⚠️ Bug: using 0 instead of -1 for null sibling height → currentMax = max(0, 1+1+0) = 2, returns [2]\n\n**Sibling subtree taller than current path** - the longest path goes through a sibling at a higher ancestor\n`Input: root = [1,2,3,4,null,5,null], queries = [4]` → `Expected: [2]`\n⚠️ Bug: not carrying currentMax down (only using depth+1+siblingH) → computes 1+1+(-1) = 1, returns [1]\n\n**Two-node tree** - minimum valid input with n = 2\n`Input: root = [1,2], queries = [2]` → `Expected: [0]`\n⚠️ Bug: initializing currentMax to -1 instead of 0 → answer[2] = -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to support node insertions and deletions between queries?",
+      "a": "Maintain the tree with a balanced structure and recompute heights along the path to the root after each update. Track the top-2 subtree heights at each ancestor so the outside-subtree best can be updated incrementally. Each update costs O(log² n) and queries stay O(1)."
+    },
+    {
+      "q": "What if a single query can remove multiple subtrees at once?",
+      "a": "For each tree level, precompute the top-2 subtree heights. When removing k nodes, at each level check whether the best subtree is removed; if so, use the second best. This gives O(k) per multi-query after O(n) preprocessing."
+    },
+    {
+      "q": "What if the tree is given as a parent array instead of TreeNode pointers?",
+      "a": "Build an adjacency list from the parent array, then run the same two-pass DFS. The logic is identical - bottom-up heights then top-down propagation. Time stays O(n + m), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    unordered_map<int,int> height, answer;\n\n    int computeHeight(TreeNode* node) {\n        if (!node) return -1;\n        int h = 1 + max(computeHeight(node->left), computeHeight(node->right));\n        height[node->val] = h;\n        return h;\n    }\n\n    void dfs(TreeNode* node, int depth, int currentMax) {\n        if (!node) return;\n        answer[node->val] = currentMax;\n        int leftH  = node->left  ? height[node->left->val]  : -1;\n        int rightH = node->right ? height[node->right->val] : -1;\n        if (node->left)  dfs(node->left,  depth + 1, max(currentMax, depth + 1 + rightH));\n        if (node->right) dfs(node->right, depth + 1, max(currentMax, depth + 1 + leftH));\n    }\n\npublic:\n    vector<int> treeQueries(TreeNode* root, vector<int>& queries) {\n        height.clear();\n        answer.clear();\n        computeHeight(root);\n        dfs(root, 0, 0);\n        vector<int> result;\n        result.reserve(queries.size());\n        for (int q : queries) result.push_back(answer[q]);\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

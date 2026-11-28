@@ -1,0 +1,40 @@
+{
+  "slug": "k-concatenation-maximum-sum",
+  "title": "K-Concatenation Maximum Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Kadane's Algorithm with Case Analysis",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few long long scalars (kadane, cur, total, pref, maxPref, suff, maxSuff, ans): O(1)\n- loop index i: O(1)\n- not counted: input arr, returned int",
+  "approach": "For k=1, run Kadane's algorithm to get the maximum subarray sum within a single copy. For k>1, the optimal subarray has one of three shapes: entirely inside one copy (Kadane's answer), the suffix of one copy plus the prefix of the next (maxSuffix + maxPrefix), or - only when the array's total sum is positive - suffix + (k−2) full middle copies + prefix. Take the max of these (and 0). All intermediate values stay under ~10^14, so long long suffices and we mod once at the end.",
+  "hints": [
+    "With k copies laid end to end, what distinct shapes can the optimal subarray take relative to copy boundaries? Note k can be up to 10^5, so you cannot build the concatenated array.",
+    "Use Kadane's algorithm for the k=1 case. For arr=[1,2], running cur=max(x,cur+x) gives cur=1 then cur=3, so one copy yields 3; the cross-copy case needs the best suffix of one copy plus the best prefix of the next.",
+    "```\nkadane = max subarray sum of arr via Kadane (clamp at 0)\nif k == 1: return kadane\ntotal = sum(arr)\nmaxPref = max over prefixes of their sum\nmaxSuff = max over suffixes of their sum\nif total > 0:\n    ans = max(kadane, maxSuff + maxPref + (k-2)*total)\nelse:\n    ans = max(kadane, maxSuff + maxPref)\nreturn ans mod 1e9+7\n```",
+    "**k=1 with cross-copy formula** - the suffix+prefix span requires two distinct copies, impossible when k=1.\n`Input: arr = [5,-10,5], k = 1` → `Expected: 5`\n⚠️ Bug: applying the k>1 formula maxSuff+maxPref even when k=1 → returns 10\n\n**All negatives** - no positive subarray exists, so the answer is the empty subarray.\n`Input: arr = [-1,-2], k = 7` → `Expected: 0`\n⚠️ Bug: initializing Kadane's cur and best to arr[0] instead of 0 → returns -1\n\n**Large total with large k** - total up to 10^5·10^4=10^9 and (k−2)·total up to ~10^14.\n`Input: arr = [10000] repeated 100000 times, k = 100000` → `Expected: 999999937`\n⚠️ Bug: computing (k-2)*total in int → signed overflow wraps to a wrong value\n\n**Total exactly zero, k>1** - middle copies contribute nothing, only suffix+prefix matters.\n`Input: arr = [1,-2,1], k = 5` → `Expected: 2`\n⚠️ Bug: using maxSuff+maxPref+(k-2)*total blindly when total=0 happens to work, but skipping the total>0 check and always adding (k-2)*total breaks when total<0 (e.g. arr=[-1,-2],k=7 gives -15 instead of 0)"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^18?",
+      "a": "The formula maxSuff+maxPref+(k−2)·total still holds, but compute (k−2)·total modulo 10^9+7 using 64-bit multiplication and modular reduction. Kadane, total, prefix, suffix computations are unchanged. TC stays O(n), SC O(1)."
+    },
+    {
+      "q": "What if you must also return the start and end indices of the optimal subarray in the concatenated array?",
+      "a": "Track index ranges during Kadane (best single-copy span), during the prefix scan (best prefix end), and during the suffix scan (best suffix start). For the cross-copy case, combine the suffix start in copy 1 with the prefix end in copy k, mapping to global indices. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if arr arrives as a one-pass stream and you cannot store it?",
+      "a": "Kadane, total, and maxPrefix are computable in one forward pass. maxSuffix requires a backward pass, so a true single-pass stream is impossible for the cross-copy case; you need either two passes or to buffer the array. With buffering, TC O(n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int kConcatenationMaxSum(vector<int>& arr, int k) {\n        const long long MOD = 1000000007;\n        int n = (int)arr.size();\n\n        // Kadane for k = 1 (single copy), clamped at 0.\n        long long kadane = 0, cur = 0;\n        for (int x : arr) {\n            cur = max((long long)x, cur + x);\n            if (cur > kadane) kadane = cur;\n        }\n\n        if (k == 1) {\n            return (int)(kadane % MOD);\n        }\n\n        // Total sum of one copy.\n        long long total = 0;\n        for (int x : arr) total += x;\n\n        // Maximum prefix sum of one copy.\n        long long maxPref = 0, pref = 0;\n        for (int x : arr) {\n            pref += x;\n            if (pref > maxPref) maxPref = pref;\n        }\n\n        // Maximum suffix sum of one copy.\n        long long maxSuff = 0, suff = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            suff += arr[i];\n            if (suff > maxSuff) maxSuff = suff;\n        }\n\n        long long ans = kadane;\n        if (total > 0) {\n            long long cross = maxSuff + maxPref + (long long)(k - 2) * total;\n            if (cross > ans) ans = cross;\n        } else {\n            long long cross = maxSuff + maxPref;\n            if (cross > ans) ans = cross;\n        }\n\n        return (int)(ans % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

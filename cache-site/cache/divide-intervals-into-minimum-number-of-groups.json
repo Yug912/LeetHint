@@ -1,0 +1,40 @@
+{
+  "slug": "divide-intervals-into-minimum-number-of-groups",
+  "title": "Divide Intervals Into Minimum Number of Groups",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Min-Heap Greedy Scheduling",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<int, vector<int>, greater<int>> pq: up to n entries → O(n)\n- sort(): introsort uses O(log n) stack\n- not counted: input intervals, returned int",
+  "approach": "The minimum number of groups equals the maximum number of intervals overlapping at any single point. Sort intervals by start time, then greedily assign each interval: if the earliest-ending active group ends strictly before the current interval starts (end < start, since touching endpoints like [1,5] and [5,8] still overlap), reuse that group; otherwise create a new group. A min-heap of end times tracks active groups, and its final size is the answer.",
+  "hints": [
+    "Consider a point on the number line where many intervals overlap - what constraint does that place on your grouping? The intervals are inclusive, so [1,5] and [5,8] share the point 5.",
+    "Sort intervals by start time, then maintain a min-heap of end times. For the sorted Example 1 starting [[1,5],[1,10],...], process [1,5] → heap {5}; [1,10] overlaps since 5≥1 → heap {5,10}.",
+    "```\nsort intervals by start\nmin_heap = empty\nfor each [l, r] in intervals:\n    if min_heap not empty and min_heap.top < l:\n        min_heap.pop\n    min_heap.push(r)\nreturn min_heap.size\n```",
+    "**Touching endpoints** - [1,5] and [5,8] share point 5, so they intersect.\n`Input: [[1,5],[5,8]]` → `Expected: 2`\n⚠️ Bug: using `pq.top() <= iv[0]` instead of `pq.top() < iv[0]` → returns 1\n\n**All identical** - three copies of the same single-point interval.\n`Input: [[3,3],[3,3],[3,3]]` → `Expected: 3`\n⚠️ Bug: storing end times in a set instead of a priority_queue → returns 1\n\n**Unsorted input** - intervals given out of start order.\n`Input: [[5,10],[6,8],[1,5],[2,3],[1,10]]` → `Expected: 3`\n⚠️ Bug: omitting the sort step → returns 5\n\n**Chain of touching intervals** - each consecutive pair shares exactly one point.\n`Input: [[1,2],[2,3],[3,4]]` → `Expected: 2`\n⚠️ Bug: tracking only the previous interval's end instead of using a heap → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if left_i and right_i can be up to 10^9 instead of 10^6?",
+      "a": "The heap approach already handles arbitrary coordinate values since it only stores and compares endpoints, never uses them as array indices. Time remains O(n log n), space O(n). A difference-array approach would need O(10^9) space and fail."
+    },
+    {
+      "q": "What if you also need to output which group each interval belongs to?",
+      "a": "Store (end_time, group_id) pairs in the heap instead of just end times. When reusing a group, pop and push with the same group_id; when creating a new group, assign a fresh id. Record the assignment in a separate array. Time and space complexity unchanged."
+    },
+    {
+      "q": "What if intervals arrive one at a time in a stream, already sorted by start time, and you must assign each immediately?",
+      "a": "The same greedy heap algorithm works - process each interval as it arrives, maintaining the min-heap of end times. Each operation is O(log n), total O(n log n) time and O(n) space. No buffering needed since the input is pre-sorted."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minGroups(vector<vector<int>>& intervals) {\n        sort(intervals.begin(), intervals.end());\n        priority_queue<int, vector<int>, greater<int>> pq;\n        for (auto& iv : intervals) {\n            if (!pq.empty() && pq.top() < iv[0]) {\n                pq.pop();\n            }\n            pq.push(iv[1]);\n        }\n        return (int)pq.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

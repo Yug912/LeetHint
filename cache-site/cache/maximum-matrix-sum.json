@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-matrix-sum",
+  "title": "Maximum Matrix Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Parity / Sign Invariant",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar accumulators (sum, negCount, minAbs, hasZero): constant → O(1)\n- no containers, no recursion → O(1)\n- not counted: input matrix",
+  "approach": "Each operation flips the signs of exactly two adjacent cells, so the parity of the number of negative entries is invariant. If the count of negatives is even (or any zero exists, since a zero can absorb a sign), we can make every entry positive and the answer is the sum of absolute values. If the count is odd and there is no zero, exactly one entry must remain negative; to maximize the sum we leave the entry with the smallest absolute value negative, giving sum_of_abs − 2·min_abs.",
+  "hints": [
+    "Each operation flips the signs of exactly two cells. What does that imply about the parity of how many negative entries exist, no matter what sequence of operations you perform?",
+    "Greedy parity argument: track the count of negatives and the minimum absolute value in one pass. In Example 2 there are 3 negatives (odd) with minimum absolute value 1, so the answer is 18 − 2·1 = 16.",
+    "```\nsum = 0, negCount = 0, minAbs = INF, hasZero = false\nfor each cell v:\n    if v < 0: negCount += 1\n    if v == 0: hasZero = true\n    minAbs = min(minAbs, abs(v))\n    sum += abs(v)\nif hasZero or negCount is even:\n    return sum\nreturn sum - 2 * minAbs\n```",
+    "**All positive** - even negative count, nothing to fix.\n`Input: matrix = [[1,2],[3,4]]` → `Expected: 10`\n⚠️ Bug: unconditionally subtracting `2 * minAbs` → returns `8`\n\n**Odd negatives, no zero** - one negative must remain.\n`Input: matrix = [[1,2,3],[-1,-2,-3],[1,2,3]]` → `Expected: 16`\n⚠️ Bug: returning the raw sum of absolute values without parity check → returns `18`\n\n**Overflow** - n = 250, every entry 10^5, sum = 250·250·10^5 = 6.25·10^9 > 2^31−1.\n`Input: matrix = [[100000,...100000], ...] (250×250 of 100000)` → `Expected: 6250000000`\n⚠️ Bug: accumulating `sum` in `int` → wraps around, returns a negative/garbage value\n\n**All equal negatives, odd count** - n = 3, nine −1's, odd negatives, min abs = 1.\n`Input: matrix = [[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]]` → `Expected: 7`\n⚠️ Bug: ignoring parity and returning sum of abs → returns `9`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the operation is restricted to horizontally adjacent pairs only (same row)?",
+      "a": "Negatives can then only move within their own row, so apply the same parity rule per row: for each row with an odd negative count and no zero, subtract 2·(min abs in that row). Time stays O(n²), space O(1)."
+    },
+    {
+      "q": "What if the goal is to minimize the sum instead of maximize it?",
+      "a": "The parity invariant is unchanged. With an even negative count you can make every entry negative (answer = −sum_of_abs); with an odd count one entry must stay positive, so pick the largest absolute value to stay positive: −sum_of_abs + 2·max_abs. Time O(n²), space O(1)."
+    },
+    {
+      "q": "What if rows arrive as a stream and you can only hold one row in memory?",
+      "a": "Fold the four accumulators (sum, negCount, minAbs, hasZero) across rows as they arrive, processing each row in O(n). Total time O(n²), auxiliary space O(n) for the single row buffer (or O(1) if elements are streamed individually)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxMatrixSum(vector<vector<int>>& matrix) {\n        long long sum = 0;\n        int negCount = 0;\n        int minAbs = INT_MAX;\n        bool hasZero = false;\n        int n = (int)matrix.size();\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < n; j++) {\n                int v = matrix[i][j];\n                if (v < 0) negCount++;\n                if (v == 0) hasZero = true;\n                int a = v < 0 ? -v : v;\n                if (a < minAbs) minAbs = a;\n                sum += a;\n            }\n        }\n        if (hasZero || (negCount % 2 == 0)) return sum;\n        return sum - 2LL * (long long)minAbs;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

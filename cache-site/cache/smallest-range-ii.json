@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-range-ii",
+  "title": "Smallest Range II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sort + Linear Scan",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): C++ introsort, O(log n) stack frames → O(log n)\n- no other containers allocated\n- not counted: input vector (modified in place)",
+  "approach": "Sort the array. In an optimal assignment, there is a single split point: all elements at or before the split get +k, all after get −k (the symmetric case is covered by trying all splits). For each split i, the new max is max(nums[i]+k, nums[n−1]−k) and the new min is min(nums[0]+k, nums[i+1]−k); take the smallest range over all splits, also comparing against the original range (all +k or all −k). This is correct because crossing assignments (a smaller original element getting −k while a larger one gets +k) can never reduce the range.",
+  "hints": [
+    "If the array is sorted, what geometric shape must the set of indices receiving +k have relative to those receiving −k in any optimal assignment?",
+    "Sort, then scan a single split point. For nums=[1,3,6], k=3, split after index 1: left [1,3]+3=[4,6], right [6]−3=[3], range = 6−3 = 3.",
+    "sort nums\nans = nums[n-1] - nums[0]\nfor i in 0 .. n-2:\n    hi = max(nums[i]+k, nums[n-1]-k)\n    lo = min(nums[0]+k, nums[i+1]-k)\n    ans = min(ans, hi - lo)\nreturn ans",
+    "**Single element** - loop must not access nums[i+1].\n`Input: nums = [1], k = 0` → `Expected: 0`\n⚠️ Bug: loop condition `i < n` instead of `i+1 < n` → out-of-bounds read on nums[1].\n\n**k = 0** - adding/subtracting zero changes nothing.\n`Input: nums = [5,5,5], k = 0` → `Expected: 0`\n⚠️ Bug: initialising `ans = INT_MAX` and never comparing against `nums[n-1]-nums[0]` → returns INT_MAX.\n\n**All equal** - range is zero regardless of k.\n`Input: nums = [3,3,3], k = 2` → `Expected: 0`\n⚠️ Bug: forcing at least one +k and one −k split → returns 4 instead of 0.\n\n**Reverse sorted input** - split logic assumes sorted order.\n`Input: nums = [6,3,1], k = 3` → `Expected: 3`\n⚠️ Bug: skipping the sort → returns 5 (uses raw nums[0]=6, nums[n-1]=1)."
+  ],
+  "followUps": [
+    {
+      "q": "What if each element has its own k_i (an array k of the same length)?",
+      "a": "Sorting by nums[i] still orders candidates, but the split logic breaks because k varies per element. You would need a sweep over sorted (nums[i], k_i) pairs maintaining the best achievable min/max with a balanced structure, giving O(n log n) time."
+    },
+    {
+      "q": "What if exactly m elements must receive +k and the rest −k?",
+      "a": "After sorting, the split point is fixed at index m−1 (the m smallest get +k). Compute that single split's range in O(n log n) for the sort, O(1) extra."
+    },
+    {
+      "q": "What if nums arrives as a stream and you must answer after each insertion?",
+      "a": "Maintain a sorted structure (e.g., balanced BST) of seen values; after each insert, the optimal split shifts by at most a constant number of positions, so recompute the boundary values in O(log n) per update."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int smallestRangeII(vector<int>& nums, int k) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        int ans = nums[n - 1] - nums[0];\n        for (int i = 0; i + 1 < n; ++i) {\n            int hi = max(nums[i] + k, nums[n - 1] - k);\n            int lo = min(nums[0] + k, nums[i + 1] - k);\n            ans = min(ans, hi - lo);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

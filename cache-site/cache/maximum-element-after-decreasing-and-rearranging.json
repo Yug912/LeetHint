@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-element-after-decreasing-and-rearranging",
+  "title": "Maximum Element After Decreasing and Rearranging",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort + Greedy",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> count(n+1, 0): up to n+1 entries → O(n)\n- recursion depth: none\n- not counted: input arr, returned int",
+  "approach": "The maximum possible value is bounded by n (array length): the first element must be 1, and each subsequent element can grow by at most 1, so after n elements the max is at most n. This means we only care about values up to n - any value larger than n can be capped to n. We use counting sort: build a frequency array of size n+1 (capping values > n to n), then greedily scan v from 1 to n, maintaining `cur` = the highest value placed so far. At each value v, all `count[v]` elements can contribute at most `min(v, cur + count[v])` to the running maximum, because each element is capped by its original value v and by the previous maximum + 1.",
+  "hints": [
+    "After rearranging and decreasing, the first element is 1 and each step can grow by at most 1 - so what is the largest value any element can possibly reach in an array of length n? The constraint n ≤ 10^5 means this upper bound is small.",
+    "Use counting sort with all values capped at n. For Example 2 ([100,1,1000], n=3), cap to [3,1,3] giving counts {1:1, 3:2}, then greedily build the running maximum from v=1 to n.",
+    "```\ncount = array of size n+1, all zeros\nfor x in arr:\n    count[min(x, n)] += 1\ncur = 0\nfor v from 1 to n:\n    cur = min(v, cur + count[v])\nreturn cur\n```",
+    "**Single large element** - one element with a huge value must still become 1.\n`Input: arr = [1000000000]` → `Expected: 1`\n⚠️ Bug: allocating `count` of size `max(arr)+1` instead of `n+1` → memory limit exceeded.\n\n**All ones** - every element is already 1, so nothing can grow.\n`Input: arr = [1,1,1]` → `Expected: 1`\n⚠️ Bug: using `cur += count[v]` instead of `cur = min(v, cur + count[v])` → returns 3.\n\n**Already sorted ascending** - the ideal ramp 1,2,…,n is already present.\n`Input: arr = [1,2,3,4,5]` → `Expected: 5`\n⚠️ Bug: capping at `n-1` instead of `n` (i.e., `count[min(x, n-1)]++`) → count[5] merges into count[4], returns 4.\n\n**All equal to n** - all elements are large but identical; the ramp still reaches n.\n`Input: arr = [5,5,5,5,5]` → `Expected: 5`\n⚠️ Bug: iterating `v` from 0 to n-1 instead of 1 to n → never processes count[5], returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "Elements arrive in a stream of known length n; you cannot store the full array. How do you compute the answer?",
+      "a": "Maintain the count array of size n+1 incrementally as each element arrives, capping at n. After the stream ends, run the same greedy scan from v=1 to n. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if you can also increase elements (not just decrease)?",
+      "a": "You can always build the ramp 1,2,…,n regardless of input values, so the answer is always n. Just return n in O(1) time after reading the array length."
+    },
+    {
+      "q": "What if the first element must equal a given k (instead of 1)?",
+      "a": "The ramp now starts at k, so the maximum is at most k+n-1. Initialize cur = k-1 and scan v from k to k+n-1 (capping input values at k+n-1). The formula cur = min(v, cur + count[v]) still applies. Time O(n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumElementAfterDecrementingAndRearranging(vector<int>& arr) {\n        int n = arr.size();\n        vector<int> count(n + 1, 0);\n        for (int x : arr) {\n            count[min(x, n)]++;\n        }\n        int cur = 0;\n        for (int v = 1; v <= n; v++) {\n            cur = min(v, cur + count[v]);\n        }\n        return cur;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

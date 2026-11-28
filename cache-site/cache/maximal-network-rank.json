@@ -1,0 +1,40 @@
+{
+  "slug": "maximal-network-rank",
+  "title": "Maximal Network Rank",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Degree-Based Graph Analysis",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<int> degree(n): n integers → O(n)\n- vector<unordered_set<int>> adj(n): total n sets holding m edges (each stored twice) → O(n + m)\n- vector<int> maxCities, secondMaxCities: at most n entries combined → O(n)\n- recursion depth: none\n- not counted: input roads, returned int",
+  "approach": "The network rank of a pair of cities equals the sum of their degrees minus 1 if they share a direct road. The maximal rank must involve a city with the highest degree; the partner is either another max-degree city or a second-max-degree city. We compute all degrees and adjacency hash sets in O(n+m), find the top two degree values, then check connectivity only among candidate cities. If multiple cities share the max degree, we check pairs among them; otherwise we check the single max-degree city against all second-max-degree cities. The pair-checking loop is bounded by O(m) because k fully-connected cities require k*(k-1)/2 ≤ m roads.",
+  "hints": [
+    "What single number about each city determines how much it contributes to any pair's network rank? In Example 1, city 1 has 3 roads and city 0 has 2 roads, giving a combined rank of 4 (not 5).",
+    "Compute each city's degree and store its neighbors in a hash set for O(1) connectivity checks. In Example 1, degrees are [2,3,1,2], so maxDeg=3 (city 1) and secondMaxDeg=2 (cities 0 and 3).",
+    "```\ncompute degree[i] and adjacency set for each city\nfind maxDeg and secondMaxDeg\ncollect cities with maxDeg and secondMaxDeg\nif >= 2 cities have maxDeg:\n    if any pair among them is NOT directly connected: answer = 2*maxDeg\n    else: answer = 2*maxDeg - 1\nelse:\n    if maxDeg city is NOT connected to some secondMaxDeg city: answer = maxDeg + secondMaxDeg\n    else: answer = maxDeg + secondMaxDeg - 1\n```",
+    "**No roads** - empty road list, all degrees are 0\n`Input: n=2, roads=[]` → `Expected: 0`\n⚠️ Bug: unconditionally subtracting 1 for a shared road even when no road exists → returns -1\n\n**All cities same degree** - every city has identical degree\n`Input: n=4, roads=[[0,1],[2,3]]` → `Expected: 2`\n⚠️ Bug: only handling the single max-degree city case, not checking pairs among multiple max-degree cities → returns 0 or crashes on empty secondMaxCities\n\n**Max-degree city connected to all second-max cities** - must subtract 1 for the shared road\n`Input: n=4, roads=[[0,1],[0,2],[0,3],[1,2]]` → `Expected: 4`\n⚠️ Bug: not subtracting 1 when all candidate pairs are directly connected → returns 5\n\n**Tie for max degree, all pairs connected** - multiple max-degree cities, all mutually connected\n`Input: n=3, roads=[[0,1],[0,2],[1,2]]` → `Expected: 3`\n⚠️ Bug: returning 2*maxDeg without checking connectivity among max-degree cities → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^6 - does the approach still work?",
+      "a": "Yes. Building the degree array and adjacency sets is O(n+m). The pair-checking among max-degree cities is bounded by O(m) since k fully-connected cities require k*(k-1)/2 ≤ m roads. TC: O(n+m), SC: O(n+m)."
+    },
+    {
+      "q": "What if roads can be added or removed dynamically, and you must answer the maximal rank after each update?",
+      "a": "Maintain the degree array and adjacency sets incrementally - each road add/remove updates two degrees and two sets in O(1). Recompute maxDeg/secondMaxDeg in O(n) and check candidate pairs in O(m) per query. TC: O(n+m) per query, SC: O(n+m)."
+    },
+    {
+      "q": "What if you must return the actual pair of cities achieving the maximal rank, not just the value?",
+      "a": "Track the pair (i,j) when a non-connected candidate pair is found during the connectivity check. Return both city indices along with the rank. TC: O(n+m), SC: O(n+m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximalNetworkRank(int n, vector<vector<int>>& roads) {\n        vector<int> degree(n, 0);\n        vector<unordered_set<int>> adj(n);\n        \n        for (auto& r : roads) {\n            int a = r[0], b = r[1];\n            degree[a]++;\n            degree[b]++;\n            adj[a].insert(b);\n            adj[b].insert(a);\n        }\n        \n        int maxDeg = 0, secondMaxDeg = 0;\n        for (int i = 0; i < n; i++) {\n            if (degree[i] > maxDeg) {\n                secondMaxDeg = maxDeg;\n                maxDeg = degree[i];\n            } else if (degree[i] > secondMaxDeg) {\n                secondMaxDeg = degree[i];\n            }\n        }\n        \n        vector<int> maxCities, secondMaxCities;\n        for (int i = 0; i < n; i++) {\n            if (degree[i] == maxDeg) maxCities.push_back(i);\n            else if (degree[i] == secondMaxDeg) secondMaxCities.push_back(i);\n        }\n        \n        int ans = 0;\n        \n        if (maxCities.size() > 1) {\n            bool found = false;\n            int k = maxCities.size();\n            for (int i = 0; i < k && !found; i++) {\n                for (int j = i + 1; j < k && !found; j++) {\n                    if (!adj[maxCities[i]].count(maxCities[j])) {\n                        found = true;\n                    }\n                }\n            }\n            ans = found ? 2 * maxDeg : 2 * maxDeg - 1;\n        } else {\n            bool found = false;\n            int a = maxCities[0];\n            for (int b : secondMaxCities) {\n                if (!adj[a].count(b)) {\n                    found = true;\n                    break;\n                }\n            }\n            ans = found ? maxDeg + secondMaxDeg : maxDeg + secondMaxDeg - 1;\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

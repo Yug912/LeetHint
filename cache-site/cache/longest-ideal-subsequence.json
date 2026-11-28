@@ -1,0 +1,40 @@
+{
+  "slug": "longest-ideal-subsequence",
+  "title": "Longest Ideal Subsequence",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Alphabet State",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int best[26]: fixed 26 entries → O(1)\n- int ans, m, idx: scalars → O(1)\n- not counted: input string s, returned int",
+  "approach": "Keep an array `best[26]` where `best[c]` is the length of the longest ideal subsequence ending with the letter `c`. For each character in `s`, the best we can do ending at that character is 1 plus the maximum `best[j]` over all letters `j` within alphabet distance `k` of the current character. Updating `best[current]` in place is correct because the new value is strictly larger than the old one, so it never hurts future lookups. The answer is the maximum entry ever written.",
+  "hints": [
+    "For each character you read, what single fact about the prefix before it would let you decide the longest ideal subsequence that ends exactly at this character?",
+    "Use an array `best[26]` where `best[c]` is the longest ideal subsequence ending with letter `c`. For `s = \"acfgbd\"`, `k = 2`: when reading `'b'` (index 1), scan letters `a,b,c,d` (indices 0..3), the max is `best[c]=2`, so set `best[b]=3`.",
+    "```\nbest[0..25] = 0\nfor ch in s:\n    idx = ch - 'a'\n    m = 0\n    for j in 0..25:\n        if abs(j - idx) <= k:\n            m = max(m, best[j])\n    best[idx] = m + 1\nreturn max(best)\n```",
+    "**Single character** - smallest allowed input.\n`Input: s = \"a\", k = 0` → `Expected: 1`\n⚠️ Bug: initialising `ans` to 1 and only updating inside the loop after the first character → returns 0\n\n**k = 0 with repeated letters** - only identical adjacent letters are allowed.\n`Input: s = \"aaabbb\", k = 0` → `Expected: 3`\n⚠️ Bug: using `best[idx] = max(best[idx], m + 1)` with `m` taken over all 26 letters ignoring the `abs(j-idx) <= k` check → returns 6\n\n**Maximum k = 25** - every pair of letters is compatible.\n`Input: s = \"az\", k = 25` → `Expected: 2`\n⚠️ Bug: clamping the lookup range to `[idx-k, idx+k]` but skipping `j < 0` or `j > 25` with `continue` while still using `abs` incorrectly → returns 1\n\n**All identical letters** - every adjacent pair has difference 0.\n`Input: s = \"zzzz\", k = 0` → `Expected: 4`\n⚠️ Bug: not reading `best[idx]` before overwriting, i.e. computing `m` from neighbours only and ignoring the current letter's own previous value → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if each position has its own k value (array `k[i]`)?",
+      "a": "Use the same `best[26]` array; when processing position `i`, scan the 26 letters using `k[i]` instead of a global `k`. Time stays O(n), space stays O(1)."
+    },
+    {
+      "q": "What if the alphabet were the full Unicode set (up to ~10^5 distinct symbols)?",
+      "a": "Replace the fixed `best[26]` array with a hash map keyed by symbol, and for each new symbol query all map entries within distance `k` - worst case O(n · distinct) unless you also maintain a structure keyed by code point. Time becomes O(n · d) where d is the number of distinct symbols seen, space O(d)."
+    },
+    {
+      "q": "What if `s` arrives as a stream and you cannot store it?",
+      "a": "The algorithm already processes one character at a time and only keeps `best[26]`, so it works as-is on a stream. Time O(n), space O(1); emit the running maximum whenever needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestIdealString(string s, int k) {\n        int best[26] = {0};\n        int ans = 0;\n        for (char c : s) {\n            int idx = c - 'a';\n            int m = 0;\n            for (int j = 0; j < 26; j++) {\n                int diff = j - idx;\n                if (diff < 0) diff = -diff;\n                if (diff <= k && best[j] > m) {\n                    m = best[j];\n                }\n            }\n            best[idx] = m + 1;\n            if (best[idx] > ans) ans = best[idx];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

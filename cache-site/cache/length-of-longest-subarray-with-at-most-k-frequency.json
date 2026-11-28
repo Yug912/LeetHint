@@ -1,0 +1,40 @@
+{
+  "slug": "length-of-longest-subarray-with-at-most-k-frequency",
+  "title": "Length of Longest Subarray With at Most K Frequency",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n distinct entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Use a sliding window with two pointers. Expand the right pointer and track element frequencies in a hash map. Whenever any element's frequency exceeds k, shrink from the left until it's valid again. The key correctness property is monotonicity: if [i, j] is good, then any subarray within it is also good, so as j increases the optimal i never moves backward. Track the maximum window size seen.",
+  "hints": [
+    "For a fixed right endpoint, if the leftmost valid start index is i, how does i change when the right endpoint moves one step further? The array can have up to 10^5 elements, so checking every (start, end) pair is too slow.",
+    "Sliding window with a hash map for frequencies. For nums = [1,2,3,1,2,3,1,2], k = 2: the window grows to [1,2,3,1,2,3] (length 6, all freq ≤ 2). Adding the 7th element (1) makes freq[1] = 3 > k, so move left past the first 1.",
+    "```\nleft = 0, ans = 0, freq = empty map\nfor right from 0 to n-1:\n    freq[nums[right]] += 1\n    while freq[nums[right]] > k:\n        freq[nums[left]] -= 1\n        left += 1\n    ans = max(ans, right - left + 1)\nreturn ans\n```",
+    "**Single element** - the smallest valid input has one element.\n`Input: nums = [1], k = 1` → `Expected: 1`\n⚠️ Bug: initializing `ans` to 0 and only updating it inside a conditional that never triggers → returns 0\n\n**All equal, minimal k** - every element is identical with k = 1.\n`Input: nums = [5,5,5], k = 1` → `Expected: 1`\n⚠️ Bug: using `>=` instead of `>` in the frequency check (`freq[nums[right]] >= k`) → returns 0\n\n**All distinct** - no element repeats, so the entire array is good.\n`Input: nums = [1,2,3,4], k = 1` → `Expected: 4`\n⚠️ Bug: computing window length as `right - left` instead of `right - left + 1` → returns 3\n\n**Large values** - nums[i] can be up to 10^9.\n`Input: nums = [1000000000, 1000000000], k = 1` → `Expected: 1`\n⚠️ Bug: using a fixed-size array `int freq[100001]` indexed directly by `nums[i]` → out-of-bounds access, undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "Count the total number of good subarrays (not just the longest).",
+      "a": "For each right endpoint, every start index in [left, right] yields a valid subarray, so add (right - left + 1) to the count each iteration. The sliding window and frequency map stay the same. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if \"good\" means at most k distinct elements (instead of frequency ≤ k)?",
+      "a": "Same sliding window, but shrink when the map size exceeds k instead of checking individual frequencies. Remove entries from the map when their count drops to zero. TC: O(n), SC: O(k)."
+    },
+    {
+      "q": "Return the actual longest good subarray instead of just its length.",
+      "a": "Track bestLeft and bestRight alongside ans, updating them whenever ans increases. Return the subarray nums[bestLeft..bestRight]. TC: O(n), SC: O(n) for the returned vector."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSubarrayLength(vector<int>& nums, int k) {\n        unordered_map<int,int> freq;\n        int left = 0, ans = 0;\n        for (int right = 0; right < (int)nums.size(); right++) {\n            freq[nums[right]]++;\n            while (freq[nums[right]] > k) {\n                freq[nums[left]]--;\n                left++;\n            }\n            ans = max(ans, right - left + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

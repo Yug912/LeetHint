@@ -1,0 +1,40 @@
+{
+  "slug": "flip-columns-for-maximum-number-of-equal-rows",
+  "title": "Flip Columns For Maximum Number of Equal Rows",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Frequency Counting",
+  "tc": "O(m × n)",
+  "sc": "O(m × n)",
+  "spaceBreakdown": "- unordered_map<string,int> count: up to m entries, each key up to n chars → O(m × n)\n- string key: n chars, reused per iteration → O(n), dominated by map\n- recursion depth: none\n- not counted: input matrix, returned int",
+  "approach": "Two rows can both become all-equal (all 0s or all 1s) after the same set of column flips if and only if they are either identical or bitwise complements of each other. We normalize each row by XORing every element with the first element, so identical and complementary rows map to the same string key. We then count how many rows share each normalized key and return the maximum count.",
+  "hints": [
+    "Two rows can both become all-equal after the same set of column flips. What relationship must those two rows share with each other?",
+    "Use a hash map to count rows sharing the same normalized pattern. Normalize each row by XORing every bit with its first bit, so identical and complementary rows map to the same key. In `[[0,1],[1,0]]`, both rows normalize to `\"01\"`, giving count 2.",
+    "```\nfor each row:\n    flip = row[0]\n    key = string where key[j] = row[j] XOR flip\n    increment count[key]\n    answer = max(answer, count[key])\nreturn answer\n```",
+    "**Single column (n = 1)** - flipping the only column makes every row equal.\n`Input: [[0],[1],[0]]` → `Expected: 3`\n⚠️ Bug: using the raw row value as key without XOR normalization → returns 2 (key \"0\" count 2, key \"1\" count 1)\n\n**Complementary rows** - rows that are bitwise complements must be counted together.\n`Input: [[0,1],[1,0]]` → `Expected: 2`\n⚠️ Bug: using the raw row string as key without normalization → returns 1 (keys \"01\" and \"10\" each get count 1)\n\n**Distinct patterns** - no two rows are identical or complementary.\n`Input: [[0,0],[0,1]]` → `Expected: 1`\n⚠️ Bug: returning `count.size()` instead of the maximum frequency → returns 2\n\n**Single row (m = 1)** - one row can always be made all-equal.\n`Input: [[1,0,1]]` → `Expected: 1`\n⚠️ Bug: only updating ans when `count[key] > 1` instead of `>= 1` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you also need to return the set of columns to flip?",
+      "a": "Find the normalized pattern with the highest count, then take any row from that group. The columns to flip are those where the normalized pattern has a 1. Time and space complexity remain O(m × n)."
+    },
+    {
+      "q": "What if each cell can be 0, 1, or 2 (ternary instead of binary)?",
+      "a": "The same insight applies: two rows can both become constant after the same per-column operations only if one is a uniform offset from the other. Normalize each row by subtracting its first element (mod 3) from all elements, then count normalized patterns. O(m × n) time, O(m × n) space."
+    },
+    {
+      "q": "What if rows arrive as a stream and you must report the answer after each row?",
+      "a": "Maintain the hash map incrementally. For each new row, compute its normalized key in O(n), increment the count, and update the running maximum. Each update is O(n) time; space is O(m × n) for storing all keys seen so far."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxEqualRowsAfterFlips(vector<vector<int>>& matrix) {\n        unordered_map<string, int> count;\n        int m = matrix.size();\n        int n = matrix[0].size();\n        int ans = 0;\n        for (int i = 0; i < m; i++) {\n            string key(n, '0');\n            int flip = matrix[i][0];\n            for (int j = 0; j < n; j++) {\n                key[j] = '0' + (matrix[i][j] ^ flip);\n            }\n            count[key]++;\n            ans = max(ans, count[key]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "slug": "number-of-ways-to-divide-a-long-corridor",
+  "title": "Number of Ways to Divide a Long Corridor",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear Scan / Greedy",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers/arrays allocated; only scalar variables (ans, seatCount, lastSeat, i) → O(1)\n- No recursion → O(1)\n- Input string not counted",
+  "approach": "Count the total number of seats. If it's zero or odd, return 0 (impossible to form sections of exactly 2 seats). Otherwise, pair seats as (1st,2nd), (3rd,4th), etc. Between each consecutive pair boundary (i.e., between the 2nd and 3rd seat, 4th and 5th seat, ...), we must place exactly one divider. If the gap between seat positions is `d` (meaning `d-1` plants between them), there are `d` possible positions for that divider. The answer is the product of all such gap distances, modulo 10^9+7.",
+  "hints": [
+    "When you pair up seats left to right, what exists between the last seat of one pair and the first seat of the next that creates multiple valid divider positions?",
+    "Linear scan with running product. In \"SSPPSPS\", after pairing seats at indices 0 and 1, there are 2 plants before the next seat at index 4, giving 2+1=3 choices for that divider.",
+    "```\nresult = 1, seats = 0, plants = 0\nfor each char c in corridor:\n    if c is 'S':\n        seats += 1\n        if seats == 2: plants = 0\n        if seats == 3:\n            result = result * (plants + 1) mod MOD\n            seats = 1\n    else if seats == 2:\n        plants += 1\nif seats != 2: return 0\nreturn result\n```",
+    "**Odd seat count** - total seats not divisible by 2\n`Input: \"S\"` → `Expected: 0`\n⚠️ Bug: not checking final seat count, returning result (1) → returns 1\n\n**No seats** - corridor has only plants\n`Input: \"PPPP\"` → `Expected: 0`\n⚠️ Bug: returning result (initialized to 1) without checking if seats exist → returns 1\n\n**Adjacent groups** - zero plants between two seat pairs\n`Input: \"SSSS\"` → `Expected: 1`\n⚠️ Bug: treating 0 plants as no valid position, skipping multiplication → returns 0\n\n**Product overflow** - two large gaps multiplied together\n`Input: \"SS\" + 49997×'P' + \"SS\" + 49997×'P' + \"SS\"` (n=100000) → `Expected: 499799990`\n⚠️ Bug: using int for result → 49998×49998 = 2499800004 overflows 32-bit int → returns wrong value"
+  ],
+  "followUps": [
+    {
+      "q": "What if each section must have exactly k seats instead of 2?",
+      "a": "Same linear scan, but group seats into chunks of k. Between consecutive chunks, multiply by (plants + 1). If total seats isn't divisible by k, return 0. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the corridor is circular (position n-1 connects to position 0)?",
+      "a": "The wrap-around gap between the last seat and the first seat adds one more multiplier: (plants after last seat + plants before first seat + 1). Multiply this into the product along with all regular gaps. TC: O(n),"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfWays(string corridor) {\n        const int MOD = 1e9 + 7;\n        long long ans = 1;\n        int seatCount = 0;\n        int lastSeat = -1;\n        for (int i = 0; i < (int)corridor.size(); i++) {\n            if (corridor[i] == 'S') {\n                seatCount++;\n                if (seatCount >= 3 && seatCount % 2 == 1) {\n                    ans = (ans * (i - lastSeat)) % MOD;\n                }\n                lastSeat = i;\n            }\n        }\n        if (seatCount == 0 || seatCount % 2 == 1) return 0;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

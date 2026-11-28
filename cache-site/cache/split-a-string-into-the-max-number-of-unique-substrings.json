@@ -1,0 +1,40 @@
+{
+  "slug": "split-a-string-into-the-max-number-of-unique-substrings",
+  "title": "Split a String Into the Max Number of Unique Substrings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Backtracking with Pruning",
+  "tc": "O(n · 2^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<string> seen: at most n substrings whose total length ≤ n → O(n)\n- local string sub per stack frame: total across all frames ≤ n (non-overlapping) → O(n)\n- recursion depth: at most n → O(n)\n- not counted: input string s",
+  "approach": "Since n ≤ 16, there are at most 2^15 = 32768 ways to choose split points, making exhaustive search feasible. We use backtracking: at each position, try every possible substring starting there, add it to a hash set if not already present, recurse, then remove it. A pruning step skips branches where even splitting every remaining character individually cannot beat the current best.",
+  "hints": [
+    "With at most 16 characters, how many ways can you choose which gaps between characters become split points?",
+    "Use backtracking with a hash set. At each position, try every possible substring starting there; if it's not already in the set, add it and recurse. For \"aba\", trying \"a\" then \"ba\" yields 2 unique pieces.",
+    "```\nfunction dfs(start, count):\n    if start == n: update best with count; return\n    if count + (n - start) <= best: return\n    for end from start+1 to n:\n        sub = s[start..end)\n        if sub not in seen:\n            add sub to seen\n            dfs(end, count + 1)\n            remove sub from seen\n```",
+    "**Single character** - The string has length 1, so the only valid split is the whole string.\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: using `end < n` instead of `end <= n` in the substring loop → returns `0`\n\n**All same characters** - Every substring of the same length is identical, so only one split per length is valid.\n`Input: s = \"aa\"` → `Expected: 1`\n⚠️ Bug: not checking the set before inserting a substring → returns `2` (splits into [\"a\",\"a\"])\n\n**Greedy longest-first** - Taking the longest valid substring at each step is not always optimal.\n`Input: s = \"aba\"` → `Expected: 2`\n⚠️ Bug: always choosing the longest unused substring → returns `1` (takes \"aba\")\n\n**All distinct characters** - When all characters differ, each single character is a unique substring.\n`Input: s = \"ab\"` → `Expected: 2`\n⚠️ Bug: always taking the entire remaining string as one piece → returns `1`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return one optimal split (the list of substrings), not just the count?",
+      "a": "Maintain a vector of the current split alongside the count. When a better count is found, copy the vector as the best split. This adds O(n) space for the vector and O(n) time per copy, but the overall complexity class stays O(n · 2^n) time and O(n) space."
+    },
+    {
+      "q": "What if s.length ≤ 100? Can you still use this backtracking?",
+      "a": "With n = 100, the search space is 2^99, which is infeasible. A greedy heuristic that picks the shortest unused substring at each position runs in O(n^2) time but is not guaranteed optimal; it fails on inputs like \"abcabc\" where it gets stuck after \"a\", \"b\", \"c\", \"ab\"."
+    },
+    {
+      "q": "What if each substring must have length at most k?",
+      "a": "In the backtracking, limit the inner loop to `end = min(start + k, n)`. This caps the branching factor at k instead of n, reducing the search space. TC improves when k is small; SC stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int best;\n    int n;\n    unordered_set<string> seen;\n\n    void dfs(const string& s, int start, int count) {\n        if (start == n) {\n            best = max(best, count);\n            return;\n        }\n        if (count + (n - start) <= best) return;\n        for (int end = start + 1; end <= n; end++) {\n            string sub = s.substr(start, end - start);\n            if (seen.find(sub) == seen.end()) {\n                seen.insert(sub);\n                dfs(s, end, count + 1);\n                seen.erase(sub);\n            }\n        }\n    }\npublic:\n    int maxUniqueSplit(string s) {\n        this->n = s.size();\n        this->best = 0;\n        seen.clear();\n        dfs(s, 0, 0);\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

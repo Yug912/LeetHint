@@ -1,0 +1,40 @@
+{
+  "slug": "steps-to-make-array-non-decreasing",
+  "title": "Steps to Make Array Non-decreasing",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n entries → O(n)\n- stack<int> st: up to n entries → O(n)\n- not counted: input nums",
+  "approach": "An element is removed only when a strictly greater element to its left becomes its immediate neighbor. The step at which element `i` is removed equals 1 plus the maximum removal-step of all elements between `i` and the nearest greater-or-equal element to its left (those elements must be removed first). We process left to right with a monotonic decreasing stack: when `nums[i]` pops smaller/equal elements, we carry forward the max `dp` among them; if a greater element remains on the stack, `dp[i] = max_popped_dp + 1`. The answer is the maximum `dp` value.",
+  "hints": [
+    "In Example 1, the element at index 3 (value 4) is removed in step 3, not step 1. What determines the step at which a given element is removed?",
+    "Use a monotonic decreasing stack of indices. For `nums = [5,3,4,...]`, when processing index 2 (value 4), pop index 1 (value 3 ≤ 4) and carry forward its dp value, then set `dp[2] = dp[1] + 1 = 2` because index 0 (value 5) is still on the stack.",
+    "```\nfor each index i:\n    cur = 0\n    while stack not empty and nums[stack.top] <= nums[i]:\n        cur = max(cur, dp[stack.top])\n        pop stack\n    if stack not empty:\n        dp[i] = cur + 1\n    push i onto stack\nreturn max(dp)\n```",
+    "**Single element** - only one element, already non-decreasing\n`Input: [42]` → `Expected: 0`\n⚠️ Bug: accessing `nums[i-1]` without bounds check when `i=0` → undefined behavior\n\n**All equal** - no element is strictly greater than its left neighbor\n`Input: [7,7,7,7]` → `Expected: 0`\n⚠️ Bug: using `<` instead of `<=` in the stack pop condition → returns 1 (equal elements stay on stack and get dp=1)\n\n**Already sorted ascending** - no removals needed\n`Input: [1,2,3,4,5]` → `Expected: 0`\n⚠️ Bug: always setting `dp[i] = cur + 1` without checking if stack is empty → returns 1\n\n**Strictly decreasing** - all elements removed simultaneously in one step\n`Input: [5,4,3,2,1]` → `Expected: 1`\n⚠️ Bug: removing only one element per step instead of all violations simultaneously → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "Return the final non-decreasing array instead of the step count.",
+      "a": "The stack at the end of processing contains exactly the indices of surviving elements. Collect `nums[st]` for each index remaining in the stack. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the removal condition changes to `nums[i-1] >= nums[i]` (remove on equal too)?",
+      "a": "Change the stack comparison from `<=` to `<` so equal values are not popped and instead trigger removal. The dp logic stays identical. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "Answer multiple queries: for a subarray `nums[l..r]`, how many steps until it becomes non-decreasing?",
+      "a": "Removal steps depend on elements to the left of `l`, so a segment tree storing per-segment monotonic-stack summaries is needed to merge segments and propagate removal chains. TC: O(n log n) preprocessing, O(log n) per query, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int totalSteps(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> dp(n, 0);\n        stack<int> st;\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            int cur = 0;\n            while (!st.empty() && nums[st.top()] <= nums[i]) {\n                cur = max(cur, dp[st.top()]);\n                st.pop();\n            }\n            if (!st.empty()) {\n                dp[i] = cur + 1;\n            }\n            st.push(i);\n            ans = max(ans, dp[i]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

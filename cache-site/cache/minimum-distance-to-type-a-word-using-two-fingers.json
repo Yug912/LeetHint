@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-distance-to-type-a-word-using-two-fingers",
+  "title": "Minimum Distance to Type a Word Using Two Fingers",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> dp: 27 entries → O(1)\n- vector<int> ndp: 27 entries → O(1)\n- recursion depth: none\n- not counted: input string word",
+  "approach": "The key insight is that after typing each character, one finger is always on the last typed character, so we only need to track the position of the other finger. We use DP where dp[j] represents the minimum cost to type the first k characters with one finger on word[k-1] and the other at position j (where j=26 represents a free/unused finger). At each step, we either move the finger on the last character to the next character, or move the other finger to the next character. The free state ensures the first use of each finger costs nothing.",
+  "hints": [
+    "After typing each character, one finger must rest on that character. What single piece of information about the other finger would let you make the optimal choice for every remaining character?",
+    "Dynamic programming with state dp[j] = min cost when one finger is on the last typed char and the other is at position j (26 = free). For \"CAKE\", after typing 'C' then 'A' with one finger, dp[FREE]=2 and dp['C']=0.",
+    "```\ndp[FREE] = 0\nfor k = 1 to n-1:\n    prev, cur = word[k-1], word[k]\n    for each j in 0..26:\n        ndp[j]    = min(ndp[j],    dp[j] + dist(prev, cur))\n        ndp[prev] = min(ndp[prev], dp[j] + dist(j, cur))\n    dp = ndp\nreturn min(dp)\n```",
+    "**Smallest input** - word has exactly 2 characters; both fingers start free so cost is 0.\n`Input: \"AB\"` → `Expected: 0`\n⚠️ Bug: initializing both fingers at word[0] instead of a free state → returns 1\n\n**Repeated consecutive letters** - same letter typed twice, distance 0.\n`Input: \"AAB\"` → `Expected: 0`\n⚠️ Bug: only considering the \"move last-used finger\" transition → returns 1\n\n**Three consecutive letters in a row** - optimal uses both fingers.\n`Input: \"ABC\"` → `Expected: 1`\n⚠️ Bug: writing ndp[j] instead of ndp[prev] in the second transition → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if we have k fingers instead of 2?",
+      "a": "The state becomes the positions of all k-1 non-typing fingers (one is always on the last typed character). The state space is 27^(k-1) per step, giving TC O(n · 27^(k-1) · k) and SC O(27^(k-1)). This is feasible for small k but grows exponentially."
+    },
+    {
+      "q": "What if the keyboard layout is given as arbitrary coordinates instead of the standard grid?",
+      "a": "The algorithm is unchanged; we just compute Manhattan distances from the given coordinates. Precompute a 26×26 distance matrix for O(1) lookups. TC remains O(n), SC remains O(1)."
+    },
+    {
+      "q": "What if characters arrive one at a time in a streaming fashion?",
+      "a": "The DP processes one character per step and only needs the current dp array, so it works online. Maintain the 27-element dp array and update it as each character arrives. TC is O(27) per character, SC is O(27) total."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumDistance(string word) {\n        int n = word.size();\n        auto dist = [](int a, int b) -> int {\n            if (a == 26 || b == 26) return 0;\n            return abs(a / 6 - b / 6) + abs(a % 6 - b % 6);\n        };\n        \n        const int INF = 1e9;\n        vector<int> dp(27, INF);\n        dp[26] = 0;\n        \n        for (int k = 1; k < n; k++) {\n            int prev = word[k - 1] - 'A';\n            int cur = word[k] - 'A';\n            vector<int> ndp(27, INF);\n            for (int j = 0; j < 27; j++) {\n                if (dp[j] >= INF) continue;\n                ndp[j] = min(ndp[j], dp[j] + dist(prev, cur));\n                ndp[prev] = min(ndp[prev], dp[j] + dist(j, cur));\n            }\n            dp = move(ndp);\n        }\n        \n        return *min_element(dp.begin(), dp.end());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

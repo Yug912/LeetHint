@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-subarray-min-product",
+  "title": "Maximum Subarray Min-Product",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> prefix: n+1 entries → O(n)\n- vector<int> left: n entries → O(n)\n- vector<int> right: n entries → O(n)\n- stack<int> st: up to n entries → O(n)\n- not counted: input nums, returned int",
+  "approach": "For each index i, the maximum min-product where nums[i] is the minimum equals nums[i] × (sum of the widest subarray where nums[i] remains the minimum). We find this widest subarray using a monotonic stack to locate the nearest strictly smaller element on each side (left boundary = prev strictly smaller + 1, right boundary = next strictly smaller - 1). Prefix sums give O(1) range sums. The answer is the maximum over all indices, taken modulo 10^9+7.",
+  "hints": [
+    "For a fixed element that is the minimum of some subarray, what determines the widest subarray where it stays the minimum? The constraint n ≤ 10^5 rules out checking every subarray pair.",
+    "Use a monotonic stack to find, for each index, the nearest strictly smaller element on the left and right, then multiply by the prefix-sum range between those boundaries. For nums = [3,1,5,6,4,2], index 4 (value 4) has left boundary index 1 and right boundary index 5, giving subarray [5,6,4] with sum 15 and product 60.",
+    "```\ncompute prefix sums of nums\nfor each index i (left to right):\n    pop stack while nums[top] >= nums[i]\n    left[i] = stack top or -1\n    push i\nfor each index i (right to left):\n    pop stack while nums[top] >= nums[i]\n    right[i] = stack top or n\n    push i\nfor each i:\n    range_sum = prefix[right[i]] - prefix[left[i] + 1]\n    ans = max(ans, nums[i] * range_sum)\nreturn ans mod 1e9+7\n```",
+    "**All equal values** - every element is the same, so each element's valid range is the full array.\n`Input: nums = [5,5,5]` → `Expected: 75`\n⚠️ Bug: using `>` instead of `>=` in the stack pop condition → equal elements do not pop, each element's range becomes just itself → returns 25\n\n**Overflow** - prefix sums reach 10^5 × 10^7 = 10^12 and products reach 10^7 × 10^12 = 10^19.\n`Input: nums = [10000000, 10000000, ..., 10000000] (10^5 elements)` → `Expected: 1000000000000000000000000 mod 1e9+7`\n⚠️ Bug: storing prefix sums or products in `int` → overflow past 2^31-1 → wrong answer\n\n**Single element** - the array has only one element.\n`Input: nums = [7]` → `Expected: 49`\n⚠️ Bug: loop condition `i < n - 1` instead of `i < n` → skips the only element, ans stays 0 → returns 0\n\n**Boundary: first element is minimum** - left[i] is -1, so the range start must be 0.\n`Input: nums = [1,2,3,2]` → `Expected: 14`\n⚠️ Bug: computing `prefix[right[i]] - prefix[left[i]]` instead of `prefix[right[i]] - prefix[left[i]+1]` → accesses prefix[-1] for i=0 → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array can contain negative numbers?",
+      "a": "The monotonic stack still finds the widest range where each element is the minimum, but that range may include negatives that reduce the sum, so the widest range no longer guarantees the max product for that minimum. You would need to also compute the maximum subarray sum within each element's range, combining the stack with a Kadane-style scan, raising the complexity to O(n log n) or worse depending on the approach."
+    },
+    {
+      "q": "What if you must support point updates and range queries for max min-product?",
+      "a": "Use a segment tree where each node stores the segment min, sum, and best min-product. When merging two children, the merged answer is max(left.ans, right.ans, merged_min × merged_sum), where merged_min is the minimum spanning the boundary. This gives O(n) build and O(log n) per update or query."
+    },
+    {
+      "q": "What if the array arrives as a stream and you cannot store all elements?",
+      "a": "Process elements one at a time, maintaining a monotonic stack. When an element is popped because a smaller element arrives, its left and right boundaries are finalized, so you can compute its min-product immediately using a running prefix sum. This still needs O(n) stack space in the worst case (strictly increasing input) but only one pass over the data."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSumMinProduct(vector<int>& nums) {\n        int n = nums.size();\n        vector<long long> prefix(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            prefix[i + 1] = prefix[i] + nums[i];\n        }\n\n        vector<int> left(n), right(n);\n        stack<int> st;\n\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && nums[st.top()] >= nums[i]) st.pop();\n            left[i] = st.empty() ? -1 : st.top();\n            st.push(i);\n        }\n\n        while (!st.empty()) st.pop();\n\n        for (int i = n - 1; i >= 0; i--) {\n            while (!st.empty() && nums[st.top()] >= nums[i]) st.pop();\n            right[i] = st.empty() ? n : st.top();\n            st.push(i);\n        }\n\n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            long long rangeSum = prefix[right[i]] - prefix[left[i] + 1];\n            long long product = (long long)nums[i] * rangeSum;\n            if (product > ans) ans = product;\n        }\n\n        return (int)(ans % 1000000007LL);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

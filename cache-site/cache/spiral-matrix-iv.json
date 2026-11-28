@@ -1,0 +1,40 @@
+{
+  "slug": "spiral-matrix-iv",
+  "title": "Spiral Matrix IV",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Direction-Vector Simulation",
+  "tc": "O(m × n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int dirs[4][2]: constant 4×2 array → O(1)\n- int d, i, j, ni, nj: five scalars → O(1)\n- recursion depth: none\n- not counted: input linked list, returned vector<vector<int>> ans (m×n entries)",
+  "approach": "Pre-fill an m×n matrix with -1, then walk the linked list while moving through the matrix in clockwise spiral order. Maintain a direction vector among {right, down, left, up}; after placing each value, peek at the next cell - if it is out of bounds or already filled (≠ -1), rotate the direction 90° clockwise. Because the list has at most m·n nodes, every placement lands on a distinct cell, and any unvisited cell keeps its -1.",
+  "hints": [
+    "As you trace the spiral path cell by cell, what two properties of the *next* cell would force you to stop and turn instead of continuing straight? The linked list has at most m × n nodes, and m × n ≤ 10^5.",
+    "Use a 2D direction vector that rotates clockwise, with the output matrix pre-filled with -1 doubling as a visited marker. In Example 1, starting at (0, 0) going right, you place 3, 0, 2, 6, 8 across row 0, then turn down because column 5 is out of bounds.",
+    "```\nfill m×n matrix with -1\ndirs = [(0,1),(1,0),(0,-1),(-1,0)],  d = 0,  i = 0,  j = 0\nwhile head ≠ null:\n    matrix[i][j] = head.val\n    ni, nj = i + dirs[d].row,  j + dirs[d].col\n    if (ni,nj) out of bounds  or  matrix[ni][nj] ≠ -1:\n        d = (d + 1) mod 4\n        ni, nj = i + dirs[d].row,  j + dirs[d].col\n    i, j = ni, nj\n    head = head.next\nreturn matrix\n```",
+    "**Single cell** - only one position exists in the entire grid.\n`Input: m=1, n=1, head=[42]` → `Expected: [[42]]`\n⚠️ Bug: checking `ans[ni][nj] != -1` before the bounds checks (no short-circuit) → out-of-bounds access at `ans[0][1]`\n\n**List exactly fills matrix** - no -1 cells remain.\n`Input: m=2, n=2, head=[1,2,3,4]` → `Expected: [[1,2],[4,3]]`\n⚠️ Bug: loop condition `while (head->next)` instead of `while (head)` → skips the last node, returns `[[1,2],[4,-1]]`\n\n**Single row** - no vertical movement is ever needed.\n`Input: m=1, n=4, head=[0,1,2]` → `Expected: [[0,1,2,-1]]`\n⚠️ Bug: not pre-filling the matrix with -1 → returns `[[0,1,2,0]]` (default int is 0)\n\n**Inner turn required** - the spiral must fold inward past already-placed cells.\n`Input: m=3, n=3, head=[1,2,3,4,5,6,7,8,9]` → `Expected: [[1,2,3],[8,9,4],[7,6,5]]`\n⚠️ Bug: only checking bounds, not checking if the cell is already filled → overwrites (0,0) with 9 and leaves (1,1) as -1, returns `[[9,2,3],[8,-1,4],[7,6,5]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the spiral must go counter-clockwise instead of clockwise?",
+      "a": "Reorder the direction vector to [(1,0),(0,1),(-1,0),(0,-1)] so the first move is downward and each rotation turns left. Every other part of the logic stays identical. TC O(m × n), SC O(1)."
+    },
+    {
+      "q": "What if the linked list can have more than m × n nodes?",
+      "a": "Add a placed-cell counter and break out of the loop once it reaches m × n, discarding the remaining list nodes. TC O(m × n), SC O(1)."
+    },
+    {
+      "q": "What if you must answer k queries of \"what value is at cell (r, c)?\" without building the full matrix, with m × n up to 10^9?",
+      "a": "Copy the list into a flat array, then compute each cell's spiral index analytically from its layer and offset within that layer. Each query becomes O(1) after O(list length) preprocessing. TC O(L + k) where L is list length, SC O(L)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> spiralMatrix(int m, int n, ListNode* head) {\n        vector<vector<int>> ans(m, vector<int>(n, -1));\n        int dirs[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};\n        int d = 0;\n        int i = 0, j = 0;\n        while (head != nullptr) {\n            ans[i][j] = head->val;\n            int ni = i + dirs[d][0];\n            int nj = j + dirs[d][1];\n            if (ni < 0 || ni >= m || nj < 0 || nj >= n || ans[ni][nj] != -1) {\n                d = (d + 1) % 4;\n                ni = i + dirs[d][0];\n                nj = j + dirs[d][1];\n            }\n            i = ni;\n            j = nj;\n            head = head->next;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "loud-and-rich",
+  "title": "Loud and Rich",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DFS with Memoization on a DAG",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- adj (adjacency list): n lists totaling m entries → O(n + m)\n- quiet (copy stored as member): n ints → O(n)\n- ans (memo + returned): n ints → O(n)\n- recursion stack: worst case O(n) for a skewed chain\n- not counted: input richer/quiet, returned vector (convention)",
+  "approach": "Model the \"richer\" relation as a DAG with edge b→a meaning \"a is richer than b\". For each person x, the set of people definitely at least as rich as x is exactly {x} ∪ (union of same sets for x's direct richer neighbors), so the least-quiet person among them is computable by DFS with memoization: ans[x] = argmin of quiet over {x} and {ans[c] : c is a direct richer neighbor of x}. Each node and edge is processed once.",
+  "hints": [
+    "For person x, the people \"definitely at least as rich\" are x plus everyone richer than x. How does this set for x relate to the same sets for x's direct richer neighbors?",
+    "Build a directed graph with edge b→a (\"a is richer than b\") and DFS with memoization. For node 0 in Example 1, its richer neighbor is 1; recursively ans[1]=5 (quietest among {1,2,3,4,5,6}), then since quiet[5]=1 < quiet[0]=3, ans[0]=5.",
+    "build graph: for each [a,b] in richer, add edge b -> a\nans[x] = -1 for all x\nfunction dfs(x):\n    if ans[x] != -1: return\n    ans[x] = x\n    for c in neighbors[x]:\n        dfs(c)\n        if quiet[ans[c]] < quiet[ans[x]]:\n            ans[x] = ans[c]\ncall dfs(i) for every i\nreturn ans",
+    "**Single person** - n=1, no richer info at all.\n`richer = [], quiet = [0]` → `Expected: [0]`\n⚠️ Bug: only updating ans[x] from neighbors and never setting ans[x]=x → returns [-1]\n\n**Disconnected nodes** - no edges, every person is their own answer.\n`richer = [], quiet = [2,0,1]` → `Expected: [0,1,2]`\n⚠️ Bug: looping only over nodes that appear in richer and skipping isolated nodes → returns [-1,-1,-1]\n\n**Quietest at the bottom** - the poorest person is the quietest.\n`richer = [[1,0]], quiet = [0,5]` → `Expected: [0,1]`\n⚠️ Bug: using `quiet[ans[c]] > quiet[ans[x]]` (wrong comparison direction) → returns [1,1]\n\n**Skewed chain** - recursion depth reaches n.\n`richer = [[1,0],[2,1],...,[499,498]], quiet = [499,498,...,1,0]` → `Expected: [499,499,...,499]`\n⚠️ Bug: DFS without memoization (revisiting subtrees) → TLE on n=500 chain"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^6, how does your solution change?",
+      "a": "The algorithm stays O(n + m), but deep recursion risks stack overflow. Replace the recursive DFS with an iterative topological sort (Kahn's algorithm): process nodes in reverse-topological order so each node's answer is finalized after all its richer neighbors, using an explicit stack/queue."
+    },
+    {
+      "q": "What if quiet values are not unique and ties must be broken by smallest index?",
+      "a": "Change the comparison to: pick ans[c] when quiet[ans[c]] < quiet[ans[x]], or when equal and ans[c] < ans[x]. The structure and complexity are unchanged."
+    },
+    {
+      "q": "What if richer edges arrive as an online stream and you must answer \"loudest-richer-than-x\" queries interleaved?",
+      "a": "Maintain the DAG and a dirty flag per affected node; on query, lazily recompute ans[x] via DFS only if any ancestor changed since last computation. Worst case per query is still O(n + m), but amortized cost is low when updates are sparse; for full online guarantees, a dynamic transitive-closure structure would be needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<vector<int>> adj;\n    vector<int> quiet;\n    vector<int> ans;\n    void dfs(int x) {\n        if (ans[x] != -1) return;\n        ans[x] = x;\n        for (int c : adj[x]) {\n            dfs(c);\n            if (quiet[ans[c]] < quiet[ans[x]]) {\n                ans[x] = ans[c];\n            }\n        }\n    }\npublic:\n    vector<int> loudAndRich(vector<vector<int>>& richer, vector<int>& quiet) {\n        int n = quiet.size();\n        this->quiet = quiet;\n        adj.assign(n, {});\n        for (auto& r : richer) {\n            adj[r[1]].push_back(r[0]);\n        }\n        ans.assign(n, -1);\n        for (int i = 0; i < n; i++) {\n            dfs(i);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

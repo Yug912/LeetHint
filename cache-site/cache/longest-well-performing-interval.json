@@ -1,0 +1,40 @@
+{
+  "slug": "longest-well-performing-interval",
+  "title": "Longest Well-Performing Interval",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack with Prefix Sums",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> P: n+1 entries → O(n)\n- vector<int> stk: up to n+1 entries → O(n)\n- recursion depth: none\n- not counted: input hours, returned int",
+  "approach": "Convert each day to +1 (tiring, >8 hours) or -1 and compute prefix sums P[0..n]. Build a monotonic stack of indices whose prefix-sum values are strictly decreasing - these are the only candidate left endpoints worth considering. Then scan j from right to left: while the stack top's prefix sum is below P[j], pop it and record j − top as a candidate answer. Scanning right-to-left guarantees that each left endpoint is matched with the farthest valid right endpoint before being discarded, yielding the longest interval.",
+  "hints": [
+    "If you replace each tiring day with +1 and each non-tiring day with -1, what must be true about the total of any contiguous group of days for it to be well-performing? The array can have up to 10^4 elements.",
+    "Prefix sums with a monotonic decreasing stack. For [9,9,6,0,6,6,9], prefix sums are [0,1,2,1,0,-1,-2,-1]; push indices where the prefix sum hits a new low, then scan j right-to-left, popping each index whose prefix sum is below P[j].",
+    "```\nP[0] = 0\nfor i in 1..n: P[i] = P[i-1] + (hours[i-1] > 8 ? 1 : -1)\n\nstack = [0]\nfor i in 1..n:\n    if P[i] < P[stack.top]: stack.push(i)\n\nans = 0\nfor j from n down to 0:\n    while stack not empty and P[stack.top] < P[j]:\n        ans = max(ans, j - stack.top)\n        stack.pop()\nreturn ans\n```",
+    "**Single element** - n=1, the only day is tiring\n`Input: hours = [9]` → `Expected: 1`\n⚠️ Bug: requiring interval length ≥ 2 → returns 0\n\n**All non-tiring** - every day is ≤ 8 hours\n`Input: hours = [6,6,6]` → `Expected: 0`\n⚠️ Bug: initializing ans to 1 instead of 0 → returns 1\n\n**Entire array valid** - the whole array is well-performing\n`Input: hours = [9,9,9]` → `Expected: 3`\n⚠️ Bug: iterating j only up to n-1 instead of n → returns 2\n\n**Tiring day at the end** - the only tiring day is the last element\n`Input: hours = [6,6,9]` → `Expected: 1`\n⚠️ Bug: using <= instead of < in the comparison P[stack.top()] < P[j] → returns 2 (interval [6,9] has equal tiring and non-tiring days, sum 0, not positive)"
+  ],
+  "followUps": [
+    {
+      "q": "What if hours can be negative (e.g., sick days counted as -1 hours)?",
+      "a": "The transformation to +1/-1 still works unchanged - only the comparison hours[i] > 8 matters. Time and space complexity remain O(n)."
+    },
+    {
+      "q": "What if the array arrives as a stream of unknown length and you must answer after each element?",
+      "a": "Maintain the prefix sum and the monotonic stack incrementally. After each new element, extend the stack if the new prefix sum is a new low, then re-scan from the current j downward to pop and update the answer. Amortized O(n) total time, O(n) space."
+    },
+    {
+      "q": "What if you must return the actual interval [l, r] instead of just its length?",
+      "a": "Track the stack index and j value whenever you update the best answer. Store best_l and best_r alongside ans. No change to time or space complexity."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestWPI(vector<int>& hours) {\n        int n = hours.size();\n        vector<int> P(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            P[i + 1] = P[i] + (hours[i] > 8 ? 1 : -1);\n        }\n\n        vector<int> stk;\n        stk.push_back(0);\n        for (int i = 1; i <= n; i++) {\n            if (P[i] < P[stk.back()]) {\n                stk.push_back(i);\n            }\n        }\n\n        int ans = 0;\n        for (int j = n; j >= 0; j--) {\n            while (!stk.empty() && P[stk.back()] < P[j]) {\n                ans = max(ans, j - stk.back());\n                stk.pop_back();\n            }\n        }\n\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "continuous-subarrays",
+  "title": "Continuous Subarrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: at most 3 entries (max−min ≤ 2 ⇒ ≤ 3 distinct values) → O(1)\n- recursion depth: none\n- not counted: input vector, returned long long",
+  "approach": "Use a sliding window with a hash-map frequency counter. For each right endpoint, add nums[right] to the map, then shrink from the left while max−min of map keys exceeds 2. Since max−min ≤ 2 allows at most 3 distinct values, the map never holds more than 3 entries, giving O(1) space. Each valid window ending at `right` contributes (right−left+1) subarrays.",
+  "hints": [
+    "If every pair of elements in a subarray differs by at most 2, how many distinct values can that subarray contain? The constraint n ≤ 10^5 rules out checking every subarray individually.",
+    "Sliding window with a hash-map frequency counter tracking distinct values in the current window. For nums = [5,4,2,4], when the window reaches [5,4,2] the map holds {5:1, 4:1, 2:1} with max−min = 3 > 2, so we shrink from the left until valid.",
+    "```\nleft = 0, ans = 0, freq = empty map\nfor right from 0 to n-1:\n    freq[nums[right]] += 1\n    while max(freq keys) - min(freq keys) > 2:\n        freq[nums[left]] -= 1\n        if freq[nums[left]] == 0: remove key\n        left += 1\n    ans += right - left + 1\nreturn ans\n```",
+    "**Single element** - n = 1, only one subarray exists.\n`Input: nums = [5]` → `Expected: 1`\n⚠️ Bug: initializing ans to 1 instead of 0 then also adding (right−left+1) → returns 2\n\n**All equal** - every subarray is valid.\n`Input: nums = [3,3,3]` → `Expected: 6`\n⚠️ Bug: shrinking when max−min == 2 (using `>=` instead of `>`) → returns 3\n\n**Overflow** - n = 10^5 all equal gives 10^5 × (10^5+1) / 2 ≈ 5 × 10^9, exceeding 2^31−1.\n`Input: nums = [1,1,1,...,1]` (10^5 ones) → `Expected: 5000050000`\n⚠️ Bug: using `int` for ans → returns garbage negative value\n\n**Large values** - nums[i] up to 10^9.\n`Input: nums = [1000000000, 999999999, 999999998]` → `Expected: 6`\n⚠️ Bug: using a fixed-size array indexed by value instead of a hash map → out-of-bounds access"
+  ],
+  "followUps": [
+    {
+      "q": "What if the allowed difference is k instead of 2?",
+      "a": "The same sliding window works unchanged. The hash map holds at most k+1 distinct values, so space becomes O(k). Time stays O(n) as long as k is small relative to n."
+    },
+    {
+      "q": "What if nums arrives as an unbounded stream you cannot store entirely?",
+      "a": "Process each element online with the same window and frequency map. You only retain the current window in memory, so space stays O(k). The answer accumulates as a running total with no need to revisit old elements."
+    },
+    {
+      "q": "What if you must return all valid [l, r] ranges instead of just the count?",
+      "a": "For each right, emit every (left, right) pair in the valid window. The output itself can be O(n^2) in the worst case (all equal), so the output size dominates the complexity - O(n^2) time and space for the result list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long continuousSubarrays(vector<int>& nums) {\n        unordered_map<int,int> freq;\n        long long ans = 0;\n        int left = 0;\n        int n = nums.size();\n        for (int right = 0; right < n; right++) {\n            freq[nums[right]]++;\n            while (true) {\n                int mn = INT_MAX, mx = INT_MIN;\n                for (auto& kv : freq) {\n                    mn = min(mn, kv.first);\n                    mx = max(mx, kv.first);\n                }\n                if (mx - mn <= 2) break;\n                freq[nums[left]]--;\n                if (freq[nums[left]] == 0) freq.erase(nums[left]);\n                left++;\n            }\n            ans += right - left + 1;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

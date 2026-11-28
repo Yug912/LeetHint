@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-earnings-from-taxi",
+  "title": "Maximum Earnings From Taxi",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Weighted Interval Scheduling (DP by end point)",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- vector<vector<pair<int,int>>> endAt: n+1 buckets holding m pairs total → O(n + m)\n- vector<long long> dp: n+1 entries → O(n)\n- not counted: input rides, return value",
+  "approach": "Sort rides conceptually by their end point using bucketing: group all rides ending at each point into `endAt[e]`. Then sweep points left to right, maintaining `dp[i]` = best earnings achievable using only points 1 through i. At each point i, first carry forward `dp[i-1]` (skip this point), then for every ride ending at i with start s and tip t, try `dp[s] + (i - s + t)`. Because s < i, `dp[s]` already incorporates the best non-overlapping set ending at or before s, so the recurrence is correct. The answer is `dp[n]`.",
+  "hints": [
+    "Among any two rides you decide to take, what must be true about their start and end points for both to fit in a single trip? The constraints allow up to 3 × 10^4 rides, so checking every subset is infeasible.",
+    "Dynamic programming with rides bucketed by end point. `dp[i]` = best earnings using points 1 through i. In Example 1, at point 5: `dp[5] = max(dp[4], dp[2]+5−2+4, dp[1]+5−1+1) = max(0, 7, 5) = 7`.",
+    "```\nbucket rides by end point\ndp[0..n] = 0\nfor i = 1 to n:\n    dp[i] = dp[i-1]\n    for each (start, tip) in bucket[i]:\n        dp[i] = max(dp[i], dp[start] + i - start + tip)\nreturn dp[n]\n```",
+    "**Single ride** - only one ride exists, so the answer is just its earning.\n`Input: n = 2, rides = [[1,2,5]]` → `Expected: 6`\n⚠️ Bug: returning `dp[n-1]` instead of `dp[n]` → returns 0\n\n**Overflow** - up to 3×10^4 rides each earning ≈ 2×10^5 gives totals up to 6×10^9.\n`Input: n = 100000, rides = [[1,100000,100000]]` → `Expected: 199999`\n⚠️ Bug: using `int` for `dp` → wraps to a negative value\n\n**Multiple rides, same end point** - several rides finish at the same point; only the best one wins but all must be checked.\n`Input: n = 5, rides = [[1,5,1],[2,5,4],[3,5,2]]` → `Expected: 7`\n⚠️ Bug: overwriting the bucket instead of appending → returns 5\n\n**Drop-off equals pick-up point** - a ride starts exactly where the previous one ends.\n`Input: n = 4, rides = [[1,2,1],[2,4,1]]` → `Expected: 5`\n⚠️ Bug: using `dp[start-1]` instead of `dp[start]` → returns 3\n\n**Ride ending at n** - the optimal ride finishes at the last point.\n`Input: n = 5, rides = [[1,5,10]]` → `Expected: 14`\n⚠️ Bug: sizing `dp` to `n` instead of `n+1` → out-of-bounds access"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^9?",
+      "a": "You cannot allocate an array of size n. Sort rides by end point and maintain a sorted structure (e.g., a map) of (point, best dp value). For each ride, binary-search the largest stored point ≤ start to get dp[start], then insert/update the entry for end. TC: O(m log m), SC: O(m)."
+    },
+    {
+      "q": "What if rides arrive online and you must answer the current best after each insertion?",
+      "a": "Replace the dp array with a Fenwick tree or segment tree supporting point-update (max) and prefix-max query. For each new ride (s, e, t), query the max over [1, s], add e−s+t, and update position e. TC: O(m log n), SC: O(n)."
+    },
+    {
+      "q": "What if you must pick up exactly k passengers?",
+      "a": "Add a second dimension: dp[i][j] = best earnings up to point i using exactly j rides. Transition dp[i][j] = max(dp[i−1][j], max over rides ending at i of dp[start][j−1] + earning). Use a rolling array over j to save space. TC: O((n + m)·k), SC: O(n·k) or O(k) with rolling."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxTaxiEarnings(int n, vector<vector<int>>& rides) {\n        vector<vector<pair<int,int>>> endAt(n + 1);\n        for (auto& r : rides) {\n            endAt[r[1]].push_back({r[0], r[2]});\n        }\n        vector<long long> dp(n + 1, 0);\n        for (int i = 1; i <= n; i++) {\n            dp[i] = dp[i - 1];\n            for (auto& pr : endAt[i]) {\n                long long earn = dp[pr.first] + (long long)(i - pr.first + pr.second);\n                if (earn > dp[i]) dp[i] = earn;\n            }\n        }\n        return dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-candies-allocated-to-k-children",
+  "title": "Maximum Candies Allocated to K Children",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log M)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- only a few scalar variables (total, maxC, lo, hi, mid, count, ans) → O(1)\n- no containers, no recursion\n- not counted: input vector",
+  "approach": "For a fixed candy count c, each pile candies[i] yields floor(candies[i]/c) sub-piles of size c. Summing these gives the total children we can serve; if it's ≥ k, c is feasible. Since feasibility is monotonic (if c works, any smaller c works), binary search c in [1, max(candies)]. If total candies < k, return 0 immediately.",
+  "hints": [
+    "If you fix the exact number of candies c each child must receive, how many children can a single pile of size candies[i] serve when you're only allowed to split (never merge) piles?",
+    "Binary search on the answer c. For c=5 on [5,8,6] with k=3: pile 5→1, pile 8→1, pile 6→1, total 3 ≥ 3, so 5 is feasible; try larger.",
+    "```\nif total candies < k: return 0\nlo, hi = 1, max(candies)\nwhile lo <= hi:\n    mid = (lo + hi) / 2\n    count = sum(candies[i] / mid for all i)\n    if count >= k:\n        ans = mid\n        lo = mid + 1\n    else:\n        hi = mid - 1\nreturn ans\n```",
+    "**Total shortage** - total candies below k forces answer 0.\n`Input: candies = [2,5], k = 11` → `Expected: 0`\n⚠️ Bug: skipping the total<k check and starting binary search at lo=1 → returns 1 (wrong, since 7 candies can't give 11 children even 1 each).\n\n**Single pile** - n=1, the answer is just floor(candies[0]/k).\n`Input: candies = [10], k = 3` → `Expected: 3`\n⚠️ Bug: initializing hi to candies.size() instead of max(candies) → hi=1, returns 1 instead of 3.\n\n**Overflow in count** - k up to 10^12 and piles up to 10^7; sum of (candies[i]/1) can reach 10^5 × 10^7 = 10^12.\n`Input: candies = [10000000, 10000000], k = 2000000000000` → `Expected: 0`\n⚠️ Bug: declaring `count` as `int` → overflows past 2^31-1, returns garbage instead of 0.\n\n**All equal piles** - every pile identical, answer is floor(pile/k) only when n=1, else larger.\n`Input: candies = [5,5,5], k = 3` → `Expected: 5`\n⚠️ Bug: using `lo < hi` with `hi = mid` (no +1/-1) → infinite loop or misses the boundary, returns 4."
+  ],
+  "followUps": [
+    {
+      "q": "What if each child must receive candies from at most two different piles (you may merge two sub-piles for one child)?",
+      "a": "The feasibility check changes: with merging allowed, the question becomes whether total candies ≥ c·k, so binary search c with that simpler predicate. TC stays O(n log M), SC O(1)."
+    },
+    {
+      "q": "What if k can change dynamically across many queries on the same candies array?",
+      "a": "Precompute prefix sums of candies sorted descending. For a query k, binary search c; the feasibility check sum(candies[i]/c) can be sped up by grouping equal values, but per-query cost remains O(n log M). Precompute total sum to answer k>total in O(1)."
+    },
+    {
+      "q": "What if candies arrive as a stream and you must answer after each new pile arrives?",
+      "a": "Maintain running total and running max. After each insertion, re-run binary search using the accumulated piles; TC O(n log M) per query, or O(1) amortized if you cache the previous answer and only increase it when new data allows."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumCandies(vector<int>& candies, long long k) {\n        long long total = 0;\n        int maxC = 0;\n        for (int c : candies) {\n            total += c;\n            if (c > maxC) maxC = c;\n        }\n        if (total < k) return 0;\n        int lo = 1, hi = maxC, ans = 0;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            long long count = 0;\n            for (int c : candies) {\n                count += c / mid;\n            }\n            if (count >= k) {\n                ans = mid;\n                lo = mid + 1;\n            } else {\n                hi = mid - 1;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

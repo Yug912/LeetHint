@@ -1,0 +1,40 @@
+{
+  "slug": "count-number-of-bad-pairs",
+  "title": "Count Number of Bad Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Complementary Counting with Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> cnt: up to n distinct keys → O(n)\n- recursion depth: none\n- not counted: input vector, returned long long",
+  "approach": "Rearrange the good-pair condition `j - i == nums[j] - nums[i]` into `nums[i] - i == nums[j] - j`. So a pair is good exactly when both indices share the same value of `nums[k] - k`. Count occurrences of `nums[i] - i` in a hash map; for each new index, the number of good pairs it forms equals the current count of its key. Bad pairs = total pairs `n*(n-1)/2` minus good pairs.",
+  "hints": [
+    "With n up to 10^5, checking all O(n^2) pairs is too slow. What algebraic rearrangement of the good-pair condition `j - i = nums[j] - nums[i]` lets you compare a single per-index quantity between i and j?",
+    "Use an `unordered_map<int,int>` keyed by `nums[i]-i`. For `nums=[4,1,3,3]`, at i=3 the key `0` was already seen once (at i=1), so this index adds 1 good pair; subtract total good pairs from `n*(n-1)/2`.",
+    "```\ntotal = n*(n-1)/2\ngood = 0\ncounts = empty map\nfor i in 0..n-1:\n    v = nums[i] - i\n    good += counts[v]\n    counts[v] += 1\nreturn total - good\n```",
+    "**Single element** - n=1 means no pairs exist.\n`Input: nums = [5]` → `Expected: 0`\n⚠️ Bug: computing total as `n*(n+1)/2` instead of `n*(n-1)/2` → returns 1.\n\n**Overflow on total** - n up to 10^5 makes total pairs ~5×10^9, exceeding 2^31-1.\n`Input: nums = [1,2,3,...,100000]` → `Expected: 0`\n⚠️ Bug: declaring `total` as `int` → `100000*99999/2` overflows, returns 704982704.\n\n**All equal values** - every `nums[i]` equal makes all keys `nums[i]-i` distinct.\n`Input: nums = [7,7,7,7]` → `Expected: 6`\n⚠️ Bug: using `nums[i]` as the key instead of `nums[i]-i` → all map to 7, good=6, returns 0.\n\n**Arithmetic progression** - `nums[i] = i + c` yields zero bad pairs.\n`Input: nums = [1,2,3,4,5]` → `Expected: 0`\n⚠️ Bug: forgetting to subtract `i` → keys 1,2,3,4,5 all distinct, good=0, returns 10."
+  ],
+  "followUps": [
+    {
+      "q": "What if `nums[i]` can be negative?",
+      "a": "The transformation `nums[i]-i` still works; the map key just becomes possibly negative, which `unordered_map` handles natively. TC stays O(n), SC O(n)."
+    },
+    {
+      "q": "What if you must return the bad-pair count after each append to `nums`?",
+      "a": "Keep the running map and good-pair count; on appending index i, add `counts[nums[i]-i]` to good, increment the count, and answer `i*(i+1)/2 - good` (total pairs so far). Each query is O(1) amortized, overall O(n+q), SC O(n)."
+    },
+    {
+      "q": "What if `nums` arrives as a stream too large to store and you only need the final count?",
+      "a": "Discard each element after computing its key; keep only the map of counts and the running good-pair total. TC O(n), SC O(n) for the map in the worst case of all distinct keys."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long countBadPairs(vector<int>& nums) {\n        unordered_map<int,int> cnt;\n        long long good = 0;\n        int n = (int)nums.size();\n        for (int i = 0; i < n; i++) {\n            int v = nums[i] - i;\n            good += cnt[v];\n            cnt[v]++;\n        }\n        long long total = (long long)n * (n - 1) / 2;\n        return total - good;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

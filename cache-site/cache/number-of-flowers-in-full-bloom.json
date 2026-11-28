@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-flowers-in-full-bloom",
+  "title": "Number of Flowers in Full Bloom",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Sorted Arrays",
+  "tc": "O((n + m) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> starts: n entries → O(n)\n- vector<int> ends: n entries → O(n)\n- vector<int> ans: m entries (returned output, not counted)\n- sort(): O(log n) stack\n- not counted: input flowers, input people, returned ans",
+  "approach": "A flower blooms at time t iff start_i ≤ t ≤ end_i. So the count at t equals (number of flowers with start ≤ t) minus (number of flowers with end < t). Sort all start times and all end times separately; for each person use upper_bound on starts and lower_bound on ends. Both bounds are correct because the end is inclusive (a flower with end_i == t is still blooming, so we only subtract flowers whose end is strictly less than t).",
+  "hints": [
+    "A flower is blooming at time t exactly when start_i ≤ t ≤ end_i. If, for a given t, you could quickly count flowers whose start is at or before t and flowers whose end is before t, what would those two counts let you compute?",
+    "Sort the start times and the end times into two separate arrays, then binary-search each. For people = [2,3,7,11] with starts = [1,3,4,9] and ends = [6,7,12,13]: at t = 7, upper_bound on starts gives 3, lower_bound on ends gives 1, so 3 − 1 = 2.",
+    "sort starts\nsort ends\nfor each person time t:\n    a = upper_bound(starts, t)   # count of starts <= t\n    b = lower_bound(ends, t)     # count of ends  <  t\n    answer = a - b",
+    "**Boundary - person arrives exactly at a flower's single-day bloom time**\n`Input: flowers = [[5,5]], people = [5]` → `Expected: [1]`\n⚠️ Bug: using upper_bound on ends (counts ends ≤ t) instead of lower_bound (ends < t) → returns `[0]`\n\n**Duplicates - two flowers share the same start and end**\n`Input: flowers = [[1,5],[1,5]], people = [3]` → `Expected: [2]`\n⚠️ Bug: deduplicating starts into a set before counting → returns `[1]`\n\n**All equal - every flower has the same range, person at the start day**\n`Input: flowers = [[2,4],[2,4],[2,4]], people = [2]` → `Expected: [3]`\n⚠️ Bug: using lower_bound on starts (counts starts < t) instead of upper_bound (starts ≤ t) → returns `[0]`\n\n**After bloom - person arrives after every flower has finished**\n`Input: flowers = [[1,5]], people = [10]` → `Expected: [0]`\n⚠️ Bug: returning only the count of starts ≤ t without subtracting the ended count → returns `[1]`"
+  ],
+  "followUps": [
+    {
+      "q": "Flowers are inserted online and people queries arrive interleaved; answer each query immediately.",
+      "a": "Keep two balanced BSTs supporting rank queries (e.g., policy-tree-based ordered sets) for start and end times. Insert is O(log n), each query is two rank lookups O(log n). Total O((n + m) log n), space O(n)."
+    },
+    {
+      "q": "people has up to 10^9 entries but only a few distinct arrival times.",
+      "a": "Sort and deduplicate the people times, answer each unique time once with the same two binary searches, then map results back to every original index. TC O(m log m + u log n) where u is the number of unique times; SC O(u + m) for the output."
+    },
+    {
+      "q": "After preprocessing, every query must be answered in O(1), with all times up to 10^9.",
+      "a": "Coordinate-compress the union of all start, end, and people times, then build a difference array over compressed coordinates: +1 at each start, −1 at each end+1, take prefix sums. Preprocessing O((n + m) log(n + m)), each query O(1) via binary search into the compressed index; SC O(n + m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> fullBloomFlowers(vector<vector<int>>& flowers, vector<int>& people) {\n        int n = (int)flowers.size();\n        vector<int> starts(n), ends(n);\n        for (int i = 0; i < n; i++) {\n            starts[i] = flowers[i][0];\n            ends[i]   = flowers[i][1];\n        }\n        sort(starts.begin(), starts.end());\n        sort(ends.begin(),   ends.end());\n\n        vector<int> ans;\n        ans.reserve(people.size());\n        for (int t : people) {\n            int started = (int)(upper_bound(starts.begin(), starts.end(), t) - starts.begin());\n            int ended   = (int)(lower_bound(ends.begin(),   ends.end(),   t) - ends.begin());\n            ans.push_back(started - ended);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

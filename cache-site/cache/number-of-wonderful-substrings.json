@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-wonderful-substrings",
+  "title": "Number of Wonderful Substrings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix XOR with Bitmask",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long count[1024]: fixed 1024 entries (2^10 masks) → O(1)\n- no recursion, no other containers\n- not counted: input string",
+  "approach": "Track a 10-bit parity mask as we scan the string: bit *i* is 1 if letter *i* has appeared an odd number of times so far. A substring word[l..r] is wonderful iff prefix_mask[r] XOR prefix_mask[l-1] has at most one bit set (popcount ≤ 1). For each position we add the count of previously-seen prefixes with the same mask (0-bit difference) and with each of the 10 one-bit-flipped masks. A fixed-size array of 1024 entries tracks mask frequencies.",
+  "hints": [
+    "If you only care whether each letter's count so far is odd or even, how many distinct parity states can a prefix of the string have? The string uses only the first ten lowercase letters 'a' through 'j'.",
+    "Use a prefix parity bitmask (10 bits, one per letter) and a frequency array of size 1024. For \"aba\": after processing 'a','b' the mask is 0b11; the prior mask 0b01 (after first 'a') differs by one bit, so substring \"b\" is wonderful.",
+    "```\ncount[0] = 1, mask = 0, ans = 0\nfor each char c:\n    mask ^= (1 << (c - 'a'))\n    ans += count[mask]                      # zero bits differ\n    for k in 0..9:\n        ans += count[mask ^ (1 << k)]       # one bit differs\n    count[mask] += 1\nreturn ans\n```",
+    "**Single character** - n = 1, the only substring is the character itself.\n`Input: \"a\"` → `Expected: 1`\n⚠️ Bug: initialising `count[0] = 0` instead of `1` → returns `0`\n\n**Overflow** - all 10^5 characters identical; every substring is wonderful, giving 10^5 × 100001 / 2 = 5 000 050 000.\n`Input: \"aaa...a\" (10^5 times)` → `Expected: 5000050000`\n⚠️ Bug: declaring `int ans` instead of `long long` → returns a wrapped/negative value\n\n**All same character** - every substring has at most one odd-frequency letter.\n`Input: \"aaa\"` → `Expected: 6`\n⚠️ Bug: omitting the `ans += count[mask]` line (only checking one-bit-flip neighbours) → returns `4`\n\n**Two distinct characters** - tests that both the same-mask and one-bit-flip branches fire.\n`Input: \"ab\"` → `Expected: 2`\n⚠️ Bug: flipping the wrong bit direction, e.g. `count[mask | (1 << k)]` instead of `count[mask ^ (1 << k)]` → returns `0`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet were all 26 lowercase letters instead of just 'a'-'j'?",
+      "a": "The mask grows to 26 bits, so a 2^26 array is too large. Replace the fixed array with a hash map keyed by mask; for each position still check the same mask and 26 one-bit-flip neighbours. TC becomes O(26 n), SC becomes O(min(n, 2^26))."
+    },
+    {
+      "q": "What if \"wonderful\" allowed at most K letters with odd frequency instead of at most one?",
+      "a": "For each prefix mask, sum the counts of all previously seen masks within Hamming distance K of the current mask. For small K you enumerate the C(10, 0) + … + C(10, K) neighbour masks explicitly; TC is O(n × 10^K). For large K a Walsh-Hadamard transform of the frequency array gives O(n + 10 × 2^10)."
+    },
+    {
+      "q": "What if the string arrives as a stream too long to store?",
+      "a": "The algorithm already processes one character at a time and keeps only the 1024-entry count array, so it works as-is for streaming. TC stays O(n), SC stays O(1) (1024 entries). You emit the running answer after each character if incremental counts are needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long wonderfulSubstrings(string word) {\n        long long count[1024] = {0};\n        count[0] = 1;\n        int mask = 0;\n        long long ans = 0;\n        for (char c : word) {\n            mask ^= (1 << (c - 'a'));\n            ans += count[mask];\n            for (int k = 0; k < 10; k++) {\n                ans += count[mask ^ (1 << k)];\n            }\n            count[mask]++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

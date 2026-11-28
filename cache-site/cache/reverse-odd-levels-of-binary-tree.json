@@ -1,0 +1,40 @@
+{
+  "slug": "reverse-odd-levels-of-binary-tree",
+  "title": "Reverse Odd Levels of Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Mirror DFS (Two-Pointer Recursion)",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call stack: depth = tree height h (perfect tree ⇒ h = log₂ n, max 13) → O(h)\n- no containers, arrays, or queues allocated\n- not counted: input tree, returned root pointer",
+  "approach": "Use a mirror DFS: pass two node pointers that walk symmetric paths from the outside inward. At each call, if the current level is odd, swap the two nodes' values. Then recurse into the crossed children - `a.left` with `b.right`, and `a.right` with `b.left` - so that every pair of nodes that must exchange values to reverse the level is visited exactly once. The tree is perfect, so every level is fully populated and every symmetric pair exists.",
+  "hints": [
+    "In a perfect binary tree, which two nodes at an odd level must exchange values to reverse that level, and what is their structural relationship to each other? Every level of a perfect tree has exactly 2^level nodes.",
+    "Use a recursive depth-first traversal with two node pointers walking mirror-image paths. For Example 1, call dfs on root's children (3 and 5) at level 1; since level 1 is odd, swap their values to get 5 and 3.",
+    "```\nfunction dfs(a, b, level):\n    if a is null: return\n    if level is odd: swap a.val and b.val\n    dfs(a.left, b.right, level + 1)\n    dfs(a.right, b.left, level + 1)\n\nreverseOddLevels(root):\n    dfs(root.left, root.right, 1)\n    return root\n```",
+    "**Single node** - only the root exists; no odd levels to reverse.\n`Input: [5]` → `Expected: [5]`\n⚠️ Bug: `return nullptr;` instead of `return root;` → returns `[]`\n\n**Wrong parity check** - swapping at even levels instead of odd.\n`Input: [2,3,5,8,13,21,34]` → `Expected: [2,5,3,8,13,21,34]`\n⚠️ Bug: `if (level % 2 == 0)` → returns `[2,3,5,8,13,21,34]` (no swap at level 1)\n\n**Same-side recursion** - pairing left-with-left instead of crossing children.\n`Input: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]` → `Expected: [0,2,1,3,4,5,6,14,13,12,11,10,9,8,7]`\n⚠️ Bug: `dfs(a.left, b.left)` and `dfs(a.right, b.right)` → returns `[0,2,1,3,4,5,6,11,12,13,14,9,10,7,8]`\n\n**Off-by-one level start** - numbering root's children as level 0.\n`Input: [7,13,11]` → `Expected: [7,11,13]`\n⚠️ Bug: `dfs(root.left, root.right, 0)` with swap at odd levels → returns `[7,13,11]` (level 0 treated as even, no swap)"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must reverse every level except the root (both odd and even)?",
+      "a": "Remove the parity check and swap unconditionally inside dfs. The mirror-recursion structure stays identical; every symmetric pair exchanges values at every level. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if the tree is complete but not perfect (last level may be partially filled)?",
+      "a": "Add null guards before each recursive call - only recurse when both paired children are non-null. Incomplete levels get partial reversals; the algorithm degrades gracefully. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if you must use O(1) auxiliary space (no recursion stack or queue)?",
+      "a": "Use an iterative two-pointer walk: at each level, start from the leftmost and rightmost nodes (reachable via child pointers from the previous level's extremes) and march inward, swapping at odd levels. Since the tree is perfect, every level's extremes are reachable from the parent level's extremes. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    void dfs(TreeNode* a, TreeNode* b, int level) {\n        if (!a || !b) return;\n        if (level % 2 == 1) {\n            int tmp = a->val;\n            a->val = b->val;\n            b->val = tmp;\n        }\n        dfs(a->left, b->right, level + 1);\n        dfs(a->right, b->left, level + 1);\n    }\npublic:\n    TreeNode* reverseOddLevels(TreeNode* root) {\n        if (!root) return root;\n        dfs(root->left, root->right, 1);\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

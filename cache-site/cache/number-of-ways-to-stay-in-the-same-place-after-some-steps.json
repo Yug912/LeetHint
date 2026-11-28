@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-ways-to-stay-in-the-same-place-after-some-steps",
+  "title": "Number of Ways to Stay in the Same Place After Some Steps",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "1D Dynamic Programming with Rolling Arrays",
+  "tc": "O(steps × min(arrLen, steps))",
+  "sc": "O(min(arrLen, steps))",
+  "spaceBreakdown": "- vector<long long> dp: up to min(arrLen, steps/2+1) entries → O(steps)\n- vector<long long> next: same size → O(steps)\n- recursion depth: none (iterative)\n- not counted: input parameters, return value",
+  "approach": "Since the pointer must return to index 0 after exactly `steps` moves, it can never be farther than `steps/2` from index 0 at any point. We cap the effective array length at `min(arrLen, steps/2 + 1)`, then run bottom-up DP with two rolling arrays: `dp[j]` = number of ways to be at position `j` after the current number of steps, transitioning by stay/left/right each iteration.",
+  "hints": [
+    "With exactly `steps` moves and a requirement to finish back at index 0, what is the farthest index the pointer could ever visit along the way? The constraint `steps ≤ 500` is relevant here.",
+    "Use 1D dynamic programming over positions 0..min(arrLen, steps/2+1)-1 with two rolling arrays. For steps=3, arrLen=2: start dp=[1,0]; after one step dp=[1,1] (stay at 0, or move right to 1).",
+    "```\nn = min(arrLen, steps/2 + 1)\ndp[0] = 1\nrepeat steps times:\n    next = all zeros\n    for each position j where dp[j] > 0:\n        next[j]   += dp[j]          # stay\n        next[j+1] += dp[j]          # right, if j+1 < n\n        next[j-1] += dp[j]          # left,  if j-1 >= 0\n        (all additions mod 1e9+7)\n    dp = next\nreturn dp[0]\n```",
+    "**Off-by-one in position cap** - capping at steps/2 instead of steps/2+1 drops the farthest reachable position\n`Input: steps = 4, arrLen = 3` → `Expected: 9`\n⚠️ Bug: using `n = min(arrLen, steps/2)` gives n = 2 instead of 3 → returns 8\n\n**Stale next array** - not zeroing `next` before each step lets values accumulate across iterations\n`Input: steps = 3, arrLen = 2` → `Expected: 4`\n⚠️ Bug: omitting the `fill(next, 0)` reset each iteration → returns 9\n\n**Skipping index 0** - starting the inner loop at j = 1 never propagates the initial state at position 0\n`Input: steps = 1, arrLen = 1` → `Expected: 1`\n⚠️ Bug: looping `for (int j = 1; j < n; j++)` instead of `for (int j = 0; j < n; j++)` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if `arrLen` can be up to 10^9?",
+      "a": "The same solution works unchanged. The cap `min(arrLen, steps/2 + 1)` still limits the effective array to at most 251 positions, so time and space remain O(steps²) and O(steps) respectively."
+    },
+    {
+      "q": "What if `steps` can be up to 10^5 and `arrLen` is very large?",
+      "a": "When the array is effectively infinite, the answer is the sum over r of `steps! / (r! · r! · (steps−2r)!)` for r = 0..steps/2 (choosing r right moves, r left moves, and the rest stays). Precompute factorials and modular inverses for O(steps) time, O(steps) space."
+    },
+    {
+      "q": "What if `steps` can be up to 10^5 but `arrLen` is small (e.g., ≤ 100)?",
+      "a": "Build the arrLen × arrLen tridiagonal transition matrix and use fast matrix exponentiation to raise it to the `steps`-th power. Time is O(arrLen³ · log steps), space is O(arrLen²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numWays(int steps, int arrLen) {\n        const int MOD = 1000000007;\n        int n = min(arrLen, steps / 2 + 1);\n        vector<long long> dp(n, 0), next(n, 0);\n        dp[0] = 1;\n        for (int s = 0; s < steps; s++) {\n            fill(next.begin(), next.end(), 0);\n            for (int j = 0; j < n; j++) {\n                if (dp[j] == 0) continue;\n                next[j] = (next[j] + dp[j]) % MOD;\n                if (j + 1 < n) next[j + 1] = (next[j + 1] + dp[j]) % MOD;\n                if (j - 1 >= 0) next[j - 1] = (next[j - 1] + dp[j]) % MOD;\n            }\n            swap(dp, next);\n        }\n        return dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

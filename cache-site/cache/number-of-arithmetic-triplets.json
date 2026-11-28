@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-arithmetic-triplets",
+  "title": "Number of Arithmetic Triplets",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Three Forward-Moving Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables n, count, i, k, j: O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input vector nums",
+  "approach": "Since nums is strictly increasing, for each middle index j the index i with nums[j] − nums[i] = diff and the index k with nums[k] − nums[j] = diff both move monotonically to the right as j increases. Three forward-moving pointers exploit this: for each j, advance i while the left gap exceeds diff, advance k while the right gap is below diff, then check whether both gaps equal diff. Each pointer traverses the array at most once, giving O(n) time and O(1) extra space.",
+  "hints": [
+    "The array is strictly increasing and n ≤ 200. For a fixed middle index j, what can you say about where the element exactly diff below nums[j] and the element exactly diff above nums[j] sit, and how do those positions shift as j moves right?",
+    "Use three forward-moving pointers i, j, k. For nums = [0,1,4,6,7,10], diff = 3: at j = 2 (nums[j] = 4), i settles at index 1 (4 − 1 = 3) and k settles at index 4 (7 − 4 = 3), counting one triplet.",
+    "```\ni = 0, k = 0, count = 0\nfor j in 0..n-1:\n    while i < j and nums[j] - nums[i] > diff: i += 1\n    while k < n-1 and nums[k] - nums[j] < diff: k += 1\n    if i < j and nums[j] - nums[i] == diff and k > j and nums[k] - nums[j] == diff:\n        count += 1\nreturn count\n```",
+    "**Smallest input** - n = 3, the minimum array size, exactly one candidate triplet.\n`Input: nums = [0,1,2], diff = 1` → `Expected: 1`\n⚠️ Bug: `while (i < j && nums[j] - nums[i] >= diff)` (using `>=` instead of `>`) → at j = 1, i advances from 0 to 1 because 1 − 0 = 1 ≥ 1, so i = j and the triplet is missed → returns 0.\n\n**Single triplet at boundary** - the only valid triplet uses the last element as k.\n`Input: nums = [0,3,6], diff = 3` → `Expected: 1`\n⚠️ Bug: `while (k < n - 1 && nums[k] - nums[j] > diff)` (advancing k when the gap is too large instead of too small) → k never moves past 0, so k > j always fails → returns 0.\n\n**Overlapping triplets** - multiple triplets share middle elements.\n`Input: nums = [0,1,4,6,7,10], diff = 3` → `Expected: 2`\n⚠️ Bug: `break` immediately after incrementing count → only the first triplet (1, 2, 4) is found → returns 1.\n\n**Partial match, no valid triplet** - the left gap matches but the right gap does not.\n`Input: nums = [0,3,7], diff = 3` → `Expected: 0`\n⚠️ Bug: checking only `nums[j] - nums[i] == diff` without verifying `nums[k] - nums[j] == diff` → at j = 1, 3 − 0 = 3 matches, so count becomes 1 → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums is not guaranteed to be strictly increasing and may contain duplicates?",
+      "a": "The monotonic pointer movement breaks on plateaus because equal values create multiple candidate positions. Insert every value into a hash set, then for each value v check whether v − diff and v + diff are both present - each such v is the middle of a triplet. O(n) time, O(n) space."
+    },
+    {
+      "q": "What if n can be up to 10^6 and nums arrives as a stream with no random access?",
+      "a": "Keep a hash set of values seen so far. For each incoming value v (which plays the role of nums[k]), check whether v − diff and v − 2·diff are both already in the set; if so, count a triplet. Strict increase guarantees correct index ordering. O(n) time, O(n) space."
+    },
+    {
+      "q": "What if you must return every triplet's indices instead of just the count?",
+      "a": "Run the same three-pointer scan, but when both gaps equal diff, append (i, j, k) to a result vector. Time is O(n + T) where T is the number of triplets; space is O(T) for the output (O(1) auxiliary beyond that)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int arithmeticTriplets(vector<int>& nums, int diff) {\n        int n = nums.size();\n        int count = 0;\n        int i = 0, k = 0;\n        for (int j = 0; j < n; j++) {\n            while (i < j && nums[j] - nums[i] > diff) i++;\n            while (k < n - 1 && nums[k] - nums[j] < diff) k++;\n            if (i < j && nums[j] - nums[i] == diff && k > j && nums[k] - nums[j] == diff) {\n                count++;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

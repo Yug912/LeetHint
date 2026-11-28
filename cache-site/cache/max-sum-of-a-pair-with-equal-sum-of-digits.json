@@ -1,0 +1,40 @@
+{
+  "slug": "max-sum-of-a-pair-with-equal-sum-of-digits",
+  "title": "Max Sum of a Pair With Equal Sum of Digits",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Grouping",
+  "tc": "O(n·log V)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int largest[82]: fixed 82 ints → O(1)\n- a few scalar locals → O(1)\n- not counted: input vector, returned int",
+  "approach": "Group numbers by their digit sum. Since nums[i] ≤ 10^9, the maximum digit sum is 9·9 = 81, so we can use a fixed array of size 82. For each digit-sum bucket, store only the largest value seen so far. When a new number x with digit sum s arrives and the bucket already holds a value v, the candidate pair sum is x + v; update the answer, then refresh the bucket with max(v, x). This works because for any group, the best pair always consists of the two largest elements, and processing in arrival order with \"keep the largest\" guarantees the second-largest meets the largest at the moment it's inserted.",
+  "hints": [
+    "Given nums[i] ≤ 10^9, how many distinct digit-sum values can possibly appear across the whole array?",
+    "Use a hash map (or a fixed array of size 82) keyed by digit sum, storing the largest value seen for each key. For nums = [18,43,36,...], when 36 arrives its digit sum is 9 and 18 is already stored under key 9, so the candidate is 36 + 18 = 54.",
+    "```\nlargest[s] = -1 for all s\nans = -1\nfor x in nums:\n    s = digitSum(x)\n    if largest[s] != -1:\n        ans = max(ans, x + largest[s])\n    largest[s] = max(largest[s], x)\nreturn ans\n```",
+    "**Single element** - n = 1 means no pair can be formed.\n`Input: nums = [5]` → `Expected: -1`\n⚠️ Bug: initializing `ans = 0` instead of `-1` → returns `0`\n\n**All same digit sum** - several candidates compete within one group.\n`Input: nums = [11,20,2]` → `Expected: 31`\n⚠️ Bug: updating `largest[s]` to `x` before computing the candidate sum → returns `40` (pairs 20 with itself)\n\n**No valid pair** - every digit sum appears exactly once.\n`Input: nums = [10,12,19,14]` → `Expected: -1`\n⚠️ Bug: returning `ans` initialized to `0` without checking whether any pair was found → returns `0`\n\n**Duplicate values** - the same number appears twice with the same digit sum.\n`Input: nums = [18,18]` → `Expected: 36`\n⚠️ Bug: storing values in a `std::set` (which dedupes) instead of tracking the largest per bucket → returns `-1`"
+  ],
+  "followUps": [
+    {
+      "q": "Instead of one pair, find the maximum sum of k numbers (k ≥ 2) all sharing the same digit sum.",
+      "a": "For each digit-sum group, keep the k largest values using a min-heap of size k (or sort each group). Sum the top k of whichever group yields the largest total. TC O(n log k), SC O(82·k) = O(k)."
+    },
+    {
+      "q": "nums is an unbounded stream; answer maximumSum after each inserted element.",
+      "a": "Maintain, per digit sum, the largest value seen and the best pair sum formed so far in that group. On each new element, update its group's largest value, recompute that group's best pair, and refresh the global maximum. TC O(1) amortized per element, SC O(82) = O(1)."
+    },
+    {
+      "q": "nums[i] can be up to 10^18, so digit sums can reach 162.",
+      "a": "Replace the fixed array of size 82 with an `unordered_map<int,int>`; the rest of the algorithm is unchanged. TC O(n) expected, SC O(min(n, 163)) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumSum(vector<int>& nums) {\n        int largest[82];\n        for (int i = 0; i < 82; ++i) largest[i] = -1;\n        int ans = -1;\n        for (int x : nums) {\n            int s = 0, t = x;\n            while (t > 0) {\n                s += t % 10;\n                t /= 10;\n            }\n            if (largest[s] != -1) {\n                int cand = x + largest[s];\n                if (cand > ans) ans = cand;\n            }\n            if (x > largest[s]) largest[s] = x;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

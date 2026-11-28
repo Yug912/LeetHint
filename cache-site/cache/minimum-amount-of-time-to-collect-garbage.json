@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-amount-of-time-to-collect-garbage",
+  "title": "Minimum Amount of Time to Collect Garbage",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum / Linear Scan",
+  "tc": "O(n * L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (total, lastM, lastP, lastG, loop counter i): O(1)\n- no containers or arrays allocated\n- no recursion\n- not counted: input garbage and travel",
+  "approach": "Since only one truck operates at a time, the total time is the sum of each truck's individual time. Each truck's time equals the number of garbage units of its type (1 minute each) plus the travel time from house 0 to the furthest house containing that type. We find the last house index for each type in one pass, then sum the travel prefix up to each of those indices.",
+  "hints": [
+    "For a truck collecting one garbage type, what determines how far it must drive from house 0? The constraint garbage.length ≤ 10^5 means a single linear pass is sufficient.",
+    "Track the highest house index where each character 'M', 'P', 'G' appears. In Example 1, the last 'G' is at index 3, so the glass truck needs travel[0]+travel[1]+travel[2] = 2+4+3 = 9 minutes of driving.",
+    "```\ntotal = 0\nlastM = lastP = lastG = -1\nfor i in 0..n-1:\n    total += len(garbage[i])\n    for c in garbage[i]:\n        if c == 'M': lastM = i\n        if c == 'P': lastP = i\n        if c == 'G': lastG = i\nfor i in 0..lastM-1: total += travel[i]\nfor i in 0..lastP-1: total += travel[i]\nfor i in 0..lastG-1: total += travel[i]\nreturn total\n```",
+    "**Type appears only at house 0** - That truck needs zero travel time.\n`Input: garbage = [\"P\",\"G\"], travel = [5]` → `Expected: 7`\n⚠️ Bug: adding the full travel sum for each type that appears, instead of only up to its last occurrence → returns 12\n\n**All three types only at the last house** - Every truck must travel the full route.\n`Input: garbage = [\"M\",\"MPG\"], travel = [10]` → `Expected: 34`\n⚠️ Bug: adding travel cost only once total instead of once per truck type → returns 14\n\n**Types spread across all houses** - Each truck travels a different distance.\n`Input: garbage = [\"M\",\"P\",\"G\"], travel = [3, 5]` → `Expected: 14`\n⚠️ Bug: only adding travel for the truck that goes furthest, instead of summing per-type → returns 11"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are k types of garbage instead of 3?",
+      "a": "Replace the three last-occurrence variables with a hash map mapping each type character to its last house index. The algorithm is otherwise identical: O(n·L + k·n) time and O(k) space, where L is the max string length."
+    },
+    {
+      "q": "What if trucks could share a single trip - multiple trucks passing through the same road segment only count that segment once?",
+      "a": "The answer simplifies to total garbage units plus the sum of travel[0..max(lastM, lastP, lastG)−1]. Only the furthest-reaching truck's route matters. Time stays O(n·L + n), space O(1)."
+    },
+    {
+      "q": "What if houses form a tree (not a line) and trucks travel along tree edges from the root?",
+      "a": "Each truck must reach all nodes containing its type, so the cost per type is the garbage count plus the size of the minimal subtree connecting the root to those nodes. Compute this with a post-order DFS per type in O(n) each, giving O(k·n) total time and O(n) space for the recursion stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int garbageCollection(vector<string>& garbage, vector<int>& travel) {\n        int n = garbage.size();\n        int total = 0;\n        int lastM = -1, lastP = -1, lastG = -1;\n        \n        for (int i = 0; i < n; i++) {\n            total += (int)garbage[i].size();\n            for (char c : garbage[i]) {\n                if (c == 'M') lastM = i;\n                else if (c == 'P') lastP = i;\n                else lastG = i;\n            }\n        }\n        \n        for (int i = 0; i < lastM; i++) total += travel[i];\n        for (int i = 0; i < lastP; i++) total += travel[i];\n        for (int i = 0; i < lastG; i++) total += travel[i];\n        \n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

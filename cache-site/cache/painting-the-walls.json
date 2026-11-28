@@ -1,0 +1,40 @@
+{
+  "slug": "painting-the-walls",
+  "title": "Painting the Walls",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "0/1 Knapsack DP",
+  "tc": "O(n^2)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n+1 entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input arrays cost and time",
+  "approach": "Paying for wall i costs cost[i] and occupies the paid painter for time[i] units, during which the free painter can paint up to time[i] other walls (1 unit each). So paying for wall i effectively \"covers\" time[i]+1 walls. The problem reduces to a 0/1 knapsack: select a subset of walls to pay for such that total coverage ≥ n, minimizing total cost. We use a 1D DP where dp[j] = min cost to cover j walls, iterating walls in reverse-j order (0/1 knapsack style) and capping the coverage lookup at 0 via max(0, j−c).",
+  "hints": [
+    "When the paid painter works on wall i for time[i] units, how many walls in total can be finished during that single period - wall i itself plus whatever the free painter completes?",
+    "This is a 0/1 knapsack: each wall i is an item with weight time[i]+1 (capped at n) and cost cost[i]; minimize total cost to reach weight n. In Example 1, paying for walls 0 and 1 gives coverage 2+3=5≥4 at cost 1+2=3.",
+    "```\ndp[0..n] = INF; dp[0] = 0\nfor each wall i:\n    c = time[i] + 1\n    for j from n down to 1:\n        dp[j] = min(dp[j], dp[max(0, j - c)] + cost[i])\nreturn dp[n]\n```",
+    "**Single wall** - only one wall exists, so it must be paid for directly.\n`Input: cost = [5], time = [1]` → `Expected: 5`\n⚠️ Bug: initializing dp[0] = INF instead of 0 → returns 1000000000\n\n**Integer overflow from INF** - adding cost[i] to an unreachable state stored as INT_MAX wraps negative.\n`Input: cost = [5,5,5], time = [1,1,1]` → `Expected: 10`\n⚠️ Bug: using INT_MAX as INF, then computing dp[prev] + cost[i] when dp[prev] = INT_MAX → returns -2147483644\n\n**Coverage exceeds remaining walls** - time[i]+1 can be larger than n, so j−c goes negative.\n`Input: cost = [1,100], time = [500,1]` → `Expected: 1`\n⚠️ Bug: guarding with `if (j >= c)` instead of using max(0, j−c) → skips wall 0 entirely, returns 100\n\n**Forward iteration allows reuse** - iterating j upward lets one wall be \"paid for\" multiple times.\n`Input: cost = [1,2,3,4], time = [1,1,1,1]` → `Expected: 3`\n⚠️ Bug: looping j from 1 to n instead of n to 1 → wall 0 used twice, returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are k free painters instead of 1?",
+      "a": "Each paid wall i now covers 1 + k*time[i] walls instead of 1 + time[i]. Replace c = time[i]+1 with c = k*time[i]+1 in the DP; everything else stays identical. TC remains O(n^2), SC O(n)."
+    },
+    {
+      "q": "What if walls must be painted in array order - the free painter can only paint walls with smaller indices than the current paid wall?",
+      "a": "Track dp[i][j] = min cost for the first i walls with j units of free time banked. Paying for wall i transitions to dp[i+1][j+time[i]] at cost[i]; using free time transitions to dp[i+1][j-1] at cost 0 (requires j ≥ 1). TC O(n^2 * max_time) = O(n^2 * 500), SC O(n * n * 500) with a 2D array or O(n * 500) with rolling rows."
+    },
+    {
+      "q": "What if the free painter charges c per wall instead of 0?",
+      "a": "Total cost becomes sum(cost[i] for i in S) + c*(n - |S|) = sum(cost[i] - c for i in S) + c*n. Minimize sum(cost[i] - c) subject to the same coverage constraint sum(time[i]+1) ≥ n. Run the identical knapsack with adjusted item costs cost'[i] = cost[i] - c, then add c*n to the result. TC O(n^2), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int paintWalls(vector<int>& cost, vector<int>& time) {\n        int n = cost.size();\n        const int INF = 1e9;\n        vector<int> dp(n + 1, INF);\n        dp[0] = 0;\n        for (int i = 0; i < n; i++) {\n            int c = time[i] + 1;\n            for (int j = n; j >= 1; j--) {\n                int prev = max(0, j - c);\n                dp[j] = min(dp[j], dp[prev] + cost[i]);\n            }\n        }\n        return dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

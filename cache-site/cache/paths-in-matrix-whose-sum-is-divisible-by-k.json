@@ -1,0 +1,40 @@
+{
+  "slug": "paths-in-matrix-whose-sum-is-divisible-by-k",
+  "title": "Paths in Matrix Whose Sum Is Divisible by K",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Grid with Modulo States",
+  "tc": "O(m * n * k)",
+  "sc": "O(n * k)",
+  "spaceBreakdown": "- dp: n × k ints → O(n * k)\n- tmp[50]: fixed-size stack array, k ≤ 50 → O(1)\n- no recursion, no other containers",
+  "approach": "Only the remainder of the path sum modulo k matters (not the actual sum), and k ≤ 50 gives just 50 possible remainders. We use DP where dp[j][r] = number of paths reaching column j of the current row with cumulative sum ≡ r (mod k). Processing row by row, each cell combines paths from above (previous row, same column) and from the left (current row, previous column), shifting remainders by grid[i][j] mod k. A temporary array avoids overwriting values still needed from the previous row.",
+  "hints": [
+    "What property of a path's sum actually determines whether it is divisible by k - the full sum, or something smaller that has far fewer distinct values? The constraint k ≤ 50 limits how many such values exist.",
+    "Use dynamic programming where dp[j][r] counts paths to column j of the current row whose sum has remainder r mod k. In Example 1, cell (1,1) has value 0 and k=3: paths from above had remainder 1, paths from the left had remainder 2, so dp[1][1]=1 and dp[1][2]=1.",
+    "```\nfor each row i:\n  for each column j:\n    v = grid[i][j] mod k\n    if (i, j) == (0, 0):\n      new[j][v] = 1\n    else:\n      for each remainder r in 0..k-1:\n        src = (r - v + k) mod k\n        new[j][r] = (prev[j][src] if i > 0 else 0)\n                  + (new[j-1][src] if j > 0 else 0)\n        new[j][r] mod= MOD\n  prev = new\nreturn prev[n-1][0]\n```",
+    "**Single cell, not divisible** - Only one cell exists and its value is not a multiple of k.\n`Input: grid = [[5]], k = 3` → `Expected: 0`\n⚠️ Bug: unconditionally setting dp[0][0] = 1 instead of dp[0][grid[0][0] % k] = 1 → returns 1\n\n**k equals 1** - Every sum is divisible by 1, so every path counts.\n`Input: grid = [[1,2],[3,4]], k = 1` → `Expected: 2`\n⚠️ Bug: looping `for (int r = 1; r < k; r++)` instead of `r = 0` → empty loop → returns 0\n\n**Negative remainder in C++** - Subtracting v from r produces a negative value whose % is negative in C++.\n`Input: grid = [[3,1]], k = 3` → `Expected: 0`\n⚠️ Bug: computing src = (r - v) % k without adding k → (0 - 1) % 3 = -1 → out-of-bounds access → undefined behavior\n\n**First row, no top neighbor** - Cells in row 0 have no cell above them.\n`Input: grid = [[1,2]], k = 3` → `Expected: 1`\n⚠️ Bug: not guarding with `if (i > 0)` before reading dp[j][src] from the previous row → reads stale data → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "Replace the fixed-size remainder array with a hash map per column storing only reachable remainders. Each cell accumulates at most O(path length) distinct remainders, so total work is O(m * n * min(k, m + n)) and space is O(n * min(k, m + n))."
+    },
+    {
+      "q": "What if movement is allowed in all four directions?",
+      "a": "The grid is no longer a DAG, so row-by-row DP breaks. Detecting whether any valid path exists becomes a reachability problem over states (row, col, remainder) solvable with BFS in O(m * n * k) time and space."
+    },
+    {
+      "q": "What if you must return one actual path instead of the count?",
+      "a": "Store a parent pointer for each (j, r) state indicating which previous cell and remainder produced it. Backtrack from dp[n-1][0] to (0, 0) to reconstruct the path. Space increases to O(m * n * k) for the parent table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfPaths(vector<vector<int>>& grid, int k) {\n        const int MOD = 1e9 + 7;\n        int m = grid.size();\n        int n = grid[0].size();\n        vector<vector<int>> dp(n, vector<int>(k, 0));\n        \n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                int v = grid[i][j] % k;\n                if (i == 0 && j == 0) {\n                    dp[j].assign(k, 0);\n                    dp[j][v] = 1;\n                } else {\n                    int tmp[50] = {};\n                    for (int r = 0; r < k; r++) {\n                        int src = ((r - v) % k + k) % k;\n                        long long ways = 0;\n                        if (i > 0) ways += dp[j][src];\n                        if (j > 0) ways += dp[j - 1][src];\n                        tmp[r] = ways % MOD;\n                    }\n                    for (int r = 0; r < k; r++) dp[j][r] = tmp[r];\n                }\n            }\n        }\n        \n        return dp[n - 1][0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

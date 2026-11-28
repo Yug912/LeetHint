@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-employees-to-be-invited-to-a-meeting",
+  "title": "Maximum Employees to Be Invited to a Meeting",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Functional Graph + Topological Sort",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> indeg: n entries → O(n)\n- vector<int> dp: n entries → O(n)\n- vector<bool> visited: n entries → O(n)\n- queue<int> q: up to n entries → O(n)\n- not counted: input favorite",
+  "approach": "The graph where each node i points to favorite[i] is a functional graph (out-degree 1), so every component is a cycle with trees hanging off it. Two seating strategies exist: (1) pick the longest cycle (length > 2) - only cycle members can sit; (2) for each 2-cycle (mutual favorites), attach the longest tree chain into each side and sum all such groups around the table. Use Kahn's topological sort to peel off tree nodes while tracking the longest chain dp[v] reaching each node, then scan remaining cycle nodes to find cycle lengths and 2-cycle contributions.",
+  "hints": [
+    "If you follow the chain \"favorite of favorite of …\" starting from any employee, what must eventually happen? The constraints guarantee favorite[i] ≠ i.",
+    "Build a functional graph (out-degree 1 per node) and run Kahn's topological sort to separate tree nodes from cycle nodes. In Example 3 (favorite = [3,0,1,4,1]), Kahn's removes node 2, leaving the 4-cycle 0→3→4→1→0.",
+    "```\ncompute in-degree for each node\nqueue nodes with in-degree 0\nwhile queue not empty:\n    pop u, let v = favorite[u]\n    dp[v] = max(dp[v], dp[u] + 1)\n    decrement in-degree[v]; if 0, push v\nfor each unvisited node with in-degree > 0:\n    traverse and count cycle length\n    if length == 2: sum += 2 + dp[a] + dp[b]\n    else: maxCycle = max(maxCycle, length)\nreturn max(maxCycle, sum)\n```",
+    "**2-cycle with chains** - A 2-cycle can have tree chains on both sides that ARE seatable.\n`Input: [1,0,1,2,3]` → `Expected: 5`\n⚠️ Bug: treating 2-cycles like longer cycles (only counting cycle length) → returns 2\n\n**Multiple 2-cycles** - Multiple 2-cycle groups can all be seated simultaneously around the table.\n`Input: [1,0,3,2]` → `Expected: 4`\n⚠️ Bug: taking max of 2-cycle contributions instead of summing → returns 2\n\n**Long cycle dominates** - A single long cycle may exceed the sum of all 2-cycle contributions.\n`Input: [1,2,3,4,0]` → `Expected: 5`\n⚠️ Bug: only summing 2-cycle contributions, ignoring longer cycles → returns 0\n\n**Chain off-by-one** - The chain length into a cycle node must not count the cycle node itself.\n`Input: [1,0,0]` → `Expected: 3`\n⚠️ Bug: initializing leaf dp to 1 instead of 0 → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if each employee has a list of up to k favorites and must sit next to at least one?",
+      "a": "The graph becomes a general directed graph with out-degree up to k. The problem reduces to finding a maximum set where each node has a neighbor in the set, which is NP-hard in general. For small k, model it as a constraint satisfaction or integer programming problem."
+    },
+    {
+      "q": "What if the table has a fixed capacity C < n?",
+      "a": "For 2-cycles, greedily pick groups with the largest total contribution (2 + chains) until C seats are filled. For longer cycles, only entire cycles that fit are eligible. Compare the best single long cycle against the greedy 2-cycle packing - this becomes a knapsack-style selection."
+    },
+    {
+      "q": "What if employees can change their favorite dynamically between queries?",
+      "a": "Each update changes one edge in the functional graph. A link-cut tree can maintain cycle structure and longest paths in O(log n) per operation, supporting both edge updates and queries online."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumInvitations(vector<int>& favorite) {\n        int n = favorite.size();\n        vector<int> indeg(n, 0);\n        for (int i = 0; i < n; i++) indeg[favorite[i]]++;\n        \n        vector<int> dp(n, 0);\n        \n        queue<int> q;\n        for (int i = 0; i < n; i++) {\n            if (indeg[i] == 0) q.push(i);\n        }\n        \n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            int v = favorite[u];\n            dp[v] = max(dp[v], dp[u] + 1);\n            if (--indeg[v] == 0) q.push(v);\n        }\n        \n        int maxCycle = 0;\n        int twoCycleSum = 0;\n        vector<bool> visited(n, false);\n        \n        for (int i = 0; i < n; i++) {\n            if (indeg[i] > 0 && !visited[i]) {\n                int len = 0;\n                int cur = i;\n                while (!visited[cur]) {\n                    visited[cur] = true;\n                    cur = favorite[cur];\n                    len++;\n                }\n                if (len == 2) {\n                    int a = i;\n                    int b = favorite[i];\n                    twoCycleSum += 2 + dp[a] + dp[b];\n                } else {\n                    maxCycle = max(maxCycle, len);\n                }\n            }\n        }\n        \n        return max(maxCycle, twoCycleSum);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

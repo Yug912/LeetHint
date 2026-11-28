@@ -1,0 +1,40 @@
+{
+  "slug": "shifting-letters-ii",
+  "title": "Shifting Letters II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Difference Array with Prefix Sum",
+  "tc": "O(n + m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> diff: size n+1 → O(n)\n- recursion depth: none\n- not counted: input string s (modified in place), returned string",
+  "approach": "Each shift adds +1 (forward) or -1 (backward) to a contiguous range [l, r] of indices. The net shift at index i is the sum of all shift contributions covering i. Use a difference array: for each shift, add the value at diff[l] and subtract it at diff[r+1]. A prefix sum over diff gives the net shift per index. Apply each net shift modulo 26 to the corresponding character (handling negatives correctly).",
+  "hints": [
+    "For a fixed index i, what single quantity determines its final character, and how do all the shifts whose ranges contain i combine to form it?\nEach shift covers a contiguous range [start_i, end_i] and contributes either +1 or -1 to every index inside it.",
+    "Use a difference array: for each shift [l, r, d], add v = (d==1 ? +1 : -1) to diff[l] and subtract v from diff[r+1]; a prefix sum then yields the net shift per index.\nExample 1, shift [0,1,0]: set diff[0] -= 1, diff[2] += 1, so the -1 \"lives\" across indices 0..1 after prefix summing.",
+    "diff = array of zeros, size n+1\nfor each (l, r, d) in shifts:\n    v = +1 if d == 1 else -1\n    diff[l] += v\n    diff[r+1] -= v\ncur = 0\nfor i in 0..n-1:\n    cur += diff[i]\n    s[i] = rotate(s[i], cur mod 26)\nreturn s",
+    "**Single character** - n = 1, one shift covers the only index.\n`Input: s = \"a\", shifts = [[0,0,1]]` → `Expected: \"b\"`\n⚠️ Bug: indexing diff[r+1] without allocating n+1 elements → out-of-bounds write, undefined behavior.\n\n**Backward wrap from 'a'** - net shift is negative, must wrap to 'z'.\n`Input: s = \"a\", shifts = [[0,0,0]]` → `Expected: \"z\"`\n⚠️ Bug: computing shift as `cur % 26` without normalizing negatives → shift = -1, then `(s[i]-'a' + shift) % 26` = -1, wrong character.\n\n**Canceling shifts** - equal forward and backward shifts on the same range net to zero.\n`Input: s = \"abc\", shifts = [[0,2,1],[0,2,0]]` → `Expected: \"abc\"`\n⚠️ Bug: applying shifts one-by-one to the string instead of accumulating net shifts → still correct here, but O(n·m) on large inputs times out.\n\n**Large net shift** - up to 5·10^4 shifts all forward on one index.\n`Input: s = \"a\", shifts = [[0,0,1]] repeated 50000 times` → `Expected: \"a\"` (50000 mod 26 = 4, so 'a'→'e'; but if 50002 shifts, wraps to 'a')\n⚠️ Bug: not taking modulo 26 before rotating → arithmetic still fine, but skipping the `((cur%26)+26)%26` normalization on a negative cur like -50000 gives wrong wrap direction."
+  ],
+  "followUps": [
+    {
+      "q": "What if shifts could specify an arbitrary shift amount k (e.g., [l, r, direction, k]) instead of just ±1?",
+      "a": "Use the same difference array but add `v = (d==1 ? k : -k)` at diff[l] and subtract at diff[r+1]. The prefix sum can grow to k·m, so use long long for cur, then take modulo 26 at the end. Time stays O(n + m), space O(n)."
+    },
+    {
+      "q": "What if shifts arrive as a streaming query sequence and you must answer the final string after each query?",
+      "a": "Maintain the difference array and a Fenwick tree (BIT) over it so each update is O(log n) and each prefix-sum query is O(log n). After each shift, you can recompute the full string in O(n log n), or lazily defer recomputation. Time O((n + m) log n), space O(n)."
+    },
+    {
+      "q": "What if s could be up to 10^9 characters but only m ≤ 10^5 shifts, and you must return the shifted characters at m queried indices?",
+      "a": "Compress coordinates: collect all l and r+1 boundaries (at most 2m distinct values), sort them, and run the difference-array prefix sum over the compressed segments. For each queried index, binary-search its segment and apply the segment's net shift. Time O(m log m), space O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string shiftingLetters(string s, vector<vector<int>>& shifts) {\n        int n = (int)s.size();\n        vector<int> diff(n + 1, 0);\n        for (auto& sh : shifts) {\n            int l = sh[0], r = sh[1], d = sh[2];\n            int v = (d == 1) ? 1 : -1;\n            diff[l] += v;\n            diff[r + 1] -= v;\n        }\n        int cur = 0;\n        for (int i = 0; i < n; i++) {\n            cur += diff[i];\n            int shift = ((cur % 26) + 26) % 26;\n            s[i] = (char)('a' + (s[i] - 'a' + shift) % 26);\n        }\n        return s;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

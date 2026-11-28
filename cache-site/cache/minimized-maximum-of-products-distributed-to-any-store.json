@@ -1,0 +1,40 @@
+{
+  "slug": "minimized-maximum-of-products-distributed-to-any-store",
+  "title": "Minimized Maximum of Products Distributed to Any Store",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(m log M)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int lo, hi, mid: scalars → O(1)\n- long long stores: scalar → O(1)\n- max_element: in-place, no allocation → O(1)\n- not counted: input vector quantities",
+  "approach": "The key insight is monotonicity: if a per-store cap of x is feasible (all products can be distributed with no store exceeding x), then any cap larger than x is also feasible. This lets us binary search on the answer. For a candidate cap k, we check feasibility by computing the total stores needed as the sum of ⌈quantities[i] / k⌉ over all product types - if this sum ≤ n, k is feasible. We search for the smallest feasible k in [1, max(quantities)].",
+  "hints": [
+    "If a per-store cap of x lets you distribute all products, what must be true of any cap larger than x? What does this tell you about the shape of the set of feasible caps? The constraints allow m and n up to 10^5, so checking every possible cap one by one is too slow.",
+    "Binary search on the answer. For a candidate cap k, compute stores needed = Σ⌈quantities[i]/k⌉; if ≤ n, k is feasible. Example: n=6, quantities=[11,6], k=3 → ⌈11/3⌉+⌈6/3⌉ = 4+2 = 6 ≤ 6, feasible.",
+    "```\nlo = 1, hi = max(quantities)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    stores = sum of ceil(q / mid) for each q in quantities\n    if stores <= n:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Single store** - only one store must hold all products of the only type.\n`Input: n=1, quantities=[100000]` → `Expected: 100000`\n⚠️ Bug: setting hi = n (=1) instead of max(quantities) → returns 1\n\n**Off-by-one in feasibility check** - the store count equals n exactly at the optimal cap.\n`Input: n=6, quantities=[11,6]` → `Expected: 3`\n⚠️ Bug: using `stores < n` instead of `stores <= n` → x=3 gives stores=6, 6<6 is false, treated as infeasible, returns 4\n\n**n equals m** - each product type gets exactly one store, so the answer is max(quantities).\n`Input: n=2, quantities=[7,3]` → `Expected: 7`\n⚠️ Bug: setting hi = quantities.back() (=3) instead of max → returns 3\n\n**Division by zero** - the smallest valid input where lo=1 is never tested.\n`Input: n=1, quantities=[1]` → `Expected: 1`\n⚠️ Bug: initializing lo=0 → mid=0, division by zero in (q+mid-1)/mid, crash"
+  ],
+  "followUps": [
+    {
+      "q": "What if quantities[i] can be up to 10^9?",
+      "a": "The approach is identical; the binary search range becomes [1, 10^9], adding about 14 iterations. TC: O(m log 10^9) ≈ O(30m), SC: O(1)."
+    },
+    {
+      "q": "Return an actual distribution achieving the minimum x, not just x itself.",
+      "a": "After finding the optimal x, for each product type i assign it to ⌈quantities[i]/x⌉ stores, splitting as evenly as possible (each store gets ⌊quantities[i]/⌈quantities[i]/x⌉⌋ or one more). TC: O(n) to build, SC: O(n) for the output."
+    },
+    {
+      "q": "Each store j has its own capacity cap[j]; find the minimum possible maximum load.",
+      "a": "Sort cap once. Binary search on x; for feasibility, count stores with cap[j] ≥ x via binary search, then check if Σ⌈q/x⌉ ≤ that count. TC: O(n log n + m log M log n), SC: O(n) for the sorted copy (or O(1) if sorting in place)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimizedMaximum(int n, vector<int>& quantities) {\n        int lo = 1, hi = *max_element(quantities.begin(), quantities.end());\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long long stores = 0;\n            for (int q : quantities) {\n                stores += (q + mid - 1) / mid;\n                if (stores > n) break;\n            }\n            if (stores <= n) hi = mid;\n            else lo = mid + 1;\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

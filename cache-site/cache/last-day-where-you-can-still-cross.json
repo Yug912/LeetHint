@@ -1,0 +1,40 @@
+{
+  "slug": "last-day-where-you-can-still-cross",
+  "title": "Last Day Where You Can Still Cross",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Disjoint Set Union (Reverse Processing)",
+  "tc": "O(row * col * α(row * col))",
+  "sc": "O(row * col)",
+  "spaceBreakdown": "- vector<int> parent: up to row * col + 2 entries → O(row * col)\n- vector<int> rank_: up to row * col + 2 entries → O(row * col)\n- vector<bool> grid: up to row * col entries → O(row * col)\n- recursion depth in find(): bounded by O(log(row * col)) due to union by rank",
+  "approach": "Instead of adding water day by day, process the cells in reverse: start from the last day where all cells are water, and revert cells to land one by one. Maintain connected components of land cells using Disjoint Set Union (DSU). Add two virtual nodes, one connected to all top-row land cells and one to all bottom-row land cells. The first day (in reverse) where these two virtual nodes become connected is the last day (in forward order) where a path from top to bottom exists.",
+  "hints": [
+    "How does the existence of a path from top to bottom change as we remove water cells instead of adding them? The grid contains at most 2 * 10^4 cells.",
+    "Process the cells in reverse order of days, maintaining connected components of land cells using Disjoint Set Union (DSU). In Example 1, reverting day 4's cell [2,2] to land connects it to the bottom; reverting day 3's cell [1,2] connects the top to the bottom, giving the answer 2.",
+    "Initialize DSU with N + 2 nodes (N cells + virtual top + virtual bottom)\nMark all cells as water\nFor i from N - 1 down to 0:\n    Revert cells[i] to land\n    If cells[i] is in top row, union it with virtual top\n    If cells[i] is in bottom row, union it with virtual bottom\n    Union cells[i] with its adjacent land cells\n    If virtual top and virtual bottom are connected, return i",
+    "**Smallest grid** - The minimum allowed grid size is 2x2.\n`Input: row = 2, col = 2, cells = [[1,1],[2,1],[1,2],[2,2]]` → `Expected: 2`\n⚠️ Bug: Returning `i + 1` instead of `i` when `i` is the loop index from `N-1` down to 0 → returns 3.\n\n**Top/bottom virtual nodes** - The path requires connecting the first and last rows.\n`Input: row = 2, col = 2, cells = [[1,1],[1,2],[2,1],[2,2]]` → `Expected: 1`\n⚠️ Bug: Forgetting to union the first row cells with the virtual top node → returns 0.\n\n**Late connection** - The grid only becomes crossable late in the reverse process.\n`Input: row = 2, col = 2, cells = [[1,1],[2,2],[1,2],[2,1]]` → `Expected: 2`\n⚠️ Bug: Checking connection before unioning the current cell with its neighbors → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if we need to answer multiple queries asking if the grid is crossable on specific days?",
+      "a": "We can process the days in reverse and save the DSU state at each step using a persistent DSU or by recording the union operations. Each query for day X is then answered in O(α(N)) by checking if the virtual top and bottom nodes are connected in the state corresponding to day X."
+    },
+    {
+      "q": "What if diagonal movement between land cells is also allowed?",
+      "a": "We simply add the 4 diagonal directions to the neighbor checks when unioning a newly reverted land cell. The overall time and space complexity remains O(N α(N))."
+    },
+    {
+      "q": "What if the grid dimensions are up to 10^9 but only 10^5 cells become water?",
+      "a": "We cannot allocate an array for all cells. We would use a hash map to store the DSU parent and rank only for cells that are or were water, along with coordinate compression. The time and space complexity would become O(K α(K)) where K is the number of water cells."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<int> parent;\n    vector<int> rank_;\n    \n    int find(int i) {\n        if (parent[i] != i)\n            parent[i] = find(parent[i]);\n        return parent[i];\n    }\n    \n    void union_(int i, int j) {\n        int root_i = find(i);\n        int root_j = find(j);\n        if (root_i != root_j) {\n            if (rank_[root_i] > rank_[root_j]) {\n                parent[root_j] = root_i;\n            } else if (rank_[root_i] < rank_[root_j]) {\n                parent[root_i] = root_j;\n            } else {\n                parent[root_j] = root_i;\n                rank_[root_i]++;\n            }\n        }\n    }\n\npublic:\n    int latestDayToCross(int row, int col, vector<vector<int>>& cells) {\n        int N = row * col;\n        parent.assign(N + 2, 0);\n        rank_.assign(N + 2, 0);\n        for (int i = 0; i < N + 2; ++i) {\n            parent[i] = i;\n        }\n        \n        vector<bool> grid(N, false);\n        \n        int top = N;\n        int bottom = N + 1;\n        \n        int dr[] = {-1, 1, 0, 0};\n        int dc[] = {0, 0, -1, 1};\n        \n        for (int i = N - 1; i >= 0; --i) {\n            int r = cells[i][0] - 1;\n            int c = cells[i][1] - 1;\n            int id = r * col + c;\n            \n            grid[id] = true;\n            \n            if (r == 0) {\n                union_(id, top);\n            }\n            if (r == row - 1) {\n                union_(id, bottom);\n            }\n            \n            for (int k = 0; k < 4; ++k) {\n                int nr = r + dr[k];\n                int nc = c + dc[k];\n                if (nr >= 0 && nr < row && nc >= 0 && nc < col) {\n                    int nid = nr * col + nc;\n                    if (grid[nid]) {\n                        union_(id, nid);\n                    }\n                }\n            }\n            \n            if (find(top) == find(bottom)) {\n                return i;\n            }\n        }\n        \n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

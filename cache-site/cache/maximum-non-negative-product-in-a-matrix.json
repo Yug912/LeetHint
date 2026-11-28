@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-non-negative-product-in-a-matrix",
+  "title": "Maximum Non Negative Product in a Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Rolling-Array DP",
+  "tc": "O(m*n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- prev_max, prev_min, cur_max, cur_min: each vector of size n → O(n) total\n- recursion depth: none\n- not counted: input grid, returned int",
+  "approach": "The key insight is that multiplying by a negative number flips the sign, so the maximum product at a cell may come from the minimum product of a predecessor. We use dynamic programming with rolling arrays, storing both the maximum and minimum product reachable at each cell. For each cell, we consider all four combinations (max/min from above × current value, max/min from left × current value) and update the current row's max and min. After processing all rows, the answer is the maximum product at the bottom-right cell, or -1 if it is negative.",
+  "hints": [
+    "When a cell holds a negative number, which product from a predecessor - the largest or the smallest - produces the largest result at the current cell? Grid values range from -4 to 4.",
+    "Dynamic programming with a rolling array storing both the maximum and minimum product at each cell. In Example 2, at cell (1,1) with value -2, predecessors (0,1) and (1,0) give products -2·-2=4 and 1·-2=-2, so max=4, min=-2.",
+    "```\nfor each cell (i, j) in row-major order:\n    candidates = {prev_max[j]·grid[i][j], prev_min[j]·grid[i][j],\n                  cur_max[j-1]·grid[i][j], cur_min[j-1]·grid[i][j]}\n    cur_max[j] = max(candidates)\n    cur_min[j] = min(candidates)\nswap prev and cur rows\nreturn prev_max[n-1] if ≥ 0 else -1\n```",
+    "**Single cell** - the grid is 1×1, so the only path is the cell itself.\n`Input: [[-1]]` → `Expected: -1`\n⚠️ Bug: initializing dp_max[0] to 0 instead of grid[0][0] → returns 0\n\n**Min needed for max** - two predecessors have different max/min, and the min is needed to get the final max.\n`Input: [[1,-2,1],[1,-3,-1]]` → `Expected: 3`\n⚠️ Bug: tracking only the maximum product per cell → at (1,1) stores max=6 only, at (1,2) computes max(6·-1, -2·-1) = max(-6, 2) = 2 → returns 2\n\n**Overflow** - a 15×2 grid of all 4s gives path product 4^16 = 4294967296 > 2^31-1.\n`Input: [[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4]]` → `Expected: 294967268`\n⚠️ Bug: using int for dp values → 4^16 overflows 32-bit int, wraps to 0 → returns 0\n\n**Zero is non-negative** - a zero cell makes the product 0, which is a valid non-negative answer.\n`Input: [[-1,0],[-1,-1]]` → `Expected: 0`\n⚠️ Bug: checking `if (ans <= 0) return -1` instead of `if (ans < 0) return -1` → returns -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if grid values can be up to 10^9 in absolute value?",
+      "a": "Products along a path of length 29 would reach (10^9)^29, far exceeding long long. Track the sign separately and use logarithms for magnitude comparison alongside modular arithmetic for the final answer. Time stays O(m*n), space O(n)."
+    },
+    {
+      "q": "What if you can also move up and left (no cell visited twice)?",
+      "a": "The graph is no longer a DAG, so the row-major DP order breaks. Finding the maximum product simple path in a general graph is NP-hard. For m,n ≤ 15, use bitmask DP with state (row, col, visited_mask), giving O(m·n·2^(m·n)) time and O(m·n·2^(m·n)) space."
+    },
+    {
+      "q": "What if you need to return the actual path achieving the maximum product?",
+      "a": "Store a parent pointer (above or left) alongside each DP state indicating which predecessor gave the optimal max/min. Backtrack from (m-1,n-1) using stored pointers. Time stays O(m*n), but space increases to O(m*n) for the full parent table since the rolling-array optimization no longer suffices for reconstruction."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxProductPath(vector<vector<int>>& grid) {\n        const long long MOD = 1000000007;\n        int m = grid.size(), n = grid[0].size();\n        vector<long long> prev_max(n), prev_min(n), cur_max(n), cur_min(n);\n        prev_max[0] = prev_min[0] = grid[0][0];\n        for (int j = 1; j < n; j++) {\n            prev_max[j] = prev_min[j] = prev_max[j - 1] * grid[0][j];\n        }\n        for (int i = 1; i < m; i++) {\n            cur_max[0] = cur_min[0] = prev_max[0] * grid[i][0];\n            for (int j = 1; j < n; j++) {\n                long long v = grid[i][j];\n                long long a = prev_max[j] * v;\n                long long b = prev_min[j] * v;\n                long long c = cur_max[j - 1] * v;\n                long long d = cur_min[j - 1] * v;\n                cur_max[j] = max({a, b, c, d});\n                cur_min[j] = min({a, b, c, d});\n            }\n            swap(prev_max, cur_max);\n            swap(prev_min, cur_min);\n        }\n        long long ans = prev_max[n - 1];\n        if (ans < 0) return -1;\n        return (int)(ans % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

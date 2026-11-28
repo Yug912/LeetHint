@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-good-subarrays",
+  "title": "Count the Number of Good Subarrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> cnt: up to n distinct values → O(n)\n- recursion depth: none\n- not counted: input vector, returned long long",
+  "approach": "For a fixed left end `l`, the number of equal-value pairs in `[l, r]` is monotonic non-decreasing as `r` grows. So once `[l, r-1]` first reaches `k` pairs, every longer subarray `[l, r-1], [l, r], …, [l, n-1]` is also good - contributing `n - r + 1` good subarrays. We maintain a sliding window with two pointers `l` and `r` and a frequency map; advancing `l` only removes pairs, so `r` never moves backward, giving linear time.",
+  "hints": [
+    "For a fixed starting index of a subarray, how does the count of equal-value pairs change as you extend the ending index further right? The array can have up to 10^5 elements.",
+    "Sliding window with two pointers `l`, `r` and a hash map of value frequencies. In `[3,1,4,3,2,2]`, when `r` passes the second `3` the pair count becomes 1, and at the second `2` it becomes 2 - so every extension past that `r` is also good.",
+    "```\nl = 0, r = 0, pairs = 0, ans = 0\nfreq = empty map\nfor l in 0..n-1:\n    while r < n and pairs < k:\n        pairs += freq[nums[r]]\n        freq[nums[r]] += 1\n        r += 1\n    if pairs >= k:\n        ans += n - r + 1\n    freq[nums[l]] -= 1\n    pairs -= freq[nums[l]]\nreturn ans\n```",
+    "**Single element** - n = 1, no pair can ever exist.\n`Input: nums = [7], k = 1` → `Expected: 0`\n⚠️ Bug: omitting the `if (pairs >= k)` guard before adding `n - r + 1` → returns 1.\n\n**Boundary equality** - the pair count lands exactly on k.\n`Input: nums = [1,1], k = 1` → `Expected: 1`\n⚠️ Bug: using `pairs > k` instead of `pairs >= k` in the while condition → returns 0.\n\n**All equal** - every subarray of length ≥ 2 is good.\n`Input: nums = [1,1,1,1], k = 1` → `Expected: 6`\n⚠️ Bug: adding `n - r` instead of `n - r + 1` → returns 3.\n\n**k beyond reach** - all elements are distinct.\n`Input: nums = [1,2,3], k = 2` → `Expected: 0`\n⚠️ Bug: always adding `n - r + 1` after the while loop without the `pairs >= k` check → returns 3."
+  ],
+  "followUps": [
+    {
+      "q": "How would you count subarrays with exactly k pairs instead of at least k?",
+      "a": "Run the same sliding window twice - once for \"at least k\" and once for \"at least k+1\" - and subtract. Each pass is O(n), so total time O(n), space O(n)."
+    },
+    {
+      "q": "If nums[i] can be up to 10^18, does anything change?",
+      "a": "No - the hash map keys on the value directly, so magnitude is irrelevant. Only the number of distinct values affects space. Time O(n), space O(distinct values)."
+    },
+    {
+      "q": "How would you handle many queries of different k values on the same array?",
+      "a": "Sort queries by k ascending and reuse the window state across queries, since a larger k only pushes r further right. Total time O(n + q log q), space O(n + q)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long countGood(vector<int>& nums, int k) {\n        unordered_map<int,int> cnt;\n        long long pairs = 0;\n        long long ans = 0;\n        int n = nums.size();\n        int r = 0;\n        for (int l = 0; l < n; l++) {\n            while (r < n && pairs < k) {\n                pairs += cnt[nums[r]];\n                cnt[nums[r]]++;\n                r++;\n            }\n            if (pairs >= k) {\n                ans += n - r + 1;\n            }\n            cnt[nums[l]]--;\n            pairs -= cnt[nums[l]];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

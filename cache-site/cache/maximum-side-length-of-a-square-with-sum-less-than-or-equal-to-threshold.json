@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-side-length-of-a-square-with-sum-less-than-or-equal-to-threshold",
+  "title": "Maximum Side Length of a Square with Sum Less than or Equal to Threshold",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "2D Prefix Sum + Monotonic Scan",
+  "tc": "O(m·n)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- vector<vector<int>> pref: (m+1)×(n+1) integers → O(m·n)\n- recursion depth: none\n- not counted: input mat, returned int",
+  "approach": "Build a 2D prefix sum array so any square's sum is an O(1) query. Then scan every cell as a potential bottom-right corner of a square, maintaining a candidate side length that only increases. At each cell, repeatedly check whether a square of side `side+1` ending there has sum ≤ threshold; if so, increment `side` and try again. Because `side` is bounded by min(m, n) and each check is O(1), the total work across all cells is O(m·n).",
+  "hints": [
+    "If a square of side length s has sum ≤ threshold, what must be true of every smaller square inside it, given that 0 ≤ mat[i][j]?",
+    "2D prefix sum array with a monotonically increasing side-length scan. In Example 1, the 2×2 block of all 1s ending at cell (1,1) has prefix-sum query value 4 ≤ threshold=4, so the candidate side length advances from 1 to 2.",
+    "```\nbuild 2D prefix sum pref[0..m][0..n]\nside ← 0\nfor each cell (i, j) as bottom-right corner:\n    while side+1 ≤ i+1 and side+1 ≤ j+1\n          and square_sum(i, j, side+1) ≤ threshold:\n        side ← side + 1\nreturn side\n```",
+    "**No valid square** - every 1×1 cell exceeds the threshold.\n`Input: mat = [[2,2,2,2,2],[2,2,2,2,2],[2,2,2,2,2],[2,2,2,2,2],[2,2,2,2,2]], threshold = 1` → `Expected: 0`\n⚠️ Bug: initializing `side` to 1 instead of 0 → returns 1.\n\n**Single cell, valid** - 1×1 matrix whose sole entry is within budget.\n`Input: mat = [[3]], threshold = 4` → `Expected: 1`\n⚠️ Bug: checking `k > i` instead of `k > i + 1` in the bounds test → returns 0 because k=1 > i=0 breaks immediately.\n\n**All zeros, threshold zero** - sum is exactly 0, equal to threshold.\n`Input: mat = [[0,0],[0,0]], threshold = 0` → `Expected: 2`\n⚠️ Bug: using `sum < threshold` instead of `sum <= threshold` → returns 0.\n\n**Answer capped by matrix dimensions** - fewer rows than columns.\n`Input: mat = [[1,1,1],[1,1,1]], threshold = 100000` → `Expected: 2`\n⚠️ Bug: omitting the bounds check `k > i+1 || k > j+1` → accesses pref at negative indices, undefined behavior."
+  ],
+  "followUps": [
+    {
+      "q": "What if mat[i][j] could be negative?",
+      "a": "The monotonic scan breaks because a larger square can have a smaller sum. You would binary-search the side length (O(log min(m,n)) candidates), each verified in O(m·n) via prefix sums, giving O(m·n·log(min(m,n))) total."
+    },
+    {
+      "q": "What if you need the maximum-area rectangle (not necessarily square) with sum ≤ threshold?",
+      "a": "Fix every pair of top/bottom rows (O(m²) pairs), compute column-wise cumulative sums between them, then find the widest subarray with sum ≤ threshold using a sliding window (all values still non-negative). Time becomes O(m²·n)."
+    },
+    {
+      "q": "What if there are Q threshold queries on the same matrix?",
+      "a": "Precompute prefix sums once. Each query runs the same O(m·n) monotonic scan, so total time is O(m·n + Q·m·n). For very large Q, precompute the minimum square sum for each size k in O(m·n·min(m,n)) and answer each query in O(log(min(m,n))) via binary search."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSideLength(vector<vector<int>>& mat, int threshold) {\n        int m = mat.size();\n        int n = mat[0].size();\n        vector<vector<int>> pref(m + 1, vector<int>(n + 1, 0));\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                pref[i + 1][j + 1] = pref[i][j + 1] + pref[i + 1][j] - pref[i][j] + mat[i][j];\n\n        int side = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                while (true) {\n                    int k = side + 1;\n                    if (k > i + 1 || k > j + 1) break;\n                    int r2 = i + 1, c2 = j + 1;\n                    int r1 = r2 - k, c1 = c2 - k;\n                    int sum = pref[r2][c2] - pref[r1][c2] - pref[r2][c1] + pref[r1][c1];\n                    if (sum > threshold) break;\n                    side = k;\n                }\n            }\n        }\n        return side;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "earliest-possible-day-of-full-bloom",
+  "title": "Earliest Possible Day of Full Bloom",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Scheduling",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> idx: n entries → O(n)\n- sort(): C++ introsort uses O(log n) stack\n- no recursion, no other containers\n- not counted: input vectors plantTime and growTime",
+  "approach": "The total planting time is fixed (sum of all plantTime) regardless of order, so what matters is maximizing the overlap between each seed's growth period and the planting of subsequent seeds. Seeds with longer growth times benefit more from starting early, so we sort by growTime descending and plant in that order. For each seed in sorted order, its bloom day is the cumulative plant time so far plus its own growTime; the answer is the maximum bloom day across all seeds.",
+  "hints": [
+    "The total days spent planting is the same no matter what order you choose. Which seeds gain the most from having their growth period overlap with the planting of other seeds?",
+    "Sort the seeds by growTime in descending order, then plant them sequentially in that order. In Example 1, the sorted order is seed 1 (grow 3), seed 0 (grow 2), seed 2 (grow 1); seed 1 blooms at day 4+3=7, and the last to bloom is seed 2 at day 8+1=9.",
+    "```\nsort seeds by growTime descending\ncur = 0, ans = 0\nfor each seed in sorted order:\n    cur += plantTime[seed]\n    ans = max(ans, cur + growTime[seed])\nreturn ans\n```",
+    "**Single seed** - n=1, only one seed exists\n`Input: plantTime = [5], growTime = [3]` → `Expected: 8`\n⚠️ Bug: returning cumulative plant time without adding growTime → returns 5\n\n**Wrong sort direction** - growth times differ significantly\n`Input: plantTime = [1,1], growTime = [5,1]` → `Expected: 6`\n⚠️ Bug: sorting by growTime ascending → returns 7\n\n**Last-planted is not last to bloom** - an early-planted seed with long growth blooms last\n`Input: plantTime = [1,1,1], growTime = [5,1,1]` → `Expected: 6`\n⚠️ Bug: returning the last seed's bloom day instead of the maximum → returns 4\n\n**No sorting** - seeds not in optimal order by default\n`Input: plantTime = [1,1,1], growTime = [1,1,100]` → `Expected: 101`\n⚠️ Bug: processing seeds in input order without sorting → returns 103"
+  ],
+  "followUps": [
+    {
+      "q": "What if you have k workers and can plant k seeds simultaneously?",
+      "a": "Sort by growTime descending, then assign seeds to workers using a min-heap of size k that tracks each worker's next-free day. For each seed in sorted order, pop the earliest-free worker, add plantTime, and compute bloom = worker_free_day + growTime. Time complexity becomes O(n log n + n log k), space O(k)."
+    },
+    {
+      "q": "What if growTime[i] can be 0?",
+      "a": "Seeds with zero growth time bloom the instant they finish planting. The algorithm is unchanged - sorting by growTime descending naturally places them last, which is optimal since they gain nothing from an early start. The formula cur + growTime[i] still holds when growTime[i] = 0."
+    },
+    {
+      "q": "What if the grow time of each seed depends on the day it was planted (e.g., grows faster if planted later)?",
+      "a": "The greedy sort breaks because growTime is no longer independent of position. You would need to evaluate how each seed's effective growTime changes with its planting slot, likely requiring dynamic programming over subsets or a more sophisticated scheduling model. The problem becomes significantly harder and may not have a polynomial solution."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int earliestFullBloom(vector<int>& plantTime, vector<int>& growTime) {\n        int n = plantTime.size();\n        vector<int> idx(n);\n        for (int i = 0; i < n; i++) idx[i] = i;\n        sort(idx.begin(), idx.end(), [&](int a, int b) {\n            return growTime[a] > growTime[b];\n        });\n        long long cur = 0, ans = 0;\n        for (int i : idx) {\n            cur += plantTime[i];\n            ans = max(ans, cur + growTime[i]);\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

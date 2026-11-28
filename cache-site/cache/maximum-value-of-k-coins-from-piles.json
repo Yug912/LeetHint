@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-value-of-k-coins-from-piles",
+  "title": "Maximum Value of K Coins From Piles",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Grouped Knapsack DP",
+  "tc": "O(k * S)",
+  "sc": "O(k + S)",
+  "spaceBreakdown": "- vector<int> dp: k+1 entries → O(k)\n- vector<int> ndp: k+1 entries → O(k)\n- vector<int> pre: max pile size + 1 entries (≤ S ≤ 2000), temporary per pile → O(k)\n- recursion depth: none\n- not counted: input piles, returned int",
+  "approach": "Within each pile you can only take a prefix (top coins), so the value gained from pile i by taking t coins is its prefix sum of length t. The problem reduces to a grouped knapsack: choose how many coins to take from each pile so the total is exactly k and the summed value is maximized. We process piles one at a time, maintaining dp[j] = best value using exactly j coins from piles seen so far, and for each pile try taking 0..min(pileSize, j) coins.",
+  "hints": [
+    "If you decide to take exactly j coins from one pile, which specific coins must they be? The total number of coins across all piles and k are each at most 2000.",
+    "Use a grouped knapsack dynamic program: dp[j] = best value with j coins so far; for each pile, precompute prefix sums and try taking 0..min(size, j) coins. In Example 1, after pile [1,100,3] we get dp = [0, 1, 101]; processing [7,8,9] with k=2 keeps dp[2] = 101.",
+    "```\ndp[0..k] = 0\nfor each pile:\n    pre = prefix sums of pile, pre[0] = 0\n    for j = 0 to k:\n        ndp[j] = max over t in 0..min(len, j) of dp[j-t] + pre[t]\n    dp = ndp\nreturn dp[k]\n```",
+    "**Single pile, full take** - k equals the only pile's size, so every coin must be taken.\n`piles = [[1,2,3]], k = 3` → `Expected: 6`\n⚠️ Bug: inner loop condition `t < min(m, j)` instead of `t <= min(m, j)` → returns 0\n\n**In-place DP update** - writing results back into dp while scanning j upward lets one pile be counted multiple times.\n`piles = [[10,1]], k = 2` → `Expected: 11`\n⚠️ Bug: updating dp in place (j = 0 → k) instead of a separate ndp array → returns 20\n\n**Forgetting to skip a pile** - t = 0 means \"take nothing from this pile\"; omitting it discards better earlier choices.\n`piles = [[10],[1]], k = 1` → `Expected: 10`\n⚠️ Bug: inner loop starts t at 1 instead of 0 → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if each pile is sorted in non-increasing order (best coins on top)?",
+      "a": "Greedy works: keep a max-heap of current top coins, extract the best k times, pushing the next coin from the same pile. TC: O(k log n), SC: O(n)."
+    },
+    {
+      "q": "What if k can be up to 10^9 but the total number of coins is still at most 2000?",
+      "a": "Cap k at the total coin count S; if k ≥ S, take every coin (answer = sum of all values). Otherwise k ≤ 2000 and the same DP applies unchanged. TC: O(k * S), SC: O(k)."
+    },
+    {
+      "q": "What if you must take at least 1 coin from each pile (and k ≥ n)?",
+      "a": "Initialize dp[0] = 0 and dp[j>0] = -inf before the first pile, then force t ≥ 1 in every pile's inner loop so skipping a pile is forbidden. TC and SC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxValueOfCoins(vector<vector<int>>& piles, int k) {\n        vector<int> dp(k + 1, 0);\n        vector<int> ndp(k + 1, 0);\n        for (auto& pile : piles) {\n            int m = (int)pile.size();\n            vector<int> pre(m + 1, 0);\n            for (int i = 0; i < m; i++) pre[i + 1] = pre[i] + pile[i];\n            for (int j = 0; j <= k; j++) {\n                ndp[j] = 0;\n                int lim = min(m, j);\n                for (int t = 0; t <= lim; t++) {\n                    int val = dp[j - t] + pre[t];\n                    if (val > ndp[j]) ndp[j] = val;\n                }\n            }\n            dp.swap(ndp);\n        }\n        return dp[k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

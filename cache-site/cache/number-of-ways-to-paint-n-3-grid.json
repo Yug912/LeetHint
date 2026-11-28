@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-ways-to-paint-n-3-grid",
+  "title": "Number of Ways to Paint N × 3 Grid",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Matrix Exponentiation",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long scalars r00,r01,r10,r11,m00,m01,m10,m11 (result and base 2×2 matrices): O(1)\n- long long scalars a,b,an,bn,e: O(1)\n- no recursion, no containers\n- not counted: input n, returned int",
+  "approach": "Each row of a 3-column grid with 3 colors and no equal neighbors is structurally either \"ABA\" (6 patterns, e.g. RYR) or \"ABC\" (6 patterns, e.g. RYG). The number of valid transitions is fixed: ABA→ABA has 3 ways, ABA→ABC has 2, ABC→ABA has 2, ABC→ABC has 2. So the state vector [count_ABA, count_ABC] evolves by the constant 2×2 matrix M=[[3,2],[2,2]]. Raising M to the (n−1)-th power via binary exponentiation and applying it to the initial vector [6,6] gives the counts for row n; their sum is the answer, all modulo 10^9+7.",
+  "hints": [
+    "With only 3 columns and 3 colors, how many *structurally different* row colorings exist if you ignore which specific colors are used (only their equality pattern matters)?",
+    "Use 2×2 matrix exponentiation. Track state vector v=[#ABA-type rows, #ABC-type rows]; it evolves by fixed M=[[3,2],[2,2]]. For n=2: M·[6,6]=[30,24], summing to 54.",
+    "```\nM = [[3,2],[2,2]]\nv = [6, 6]\nR = identity 2x2\ne = n - 1\nwhile e > 0:\n    if e odd: R = R * M   (mod 1e9+7)\n    M = M * M             (mod 1e9+7)\n    e = e >> 1\nv = R * v                  (mod 1e9+7)\nreturn (v[0] + v[1]) mod 1e9+7\n```",
+    "**Smallest input** - n=1 means the exponent is 0, so the result matrix must stay identity.\n`Input: n = 1` → `Expected: 12`\n⚠️ Bug: initializing the result matrix to zeros instead of identity → returns 0.\n\n**Off-by-one exponent** - the recurrence applies M exactly (n−1) times, not n times.\n`Input: n = 2` → `Expected: 54`\n⚠️ Bug: computing M^n instead of M^(n−1) → applies M once too many, returns 246.\n\n**Overflow in multiplication** - matrix entries reach ~10^9, so products reach ~10^18 before reduction.\n`Input: n = 5000` → `Expected: 30228214`\n⚠️ Bug: using `int` for the matrix entries and products → overflow, returns a wrong/garbage value.\n\n**Missing modular reduction** - entries grow as λ^n with λ≈4.56, far beyond 2^63 after a few squarings.\n`Input: n = 5000` → `Expected: 30228214`\n⚠️ Bug: taking `% MOD` only at the end instead of after every multiply-add → overflow, wrong answer."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to an n×3 grid with k colors. How does the time complexity change?",
+      "a": "The state is still the row's equality pattern (ABA or ABC), but the transition matrix entries become polynomials in k. The matrix stays 2×2, so exponentiation is still O(log n) with O(1) space; only the constants change (e.g. ABA→ABA becomes (k−2)+(k−3)·0... recomputed per k)."
+    },
+    {
+      "q": "What if the grid has m columns instead of 3, with 3 colors?",
+      "a": "The number of valid row patterns grows exponentially in m (proper 3-colorings of a path of length m), so the transition matrix is up to ~c·φ^m in size. Time becomes O(φ^(3m) · log n) and space O(φ^(2m)) for the matrix, which is fine only for small m."
+    },
+    {
+      "q": "Stream the rows one at a time and answer \"number of ways so far\" after each row, without re-running exponentiation per query.",
+      "a": "Keep the current state vector v and the current power M^(2^i) for each bit consumed; when a new row arrives, multiply v by M once (O(1)) and report v[0]+v[1]. Total O(n) time, O(1) space, answering each prefix in O(1) amortized."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numOfWays(int n) {\n        const long long MOD = 1000000007LL;\n        // State vector v = [count_ABA, count_ABC], initial row: [6, 6].\n        // Transition matrix M = [[3,2],[2,2]].\n        // Answer = sum of entries of M^(n-1) * [6, 6], mod 1e9+7.\n        long long m00 = 3, m01 = 2, m10 = 2, m11 = 2;\n        long long r00 = 1, r01 = 0, r10 = 0, r11 = 1;\n        long long e = (long long)(n - 1);\n        while (e > 0) {\n            if (e & 1LL) {\n                long long nr00 = (r00 * m00 + r01 * m10) % MOD;\n                long long nr01 = (r00 * m01 + r01 * m11) % MOD;\n                long long nr10 = (r10 * m00 + r11 * m10) % MOD;\n                long long nr11 = (r10 * m01 + r11 * m11) % MOD;\n                r00 = nr00; r01 = nr01; r10 = nr10; r11 = nr11;\n            }\n            long long nm00 = (m00 * m00 + m01 * m10) % MOD;\n            long long nm01 = (m00 * m01 + m01 * m11) % MOD;\n            long long nm10 = (m10 * m00 + m11 * m10) % MOD;\n            long long nm11 = (m10 * m01 + m11 * m11) % MOD;\n            m00 = nm00; m01 = nm01; m10 = nm10; m11 = nm11;\n            e >>= 1;\n        }\n        long long an = (r00 * 6 + r01 * 6) % MOD;\n        long long bn = (r10 * 6 + r11 * 6) % MOD;\n        return (int)((an + bn) % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

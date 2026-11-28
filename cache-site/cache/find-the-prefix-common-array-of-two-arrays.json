@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-prefix-common-array-of-two-arrays",
+  "title": "Find the Prefix Common Array of Two Arrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- maskA (unsigned long long): one 64-bit integer → O(1)\n- maskB (unsigned long long): one 64-bit integer → O(1)\n- C (returned vector): not counted\n- No recursion, no other containers",
+  "approach": "Since A and B are permutations of 1..n with n ≤ 50, we track which values have appeared in each array using a 64-bit bitmask. At each index i, set bit A[i] in maskA and bit B[i] in maskB, then C[i] = popcount(maskA & maskB). This is correct because a value is \"common at or before i\" exactly when it has appeared in both prefixes, and the AND of the two masks captures precisely those values.",
+  "hints": [
+    "With only n ≤ 50 distinct values ever appearing, how compactly can you represent the entire set of values seen so far in one array?",
+    "Use a 64-bit integer as a bitmask for each array. At index i, set bit A[i] in maskA and bit B[i] in maskB; C[i] = popcount(maskA & maskB). In Example 1 at i=1, maskA has bits {1,3}, maskB has bits {3,1}, AND has 2 bits set, so C[1]=2.",
+    "```\nmaskA = 0, maskB = 0\nfor i from 0 to n-1:\n    maskA |= 1 << A[i]\n    maskB |= 1 << B[i]\n    C[i] = popcount(maskA & maskB)\nreturn C\n```",
+    "**Smallest input** - n=1, both arrays contain the single value 1.\n`A = [1], B = [1]` → `Expected: [1]`\n⚠️ Bug: initializing C[0] to 0 and skipping the loop body → returns [0]\n\n**Largest bit position** - n=50, value 50 requires bit 50 in the mask.\n`A = [50,1,2,...,49], B = [50,1,2,...,49]` → `Expected: [1,2,3,...,50]`\n⚠️ Bug: using a 32-bit int for the mask (1 << 50 overflows int) → undefined behavior, wrong counts\n\n**First elements differ** - no value is common at index 0.\n`A = [1,3,2,4], B = [3,1,2,4]` → `Expected: [0,2,3,4]`\n⚠️ Bug: using popcount(maskA | maskB) instead of popcount(maskA & maskB) → at i=0 returns 2 instead of 0\n\n**Last index always full** - for any two permutations, C[n-1] = n.\n`A = [2,3,1], B = [3,1,2]` → `Expected: [0,1,3]`\n⚠️ Bug: looping to n-2 instead of n-1 → C[n-1] left uninitialized, returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "A 64-bit bitmask can no longer hold all values. Switch to a frequency array of size n+1 and a running counter: increment freq[A[i]] and freq[B[i]]; whenever a frequency reaches exactly 2, increment the counter and set C[i] to it. O(n) time, O(n) space."
+    },
+    {
+      "q": "What if the arrays arrive as a stream and you cannot store them?",
+      "a": "The bitmask approach still works online - process each (A[i], B[i]) pair as it arrives, update the two masks, and emit C[i] immediately. Beyond the output buffer, auxiliary space stays O(1)."
+    },
+    {
+      "q": "What if A and B are not guaranteed to be permutations (duplicates or missing values allowed)?",
+      "a": "The bitmask breaks because a duplicate in one array sets the same bit twice with no effect. Use a frequency array and count a value as common only when it has appeared at least once in both arrays' prefixes, tracked by two separate boolean arrays or a single freq array with threshold 2. O(n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findThePrefixCommonArray(vector<int>& A, vector<int>& B) {\n        int n = A.size();\n        vector<int> C(n);\n        unsigned long long maskA = 0, maskB = 0;\n        for (int i = 0; i < n; i++) {\n            maskA |= (1ULL << A[i]);\n            maskB |= (1ULL << B[i]);\n            C[i] = __builtin_popcountll(maskA & maskB);\n        }\n        return C;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "take-k-of-each-character-from-left-and-right",
+  "title": "Take K of Each Character From Left and Right",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int total[3], limit[3], cnt[3]: fixed-size arrays → O(1)\n- scalars n, left, best, right, idx → O(1)\n- no recursion, no dynamic containers\n- not counted: input string s",
+  "approach": "The characters you take always form a prefix plus a suffix of `s`, so the characters you *don't* take form one contiguous middle substring. To have at least `k` of each character outside, the middle substring may contain at most `total[c] − k` of each character `c`. So the problem reduces to: find the **longest** middle substring whose per-character counts stay within those limits, then the answer is `n − maxLen`. A sliding window expands on the right and shrinks from the left whenever any character's in-window count exceeds its limit. If any character's total is below `k`, return −1 immediately.",
+  "hints": [
+    "The characters you take are always some prefix of `s` plus some suffix of `s`. What does the part you leave untouched look like, and what must be true of the character counts outside it? (n ≤ 10⁵, so checking every prefix/suffix split naively is too slow.)",
+    "Sliding window over the \"middle\" substring. In Example 1 (`s = \"aabaaaacaabc\"`, `k = 2`) the totals are a=8, b=2, c=2, so the middle may hold at most a=6, b=0, c=0 - only `a`s. The longest such middle is `\"aaaa\"` (length 4), giving 12 − 4 = 8.",
+    "```\ncount totals of a, b, c\nif any total < k: return -1\nlimit[c] = total[c] - k\nleft = 0, best = 0\nfor right in 0..n-1:\n    add s[right] to window\n    while window_count[s[right]] > limit[s[right]]:\n        remove s[left], left += 1\n    best = max(best, right - left + 1)\nreturn n - best\n```",
+    "**Impossible** - a character's total count is below k\n`Input: s = \"a\", k = 1` → `Expected: -1`\n⚠️ Bug: skipping the feasibility check on totals → returns 1\n\n**k = 0** - nothing needs to be taken\n`Input: s = \"abc\", k = 0` → `Expected: 0`\n⚠️ Bug: early-returning -1 when k == 0 → returns -1\n\n**Off-by-one in shrink** - using >= instead of >\n`Input: s = \"aabbcc\", k = 1` → `Expected: 4`\n⚠️ Bug: shrinking while `count >= limit` instead of `count > limit` → returns 6\n\n**All same character** - other characters are absent\n`Input: s = \"aaaa\", k = 1` → `Expected: -1`\n⚠️ Bug: only checking the total of 'a' (ignoring b and c) → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet had 26 lowercase letters instead of 3?",
+      "a": "Use count arrays of size 26 instead of 3. The window invariant becomes \"for each letter, window count ≤ total − k,\" checked only for the letter just added. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if each character has its own required count (k_a, k_b, k_c)?",
+      "a": "Replace the single k with per-character requirements. Feasibility checks each total against its own requirement, and limits become total[c] − req[c]. The sliding window logic is unchanged. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if taking position i costs cost[i] and you must minimize total cost, not minutes?",
+      "a": "Maximizing window length no longer suffices. Precompute prefix costs and suffix costs, then for each split point find the minimum prefix+suffix cost that still meets the k requirement per character - a prefix/suffix-min scan. TC O(n), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int takeCharacters(string s, int k) {\n        int n = s.size();\n        int total[3] = {0, 0, 0};\n        for (char c : s) total[c - 'a']++;\n        for (int i = 0; i < 3; i++) {\n            if (total[i] < k) return -1;\n        }\n        int limit[3];\n        for (int i = 0; i < 3; i++) limit[i] = total[i] - k;\n        int cnt[3] = {0, 0, 0};\n        int left = 0, best = 0;\n        for (int right = 0; right < n; right++) {\n            int idx = s[right] - 'a';\n            cnt[idx]++;\n            while (cnt[idx] > limit[idx]) {\n                cnt[s[left] - 'a']--;\n                left++;\n            }\n            if (right - left + 1 > best) best = right - left + 1;\n        }\n        return n - best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

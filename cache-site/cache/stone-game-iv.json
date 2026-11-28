@@ -1,0 +1,40 @@
+{
+  "slug": "stone-game-iv",
+  "title": "Stone Game IV",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Win/Loss Game DP",
+  "tc": "O(n·√n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> dp: n+1 entries → O(n)\n- no recursion, no auxiliary containers\n- not counted: input int n, returned bool",
+  "approach": "Define dp[i] = whether the player whose turn it is wins when i stones remain. dp[0] = false (no move means loss). For i ≥ 1, dp[i] = true iff there exists a square s = k² ≤ i such that dp[i−s] = false (i.e., we can hand the opponent a losing position). We compute dp[1..n] bottom-up, trying every square k² ≤ i. Correctness follows from optimal play: a state is winning exactly when some legal move reaches a losing state for the opponent.",
+  "hints": [
+    "For a pile of size n, what property of the smaller piles Alice could leave behind determines whether she can guarantee a win? The constraints allow n up to 10⁵.",
+    "Use a boolean DP array dp[0..n] where dp[i] means \"the player to move with i stones wins.\" For n = 4: dp[0] = false, and dp[4] becomes true because removing 4 stones leaves dp[0] = false.",
+    "```\ndp[0] = false\nfor i from 1 to n:\n    dp[i] = false\n    k = 1\n    while k*k <= i:\n        if dp[i - k*k] == false:\n            dp[i] = true\n            break\n        k = k + 1\nreturn dp[n]\n```",
+    "**Smallest input** - n = 1, the only legal move ends the game.\n`Input: 1` → `Expected: true`\n⚠️ Bug: initializing dp[0] = true → returns false.\n\n**Alice-loses case** - n = 2, every move hands Bob a winning pile.\n`Input: 2` → `Expected: false`\n⚠️ Bug: testing `if (dp[i - k*k])` instead of `if (!dp[i - k*k])` → returns true.\n\n**Perfect square** - n = 4, a single move can clear the pile.\n`Input: 4` → `Expected: true`\n⚠️ Bug: loop condition `k*k < i` instead of `k*k <= i` → never tries k = 2, sees only dp[3] = true, returns false.\n\n**Largest input** - n = 10⁵, many squares to try per state.\n`Input: 100000` → `Expected: true`\n⚠️ Bug: recomputing the square list inside the inner loop with a fresh scan each time → TLE on the largest cases."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be as large as 10⁹?",
+      "a": "The O(n√n) DP is now infeasible. Precompute dp up to a moderate bound, detect the periodic pattern in win/loss values, then answer large n by index into the period. Time becomes O(period + √n) per query, space O(period)."
+    },
+    {
+      "q": "What if there are several piles and a player removes a square number of stones from one pile per turn?",
+      "a": "This is an impartial combinatorial game, so compute the Sprague-Grundy (nimber) value g(i) for a single pile of size i with the same square-move recurrence, then XOR the g-values of all piles; Alice wins iff the XOR is nonzero. Time O(total stones · √max pile), space O(max pile)."
+    },
+    {
+      "q": "What if the allowed moves are perfect cubes (1, 8, 27, …) instead of squares?",
+      "a": "The recurrence is identical; only the inner loop changes to iterate k while k³ ≤ i. Time drops to O(n · ∛n) ≈ 4.6·10⁶ for n = 10⁵, space stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool winnerSquareGame(int n) {\n        vector<bool> dp(n + 1, false);\n        for (int i = 1; i <= n; ++i) {\n            for (int k = 1; k * k <= i; ++k) {\n                if (!dp[i - k * k]) {\n                    dp[i] = true;\n                    break;\n                }\n            }\n        }\n        return dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

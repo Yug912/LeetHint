@@ -1,0 +1,40 @@
+{
+  "slug": "path-in-zigzag-labelled-binary-tree",
+  "title": "Path In Zigzag Labelled Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Math Traversal",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> path: up to log₂(n) ≈ 20 entries → O(log n) (returned output, not counted)\n- int variables d, lo, hi: O(1)\n- reverse(): in-place, O(1) auxiliary\n- recursion: none\n- not counted: returned vector",
+  "approach": "In a standard row-ordered binary tree, the parent of node `x` is `x/2`. In the zigzag tree, because consecutive rows alternate direction, the actual parent is the mirror image of `x/2` within the parent's row: if the parent row spans `[lo, hi]`, the parent label is `lo + hi - x/2`. Starting from the given label, we repeatedly divide by 2 and mirror to walk up to the root, collecting labels along the way, then reverse the collected path.",
+  "hints": [
+    "In a standard row-ordered binary tree, node `x` has parent `x/2`. Here, node 14's parent is 4 rather than 7 - what does this tell you about how the zigzag affects the parent-child link?",
+    "Use the mirror property: in row `[lo, hi]`, the mirror of `x` is `lo + hi - x`. Start from the label, repeatedly divide by 2 and mirror to find each parent, collecting the path, then reverse.\nExample: label=14 in row [8,15]. Parent = mirror(14/2=7) in row [4,7] = 4+7−7 = 4.",
+    "```\nfind row d such that 2^(d-1) <= label <= 2^d - 1\npath = []\nwhile label > 1:\n    append label to path\n    label = label / 2\n    d = d - 1\n    lo = 2^(d-1), hi = 2^d - 1\n    label = lo + hi - label\nappend 1 to path\nreverse path\nreturn path\n```",
+    "**Smallest input** - label = 1, the root itself\n`Input: label = 1` → `Expected: [1]`\n⚠️ Bug: loop condition `while label > 0` instead of `while label > 1` → enters loop, divides 1 by 2 to get 0, then computes `1 << (d-1)` with d=0 → undefined behavior, crash or garbage output\n\n**Row boundary** - label = 8, first label in an even row\n`Input: label = 8` → `Expected: [1, 2, 7, 8]`\n⚠️ Bug: using `while ((1 << d) < label)` instead of `<=` to find the row → d=3 instead of 4, mirrors 4 in row [2,3] getting 1, returns [1, 8]\n\n**No mirroring** - skipping the mirror step entirely\n`Input: label = 14` → `Expected: [1, 3, 4, 14]`\n⚠️ Bug: using `label = label / 2` without mirroring → returns [1, 3, 7, 14]\n\n**Forgetting to reverse** - returning path in build order\n`Input: label = 14` → `Expected: [1, 3, 4, 14]`\n⚠️ Bug: omitting `reverse(path.begin(), path.end())` → returns [14, 4, 3, 1]"
+  ],
+  "followUps": [
+    {
+      "q": "What if each node has 3 children instead of 2?",
+      "a": "The parent formula becomes `(x - 2) / 3 + 1` instead of `x / 2`, and row d spans `[start_d, start_d + 3^(d-1) - 1]` where `start_d = (3^(d-1) - 1) / 2 + 1`. The mirror formula `lo + hi - parent` still applies. TC: O(log₃ n), SC: O(1)."
+    },
+    {
+      "q": "What if labels can be up to 10^18?",
+      "a": "Switch all variables to `long long`. The row count becomes at most 60, so the path has at most 60 elements. No other changes needed. TC: O(log n) ≈ 60 iterations, SC: O(1) auxiliary."
+    },
+    {
+      "q": "What if you must answer 10^6 queries, each for a different label?",
+      "a": "Each query is independent and takes O(log n) time - no shared subproblems benefit from precomputation. Process queries one at a time. Total TC: O(Q log n), SC: O(log n) per query for the output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> pathInZigZagTree(int label) {\n        vector<int> path;\n        int d = 0;\n        while ((1 << d) <= label) d++;\n        while (label > 1) {\n            path.push_back(label);\n            label /= 2;\n            d--;\n            int lo = 1 << (d - 1);\n            int hi = (1 << d) - 1;\n            label = lo + hi - label;\n        }\n        path.push_back(1);\n        reverse(path.begin(), path.end());\n        return path;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

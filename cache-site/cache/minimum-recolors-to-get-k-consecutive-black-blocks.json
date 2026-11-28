@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-recolors-to-get-k-consecutive-black-blocks",
+  "title": "Minimum Recolors to Get K Consecutive Black Blocks",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int wCount: single integer → O(1)\n- int minOps: single integer → O(1)\n- int n: single integer → O(1)\n- not counted: input string blocks",
+  "approach": "We need to find a window of k consecutive blocks that already contains the most 'B' characters (equivalently, the fewest 'W' characters), since each 'W' in that window costs one recolor operation. A sliding window of fixed size k moves across the string: we count 'W's in the first window, then for each shift we remove the leftmost character's contribution and add the new rightmost character's contribution, tracking the minimum count seen. This is correct because every possible k-length window is examined exactly once.",
+  "hints": [
+    "When you shift your focus from a group of k blocks starting at position i to the group starting at position i+1, how many blocks actually leave and how many enter the group?",
+    "Sliding window. For blocks = \"WBBWWBBWBW\" with k = 7, the first window \"WBBWWBB\" has 3 whites. Sliding right drops blocks[0]='W' and adds blocks[7]='W', so the count stays 3.",
+    "```\ncount whites in blocks[0..k-1]\nminOps = count\nfor i from k to n-1:\n    if blocks[i-k] == 'W': count = count - 1\n    if blocks[i] == 'W': count = count + 1\n    minOps = min(minOps, count)\nreturn minOps\n```",
+    "**Single block** - only one window exists, no sliding needed.\n`Input: blocks = \"W\", k = 1` → `Expected: 1`\n⚠️ Bug: initializing minOps to 0 instead of the first window's white count → returns 0\n\n**All white** - every window needs k recolors.\n`Input: blocks = \"WWWW\", k = 2` → `Expected: 2`\n⚠️ Bug: initializing minOps to 0 → returns 0\n\n**Window covers entire string** - k equals n, the sliding loop never executes.\n`Input: blocks = \"WBW\", k = 3` → `Expected: 2`\n⚠️ Bug: loop bound `for i = k; i <= n; i++` (using <= instead of <) → accesses blocks[n], out of bounds\n\n**Already all black** - answer is 0, no recoloring needed.\n`Input: blocks = \"BBBB\", k = 2` → `Expected: 0`\n⚠️ Bug: initializing minOps to 1 instead of the first window's white count → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5 and you must answer many queries, each with a different k?",
+      "a": "Precompute a prefix sum array of 'W' counts so any window's white count is obtained in O(1) via prefix[r] - prefix[l]. Each query then takes O(n) to scan all windows of that size. Total time O(n) preprocessing + O(n) per query, space O(n) for the prefix array."
+    },
+    {
+      "q": "What if blocks is an infinite repeating pattern of length p and k can be up to 10^9?",
+      "a": "Concatenate two copies of the pattern and compute prefix sums over that doubled string. Any k-length window either fits within one period copy or spans at most two, so slide a window of size min(k, 2p) over the doubled string. Time O(p), space O(p)."
+    },
+    {
+      "q": "What if you must also return the starting index of the optimal window, breaking ties by smallest index?",
+      "a": "Track a bestIndex variable alongside minOps. Update bestIndex only when the current count is strictly less than minOps, not when equal. Time and space complexity remain O(n) and O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumRecolors(string blocks, int k) {\n        int n = blocks.size();\n        int wCount = 0;\n        for (int i = 0; i < k; i++) {\n            if (blocks[i] == 'W') wCount++;\n        }\n        int minOps = wCount;\n        for (int i = k; i < n; i++) {\n            if (blocks[i - k] == 'W') wCount--;\n            if (blocks[i] == 'W') wCount++;\n            if (wCount < minOps) minOps = wCount;\n        }\n        return minOps;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

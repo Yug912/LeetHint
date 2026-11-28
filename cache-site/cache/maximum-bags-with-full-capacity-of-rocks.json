@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-bags-with-full-capacity-of-rocks",
+  "title": "Maximum Bags With Full Capacity of Rocks",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n) depth\n- remaining (long long): O(1)\n- count (int): O(1)\n- not counted: capacity array (modified in place, input)",
+  "approach": "Compute each bag's deficit (capacity[i] − rocks[i]) in place by reusing the capacity array, then sort it in ascending order. Greedily fill bags from the smallest deficit upward, subtracting each deficit from the remaining additional rocks, until the next deficit exceeds what's left. This is optimal because filling a bag with a smaller deficit never costs more than filling one with a larger deficit, so prioritizing small deficits maximizes the count of fully filled bags.",
+  "hints": [
+    "With a fixed budget of additional rocks, what determines how many bags you can fill to capacity? n can be up to 5 × 10^4.",
+    "Sort the deficits (capacity[i] − rocks[i]) in place and greedily fill from smallest. In Example 1, deficits are [1,1,0,1]; sorted to [0,1,1,1]; with 2 rocks, fill 0+1+1 = 2 rocks for 3 full bags.",
+    "```\nfor i in range(n):\n    capacity[i] -= rocks[i]\nsort capacity ascending\ncount = 0\nfor d in capacity:\n    if additionalRocks >= d:\n        additionalRocks -= d\n        count += 1\n    else:\n        break\nreturn count\n```",
+    "**Exact match** - remaining rocks exactly equal the next deficit\n`Input: capacity = [3,3], rocks = [1,2], additionalRocks = 3` → `Expected: 2`\n⚠️ Bug: using `>` instead of `>=` in the fill check → when remaining = 2 and deficit = 2, skips it → returns 1\n\n**All full** - every bag already at capacity, all deficits are 0\n`Input: capacity = [3,3,3], rocks = [3,3,3], additionalRocks = 5` → `Expected: 3`\n⚠️ Bug: checking `deficit > 0` before filling → skips all zero-deficit bags → returns 0\n\n**Overflow** - n = 5×10^4 bags each with deficit 10^9, total deficit 5×10^13\n`Input: capacity = [1000000000]×50000, rocks = [0]×50000, additionalRocks = 1000000000` → `Expected: 1`\n⚠️ Bug: accumulating total deficit in `int` (5×10^4 × 10^9 = 5×10^13 > 2^31−1) → signed overflow → wrong count\n\n**Unsorted input** - deficits in descending order\n`Input: capacity = [5,4,3], rocks = [0,0,0], additionalRocks = 7` → `Expected: 2`\n⚠️ Bug: not sorting deficits, processing in original order [5,4,3] → fills 5 (remaining 2), stops → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to answer Q queries, each with a different value of additionalRocks?",
+      "a": "Sort deficits once and compute prefix sums. For each query, binary search for the largest prefix sum ≤ additionalRocks. TC: O(n log n + Q log n), SC: O(n) for the prefix sum array."
+    },
+    {
+      "q": "What if each bag has a different reward value and you want to maximize total reward from full bags?",
+      "a": "This becomes a 0/1 knapsack problem where each bag has a cost (deficit) and value (reward), with budget additionalRocks. For small additionalRocks, use DP with O(n × additionalRocks) time. For large values, the problem is NP-hard."
+    },
+    {
+      "q": "What if rocks arrive one at a time in a stream and you must assign each rock immediately?",
+      "a": "Maintain a min-heap of positive deficits. Assign each incoming rock to the bag with the smallest deficit. When a deficit reaches 0, increment the count and remove it from the heap. TC: O((n + R) log n) where R is the number of incoming rocks, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumBags(vector<int>& capacity, vector<int>& rocks, int additionalRocks) {\n        int n = capacity.size();\n        for (int i = 0; i < n; i++) {\n            capacity[i] -= rocks[i];\n        }\n        sort(capacity.begin(), capacity.end());\n        int count = 0;\n        long long remaining = additionalRocks;\n        for (int i = 0; i < n; i++) {\n            if (remaining >= capacity[i]) {\n                remaining -= capacity[i];\n                count++;\n            } else {\n                break;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

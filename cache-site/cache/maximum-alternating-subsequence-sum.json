@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-alternating-subsequence-sum",
+  "title": "Maximum Alternating Subsequence Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two-State DP (Parity)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long add, sub, nxtAdd, nxtSub: four scalars → O(1)\n- const long long NEG: one constant → O(1)\n- loop variable x: one scalar → O(1)\n- no containers, no recursion → O(1) total",
+  "approach": "The sign of an element in the chosen subsequence depends only on its position within that subsequence (even index → added, odd index → subtracted). While scanning left to right, the only thing that matters about the past is whether the next picked element would be added (subsequence currently has even length) or subtracted (odd length). Maintain two values `add` (best sum of an even-length subsequence) and `sub` (best sum of an odd-length subsequence); for each element either skip it or extend the opposite-parity subsequence. The answer is `max(add, sub)`, which for positive inputs is the best odd-length sum (one more addition than subtraction).",
+  "hints": [
+    "As you scan the array left to right and decide for each element whether to include it, what single piece of information about your choices so far determines whether picking the next element increases or decreases the running alternating sum? The array can have up to 10^5 elements, so you cannot try every subsequence.",
+    "Dynamic programming with two running values: `add` = best sum of an even-length subsequence (next pick is added), `sub` = best sum of an odd-length subsequence (next pick is subtracted). On nums = [4,2,5,3], after 4: add=0, sub=4; after 2: add=max(0, 4−2)=2, sub=max(4, 0+2)=4.",
+    "```\nadd = 0\nsub = -infinity\nfor each x in nums:\n    newAdd = max(add, sub - x)\n    newSub = max(sub, add + x)\n    add, sub = newAdd, newSub\nreturn max(add, sub)\n```",
+    "**Single element** - only one element exists, so the answer is that element itself.\n`Input: nums = [5]` → `Expected: 5`\n⚠️ Bug: returning the `add` state (even-length/empty) instead of `max(add, sub)` → returns 0.\n\n**All equal values** - every element is identical, so picking more than one cancels out.\n`Input: nums = [2,2,2,2]` → `Expected: 2`\n⚠️ Bug: computing the alternating sum of the whole array instead of the best subsequence → returns 2−2+2−2 = 0.\n\n**Strictly increasing** - the largest element is last; the best subsequence is just that one element.\n`Input: nums = [5,6,7,8]` → `Expected: 8`\n⚠️ Bug: forcing inclusion of nums[0] and searching only among subsequences that keep it → returns 7 (from [5,6,8] = 5−6+8).\n\n**Two elements, first larger** - picking both subtracts the smaller from the larger, which is worse than the larger alone.\n`Input: nums = [8,3]` → `Expected: 8`\n⚠️ Bug: always selecting at least two elements to \"use\" the alternation → returns 8 − 3 = 5."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array elements could be negative?",
+      "a": "The same DP works unchanged because `max` still selects the best option at each step; negative values just make skipping optimal more often. The initialization `sub = -infinity` stays essential so the first pick must be an addition. TC remains O(n), SC O(1)."
+    },
+    {
+      "q": "What if you must pick exactly k elements?",
+      "a": "Add a dimension for the count: dp[j][parity] = best sum of a subsequence of length j ending at the given parity, transitioning by skip or take. TC O(n·k), SC O(k) with rolling arrays."
+    },
+    {
+      "q": "What if the array arrives as a stream you cannot store?",
+      "a": "The recurrence only needs the previous `add` and `sub`, so process each incoming element once and update the two scalars in place. TC O(n), SC O(1) beyond the two running values."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxAlternatingSum(vector<int>& nums) {\n        const long long NEG = -1000000000000000LL; // safely below any real value (max |sum| ≈ 10^10)\n        long long add = NEG; // best alternating sum of an even-length subsequence (next pick is added)\n        long long sub = NEG; // best alternating sum of an odd-length subsequence (next pick is subtracted)\n        // Empty subsequence has even length 0 and sum 0, so seed add with 0.\n        add = 0;\n        for (int x : nums) {\n            long long nxtAdd = max(add, sub - x); // skip, or take x at an odd index (subtract)\n            long long nxtSub = max(sub, add + x); // skip, or take x at an even index (add)\n            add = nxtAdd;\n            sub = nxtSub;\n        }\n        return max(add, sub);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "replace-the-substring-for-balanced-string",
+  "title": "Replace the Substring for Balanced String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[4]: fixed 4 entries → O(1)\n- int window[4]: fixed 4 entries → O(1)\n- lambda idx: no heap allocation → O(1)\n- not counted: input string s",
+  "approach": "When a substring is replaced, the characters outside it stay fixed; for the whole string to become balanced, each character's count outside the window must be ≤ n/4 (we can only add to deficits inside the replacement, never remove from outside). So the problem reduces to: find the minimum-length window such that for every character c, total[c] − window[c] ≤ n/4. A sliding window expands the right end and shrinks the left end while the condition holds, tracking the smallest valid window. If the string is already balanced (all totals ≤ n/4), return 0.",
+  "hints": [
+    "If you replace one substring, which characters' counts can you change and which stay fixed? For the final string to have exactly n/4 of each, what upper bound must each outside count respect?",
+    "Use a sliding window over s. For \"QQWE\" (n=4, k=1), totals are Q=2,W=1,E=1,R=0; a window covering just the first 'Q' leaves outside counts Q=1,W=1,E=1,R=0 - all ≤ 1, so length 1 suffices.",
+    "```\ncount totals of each char\nif all totals <= n/4: return 0\nleft = 0, ans = n\nfor right in 0..n-1:\n    add s[right] to window\n    while all (total[i] - window[i] <= n/4):\n        ans = min(ans, right - left + 1)\n        remove s[left] from window\n        left++\nreturn ans\n```",
+    "**Already balanced** - every character appears exactly n/4 times\n`Input: \"QWER\"` → `Expected: 0`\n⚠️ Bug: using `>=` instead of `>` in the check `total[i] - window[i] >= k` → returns 4\n\n**All same character** - one character fills the entire string\n`Input: \"QQQQ\"` → `Expected: 3`\n⚠️ Bug: initializing `ans = 0` instead of `n` → returns 0\n\n**Shrinkable window** - a valid window can be shrunk to a smaller valid one\n`Input: \"WQQQ\"` → `Expected: 2`\n⚠️ Bug: using `if` instead of `while` for the shrink loop → returns 3\n\n**Large all-same** - n=8, all 'Q', must replace 6 characters\n`Input: \"QQQQQQQQ\"` → `Expected: 6`\n⚠️ Bug: computing window length as `right - left` instead of `right - left + 1` → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet had k distinct characters instead of 4?",
+      "a": "The same sliding window works, but checking all k characters each step costs O(k). Maintain a counter of how many characters still violate the condition so each expand/shrink is O(1). TC stays O(n), SC becomes O(k)."
+    },
+    {
+      "q": "What if you could replace at most two disjoint substrings instead of one?",
+      "a": "Precompute for each prefix the minimum window ending there and for each suffix the minimum window starting there, then try every split point. TC: O(n), SC: O(n) for the prefix/suffix arrays."
+    },
+    {
+      "q": "What if the string arrives as a stream and you can only store O(1) memory?",
+      "a": "You need total counts to know n/4, so a single streaming pass is impossible. Do one pass to count totals, then a second streaming pass running the sliding window - but the window itself can be O(n) in the worst case, so true O(1) streaming is not achievable for this problem."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int balancedString(string s) {\n        int n = s.size();\n        int k = n / 4;\n        auto idx = [](char c) -> int {\n            switch (c) {\n                case 'Q': return 0;\n                case 'W': return 1;\n                case 'E': return 2;\n                default:  return 3;\n            }\n        };\n        int cnt[4] = {0, 0, 0, 0};\n        for (char c : s) cnt[idx(c)]++;\n        bool balanced = true;\n        for (int i = 0; i < 4; i++) {\n            if (cnt[i] > k) { balanced = false; break; }\n        }\n        if (balanced) return 0;\n        int ans = n;\n        int window[4] = {0, 0, 0, 0};\n        int left = 0;\n        for (int right = 0; right < n; right++) {\n            window[idx(s[right])]++;\n            while (left <= right) {\n                bool ok = true;\n                for (int i = 0; i < 4; i++) {\n                    if (cnt[i] - window[i] > k) { ok = false; break; }\n                }\n                if (!ok) break;\n                int len = right - left + 1;\n                if (len < ans) ans = len;\n                window[idx(s[left])]--;\n                left++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

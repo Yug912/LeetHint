@@ -1,0 +1,36 @@
+{
+  "slug": "soup-servings",
+  "title": "Soup Servings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Memoized DP (Top-Down)",
+  "tc": "O(m²)",
+  "sc": "O(m²)",
+  "spaceBreakdown": "- vector<vector<double>> memo: (m+1)×(m+1) entries, m ≤ 200 → O(m²)\n- recursion call-stack depth: at most m (each call reduces a by ≥1) → O(m), dominated by memo\n- not counted: input n, returned double",
+  "approach": "Scale down by 25 mL: operations become (4,0), (3,1), (2,2), (1,3). Let m = ceil(n/25). Use memoized DP where dp(a,b) = probability A empties first + 0.5 × probability both empty same turn. Base cases: both ≤0 → 0.5, only A ≤0 → 1.0, only B ≤0 → 0.0. Since A is depleted faster on average (mean 2.5/step vs 1.5/step for B), the answer approaches 1.0 exponentially fast as n grows. For n ≥ 5000, the error from returning 1.0 is far below 10⁻⁵ (over 8 standard deviations away), so we short-circuit. For smaller n, the DP table is at most 200×200.",
+  "hints": [
+    "The amounts poured are always multiples of 25. How does scaling the initial amount `n` down by a factor of 25 simplify the state space? The constraints allow `n` up to 10^9.",
+    "Use dynamic programming with a 2D array where `dp[i][j]` represents the probability starting with `i` units of A and `j` units of B. For `n = 50`, we have 2 units of each, so `dp[2][2] = 0.25 * (dp[0][2] + dp[0][1] + dp[0][0] + dp[1][0])`.",
+    "```\nif n >= 12500: return 1.0\nm = ceil(n / 25)\ninitialize dp[m+1][m+1]\nfor i from 0 to m:\n  for j from 0 to m:\n    if i == 0 and j == 0: dp[i][j] = 0.5\n    else if i == 0: dp[i][j] = 1.0\n    else if j == 0: dp[i][j] = 0.0\n    else: dp[i][j] = 0.25 * (dp[max(0,i-4)][j] + dp[max(0,i-3)][max(0,j-1)] + dp[max(0,i-2)][max(0,j-2)] + dp[max(0,i-1)][max(0,j-3)])\nreturn dp[m][m]\n```",
+    "**Smallest input** - `n = 0` means both soups start empty.\n`Input: n = 0` → `Expected: 0.5`\n⚠️ Bug: checking `i == 0` before `i == 0 && j == 0` → returns 1.0\n\n**Rounding** - `n = 51` requires 3 units (ceil(51/25)).\n`Input: n = 51` → `Expected: 0.65625`\n⚠️ Bug: using `m = n / 25` (integer division) → `m = 2`, returns 0.625\n\n**Negative indices** - `n = 50` means 2 units. Operation 1 asks to pour 4 units from A.\n`Input: n = 50` → `Expected: 0.625`\n⚠️ Bug: accessing `dp[i-4][j]` without `max(0, i-4)` → out-of-bounds array access, returns garbage or crashes\n\n**Large input** - `n = 10^9` makes a full DP table impossible.\n`Input: n = 10^9` → `Expected: 1.0`\n⚠️ Bug: not capping `n` and allocating `dp[n][n]` → memory limit exceeded"
+  ],
+  "followUps": [
+    {
+      "q": "What if the probability of each operation is not 0.25, but given as an array of 4 probabilities?",
+      "a": "The recurrence would multiply each term by its respective probability instead of 0.25. The time and space complexity would remain the same."
+    },
+    {
+      "q": "What if there are more than 4 operations to choose from?",
+      "a": "The recurrence would sum over all $k$ operations, multiplying each by its probability. Time complexity becomes $O(m^2 \\cdot k)$, space complexity remains $O(m^2)$."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double soupServings(int n) {\n        if (n >= 5000) return 1.0;\n        int m = (n + 24) / 25;\n        vector<vector<double>> memo(m + 1, vector<double>(m + 1, -1.0));\n        return dp(m, m, memo);\n    }\nprivate:\n    double dp(int a, int b, vector<vector<double>>& memo) {\n        if (a <= 0 && b <= 0) return 0.5;\n        if (a <= 0) return 1.0;\n        if (b <= 0) return 0.0;\n        if (memo[a][b] >= 0.0) return memo[a][b];\n        memo[a][b] = 0.25 * (dp(a - 4, b, memo) +\n                             dp(a - 3, b - 1, memo) +\n                             dp(a - 2, b - 2, memo) +\n                             dp(a - 1, b - 3, memo));\n        return memo[a][b];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

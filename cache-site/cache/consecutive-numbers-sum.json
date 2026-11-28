@@ -1,0 +1,40 @@
+{
+  "slug": "consecutive-numbers-sum",
+  "title": "Consecutive Numbers Sum",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Mathematical Enumeration",
+  "tc": "O(√n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long k, rem, count: scalars → O(1)\n- no containers, no recursion",
+  "approach": "A sum of k consecutive positive integers starting at a equals k·a + k(k−1)/2. For fixed k, the starting value a = (n − k(k−1)/2)/k is valid iff it is a positive integer, i.e. (n − k(k−1)/2) is divisible by k and positive. Since k(k−1)/2 grows quadratically, k only ranges up to ≈√(2n), so we enumerate every k and count the valid ones.",
+  "hints": [
+    "With a fixed length k of consecutive positive integers, what arithmetic condition on n determines whether a valid starting point exists? The constraint n ≤ 10^9 rules out scanning every starting position.",
+    "Enumerate over k (the number of terms). For n = 9 and k = 3: subtract 0+1+2 = 3 from 9 to get 6, then 6/3 = 2 is the start, giving 2+3+4.",
+    "count = 0\nk = 1\nwhile k*(k-1)/2 < n:\n    rem = n - k*(k-1)/2\n    if rem % k == 0:\n        count += 1\n    k += 1\nreturn count",
+    "**Smallest input** - n = 1 has only the trivial single-term sum \"1\".\n`Input: 1` → `Expected: 1`\n⚠️ Bug: using `k*(k-1)/2 < n` with `int` for k and stopping condition computed in 32-bit → on large n the product k*(k-1) reaches ≈2·10^9 and overflows before the loop exits, returning a wrong (too large) count.\n\n**No two-term split** - n = 2 cannot be written as a sum of two consecutive positives (1+2 = 3).\n`Input: 2` → `Expected: 1`\n⚠️ Bug: using `rem % k == 0` without requiring rem > 0 → for k = 2, rem = 1, 1 % 2 ≠ 0 is fine here, but a variant that checks `rem >= 0` instead of strict positivity would wrongly accept k where a = 0.\n\n**Overflow boundary** - n = 10^9 forces k up to ≈44721, so k*(k-1) ≈ 2·10^9.\n`Input: 1000000000` → `Expected: 2`\n⚠️ Bug: declaring k and the triangle product as `int` → k*(k-1) overflows past INT_MAX near k ≈ 46341, loop runs forever or miscounts → returns a value > 2.\n\n**Just fits** - n = 3 equals 1+2, the smallest two-term sum.\n`Input: 3` → `Expected: 2`\n⚠️ Bug: loop condition `k*(k-1)/2 <= n` (≤ instead of <) → at k = 2 for n = 3, 1 ≤ 3 holds and rem = 2, 2 % 2 = 0 counts it, but for n = 1 it would let k = 1 give rem = 1 (correct) yet also try k = 2 with rem = 0, 0 % 2 = 0 → wrongly returns 2 for n = 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^18?",
+      "a": "The same enumeration still works since k only reaches ≈√(2n) ≈ 1.4·10^9, but that is too many iterations. Instead factor 2n and count divisor pairs (k, m) with opposite parity and m > k, giving O(n^(1/3)) via trial division up to the cube root plus primality handling."
+    },
+    {
+      "q": "What if the consecutive integers may be non-positive (zero or negative allowed)?",
+      "a": "For every odd k there is exactly one centered window summing to n, and for even k there is one iff n ≡ k/2 (mod k); combined this gives one valid window per k with k(k−1)/2 ≤ n plus infinitely many shiftable windows, so you must add a bound like \"all terms in [−M, M]\" to keep the answer finite."
+    },
+    {
+      "q": "Answer many queries n_i (up to 10^5 of them, each ≤ 10^9) online.",
+      "a": "Precompute nothing; each query is independent and runs in O(√n_i) ≈ 4.5·10^4 iterations, so 10^5 queries cost ≈4.5·10^9 - too slow. Precompute answers offline by, for each k ≤ √(2·10^9), incrementing a bucket at every multiple of k satisfying the parity condition, yielding O(√N · N/k) total work amortized."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int consecutiveNumbersSum(int n) {\n        int count = 0;\n        long long k = 1;\n        while (k * (k - 1) / 2 < n) {\n            long long rem = (long long)n - k * (k - 1) / 2;\n            if (rem % k == 0) {\n                count++;\n            }\n            k++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

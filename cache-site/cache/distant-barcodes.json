@@ -1,0 +1,39 @@
+{
+  "slug": "distant-barcodes",
+  "title": "Distant Barcodes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting and Even-Odd Index Placement",
+  "tc": "O(n + k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- int cnt[10001]: fixed-size frequency array, 10001 ints → O(k)\n- vector<int> res(n): returned output, not counted\n- no recursion, no heap, no other containers",
+  "approach": "Count the frequency of each barcode using a fixed-size array. Find the most frequent barcode and place it at every even index (0, 2, 4, …) first; when even indices are exhausted, wrap to index 1 and continue filling odd indices with the remaining barcodes. Because the problem guarantees a valid answer exists, no barcode appears more than ⌈n/2⌉ times, so spacing the most frequent one at even indices never creates an adjacency, and the remaining barcodes naturally fill the gaps without touching themselves.",
+  "hints": [
+    "If a barcode appears f times, what is the shortest row that can hold all f copies with no two adjacent? The constraint guarantees an answer exists for inputs up to length 10000.",
+    "Use a frequency count array. Find the most frequent barcode and place it at every even index (0, 2, 4, …). For [1,1,1,2,2,2], barcode 1 goes to indices 0, 2, 4; then barcode 2 fills 1, 3, 5.",
+    "```\ncount frequency of each barcode\nfind barcode with maximum frequency\nidx = 0\nfor each copy of max-freq barcode:\n    result[idx] = max-freq barcode\n    idx += 2; if idx >= n: idx = 1\nfor each other barcode v:\n    while count[v] > 0:\n        result[idx] = v\n        idx += 2; if idx >= n: idx = 1\n        count[v]--\nreturn result\n```",
+    "**Wrap-around boundary** - idx wraps from even to odd phase\n`Input: [1,2]` → `Expected: [1,2]`\n⚠️ Bug: wrapping idx to 0 instead of 1 after even indices are exhausted → res[0] overwritten, returns [2,0]\n\n**Odd length, max freq = ceil(n/2)** - most frequent fills all even positions exactly\n`Input: [1,1,1,2,3]` → `Expected: [1,2,1,3,1]`\n⚠️ Bug: starting placement at index 1 instead of 0 → [1,1,2,1,3] has adjacent 1s\n\n**Single element** - n=1, trivially valid\n`Input: [5]` → `Expected: [5]`\n⚠️ Bug: returning empty vector for n < 2 → returns []\n\n**Two barcodes, unequal frequency** - simplest non-trivial case\n`Input: [1,1,2]` → `Expected: [1,2,1]`\n⚠️ Bug: placing max-freq element at consecutive indices 0, 1 instead of 0, 2 → [1,1,2] has adjacent 1s"
+  ],
+  "followUps": [
+    {
+      "q": "What if no valid rearrangement is guaranteed - how do you detect impossibility?",
+      "a": "After counting, check whether the maximum frequency exceeds ⌈n/2⌉ (i.e., maxCnt > (n + 1) / 2). If it does, return an empty array to signal no valid arrangement. TC stays O(n), SC stays O(k)."
+    },
+    {
+      "q": "What if barcode values can be up to 10^9 or negative?",
+      "a": "Replace the fixed-size count array with an unordered_map<int, int>. The algorithm is unchanged: count, find the max-frequency barcode, place it at even indices, then fill the rest. TC becomes O(n) expected, SC becomes O(d) where d is the number of distinct barcodes."
+    },
+    {
+      "q": "What if the input arrives as a stream too large to hold in memory?",
+      "a": "You still need two passes: one to count frequencies (using a hash map) and identify the most frequent barcode, then a second pass to place elements. If memory is extremely constrained, use an external sort to count frequencies on disk, then stream the placement phase. TC: O(n log n) for external sort, SC: O(d) in memory."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> rearrangeBarcodes(vector<int>& barcodes) {\n        int n = barcodes.size();\n        if (n <= 1) return barcodes;\n        int cnt[10001] = {0};\n        int maxCnt = 0, maxVal = 0;\n        for (int b : barcodes) {\n            cnt[b]++;\n            if (cnt[b] > maxCnt) {\n                maxCnt = cnt[b];\n                maxVal = b;\n            }\n        }\n        vector<int> res(n);\n        int idx = 0;\n        for (int i = 0; i < maxCnt; i++) {\n            res[idx] = maxVal;\n            idx += 2;\n            if (idx >= n) idx = 1;\n        }\n        for (int v = 1; v <= 10000; v++) {\n            if (v == maxVal) continue;\n            while (cnt[v] > 0) {\n                res[idx] = v;\n                idx += 2;\n                if (idx >= n) idx = 1;\n                cnt[v]--;\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

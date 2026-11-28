@@ -1,0 +1,40 @@
+{
+  "slug": "partition-array-into-disjoint-intervals",
+  "title": "Partition Array into Disjoint Intervals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Running Maximum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, maxLeft, maxSeen, partitionIdx, i): constant → O(1)\n- no containers, no recursion, no heap\n- not counted: input vector",
+  "approach": "Scan left to right maintaining two values: `maxLeft` (max of the current left partition) and `maxSeen` (max of everything scanned so far). When an element is smaller than `maxLeft`, it must join the left partition (otherwise a larger element in left would violate the condition), so we extend the partition to this index and update `maxLeft` to `maxSeen`. Elements ≥ `maxLeft` can stay in right, so we only update `maxSeen`. The final partition index gives the smallest valid left partition.",
+  "hints": [
+    "As you scan left to right, what must happen when you meet an element smaller than the largest value you've already seen? The array can have up to 10^5 elements.",
+    "Track two running maxima: the max of the current left partition (`maxLeft`) and the max of everything scanned (`maxSeen`). In [5,0,3,8,6], seeing 0 (< maxLeft 5) forces left to extend to index 1; seeing 3 (< 5) extends to index 2; 8 and 6 don't trigger extension, so left = [5,0,3].",
+    "```\nmaxLeft = nums[0]\nmaxSeen = nums[0]\npos = 0\nfor i from 1 to n-1:\n    if nums[i] < maxLeft:\n        pos = i\n        maxLeft = maxSeen\n    else:\n        maxSeen = max(maxSeen, nums[i])\nreturn pos + 1\n```",
+    "**All elements equal** - every element is the same value\n`Input: nums = [1,1,1,1]` → `Expected: 1`\n⚠️ Bug: using `<=` instead of `<` in the comparison → returns 4\n\n**Minimum input** - only two elements\n`Input: nums = [1,2]` → `Expected: 1`\n⚠️ Bug: initializing partitionIdx to -1 instead of 0 → returns 0\n\n**Descending then ascending** - left must extend to cover the entire descending run\n`Input: nums = [5,4,3,2,1,6]` → `Expected: 5`\n⚠️ Bug: returning pos instead of pos + 1 → returns 4\n\n**Zeros mixed in** - zero values are valid but affect the running maximum\n`Input: nums = [5,0,3,8,6]` → `Expected: 3`\n⚠️ Bug: initializing maxLeft to 0 instead of nums[0] → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed to find ALL valid partition points, not just the smallest?",
+      "a": "Precompute a suffix-minimum array, then for each index i check if the prefix-max up to i is ≤ the suffix-min from i+1 onward. Every satisfying index is a valid partition point. Time O(n), space O(n) for the suffix-min array."
+    },
+    {
+      "q": "What if the array elements could be negative?",
+      "a": "No change needed - the algorithm uses only comparisons and max operations, which work identically with negative values. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if the array arrives as a data stream too large to store?",
+      "a": "The algorithm already processes elements one at a time with three variables, so it works on a stream as-is. The answer can only be finalized after the stream ends, since a later small element can extend the partition. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int partitionDisjoint(vector<int>& nums) {\n        int n = nums.size();\n        int maxLeft = nums[0];\n        int maxSeen = nums[0];\n        int partitionIdx = 0;\n        for (int i = 1; i < n; i++) {\n            if (nums[i] < maxLeft) {\n                partitionIdx = i;\n                maxLeft = maxSeen;\n            } else {\n                maxSeen = max(maxSeen, nums[i]);\n            }\n        }\n        return partitionIdx + 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

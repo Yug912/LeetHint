@@ -1,0 +1,40 @@
+{
+  "slug": "max-value-of-equation",
+  "title": "Max Value of Equation",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Deque (Sliding Window Maximum)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- deque<int> dq: up to n indices → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Since x_i < x_j (strictly increasing), |x_i - x_j| = x_j - x_i, so the equation becomes (y_i - x_i) + (y_j + x_j). For each j, we need the maximum (y_i - x_i) among all i < j with x_j - x_i ≤ k - a sliding-window maximum over (y_i - x_i). A monotonic deque storing indices in decreasing order of (y_i - x_i) gives O(1) amortized per point: evict expired entries from the front, read the best i from the front, then push j after popping back any entries with (y - x) no greater than the current point's.",
+  "hints": [
+    "Since the points are sorted by x with x_i < x_j, what does |x_i - x_j| equal? With n up to 10^5, checking every pair is too slow.",
+    "Use a monotonic deque (decreasing) of indices keyed by y_i - x_i. At j = 1 in [[1,3],[2,0],[5,10],[6,-10]], k = 1, the front is index 0 (y−x = 2), giving 2 + (0+2) = 4.",
+    "```\nans = -infinity\ndeque = empty\nfor j in 0..n-1:\n    while deque not empty and x[deque.front] < x[j] - k:\n        deque.pop_front\n    if deque not empty:\n        i = deque.front\n        ans = max(ans, (y[i] - x[i]) + (y[j] + x[j]))\n    while deque not empty and (y[deque.back] - x[deque.back]) <= (y[j] - x[j]):\n        deque.pop_back\n    deque.push_back(j)\nreturn ans\n```",
+    "**Negative answer** - all y-values are negative so the maximum equation value is negative\n`Input: points=[[-3,-5],[-1,-2]], k=2` → `Expected: -5`\n⚠️ Bug: initializing ans to 0 instead of LLONG_MIN → returns 0\n\n**Window boundary** - a point whose x equals exactly x_j − k is still valid and must not be evicted\n`Input: points=[[0,0],[1,10],[2,5]], k=1` → `Expected: 16`\n⚠️ Bug: evicting with `x[i] <= x[j] - k` (should be `<`) → returns 11\n\n**Monotonic maintenance** - a later in-window point has higher y−x than an earlier one, so the earlier one can never be the best again\n`Input: points=[[0,0],[1,10],[2,5]], k=2` → `Expected: 16`\n⚠️ Bug: skipping pop_back entirely (no monotonic maintenance) → front stays at index 0 with y−x=0, misses index 1 with y−x=9 → returns 11\n\n**Best pair at extremes** - the maximum is achieved by the first and last points with a large k\n`Input: points=[[0,100],[1,0],[2,0],[3,0],[4,100]], k=4` → `Expected: 204`\n⚠️ Bug: evicting from front before computing the answer (reversed order of operations) → evicts index 0 at j=4 before reading it → returns 103"
+  ],
+  "followUps": [
+    {
+      "q": "What if the points are not pre-sorted by x?",
+      "a": "Sort by x first in O(n log n), then run the same monotonic deque pass. Total time becomes O(n log n); space stays O(n) for the deque plus O(n) for the sorted copy if you cannot modify the input."
+    },
+    {
+      "q": "What if k can be zero or negative, meaning no valid pair may exist?",
+      "a": "Initialize ans to a sentinel (e.g., LLONG_MIN) and after the loop check whether it was ever updated; if not, return -1 or another agreed sentinel. The deque naturally stays empty at every j when no pair fits, so no structural change is needed."
+    },
+    {
+      "q": "What if the equation were y_i + y_j − |x_i − x_j| (subtracting distance instead of adding)?",
+      "a": "The expression becomes (y_i + x_i) + (y_j − x_j). Use the identical monotonic deque but key on (y_i + x_i) instead of (y_i − x_i), maintaining a decreasing deque within the same sliding x-window. Time and space remain O(n) and O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMaxValueOfEquation(vector<vector<int>>& points, int k) {\n        int n = points.size();\n        deque<int> dq;\n        long long ans = LLONG_MIN;\n        for (int j = 0; j < n; j++) {\n            long long xj = points[j][0], yj = points[j][1];\n            while (!dq.empty() && points[dq.front()][0] < xj - k) {\n                dq.pop_front();\n            }\n            if (!dq.empty()) {\n                int i = dq.front();\n                long long val = ((long long)points[i][1] - points[i][0]) + (yj + xj);\n                if (val > ans) ans = val;\n            }\n            long long cur = yj - xj;\n            while (!dq.empty() && ((long long)points[dq.back()][1] - points[dq.back()][0]) <= cur) {\n                dq.pop_back();\n            }\n            dq.push_back(j);\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

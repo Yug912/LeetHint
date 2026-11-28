@@ -1,0 +1,40 @@
+{
+  "slug": "count-number-of-maximum-bitwise-or-subsets",
+  "title": "Count Number of Maximum Bitwise-OR Subsets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Backtracking",
+  "tc": "O(2^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- recursion call-stack: depth n (one frame per element in the decision tree) → O(n)\n- no containers or arrays allocated; nums passed by const reference (not counted)",
+  "approach": "The maximum possible bitwise OR of any subset equals the OR of all elements, since OR only sets bits and never clears them. With n ≤ 16, we enumerate all 2^n subsets via DFS, carrying the running OR down the recursion tree. At each index, we branch on including or excluding the current element, and at the leaves we check if the accumulated OR equals the maximum. This visits each subset exactly once with O(1) work per node.",
+  "hints": [
+    "With n ≤ 16, how many total subsets would you need to examine if you checked every possible one? The constraints guarantee 1 ≤ nums.length ≤ 16.",
+    "DFS/backtracking carrying a running OR value. For nums = [3, 1], start with OR 0, include 3 to get OR 3, then branch: include 1 (OR stays 3) or skip it (OR stays 3) - both match the max OR of 3.",
+    "```\nmaxOR = OR of all elements\ncount = 0\ndfs(i, curOR):\n    if i == n: if curOR == maxOR: count += 1; return\n    dfs(i + 1, curOR | nums[i])\n    dfs(i + 1, curOR)\ndfs(0, 0)\nreturn count\n```",
+    "**Smallest input** - n = 1, only one non-empty subset exists.\n`Input: nums = [5]` → `Expected: 1`\n⚠️ Bug: base case `i == n - 1` instead of `i == n` → returns 0 (checks OR before processing the only element)\n\n**All elements equal** - every non-empty subset has the same OR.\n`Input: nums = [2,2,2]` → `Expected: 7`\n⚠️ Bug: comparing `curOR > maxOR` instead of `curOR == maxOR` → returns 0 (no subset OR exceeds the maximum)\n\n**Duplicates** - identical values at different indices form distinct subsets.\n`Input: nums = [3,3]` → `Expected: 3`\n⚠️ Bug: skipping duplicate values in the exclude branch (combination-sum-style dedup) → returns 2 (misses the subset using only the second 3)\n\n**Single element with all bits** - one element already achieves the max OR.\n`Input: nums = [7,1,2]` → `Expected: 4`\n⚠️ Bug: requiring subset size ≥ 2 → returns 3 (misses the single-element subset {7})"
+  ],
+  "followUps": [
+    {
+      "q": "What if n ≤ 32 instead of 16?",
+      "a": "2^32 is too large for direct enumeration. Split the array into two halves, enumerate all 2^(n/2) subset ORs for each half, store the second half's OR frequencies in a hash map, then for each first-half OR value, count how many second-half ORs combine with it to equal maxOR. Time O(2^(n/2) · n), space O(2^(n/2))."
+    },
+    {
+      "q": "What if nums[i] can be 0?",
+      "a": "If all elements are 0, maxOR = 0 and the empty subset (OR 0) would be incorrectly counted. Track whether at least one element was included via a boolean parameter, or subtract 1 from the count when maxOR == 0. Time O(2^n), space O(n)."
+    },
+    {
+      "q": "What if only O(1) extra space is allowed (no recursion stack)?",
+      "a": "Use iterative bitmask enumeration: loop mask from 1 to 2^n − 1, compute OR for each mask by checking each bit, and compare to maxOR. This trades time for space: O(n · 2^n) time, O(1) space, since each subset's OR is recomputed from scratch rather than carried down."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    void dfs(const vector<int>& nums, int i, int curOR, int maxOR, int n, int& count) {\n        if (i == n) {\n            if (curOR == maxOR) count++;\n            return;\n        }\n        dfs(nums, i + 1, curOR | nums[i], maxOR, n, count);\n        dfs(nums, i + 1, curOR, maxOR, n, count);\n    }\npublic:\n    int countMaxOrSubsets(vector<int>& nums) {\n        int maxOR = 0;\n        for (int x : nums) maxOR |= x;\n        int n = nums.size();\n        int count = 0;\n        dfs(nums, 0, 0, maxOR, n, count);\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

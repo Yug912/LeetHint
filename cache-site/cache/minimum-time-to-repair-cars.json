@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-time-to-repair-cars",
+  "title": "Minimum Time to Repair Cars",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log(cars))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few scalar `long long` locals (lo, hi, mid, total, c): O(1)\n- no containers, no recursion\n- not counted: input vector, return value",
+  "approach": "The feasibility check is monotonic: if all cars can be repaired within time T, they can be repaired within any T' > T. So binary search on T. For a fixed T, mechanic i with rank r repairs floor(sqrt(T/r)) cars; summing across all mechanics tells us whether T is feasible. The upper bound is 100·cars² (one rank-100 mechanic doing every car), which reaches 10^14, so use `long long` everywhere.",
+  "hints": [
+    "For a fixed time T, the statement already gives the relation r·n² = T for one mechanic. As T grows, how does the total number of cars all mechanics can finish change?",
+    "Binary search on the answer T. For each T, sum ⌊√(T/r)⌋ over all mechanics; feasible iff the sum ≥ cars. Example 1 at T=16: ⌊√4⌋+⌊√8⌋+⌊√(16/3)⌋+⌊√16⌋ = 2+2+2+4 = 10 ✓.",
+    "```\nlo = 1, hi = 100 * cars * cars\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    total = 0\n    for each rank r:\n        total += floor(sqrt(mid / r))\n        if total >= cars: break\n    if total >= cars: hi = mid\n    else: lo = mid + 1\nreturn lo\n```",
+    "**Smallest input** - one mechanic, one car.\n`ranks = [1], cars = 1` → `Expected: 1`\n⚠️ Bug: initializing `hi = 0` then `while lo < hi` never executes → returns 0\n\n**Upper-bound overflow** - one fast mechanic repairs all cars.\n`ranks = [1], cars = 1000000` → `Expected: 1000000000000`\n⚠️ Bug: computing `int hi = 1 * cars * cars` overflows to a negative value, loop skipped → returns 1\n\n**Rank factor in upper bound** - high rank, few cars.\n`ranks = [100], cars = 1` → `Expected: 100`\n⚠️ Bug: setting `hi = cars * cars = 1` (ignoring max rank) → at T=1, ⌊√(1/100)⌋=0, total=0<1 → returns 1\n\n**Sum overflow** - 10^5 mechanics each contributing up to 10^7 cars at large T.\n`ranks = [1,1,...,1] (100000 times), cars = 1000000` → `Expected: 100`\n⚠️ Bug: using `int total` without an early `if (total >= cars) break` → total reaches ~10^12, wraps negative, binary search returns a wrong value"
+  ],
+  "followUps": [
+    {
+      "q": "What if each mechanic can only repair at most k cars (a per-mechanic cap)?",
+      "a": "The check becomes `min(k, floor(sqrt(T/r)))` per mechanic; everything else stays the same. Time complexity is still O(n log(cars)), space O(1)."
+    },
+    {
+      "q": "What if cars can be up to 10^9?",
+      "a": "The upper bound becomes 100·(10^9)² = 10^20, which still fits in `long long` (max ~9.2·10^18) - actually it does not, so switch to `__int128` or `unsigned long long` for the upper bound and the `mid/r` comparison. Iterations grow to ~67; time O(n log(cars)) still holds."
+    },
+    {
+      "q": "What if ranks arrive as an unbounded stream and you cannot store them all?",
+      "a": "Precompute a frequency array of size 101 (ranks are 1..100), then run the same binary search summing `freq[r] * floor(sqrt(T/r))`. Space drops to O(100) = O(1), and you can process the stream in one pass before searching."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long repairCars(vector<int>& ranks, int cars) {\n        long long lo = 1;\n        long long hi = 100LL * (long long)cars * cars;\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2;\n            long long total = 0;\n            for (int r : ranks) {\n                long long c = (long long)sqrtl((long double)mid / r);\n                while ((c + 1) * (c + 1) <= mid / r) c++;\n                while (c > 0 && c * c > mid / r) c--;\n                total += c;\n                if (total >= cars) break;\n            }\n            if (total >= cars) hi = mid;\n            else lo = mid + 1;\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-xor-with-an-element-from-array",
+  "title": "Maximum XOR With an Element From Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Offline Sorting + Binary Trie",
+  "tc": "O(n log n + q log q + (n + q) log V)",
+  "sc": "O(n log V + q)",
+  "spaceBreakdown": "- Trie nodes: up to n · 31 nodes, each holding 2 pointers → O(n)\n- vector<int> order: q entries → O(q)\n- sort() stack: introsort uses O(log n) for nums and O(log q) for order → O(log n + log q)\n- not counted: input nums, input queries, returned vector<int> result",
+  "approach": "Sort nums and sort queries by their m threshold. Process queries in increasing m order, inserting every nums[j] ≤ m into a binary trie as you go so the trie always holds exactly the eligible elements. For each query, walk the trie from the MSB downward, at each bit preferring the branch opposite to x's bit to maximize the XOR; if the trie is empty (no element ≤ m), return −1. This is correct because the trie lets us greedily decide each output bit from most to least significant, and the offline sorting guarantees the trie contains precisely the valid candidates.",
+  "hints": [
+    "Each query restricts which elements are \"available\" via a different threshold m_i. If you could fix the available set for one query, what bit-level property of that set lets you find the best partner for x_i one bit at a time, from the most significant down? The constraints allow up to 10^5 queries and 10^5 numbers.",
+    "Use a binary trie over the available numbers. Sort queries by m_i and insert nums (sorted) into the trie incrementally so it always holds exactly {nums[j] ≤ m_i}. For x = 3 with trie holding {0, 1}, walk from bit 30 down: at each bit prefer the branch opposite to x's bit.",
+    "```\nsort nums ascending\nsort query indices by m_i\ntrie = empty, ptr = 0\nfor each query (x, m) in sorted order:\n    while ptr < n and nums[ptr] <= m:\n        insert nums[ptr] into trie\n        ptr++\n    if trie is empty:\n        answer[original index] = -1\n    else:\n        walk trie from bit 30 to 0\n        at each bit try opposite of x's bit; if exists, set that answer bit to 1\n        answer[original index] = accumulated value\n```",
+    "**No valid element** - m is smaller than every nums[j].\n`Input: nums = [5,2,4,6,6,3], queries = [[8,1]]` → `Expected: [-1]`\n⚠️ Bug: walking the trie without first checking whether root has any children → dereferences nullptr, undefined behavior.\n\n**Boundary: m equals smallest element** - only one element qualifies.\n`Input: nums = [0,5], queries = [[0,0]]` → `Expected: [0]`\n⚠️ Bug: using `nums[idx] < m` instead of `nums[idx] <= m` → never inserts 0, returns -1.\n\n**Query order differs from answer order** - sorting by m scrambles output positions.\n`Input: nums = [0,1,2,3,4], queries = [[5,6],[3,1],[1,3]]` → `Expected: [7,3,3]`\n⚠️ Bug: writing answers in sorted-query order without remapping to the original index → returns [3,3,7].\n\n**High bit needed** - values up to 10^9 require bit 29 (10^9 > 2^29).\n`Input: nums = [1000000000], queries = [[0,1000000000]]` → `Expected: [1000000000]`\n⚠️ Bug: iterating only bits 28 down to 0 → misses bit 29, returns 463129088."
+  ],
+  "followUps": [
+    {
+      "q": "What if queries arrive online one at a time and cannot be sorted?",
+      "a": "Store in every trie node the minimum value in its subtree. During the walk for (x, m), only descend into a child whose subtree minimum is ≤ m. This keeps the trie holding all nums permanently and filters by m on the fly. TC: O(q · 31), SC: O(n · 31)."
+    },
+    {
+      "q": "What if elements can be inserted and deleted from nums between queries?",
+      "a": "Add a count field to each trie node. Insert increments counts along the path; delete decrements them. A branch is usable only when its count > 0. TC: O(31) per update or query, SC: O(n · 31)."
+    },
+    {
+      "q": "What if each query asks for max XOR over nums[l..r] instead of nums[j] ≤ m?",
+      "a": "Build a persistent trie: version i is the trie after inserting nums[0..i]. For query [l, r], walk version r while checking that a child's count exceeds the corresponding count in version l−1. TC: O((n + q) · 31), SC: O(n · 31)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maximizeXor(vector<int>& nums, vector<vector<int>>& queries) {\n        int n = nums.size();\n        int q = queries.size();\n        sort(nums.begin(), nums.end());\n\n        vector<int> order(q);\n        for (int i = 0; i < q; i++) order[i] = i;\n        sort(order.begin(), order.end(), [&](int a, int b) {\n            return queries[a][1] < queries[b][1];\n        });\n\n        struct Node {\n            Node* ch[2];\n            Node() { ch[0] = ch[1] = nullptr; }\n        };\n        Node* root = new Node();\n\n        auto insert = [&](int val) {\n            Node* cur = root;\n            for (int b = 30; b >= 0; b--) {\n                int bit = (val >> b) & 1;\n                if (!cur->ch[bit]) cur->ch[bit] = new Node();\n                cur = cur->ch[bit];\n            }\n        };\n\n        auto query = [&](int x) -> int {\n            Node* cur = root;\n            if (!cur->ch[0] && !cur->ch[1]) return -1;\n            int ans = 0;\n            for (int b = 30; b >= 0; b--) {\n                int bit = (x >> b) & 1;\n                int want = 1 - bit;\n                if (cur->ch[want]) {\n                    ans |= (1 << b);\n                    cur = cur->ch[want];\n                } else {\n                    cur = cur->ch[bit];\n                }\n            }\n            return ans;\n        };\n\n        vector<int> result(q);\n        int idx = 0;\n        for (int i = 0; i < q; i++) {\n            int qi = order[i];\n            int x = queries[qi][0];\n            int m = queries[qi][1];\n            while (idx < n && nums[idx] <= m) {\n                insert(nums[idx]);\n                idx++;\n            }\n            result[qi] = query(x);\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

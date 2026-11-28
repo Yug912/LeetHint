@@ -1,0 +1,39 @@
+{
+  "slug": "pancake-sorting",
+  "title": "Pancake Sorting",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Selection",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- result vector: O(n) entries but it is the returned output (not counted)\n- arr: modified in place → O(1) auxiliary\n- loop variables (value, index, i): O(1)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "Since each flip reverses a prefix, we can permanently fix elements from the end backward. For each value from n down to 1: find its current index, flip it to the front (k = index+1) if it's not already there, then flip k = value to send it to its final position at index value−1. Later flips use k < value, so they never touch already-placed elements. This uses at most 2(n−1) flips, well within 10n.",
+  "hints": [
+    "Each flip reverses a prefix arr[0..k−1]. If an element sits at position p, which values of k in a later flip would still move it?",
+    "Greedy selection sort: for value from n down to 1, flip it to the front (k = index+1), then flip k = value to place it at its final position. Example: arr = [3,2,4,1], value 4 at index 2 → flip k=3 gives [4,2,3,1] → flip k=4 gives [1,3,2,4].",
+    "```\nfor value from n down to 1:\n    find index where arr[index] == value\n    if index == value - 1: continue\n    if index != 0:\n        reverse arr[0..index]\n        record index + 1\n    reverse arr[0..value-1]\n    record value\nreturn recorded flips\n```",
+    "**Already sorted** - every element is in its target position\n`Input: arr = [1,2,3]` → `Expected: []`\n⚠️ Bug: using `index` instead of `index + 1` as k for the first flip → value=3 at index 2, flips k=2 reversing [1,2]→[2,1,3], then k=3→[3,1,2], returns `[2,3]` with arr=[3,1,2] unsorted\n\n**Largest at front** - value n is at index 0 but not at its target position n−1\n`Input: arr = [4,2,3,1]` → `Expected: [4,2,3,2]`\n⚠️ Bug: `if (index == 0) continue;` (skipping when at front instead of checking `index == value - 1`) → returns `[3,3,2,2,4,1]` with arr=[1,3,2,4] unsorted\n\n**Reverse sorted** - every element needs repositioning\n`Input: arr = [3,2,1]` → `Expected: [3]`\n⚠️ Bug: omitting the second flip (k = value) entirely → value=3 at index 0 gets no flip, value=2 flips k=2→[2,3,1] but no placement flip, value=1 flips k=3→[1,3,2], returns `[2,3]` with arr=[1,3,2] unsorted"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array can contain duplicate values - does the same greedy still work?",
+      "a": "Yes, but you can no longer identify the target position by value alone. Instead, sort a copy to determine each element's target rank, then place elements from the last position backward using the same two-flip strategy. TC stays O(n²), SC becomes O(n) for the sorted copy."
+    },
+    {
+      "q": "What is the minimum number of flips needed in the worst case, and can you do better than 2n?",
+      "a": "The information-theoretic lower bound is about 1.67n flips, and there exist algorithms achieving roughly 1.67n. The greedy 2n approach is simpler but not optimal; improving it requires tracking runs of already-consecutive elements to combine flips."
+    },
+    {
+      "q": "If the array is too large to hold in memory and arrives as a stream, how would you adapt?",
+      "a": "You cannot do pancake sorting on a stream since each flip depends on the full prefix. You would need to buffer the entire array first (O(n) memory), then apply the same greedy. There is no streaming variant that avoids storing the array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> pancakeSort(vector<int>& arr) {\n        vector<int> result;\n        int n = arr.size();\n        for (int value = n; value >= 1; value--) {\n            int index = 0;\n            for (int i = 0; i < n; i++) {\n                if (arr[i] == value) {\n                    index = i;\n                    break;\n                }\n            }\n            if (index == value - 1) continue;\n            if (index != 0) {\n                reverse(arr.begin(), arr.begin() + index + 1);\n                result.push_back(index + 1);\n            }\n            reverse(arr.begin(), arr.begin() + value);\n            result.push_back(value);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

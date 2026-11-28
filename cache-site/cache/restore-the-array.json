@@ -1,0 +1,40 @@
+{
+  "slug": "restore-the-array",
+  "title": "Restore The Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Suffix DP",
+  "tc": "O(n log k)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> dp: n+1 entries → O(n)\n- no recursion, no other containers\n- not counted: input string s",
+  "approach": "Since k ≤ 10^9, every integer in the array has at most 10 digits, so from any position in s there are at most 10 candidate \"next numbers\" to try. Define dp[i] = number of ways to split the suffix s[i..n−1]; dp[n] = 1 (empty suffix). For each i from right to left, if s[i] is '0' then dp[i] = 0 (no leading zeros allowed); otherwise build the number digit by digit for j = i, i+1, … while the value stays ≤ k, and add dp[j+1] to dp[i]. The answer is dp[0], all modulo 10^9+7. This is correct because every valid split of s[i..] is uniquely determined by the length of its first number, and we enumerate exactly those lengths whose value is in [1, k] with no leading zero.",
+  "hints": [
+    "Given that every integer in the array is at most k ≤ 10^9, how many digits can any single integer span at most?",
+    "Use dynamic programming: dp[i] = number of ways to split the suffix s[i..n−1], with dp[n] = 1. For s = \"1317\", k = 2000, dp[3] = 1 (just \"7\"), and dp[0] sums dp[j+1] for every j where s[0..j] ≤ 2000.",
+    "```\ndp[n] = 1\nfor i from n-1 down to 0:\n    if s[i] == '0':\n        dp[i] = 0\n        continue\n    num = 0\n    for j from i to n-1:\n        num = num*10 + digit(s[j])\n        if num > k: break\n        dp[i] = (dp[i] + dp[j+1]) mod MOD\nreturn dp[0]\n```",
+    "**Single character** - n = 1, the entire string is one number.\n`s = \"1\", k = 1` → `Expected: 1`\n⚠️ Bug: forgetting to set dp[n] = 1 (base case) → returns 0\n\n**Embedded zero** - a '0' in the middle cannot start a valid number (range is [1, k]).\n`s = \"10\", k = 1` → `Expected: 0`\n⚠️ Bug: not special-casing s[i] == '0', parsing '0' as the number 0 and checking 0 ≤ k → returns 1\n\n**Integer overflow** - num can reach 10^9 before the break check; num*10 then exceeds 2^31.\n`s = \"3000000000\", k = 1000000000` → `Expected: 0`\n⚠️ Bug: declaring num as int; 300000000*10 wraps to a negative value that passes the ≤ k check → returns 1\n\n**No early break** - without breaking when num > k, multi-digit numbers exceeding k get counted.\n`s = \"123\", k = 9` → `Expected: 1`\n⚠️ Bug: omitting the `if (num > k) break` line → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^18?",
+      "a": "Each number can now span up to 18 digits, so the inner loop runs at most 18 times. Use long long for num (10^18 fits). Time becomes O(18·n), space stays O(n). No other changes needed."
+    },
+    {
+      "q": "Instead of the count, return any one valid split as a list of integers.",
+      "a": "During the DP, also store a \"parent\" pointer: for each i, record one j such that s[i..j] is valid and dp[j+1] > 0. After computing dp[0], walk the parent pointers from i = 0 to reconstruct the array. Time and space remain O(n)."
+    },
+    {
+      "q": "What if s arrives as a one-way stream and is too large to store in memory?",
+      "a": "Reverse the DP to prefix form: dp[i] = ways to split s[0..i−1], dp[0] = 1, and dp[i] = sum of dp[j] for valid s[j..i−1]. Since each number spans at most 10 digits, dp[i] only depends on the last 10 dp values, so keep a circular buffer of size 10. Time O(10·n), space O(10) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfArrays(string s, int k) {\n        const int MOD = 1000000007;\n        int n = (int)s.size();\n        vector<long long> dp(n + 1, 0);\n        dp[n] = 1;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s[i] == '0') {\n                dp[i] = 0;\n                continue;\n            }\n            long long num = 0;\n            long long ways = 0;\n            for (int j = i; j < n; j++) {\n                num = num * 10 + (s[j] - '0');\n                if (num > k) break;\n                ways = (ways + dp[j + 1]) % MOD;\n            }\n            dp[i] = ways;\n        }\n        return (int)dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

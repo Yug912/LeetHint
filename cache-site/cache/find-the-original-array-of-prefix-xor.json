@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-original-array-of-prefix-xor",
+  "title": "Find The Original Array of Prefix Xor",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bit Manipulation / XOR Self-Inverse",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> arr: size n, but it is the returned output → not counted\n- loop variables i, n: O(1)\n- recursion depth: none\n- not counted: input pref, returned arr",
+  "approach": "Since `pref[i] = arr[0] ^ ... ^ arr[i]` and `pref[i-1] = arr[0] ^ ... ^ arr[i-1]`, XOR-ing these two cancels the shared prefix, leaving `arr[i] = pref[i] ^ pref[i-1]`. The base case is `arr[0] = pref[0]`. Iterate once, applying this relation. Correctness follows from the self-inverse property of XOR: `a ^ a = 0` and `a ^ 0 = a`.",
+  "hints": [
+    "Each `pref[i]` is the XOR of `arr[0..i]`. How are two adjacent entries of `pref` related to a single entry of `arr`?",
+    "Use the XOR self-inverse property: if `a ^ b = c`, then `b = a ^ c`. With `pref = [5,2,0,3,1]`, `arr[1] = pref[1] ^ pref[0] = 2 ^ 5 = 7`.",
+    "```\narr[0] = pref[0]\nfor i from 1 to n-1:\n    arr[i] = pref[i] ^ pref[i-1]\nreturn arr\n```",
+    "**Smallest input** - only one element, no predecessor exists\n`Input: pref = [13]` → `Expected: [13]`\n⚠️ Bug: looping from `i = 0` and reading `pref[i-1]` → out-of-bounds access\n\n**All equal nonzero** - every `pref` value identical and nonzero\n`Input: pref = [7,7,7]` → `Expected: [7,0,0]`\n⚠️ Bug: computing `arr[i] = pref[i] ^ pref[i]` (same index twice) → returns `[0,0,0]`\n\n**Forward in-place overwrite** - modifying `pref` left-to-right destroys the next needed value\n`Input: pref = [5,2,0,3,1]` → `Expected: [5,7,2,3,2]`\n⚠️ Bug: setting `pref[i] ^= pref[i-1]` with `i` increasing → returns `[5,7,7,4,5]`\n\n**All zeros** - every `pref` value is zero\n`Input: pref = [0,0,0]` → `Expected: [0,0,0]`\n⚠️ Bug: hardcoding `arr[0] = 0` instead of `pref[0]` → returns `[0,0,0]` (masks the bug; use a nonzero first element to expose it)"
+  ],
+  "followUps": [
+    {
+      "q": "What if `pref` arrives as a stream, one value at a time, with no random access?",
+      "a": "Store only the previous `pref` value in a single variable. On each new value `p`, emit `p ^ prev`, then set `prev = p`. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if the combining operation were addition instead of XOR (`pref[i] = arr[0] + ... + arr[i]`)?",
+      "a": "Use `arr[i] = pref[i] - pref[i-1]` with `arr[0] = pref[0]`. Same single-pass structure. Time O(n), space O(1), but watch for overflow since sums can reach 10^5 × 10^6 = 10^11."
+    },
+    {
+      "q": "Given `arr`, recover `pref` (the inverse problem).",
+      "a": "Maintain a running XOR `r`; for each `i`, set `r ^= arr[i]` and output `r` as `pref[i]`. Time O(n), space O(1) if done in place."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findArray(vector<int>& pref) {\n        int n = pref.size();\n        vector<int> arr(n);\n        arr[0] = pref[0];\n        for (int i = 1; i < n; i++) {\n            arr[i] = pref[i] ^ pref[i - 1];\n        }\n        return arr;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

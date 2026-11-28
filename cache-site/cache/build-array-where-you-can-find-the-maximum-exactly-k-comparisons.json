@@ -1,0 +1,40 @@
+{
+  "slug": "build-array-where-you-can-find-the-maximum-exactly-k-comparisons",
+  "title": "Build Array Where You Can Find The Maximum Exactly K Comparisons",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Prefix Sums",
+  "tc": "O(n·m·k)",
+  "sc": "O(m·k)",
+  "spaceBreakdown": "- dp: (m+1)×(k+1) long long array → O(m·k)\n- ndp: (m+1)×(k+1) long long array → O(m·k)\n- prefix: single long long → O(1)\n- recursion depth: none (iterative)",
+  "approach": "We build the array left to right. The search cost increases by 1 exactly when we place a value larger than the current maximum. We use DP where `dp[maxSoFar][cost]` counts the number of ways to build the prefix so far. At each position, two transitions occur: (1) pick a value ≤ maxSoFar (cost unchanged, `j` choices) and (2) pick a value > maxSoFar (cost +1, new max = chosen value). The second transition's inner loop over all larger values is replaced by a running prefix sum, making each step O(m) instead of O(m²). A virtual state `dp[0][0]=1` handles the first element uniformly.",
+  "hints": [
+    "The search cost goes up by exactly 1 each time a new element is strictly larger than every element before it. As you build the array left to right, what two pieces of information about the prefix do you need to know how a future choice changes the cost?",
+    "Use 3D dynamic programming on `(position, currentMax, cost)`. For Example 1 (n=2, m=3, k=1): after placing the first element, `dp[1][1]=dp[2][1]=dp[3][1]=1`; placing the second element, picking any value ≤ current max keeps cost at 1, giving 1+2+3=6 ways. Replace the loop over all larger values with a running prefix sum.",
+    "```\ndp[0][0] = 1\nfor each position:\n    ndp = zeros\n    for each cost c:\n        for j in 1..m:\n            ndp[j][c] += dp[j][c] * j\n        prefix = dp[0][c]\n        for v in 1..m:\n            ndp[v][c+1] += prefix\n            prefix += dp[v][c]\n    dp = ndp\nreturn sum(dp[j][k] for j in 1..m)\n```",
+    "**k = 0 with n ≥ 1** - cost can never be 0 when at least one element is placed.\n`Input: n = 1, m = 5, k = 0` → `Expected: 0`\n⚠️ Bug: not guarding `c+1 <= k` in the prefix-sum loop → writes to `ndp[v][k+1]` (out of bounds or ignored), but if k=0 the Part-1 loop still runs and returns 0 correctly; the real bug is initialising `dp[0][0]=1` and then summing `dp[j][0]` which stays 0 - a solution that returns `dp[0][0]` directly returns 1.\n\n**k > m** - the maximum possible cost is m (strictly increasing max values 1,2,…,m).\n`Input: n = 5, m = 2, k = 3` → `Expected: 0`\n⚠️ Bug: allocating `dp` with `k+1` columns but not early-returning 0 when `k > m` → still returns 0 correctly, but a solution that uses `k` as array size without checking `k > m` may index out of bounds if it allocates `k` columns instead of `k+1`.\n\n**Overflow in multiplication** - `dp[j][c]` can reach ~10⁹ and `j` up to 100, so `dp[j][c] * j` reaches ~10¹¹.\n`Input: n = 50, m = 100, k = 50` → `Expected: (large value mod 10⁹+7)`\n⚠️ Bug: using `int` for `dp[j][c] * j` → overflow past 2³¹−1, returns garbage.\n\n**n = 1, m = 1, k = 1** - only one array possible: [1].\n`Input: n = 1, m = 1, k = 1` → `Expected: 1`\n⚠️ Bug: skipping the virtual state `dp[0][0]=1` and instead initialising `dp[j][1]=1` for all j, but then summing from j=0 → returns 1+0 = 1 (happens to work), but for k=0 returns 1 instead of 0.\n\n**All elements equal** - e.g., n=9, m=1, k=1: only [1,1,…,1], cost=1.\n`Input: n = 9, m = 1, k = 1` → `Expected: 1`\n⚠️ Bug: Part-1 loop `for j in 1..m` with `dp[j][c] * j` using `j` as both the max and the count of choices - if `j` is 0-indexed (0..m-1), multiplying by 0 zeroes out all Part-1 contributions → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if m can be up to 10⁹? The O(m) loop per step is infeasible.",
+      "a": "The answer is a polynomial of degree k in m (with n fixed), because each DP transition is linear in m-dependent prefix sums. Compute the DP for m = 0, 1, …, k+1 in O(n·k²) time, then evaluate the answer for the actual m using Lagrange interpolation in O(k) time. Total: O(n·k² + k)."
+    },
+    {
+      "q": "What if we must answer many queries (nᵢ, mᵢ, kᵢ) online?",
+      "a": "Precompute the full DP table for the maximum n, m, k across all queries in O(n·m·k) time. Each query is then an O(1) lookup into the table (or O(m) sum if only n and k are fixed). If m varies widely, precompute for each (n, k) the polynomial coefficients and interpolate per query."
+    },
+    {
+      "q": "What if n can be up to 10⁹ (with m, k ≤ 100)?",
+      "a": "The DP transition is a linear map on the O(m·k) state vector. Encode it as a matrix and use matrix exponentiation to compute the n-th power in O((m·k)³ · log n) time, then multiply by the initial state vector. For m=100, k=50 this is impractical, but for small m and k it works."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numOfArrays(int n, int m, int k) {\n        const int MOD = 1000000007;\n        // dp[j][c]: number of ways to build prefix so far\n        // j = current maximum (0 = virtual, no element placed yet)\n        // c = search cost so far\n        vector<vector<long long>> dp(m + 1, vector<long long>(k + 1, 0));\n        dp[0][0] = 1;\n\n        for (int pos = 0; pos < n; pos++) {\n            vector<vector<long long>> ndp(m + 1, vector<long long>(k + 1, 0));\n            for (int c = 0; c <= k; c++) {\n                // Part 1: pick v in [1, j] - max stays j, cost stays c\n                // There are j such choices\n                for (int j = 1; j <= m; j++) {\n                    ndp[j][c] = (ndp[j][c] + dp[j][c] * j) % MOD;\n                }\n                // Part 2: pick v in [j+1, m] - new max = v, cost = c+1\n                // Use prefix sum: prefix = sum of dp[j'][c] for j' in [0, v-1]\n                long long prefix = dp[0][c];\n                for (int v = 1; v <= m; v++) {\n                    if (c + 1 <= k) {\n                        ndp[v][c + 1] = (ndp[v][c + 1] + prefix) % MOD;\n                    }\n                    prefix = (prefix + dp[v][c]) % MOD;\n                }\n            }\n            dp = move(ndp);\n        }\n\n        long long ans = 0;\n        for (int j = 1; j <= m; j++) {\n            ans = (ans + dp[j][k]) % MOD;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

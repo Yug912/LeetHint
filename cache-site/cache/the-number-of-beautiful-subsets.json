@@ -1,0 +1,40 @@
+{
+  "slug": "the-number-of-beautiful-subsets",
+  "title": "The Number of Beautiful Subsets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "House Robber DP on Grouped Values",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- map<int,int> cnt: up to n unique values → O(n)\n- unordered_map<int,vector<int>> groups: total n elements across all vectors → O(n)\n- recursion depth: none (iterative)\n- not counted: input, returned int",
+  "approach": "Two numbers can only conflict (have absolute difference k) if they share the same remainder modulo k, so we partition values into independent residue groups. Within each sorted group, we run a house-robber-style DP: for each distinct value with count c, either skip it (carry forward dp[i−1]) or take any non-empty subset of its copies (2^c−1 choices), but if the previous value differs by exactly k we must exclude it (use dp[i−2]). Multiply the per-group counts (including the empty subset) and subtract 1 at the end.",
+  "hints": [
+    "If two numbers have an absolute difference of exactly k, what must be true about their remainders when divided by k?",
+    "Group numbers by remainder mod k, sort within each group, and apply a house-robber-style DP. For nums = [2,4,6], k = 2: all share remainder 0, forming one sorted group [2,4,6]. At value 4, since 4−2 = k, you either skip 4 (carry dp[i−1]) or take 4 but exclude 2 (dp[i−2] × (2^count − 1)).",
+    "```\ncnt = frequency map; group values by v % k; result = 1\nfor each group (sorted v[], counts c[]):\n    p2 = p1 = 1\n    for i in 0..len-1:\n        cur = (i > 0 and v[i]-v[i-1] == k) ? p1 + p2*(2^c[i]-1) : p1*2^c[i]\n        p2, p1 = p1, cur\n    result *= p1\nreturn result - 1\n```",
+    "**Single element** - the answer is always 1 regardless of k\n`Input: nums = [1], k = 1` → `Expected: 1`\n⚠️ Bug: returning result without subtracting 1 for the empty subset → returns 2\n\n**Duplicates with no conflict** - identical values never conflict since |x − x| = 0 ≠ k\n`Input: nums = [5,5,5], k = 3` → `Expected: 7`\n⚠️ Bug: treating each copy as a separate conflicting value (using 1 instead of 2^c − 1) → returns 1\n\n**Same residue, no conflict** - values in the same group but differing by more than k\n`Input: nums = [1,5], k = 2` → `Expected: 3`\n⚠️ Bug: always applying the house-robber recurrence without checking if the difference equals k → returns 2\n\n**Multiple independent groups** - values split across different residues, each group independent\n`Input: nums = [1,2,3,4], k = 2` → `Expected: 8`\n⚠️ Bug: not multiplying results across groups (processing only one group) → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5 and nums[i] up to 10^9?",
+      "a": "The current approach already handles this. Use a hash map for frequency counting and grouping by remainder. Sorting within groups costs O(n log n) total. Space remains O(n) for the maps and group vectors."
+    },
+    {
+      "q": "What if you need to count beautiful subsets of exactly size m?",
+      "a": "Replace the scalar DP with dp[i][j] = number of beautiful subsets of size j using values up to v_i. The \"no conflict\" transition becomes a convolution with the subset-size distribution of the current value's copies. Time becomes O(n · m) per group, O(n · m · log n) total."
+    },
+    {
+      "q": "What if multiple queries with different k values arrive on the same array?",
+      "a": "Precompute the sorted unique values and their counts once. For each query k, regroup by the new remainder and rerun the DP. Since values are already sorted, each query costs O(n) after the initial O(n log n) sort. Total: O(n log n + Q · n) for Q queries."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int beautifulSubsets(vector<int>& nums, int k) {\n        map<int, int> cnt;\n        for (int x : nums) cnt[x]++;\n        \n        unordered_map<int, vector<int>> groups;\n        for (auto& [v, c] : cnt) {\n            groups[v % k].push_back(v);\n        }\n        \n        long long result = 1;\n        for (auto& [r, vals] : groups) {\n            long long prev2 = 1, prev1 = 1;\n            for (int i = 0; i < (int)vals.size(); i++) {\n                int v = vals[i];\n                int c = cnt[v];\n                long long pow2c = 1LL << c;\n                long long ways = pow2c - 1;\n                long long cur;\n                if (i == 0 || vals[i] - vals[i - 1] != k) {\n                    cur = prev1 * pow2c;\n                } else {\n                    cur = prev1 + prev2 * ways;\n                }\n                prev2 = prev1;\n                prev1 = cur;\n            }\n            result *= prev1;\n        }\n        \n        return (int)(result - 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

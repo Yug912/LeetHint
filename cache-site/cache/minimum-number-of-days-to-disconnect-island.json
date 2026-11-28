@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-days-to-disconnect-island",
+  "title": "Minimum Number of Days to Disconnect Island",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Articulation Points (Tarjan)",
+  "tc": "O(m·n)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- visited (bool grid): m·n → O(m·n)\n- disc, low (int grids): m·n each → O(m·n)\n- isArt (bool grid): m·n → O(m·n)\n- BFS stack: up to m·n cells → O(m·n)\n- Tarjan recursion depth: up to m·n cells → O(m·n)\n- not counted: input grid",
+  "approach": "The answer is always 0, 1, or 2. First count connected land components: if it isn't exactly 1, return 0. If there's exactly one land cell, removing it yields 0 islands, so return 1. Otherwise run Tarjan's articulation-point algorithm on the grid graph (land cells = vertices, 4-adjacency = edges): if any land cell is an articulation point, removing it disconnects the island → return 1. If none exists, two removals always suffice (break a corner of any 2×2-ish bend) → return 2.",
+  "hints": [
+    "For a connected island, which single land cells-when turned to water-would leave the remaining land split into more than one piece? The grid has at most 30×30 cells, so you can afford a full graph traversal per candidate idea, but not per cell-pair.",
+    "Use Tarjan's articulation-point algorithm on the grid graph (land cells = vertices, 4-adjacency = edges). On Example 1's 2×2 land block, no cell is an articulation point, so the answer is 2.",
+    "```\ncount islands via flood fill\nif islands != 1: return 0\nif land cells == 1: return 1\nrun Tarjan from any land cell:\n  disc[u]=low[u]=++timer\n  for each land neighbor v:\n    if v unvisited: recurse, low[u]=min(low[u],low[v])\n       if not root and low[v]>=disc[u]: u is articulation\n    else if v != parent: low[u]=min(low[u],disc[v])\n  if root and tree-children>1: u is articulation\nif any articulation: return 1 else return 2\n```",
+    "**Single land cell** - only one land cell exists; removing it leaves 0 islands (disconnected).\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: not special-casing landCount==1; Tarjan on a lone vertex finds no articulation → returns 2.\n\n**Already disconnected** - two separate land cells with water between.\n`Input: [[1,0,1]]` → `Expected: 0`\n⚠️ Bug: skipping the island-count check and going straight to Tarjan → returns 1 or 2.\n\n**2×2 block** - root of Tarjan has exactly one tree child but is not an articulation point.\n`Input: [[0,1,1,0],[0,1,1,0],[0,0,0,0]]` → `Expected: 2`\n⚠️ Bug: using `children >= 1` instead of `children > 1` for the root test → flags the root → returns 1.\n\n**1×3 line** - the middle cell is a genuine articulation point.\n`Input: [[1,1,1]]` → `Expected: 1`\n⚠️ Bug: using `low[v] > disc[u]` instead of `>=` and a graph where low equals disc → misses the middle cell → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "If m,n can be up to 10^5 with at most 10^5 land cells (sparse), how does the approach change?",
+      "a": "Store land coordinates in a hash set and compute 4-neighbors on demand. Tarjan stays O(V+E) over land cells only. Space drops from O(m·n) to O(V)."
+    },
+    {
+      "q": "What if \"disconnect\" must yield exactly 2 islands (0 islands doesn't count)?",
+      "a": "The single-land-cell case no longer returns 1 (removing it gives 0 islands). You'd need landCount≥2 and a real articulation point whose removal leaves ≥2 components; the ≤2 bound still holds for any connected island of size ≥2."
+    },
+    {
+      "q": "What if cells can be flipped either way (land↔water) per day?",
+      "a": "Flipping water→land only adds land and never helps disconnect, so optimal play still only uses land→water flips. The same algorithm and ≤2 bound apply unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int m, n;\n    int dirs[4][2] = {{0,1},{0,-1},{1,0},{-1,0}};\n    vector<vector<int>> disc, low;\n    vector<vector<bool>> isArt;\n    int timer;\n    const vector<vector<int>>* G;\n    void dfs(int r, int c, int pr, int pc){\n        disc[r][c] = low[r][c] = ++timer;\n        int children = 0;\n        const auto& grid = *G;\n        for (auto& d : dirs){\n            int nr = r + d[0], nc = c + d[1];\n            if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;\n            if (grid[nr][nc] != 1) continue;\n            if (disc[nr][nc] == 0){\n                children++;\n                dfs(nr, nc, r, c);\n                low[r][c] = min(low[r][c], low[nr][nc]);\n                if (pr != -1 && low[nr][nc] >= disc[r][c]) isArt[r][c] = true;\n            } else if (!(nr == pr && nc == pc)){\n                low[r][c] = min(low[r][c], disc[nr][nc]);\n            }\n        }\n        if (pr == -1 && children > 1) isArt[r][c] = true;\n    }\npublic:\n    int minDays(vector<vector<int>>& grid) {\n        m = grid.size(); n = grid[0].size();\n        int landCount = 0;\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                if (grid[i][j] == 1) landCount++;\n        int islands = 0;\n        vector<vector<bool>> visited(m, vector<bool>(n, false));\n        for (int i = 0; i < m; i++){\n            for (int j = 0; j < n; j++){\n                if (grid[i][j] == 1 && !visited[i][j]){\n                    islands++;\n                    stack<pair<int,int>> st;\n                    st.push({i, j});\n                    visited[i][j] = true;\n                    while (!st.empty()){\n                        auto [r, c] = st.top(); st.pop();\n                        for (auto& d : dirs){\n                            int nr = r + d[0], nc = c + d[1];\n                            if (nr >= 0 && nr < m && nc >= 0 && nc < n &&\n                                grid[nr][nc] == 1 && !visited[nr][nc]){\n                                visited[nr][nc] = true;\n                                st.push({nr, nc});\n                            }\n                        }\n                    }\n                }\n            }\n        }\n        if (islands != 1) return 0;\n        if (landCount == 1) return 1;\n\n        disc.assign(m, vector<int>(n, 0));\n        low.assign(m, vector<int>(n, 0));\n        isArt.assign(m, vector<bool>(n, false));\n        timer = 0;\n        G = &grid;\n\n        for (int i = 0; i < m; i++){\n            for (int j = 0; j < n; j++){\n                if (grid[i][j] == 1){\n                    dfs(i, j, -1, -1);\n                    for (int a = 0; a < m; a++)\n                        for (int b = 0; b < n; b++)\n                            if (isArt[a][b]) return 1;\n                    return 2;\n                }\n            }\n        }\n        return 2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

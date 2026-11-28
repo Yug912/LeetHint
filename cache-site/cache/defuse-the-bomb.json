@@ -1,0 +1,40 @@
+{
+  "slug": "defuse-the-bomb",
+  "title": "Defuse the Bomb",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> res: up to n entries → O(n) (not counted: returned output)\n- int sum, n, m: O(1)\n- not counted: input vector `code`",
+  "approach": "The problem requires replacing each element with the sum of the next `k` (or previous `-k`) elements in a circular array. Instead of recalculating the sum for each index from scratch, which takes O(n·|k|) time, we can use a sliding window of size `|k|`. We compute the sum for the first index, and for each subsequent index, we update the sum by subtracting the element that just left the window and adding the new element that entered it. This reduces the time complexity to O(n) while using O(1) extra space.",
+  "hints": [
+    "If you write out the exact `k` numbers summed for index 0 and for index 1, how many of those numbers are the same?",
+    "Use a sliding window of size `|k|`. For `code = [5,7,1,4], k = 3`, the first sum is `7+1+4=12`. To get the next sum, subtract the outgoing `7` and add the incoming `5`, yielding `12 - 7 + 5 = 10`.",
+    "```\nif k == 0: return zeros\nif k > 0:\n  sum = sum(code[1..k])\n  for i = 0..n-1: res[i] = sum; sum += code[(i+1+k)%n] - code[(i+1)%n]\nelse:\n  m = -k\n  sum = sum(code[n-m..n-1])\n  for i = 0..n-1: res[i] = sum; sum += code[i] - code[(i-m+n)%n]\n```",
+    "**Zero key** - `k = 0` means all elements become 0.\n`Input: code = [1,2,3,4], k = 0` → `Expected: [0,0,0,0]`\n⚠️ Bug: Returning the original array when `k == 0` instead of zeros → returns `[1,2,3,4]`\n\n**Negative modulo** - Calculating indices for `k < 0` can yield negative values before modulo.\n`Input: code = [2,4,9,3], k = -2` → `Expected: [12,5,6,13]`\n⚠️ Bug: Using `(i - m) % n` for the outgoing index without adding `n` → returns garbage values or crashes due to negative index\n\n**Maximum window** - `k = n - 1` means the window covers all other elements.\n`Input: code = [1,2,3], k = 2` → `Expected: [5,4,3]`\n⚠️ Bug: Initializing `sum` with `code[0]` included (e.g., `sum = code[0] + code[1]`) → returns `[6,5,4]`\n\n**Wrap around** - The window wraps from the end of the array to the beginning.\n`Input: code = [5,7,1,4], k = 3` → `Expected: [12,10,16,13]`\n⚠️ Bug: Omitting modulo for the incoming element index `code[i+k]` → returns garbage values or crashes when `i + k >= n`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is too large to fit in memory, and arrives as a stream?",
+      "a": "You can't compute the sliding window easily without storing the array because the window wraps around and requires accessing elements up to `k` steps ahead. You would need to buffer the array in a circular manner of size `n` or use an external memory approach. Time complexity remains O(n), but space becomes O(n) for the buffer."
+    },
+    {
+      "q": "What if `k` can be larger than `n`?",
+      "a": "If `k` is a multiple of `n`, the sum is just the total sum of the array multiplied by `k/n`. For the remainder `k % n`, we can use the same sliding window approach. Time complexity becomes O(n) to find the total sum and O(n) for the sliding window, so overall O(n). Space remains O(1)."
+    },
+    {
+      "q": "What if we need to decrypt the array in-place without returning a new array?",
+      "a": "In-place modification is tricky because overwriting an element might destroy a value needed for a future window's incoming sum. We would need to buffer the overwritten elements, requiring O(|k|) extra space. Time complexity remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> decrypt(vector<int>& code, int k) {\n        int n = code.size();\n        vector<int> res(n, 0);\n        if (k == 0) return res;\n        \n        if (k > 0) {\n            int sum = 0;\n            for (int i = 1; i <= k; i++) {\n                sum += code[i % n];\n            }\n            for (int i = 0; i < n; i++) {\n                res[i] = sum;\n                sum = sum - code[(i + 1) % n] + code[(i + 1 + k) % n];\n            }\n        } else {\n            int m = -k;\n            int sum = 0;\n            for (int i = n - m; i < n; i++) {\n                sum += code[i];\n            }\n            for (int i = 0; i < n; i++) {\n                res[i] = sum;\n                sum = sum - code[(i - m + n) % n] + code[i];\n            }\n        }\n        \n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

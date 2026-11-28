@@ -1,0 +1,40 @@
+{
+  "slug": "largest-local-values-in-a-matrix",
+  "title": "Largest Local Values in a Matrix",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Brute-Force Fixed-Size Window",
+  "tc": "O(n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int locals (n, i, j, mx, di, dj): constant → O(1)\n- recursion depth: none\n- not counted: input grid, returned maxLocal (output)",
+  "approach": "For each cell (i, j) of the output (size (n-2)×(n-2)), scan the 9 cells of the 3×3 block in `grid` whose top-left corner is at (i, j) and record the maximum. With n ≤ 100, the total work is about 9·(n-2)² ≈ 80,000 comparisons, so a direct nested-loop scan is optimal and simplest. Correctness follows directly from the definition: every output cell is exactly the max of its corresponding 3×3 window.",
+  "hints": [
+    "How many distinct 3×3 windows fit inside an n×n grid, and what determines the top-left corner of each one?\nThe output has size (n-2)×(n-2).",
+    "Brute-force enumeration: for each top-left corner (i,j), scan all 9 cells of its 3×3 block.\nFor `grid=[[9,9,8,1],[5,6,2,6],[8,2,6,4],[6,2,2,2]]`, the window at (0,0) covers rows 0-2, cols 0-2, max = 9.",
+    "```\nfor i in 0..n-3:\n  for j in 0..n-3:\n    m = 0\n    for di in 0..2:\n      for dj in 0..2:\n        m = max(m, grid[i+di][j+dj])\n    maxLocal[i][j] = m\n```",
+    "**Smallest valid input** - n = 3 yields a 1×1 output covering the whole grid.\n`Input: [[1,2,3],[4,5,6],[7,8,9]]` → `Expected: [[9]]`\n⚠️ Bug: looping `i < n-3` (i.e. `i < 0`) → returns `[[]]`\n\n**Boundary indices** - the last window starts at (n-3, n-3) and must reach index n-1.\n`Input: [[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,9]]` → `Expected: [[1,1],[1,9]]`\n⚠️ Bug: inner loop `di < 2` instead of `di < 3` → returns `[[1,1],[1,1]]`\n\n**Max at window corner** - the maximum of a 3×3 block can sit at any of its 9 cells.\n`Input: [[9,1,1],[1,1,1],[1,1,1]]` → `Expected: [[9]]`\n⚠️ Bug: only reading the center cell `grid[i+1][j+1]` → returns `[[1]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the window side length k is a parameter instead of fixed at 3?",
+      "a": "The same nested scan becomes O(n²·k²). For large k, run a sliding-window maximum (monotonic deque) along each row, then along each column of the row results, giving O(n²) time and O(n) auxiliary space."
+    },
+    {
+      "q": "What if n can be up to 10^5 and rows arrive as a stream?",
+      "a": "Materializing the whole grid is infeasible. Keep a rolling buffer of k rows and apply the deque-based sliding maximum per row then per column, producing outputs row by row in O(n²) time and O(n·k) auxiliary space."
+    },
+    {
+      "q": "What if you must return both the max and the min of every 3×3 window?",
+      "a": "Track two accumulators (mx and mn) inside the same 9-cell scan, or run the scan twice. Time stays O(n²) and auxiliary space stays O(1), since both results are returned output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> largestLocal(vector<vector<int>>& grid) {\n        int n = grid.size();\n        vector<vector<int>> maxLocal(n - 2, vector<int>(n - 2));\n        for (int i = 0; i < n - 2; i++) {\n            for (int j = 0; j < n - 2; j++) {\n                int mx = 0;\n                for (int di = 0; di < 3; di++) {\n                    for (int dj = 0; dj < 3; dj++) {\n                        int v = grid[i + di][j + dj];\n                        if (v > mx) mx = v;\n                    }\n                }\n                maxLocal[i][j] = mx;\n            }\n        }\n        return maxLocal;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

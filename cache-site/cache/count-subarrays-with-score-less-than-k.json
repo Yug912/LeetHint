@@ -1,0 +1,40 @@
+{
+  "slug": "count-subarrays-with-score-less-than-k",
+  "title": "Count Subarrays With Score Less Than K",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar variables (ans, sum, left, right, n): constant → O(1)\n- no containers, no recursion → O(1)\n- not counted: input vector nums",
+  "approach": "For a fixed right endpoint, as the subarray extends leftward the sum and length both grow (all elements positive), so the score is strictly increasing in window size. This monotonicity lets us keep a window [left, right] that is the largest valid window ending at right: extend right by one, then shrink left while score ≥ k. Every subarray ending at right with start in [left, right] is valid, so add (right − left + 1) to the answer. Two pointers move forward only, giving linear time.",
+  "hints": [
+    "With a fixed right end of a subarray, what happens to its score as you extend it further to the left, given every element is positive (nums[i] ≥ 1)?",
+    "Use a two-pointer sliding window. For nums = [2,1,4,3,5], k = 10: at right = 2 the window [0,2] has score 7·3 = 21 ≥ 10, so move left until score < 10, leaving window [2,2] and adding 1 valid subarray ending at index 2.",
+    "```\nans = 0, sum = 0, left = 0\nfor right in 0..n-1:\n    sum += nums[right]\n    while sum * (right - left + 1) >= k:\n        sum -= nums[left]\n        left += 1\n    ans += (right - left + 1)\nreturn ans\n```",
+    "**Single-element tie** - score equals k exactly; strict inequality must exclude it.\n`Input: nums = [5], k = 5` → `Expected: 0`\n⚠️ Bug: using `>` instead of `>=` in the shrink condition → returns 1\n\n**Integer overflow** - 10^5 elements each up to 10^5 gives sum up to 10^10, exceeding 2^31 − 1.\n`Input: nums = [100000 repeated 100000 times], k = 1000000000000000` → `Expected: 5000049999`\n⚠️ Bug: declaring `sum` as `int` → overflows during accumulation, returns garbage\n\n**All equal, large k** - every subarray is valid, exposing off-by-one in the count.\n`Input: nums = [1,1,1], k = 100` → `Expected: 6`\n⚠️ Bug: `ans += (right - left)` without the `+1` → returns 3\n\n**Boundary first element only** - only the first single-element subarray is valid.\n`Input: nums = [1,100], k = 10` → `Expected: 1`\n⚠️ Bug: skipping the shrink loop when score ≥ k → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] could be zero or negative?",
+      "a": "The score is no longer monotonic as the window grows, so the shrink step is invalid. Use divide-and-conquer: split at a midpoint, count valid subarrays crossing it by iterating the shorter side and binary-searching the other side's prefix sums. TC O(n log² n), SC O(n)."
+    },
+    {
+      "q": "What if you must count subarrays with score ≥ k instead?",
+      "a": "The total number of subarrays is n(n+1)/2; subtract the count of subarrays with score < k obtained from this exact solution. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if nums arrives as an infinite stream and you must report the running count after each element?",
+      "a": "Keep the same window [left, right] and running sum; append each new element, run the shrink loop, then add (right − left + 1) to a running total. TC O(1) amortized per element, SC O(window size) for buffering."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, long long k) {\n        long long ans = 0, sum = 0;\n        int left = 0;\n        int n = (int)nums.size();\n        for (int right = 0; right < n; right++) {\n            sum += nums[right];\n            while (sum * (long long)(right - left + 1) >= k) {\n                sum -= nums[left];\n                left++;\n            }\n            ans += (long long)(right - left + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

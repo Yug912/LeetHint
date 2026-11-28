@@ -1,0 +1,40 @@
+{
+  "slug": "finding-3-digit-even-numbers",
+  "title": "Finding 3-Digit Even Numbers",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Enumeration",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[10]: fixed size 10 → O(1)\n- int need[10]: fixed size 10, stack-allocated inside loop → O(1)\n- not counted: input vector, returned vector",
+  "approach": "The answer space is only 450 even numbers (100 to 998). Instead of generating permutations, enumerate each candidate and verify it can be formed from the digits using a size-10 frequency array: count available digits once, then for each even number check that its three digits don't exceed the available counts. The result is naturally sorted since we enumerate in increasing order.",
+  "hints": [
+    "How many even 3-digit numbers exist between 100 and 998, and how does that count compare to the number of 3-element arrangements possible from 100 digits?",
+    "Use a size-10 frequency array to count available digits, then test each even number from 100 to 998 by checking if its three digits can be covered. For digits = [2,1,3,0], the frequency array has one each of 0,1,2,3; testing 102 needs one 1, one 0, one 2 - all available, so 102 is valid.",
+    "```\nfreq = count of each digit in digits\nfor num in 100, 102, ..., 998:\n    d1, d2, d3 = digits of num\n    need = count of d1, d2, d3\n    if need[i] <= freq[i] for all i in 0..9:\n        add num to result\nreturn result\n```",
+    "**All zeros** - only digit available is 0, so no valid 3-digit number exists\n`Input: digits = [0,0,0]` → `Expected: []`\n⚠️ Bug: starting the enumeration loop from 0 instead of 100 → returns [0]\n\n**Repeated digits required** - a valid answer needs the same digit multiple times\n`Input: digits = [2,2,8,8,2]` → `Expected: [222,228,282,288,822,828,882]`\n⚠️ Bug: using a set instead of a frequency array to track available digits → omits 222 because the set {2,8} cannot confirm three 2's are available\n\n**No even digit** - every even number requires an even units digit\n`Input: digits = [3,7,5]` → `Expected: []`\n⚠️ Bug: iterating over all numbers 100-999 instead of only even ones → returns [357,375,537,573,735,753]\n\n**Leading zero in candidate** - numbers below 100 are not valid 3-digit numbers\n`Input: digits = [0,2,4]` → `Expected: [204,240,402,420]`\n⚠️ Bug: starting the loop from 0 instead of 100 → returns [24,42,204,240,402,420]"
+  ],
+  "followUps": [
+    {
+      "q": "Find all k-digit even numbers where k is given (1 ≤ k ≤ 9).",
+      "a": "Enumerate even numbers from 10^(k-1) to 10^k - 2, stepping by 2, and check each against the frequency array. TC: O(5·10^(k-1)·k), practical for k ≤ 7. For k = 8 or 9, switch to recursive generation from the frequency pool. SC: O(1) either way."
+    },
+    {
+      "q": "digits.length can be up to 10^5 - does the solution change?",
+      "a": "No change needed. Frequency counting is O(n) and the 450-candidate enumeration is O(1). TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "Digits arrive one at a time in a stream; after each arrival, output the current list of valid 3-digit even numbers.",
+      "a": "Maintain the frequency array incrementally (O(1) per digit). After each update, re-scan all 450 candidates (O(450·10) = O(1) per query). Total TC: O(n) for n digits. SC: O(1) auxiliary."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findEvenNumbers(vector<int>& digits) {\n        int freq[10] = {0};\n        for (int d : digits) freq[d]++;\n        \n        vector<int> result;\n        for (int num = 100; num <= 998; num += 2) {\n            int a = num / 100;\n            int b = (num / 10) % 10;\n            int c = num % 10;\n            int need[10] = {0};\n            need[a]++; need[b]++; need[c]++;\n            bool ok = true;\n            for (int i = 0; i < 10; i++) {\n                if (need[i] > freq[i]) { ok = false; break; }\n            }\n            if (ok) result.push_back(num);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "the-number-of-the-smallest-unoccupied-chair",
+  "title": "The Number of the Smallest Unoccupied Chair",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sweep Line with Heaps",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> idx: n entries → O(n)\n- priority_queue occupied: up to n entries → O(n)\n- priority_queue available: up to n entries → O(n)\n- sort(): O(log n) stack\n- not counted: input times, return value",
+  "approach": "Sort friends by arrival time. Maintain two min-heaps: one of occupied chairs keyed by leaving time (to know when chairs free up), and one of available chair numbers (to always pick the smallest free chair). For each friend in arrival order, first free all chairs whose leaving time ≤ current arrival time (≤ because same-moment departures free the chair), then assign the smallest available chair (or the next never-used chair number if none are free). Stop and return when we reach the target friend.",
+  "hints": [
+    "For each seated friend, what two values determine whether their chair is free when the next friend arrives?",
+    "Use two min-heaps: one keyed by leaving time to free chairs, one of available chair numbers to pick the smallest. In Example 1, friend 0 arrives at time 1 and takes chair 0; when friend 1 arrives at time 2, no chair has freed yet, so friend 1 takes chair 1.",
+    "```\nsort friends by arrival time\noccupied = min-heap of (leaving_time, chair)\navailable = min-heap of chair numbers\nnextChair = 0\nfor each friend in arrival order:\n    while occupied top leaving_time <= current arrival:\n        push that chair into available, pop occupied\n    if available not empty: chair = pop available\n    else: chair = nextChair, nextChair++\n    push (leaving_time, chair) into occupied\n    if this friend is target: return chair\n```",
+    "**Same-time leave and arrive** - A friend leaves at the exact moment another arrives; the chair must be reusable.\n`times = [[1,2],[2,3]], targetFriend = 1` → `Expected: 0`\n⚠️ Bug: using `<` instead of `<=` in the freeing check → returns `1`\n\n**Unsorted input** - Arrival times are not given in sorted order; processing by index gives wrong chair assignments.\n`times = [[3,10],[1,5],[2,6]], targetFriend = 0` → `Expected: 2`\n⚠️ Bug: iterating friends in index order without sorting by arrival → returns `0`\n\n**Late target, chairs already freed** - The target arrives after earlier friends have left; freed chairs must be reused.\n`times = [[5,10],[1,3],[2,4]], targetFriend = 0` → `Expected: 0`\n⚠️ Bug: freeing chairs after assigning the current friend's chair → returns `2`\n\n**No overlap, all reuse chair 0** - Every friend leaves before the next arrives, so chair 0 is reused each time.\n`times = [[1,2],[3,4],[5,6]], targetFriend = 2` → `Expected: 0`\n⚠️ Bug: only incrementing a nextChair counter without pushing freed chairs back → returns `2`"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are only k chairs (k < n) and a friend must wait when all are occupied?",
+      "a": "Same two-heap structure, but when no chair is available the friend enters a waiting queue ordered by arrival. When a chair frees, assign it to the earliest-waiting friend. Time complexity stays O(n log n); space stays O(n)."
+    },
+    {
+      "q": "What if arrival and leaving times can be up to 10^9?",
+      "a": "The algorithm only compares times, never uses them as array indices, so int suffices up to ~2.1×10^9. Time and space complexity are unchanged at O(n log n) and O(n)."
+    },
+    {
+      "q": "What if friends arrive and leave in a streaming fashion with no known future events?",
+      "a": "Process each event (arrival or departure) in real time using the same two heaps. Each event costs O(log n). For m total events the time is O(m log n) and space O(n) for the heaps."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int smallestChair(vector<vector<int>>& times, int targetFriend) {\n        int n = times.size();\n        vector<int> idx(n);\n        for (int i = 0; i < n; i++) idx[i] = i;\n        sort(idx.begin(), idx.end(), [&](int a, int b) {\n            return times[a][0] < times[b][0];\n        });\n\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> occupied;\n        priority_queue<int, vector<int>, greater<int>> available;\n        int nextChair = 0;\n\n        for (int i : idx) {\n            int arr = times[i][0], leave = times[i][1];\n            while (!occupied.empty() && occupied.top().first <= arr) {\n                available.push(occupied.top().second);\n                occupied.pop();\n            }\n            int chair;\n            if (!available.empty()) {\n                chair = available.top();\n                available.pop();\n            } else {\n                chair = nextChair++;\n            }\n            occupied.push({leave, chair});\n            if (i == targetFriend) return chair;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

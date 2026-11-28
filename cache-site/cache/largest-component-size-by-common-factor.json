@@ -1,0 +1,40 @@
+{
+  "slug": "largest-component-size-by-common-factor",
+  "title": "Largest Component Size by Common Factor",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find with Prime Factorization",
+  "tc": "O(M log log M + N log M · α(M))",
+  "sc": "O(M)",
+  "spaceBreakdown": "- vector<int> spf: size M+1 → O(M)\n- vector<int> parent: size M+1 → O(M)\n- vector<int> rank_: size M+1 → O(M)\n- unordered_map<int,int> cnt: up to N entries → O(N) ≤ O(M)\n- recursion depth: none (iterative find)\n- not counted: input nums, returned int",
+  "approach": "Use Union-Find. Build a smallest-prime-factor sieve up to max(nums). For each number, factorize it via the sieve and union the number with each of its prime factors (using the prime value itself as a union-find node index, since primes ≤ max(nums)). After processing all numbers, count how many original nums share each root; the maximum count is the answer. This works because two numbers share a common factor > 1 iff they share at least one prime factor, so unioning each number with its primes correctly captures connectivity.",
+  "hints": [
+    "Given nums[i] ≤ 10^5, what is the maximum number of prime factors any single element can have? All values are unique and at most 10^5.",
+    "Use a Disjoint Set Union (union-find) over both numbers and their prime factors. For nums = [4,6,15,35]: factorize 6 → {2, 3}, then union(6, 2) and union(6, 3), linking 6 to 4 via prime 2 and to 15 via prime 3.",
+    "```\nbuild SPF sieve up to max(nums)\ninit DSU over 0..maxVal\nfor each x in nums:\n    for each prime p of x:\n        union(x, p)\ncount frequency of each root among nums\nreturn max frequency\n```",
+    "**Value of 1** - 1 has no prime factors and can never connect to any other number.\n`Input: nums = [1,2,4]` → `Expected: 2`\n⚠️ Bug: iterating all divisors including 1 and unioning with 1 → 1 connects to everything → returns 3\n\n**All primes** - no two numbers share a factor, every component has size 1.\n`Input: nums = [2,3,5,7,11]` → `Expected: 1`\n⚠️ Bug: skipping components of size 1 with `if (cnt[root] > 1)` before updating best → returns 0\n\n**Single element** - one node, no edges.\n`Input: nums = [7]` → `Expected: 1`\n⚠️ Bug: tracking max size only during union merges, never updating for isolated nodes → returns 0\n\n**Disconnected components of different sizes** - must return the larger component.\n`Input: nums = [2,4,8,3,9]` → `Expected: 3`\n⚠️ Bug: returning the count of the last processed root instead of the maximum → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^9?",
+      "a": "The SPF sieve up to 10^9 is too large. Instead, factorize each number by trial division up to sqrt(10^9) ≈ 31623, and use a hash map for the DSU parent of prime factors. TC becomes O(n sqrt(M)), SC becomes O(n + number of distinct primes seen)."
+    },
+    {
+      "q": "Return the actual largest component (the set of numbers), not just its size.",
+      "a": "During the counting phase, store each number in a list keyed by its DSU root. After finding the root with the maximum count, return its list. SC increases to O(n) for the member lists, TC unchanged."
+    },
+    {
+      "q": "What if nums arrives as a stream too large to store?",
+      "a": "Maintain the DSU only over prime factors (at most ~10^4 primes up to 10^5) with a count per root. For each incoming number, factorize it, union its primes, and increment the merged root's count. SC drops to O(M) for primes only, with no need to store the numbers."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestComponentSize(vector<int>& nums) {\n        int maxVal = 0;\n        for (int x : nums) if (x > maxVal) maxVal = x;\n        if (maxVal < 2) return nums.empty() ? 0 : 1;\n        \n        vector<int> spf(maxVal + 1);\n        for (int i = 0; i <= maxVal; i++) spf[i] = i;\n        for (int i = 2; (long long)i * i <= maxVal; i++) {\n            if (spf[i] == i) {\n                for (int j = i * i; j <= maxVal; j += i) {\n                    if (spf[j] == j) spf[j] = i;\n                }\n            }\n        }\n        \n        vector<int> parent(maxVal + 1);\n        vector<int> rnk(maxVal + 1, 0);\n        for (int i = 0; i <= maxVal; i++) parent[i] = i;\n        \n        auto find = [&](int x) {\n            while (parent[x] != x) {\n                parent[x] = parent[parent[x]];\n                x = parent[x];\n            }\n            return x;\n        };\n        auto unite = [&](int a, int b) {\n            int ra = find(a), rb = find(b);\n            if (ra == rb) return;\n            if (rnk[ra] < rnk[rb]) { int t = ra; ra = rb; rb = t; }\n            parent[rb] = ra;\n            if (rnk[ra] == rnk[rb]) rnk[ra]++;\n        };\n        \n        for (int x : nums) {\n            int v = x;\n            while (v > 1) {\n                int p = spf[v];\n                unite(x, p);\n                while (v % p == 0) v /= p;\n            }\n        }\n        \n        unordered_map<int,int> cnt;\n        int ans = 0;\n        for (int x : nums) {\n            int r = find(x);\n            cnt[r]++;\n            if (cnt[r] > ans) ans = cnt[r];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

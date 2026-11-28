@@ -1,0 +1,40 @@
+{
+  "slug": "ugly-number-iii",
+  "title": "Ugly Number III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(log(2 × 10^9))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- All variables are scalars (long long): lo, hi, mid, cnt, A, B, C, ab, ac, bc, abc → O(1)\n- No containers, no recursion → O(1)\n- Not counted: input parameters, returned int",
+  "approach": "The count of ugly numbers ≤ k is monotonic in k, so we binary search for the smallest k where count(k) ≥ n. To count numbers in [1, k] divisible by a, b, or c, we use the inclusion-exclusion principle: count = k/a + k/b + k/c − k/lcm(a,b) − k/lcm(a,c) − k/lcm(b,c) + k/lcm(a,b,c). All arithmetic uses `long long` to handle products up to 10^18.",
+  "hints": [
+    "For any integer k, how many values in [1, k] are divisible by a, b, or c? Does this count grow monotonically as k increases?",
+    "Binary search on the answer. Count multiples ≤ mid via inclusion-exclusion: |A∪B∪C| = |A|+|B|+|C|−|A∩B|−|A∩C|−|B∩C|+|A∩B∩C|, where each intersection size uses LCM. For n=3, a=2, b=3, c=5: count(4) = 4/2+4/3+4/5−4/6−4/10−4/15+4/30 = 2+1+0 = 3 ≥ 3.",
+    "```\nlo = 1, hi = 2*10^9\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    cnt = mid/a + mid/b + mid/c\n         - mid/lcm(a,b) - mid/lcm(a,c) - mid/lcm(b,c)\n         + mid/lcm(a,b,c)\n    if cnt >= n:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Smallest input** - n=1, answer is the smallest of a, b, c.\n`Input: n=1, a=2, b=3, c=5` → `Expected: 2`\n⚠️ Bug: setting hi=n (=1) → loop body never executes, returns lo=1\n\n**All equal values** - a=b=c, every multiple is triple-counted.\n`Input: n=5, a=2, b=2, c=2` → `Expected: 10`\n⚠️ Bug: counting k/a+k/b+k/c without inclusion-exclusion → count(4)=6≥5, count(3)=3<5, returns 4\n\n**LCM overflow** - a×b can exceed 2^31 even when the true LCM is small.\n`Input: n=5, a=50000, b=50000, c=50000` → `Expected: 250000`\n⚠️ Bug: computing lcm as `a*b/gcd` with int → 50000×50000=2.5×10^9 overflows signed 32-bit → lcm wraps to −35899 → count(50000)=3+2=5≥5, returns 50000"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are up to 15 divisors instead of 3?",
+      "a": "Inclusion-exclusion over 15 sets requires 2^15−1 = 32767 terms per evaluation, enumerated via bitmask subsets. Total cost: O(2^15 × log(2×10^9)) ≈ 10^6, still well within budget. Precompute all subset LCMs once before the binary search loop."
+    },
+    {
+      "q": "What if the answer can be up to 10^18 instead of 2×10^9?",
+      "a": "The binary search range extends to [1, 10^18], adding about 30 iterations (total ~60). All variables already use long long, which holds up to ~9.2×10^18. If LCMs can exceed that, switch to __int128 for the LCM computation only."
+    },
+    {
+      "q": "What if a, b, c change between queries but n stays fixed?",
+      "a": "Each query is independent: recompute the three pairwise LCMs and the triple LCM, then run the same binary search. No preprocessing carries over since the divisors change. TC remains O(log(max_answer)) per query with O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long gcd(long long x, long long y) {\n        while (y) {\n            long long t = x % y;\n            x = y;\n            y = t;\n        }\n        return x;\n    }\n    long long lcm(long long x, long long y) {\n        return x / gcd(x, y) * y;\n    }\n    int nthUglyNumber(int n, int a, int b, int c) {\n        long long A = a, B = b, C = c;\n        long long ab = lcm(A, B);\n        long long ac = lcm(A, C);\n        long long bc = lcm(B, C);\n        long long abc = lcm(ab, C);\n        long long lo = 1, hi = 2000000000LL;\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2;\n            long long cnt = mid / A + mid / B + mid / C\n                         - mid / ab - mid / ac - mid / bc\n                         + mid / abc;\n            if (cnt >= n)\n                hi = mid;\n            else\n                lo = mid + 1;\n        }\n        return (int)lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

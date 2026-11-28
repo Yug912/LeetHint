@@ -1,0 +1,40 @@
+{
+  "slug": "split-array-with-same-average",
+  "title": "Split Array With Same Average",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming with Bitset Optimization",
+  "tc": "O(n^2 \\cdot \\text{max\\_sum} / 64)",
+  "sc": "O(n \\cdot \\text{max\\_sum} / 64)",
+  "spaceBreakdown": "- `vector<bitset<300001>> dp`: 31 bitsets of size 300001 bits each → ~1.16 MB\n- recursion depth: none\n- not counted: input `nums`",
+  "approach": "The problem asks if we can split the array into two non-empty parts A and B with the same average. If a subset A of size $k$ has the same average as the entire array of size $n$ and sum $S$, its sum must be exactly $S \\cdot k / n$. We can use dynamic programming to track all possible subset sums for each possible subset size $k$. Since $n \\le 30$ and $nums[i] \\le 10^4$, the maximum possible sum is $300,000$. We use an array of bitsets where `dp[k]` stores the achievable sums using exactly $k$ elements. We iterate through the numbers, updating the bitsets in reverse, and finally check if any valid subset sum matches the required target.",
+  "hints": [
+    "If a subset $A$ of size $k$ has the same average as the entire array of size $n$ and sum $S$, what must be the exact sum of the elements in $A$? The constraints allow $n \\le 30$ and $nums[i] \\le 10^4$.",
+    "Use a dynamic programming array of bitsets where `dp[k]` stores all achievable sums using exactly `k` elements. For `nums = [1,2,3,4,5,6,7,8]`, after processing 1 and 2, `dp[2]` will have bit 3 set (sum 1+2=3).",
+    "```\ninitialize dp[0][0] = true\nfor each x in nums:\n    for k from n down to 1:\n        dp[k] |= dp[k-1] << x\nfor k from 1 to n-1:\n    if (S * k) % n == 0 and dp[k][(S * k) / n] is true:\n        return true\nreturn false\n```",
+    "**Smallest input** - `n = 1` means we cannot form two non-empty arrays.\n`Input: nums = [5]` → `Expected: false`\n⚠️ Bug: Looping `k` from 1 to `n` instead of `n-1` → returns `true` because `(5 * 1) % 1 == 0` and `dp[1][5]` is true.\n\n**No valid split** - Sums and sizes don't align.\n`Input: nums = [1,2,3,5]` → `Expected: false`\n⚠️ Bug: Using `S / n * k` instead of `S * k / n` → integer division truncates `11/4=2`, `2*2=4`, `dp[2][4]` is true (1+3=4), returns `true` instead of `false`.\n\n**All elements equal** - Any non-empty proper subset works.\n`Input: nums = [2,2,2,2]` → `Expected: true`\n⚠️ Bug: Forgetting to check all $k$ up to $n-1$ and stopping early at $n/2$ without handling symmetry → returns `false` if the only matching subset size is $> n/2$ (though here any $k$ works, a flawed loop bound could skip valid $k$)."
+  ],
+  "followUps": [
+    {
+      "q": "What if $n \\le 60$ instead of $30$?",
+      "a": "The bitset DP approach would still be feasible. The maximum sum becomes $60 \\times 10^4 = 600,000$. The time complexity would be $O(60^2 \\times 600000 / 64) \\approx 3.3 \\times 10^7$ operations, which easily runs within 1 second. Space would increase to about 4.6 MB."
+    },
+    {
+      "q": "What if we need to return the actual arrays A and B instead of just a boolean?",
+      "a": "We would need to store parent pointers or backtrack through the DP bitsets. After finding a valid $k$ and target sum, we can trace backwards through the elements and DP states to reconstruct which elements were included in the subset of size $k$."
+    },
+    {
+      "q": "What if $nums[i]$ can be negative?",
+      "a": "The bitset approach relies on non-negative indices. We would need to offset all numbers by the minimum possible value to make them non-negative, or use an `unordered_set<int>` for the DP states instead of a bitset, which would increase the time complexity to $O(n^2 \\cdot \\text{number of achievable sums})$."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool splitArraySameAverage(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 1) return false;\n        \n        int S = 0;\n        for (int x : nums) S += x;\n        \n        vector<bitset<300001>> dp(n + 1);\n        dp[0][0] = 1;\n        \n        for (int x : nums) {\n            for (int k = n; k >= 1; --k) {\n                dp[k] |= dp[k - 1] << x;\n            }\n        }\n        \n        for (int k = 1; k < n; ++k) {\n            if ((S * k) % n == 0) {\n                int target = (S * k) / n;\n                if (dp[k][target]) {\n                    return true;\n                }\n            }\n        }\n        \n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

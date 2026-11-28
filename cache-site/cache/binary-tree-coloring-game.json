@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-coloring-game",
+  "title": "Binary Tree Coloring Game",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DFS on Tree",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- findNode recursion depth: up to h (tree height) → O(h)\n- countNodes recursion depth: up to h (called sequentially, not nested) → O(h)\n- local variables (leftCount, rightCount, parentCount, maxRegion, xNode): O(1)\n- not counted: input tree, returned boolean",
+  "approach": "When player 2 colors a node y adjacent to x, x is blocked from expanding into y's region. The tree splits into three independent regions: x's left subtree, x's right subtree, and the parent side (everything reachable from x's parent without going through x). Player 2 gets all nodes in the chosen region; player 1 gets the rest. Use DFS to count each region's size, pick the largest, and check if it exceeds n/2.",
+  "hints": [
+    "When player 2 colors a node adjacent to x, what happens to the nodes on the other side of that colored node relative to player 1? The tree has n nodes where n is odd.",
+    "Use DFS to count the size of each of the three subtrees branching from x: left child's subtree, right child's subtree, and the parent side. In Example 1 with x=3, the left subtree has 1 node, the right has 1 node, and the parent side has 8 nodes.",
+    "```\nfind node x in tree\nleftCount = count nodes in x.left\nrightCount = count nodes in x.right\nparentCount = n - 1 - leftCount - rightCount\nreturn max(leftCount, rightCount, parentCount) > n/2\n```",
+    "**Smallest tree** - n=1, only one node, no valid y\n`Input: root = [1], n = 1, x = 1` → `Expected: false`\n⚠️ Bug: using `>=` instead of `>` in `maxRegion > n/2` → 0 >= 0 returns true\n\n**Parent count off-by-one** - x is internal, parent side is largest but exactly n/2\n`Input: root = [1,2,3,4,5], n = 5, x = 2` → `Expected: false`\n⚠️ Bug: computing parentCount as n - leftCount - rightCount instead of n - 1 - leftCount - rightCount → parentCount = 3, returns true\n\n**x is a leaf** - both subtrees empty, parent side has n-1 nodes\n`Input: root = [1,2,3], n = 3, x = 2` → `Expected: true`\n⚠️ Bug: countNodes without null base case, dereferences nullptr when counting xNode->left → segfault\n\n**Right-skewed tree** - x is in the right subtree, findNode must search both children\n`Input: root = [1,null,2,null,3,null,4,null,5], n = 5, x = 3` → `Expected: false`\n⚠️ Bug: findNode only recurses into left child → returns nullptr → crash on xNode->left"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5? How does the solution change?",
+      "a": "The algorithm stays the same - DFS to count subtree sizes is O(n), fine for 10^5. The recursion depth could reach 10^5 on a skewed tree, risking stack overflow. Convert countNodes and findNode to iterative post-order traversal with an explicit stack. TC stays O(n), SC stays O(n) worst case but avoids call stack limits."
+    },
+    {
+      "q": "What if the tree is a general tree with arbitrary children per node instead of binary?",
+      "a": "The same principle applies - x splits the tree into degree(x) regions (one per child subtree plus the parent side). Count each region's size with DFS, pick the largest, and check if it exceeds n/2. TC remains O(n), SC remains O(h)."
+    },
+    {
+      "q": "What if you must return the actual winning y value (or -1 if none exists)?",
+      "a": "Track the parent of x during the search so you can identify all three neighbor values. Return the neighbor corresponding to the largest region if it exceeds n/2, otherwise return -1. TC and SC remain unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countNodes(TreeNode* node) {\n        if (!node) return 0;\n        return 1 + countNodes(node->left) + countNodes(node->right);\n    }\n    \n    TreeNode* findNode(TreeNode* root, int x) {\n        if (!root) return nullptr;\n        if (root->val == x) return root;\n        TreeNode* left = findNode(root->left, x);\n        if (left) return left;\n        return findNode(root->right, x);\n    }\n    \n    bool btreeGameWinningMove(TreeNode* root, int n, int x) {\n        TreeNode* xNode = findNode(root, x);\n        int leftCount = countNodes(xNode->left);\n        int rightCount = countNodes(xNode->right);\n        int parentCount = n - 1 - leftCount - rightCount;\n        int maxRegion = max(leftCount, max(rightCount, parentCount));\n        return maxRegion > n / 2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

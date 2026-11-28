@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-steps-to-reduce-a-number-in-binary-representation-to-one",
+  "title": "Number of Steps to Reduce a Number in Binary Representation to One",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Carry Propagation Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, carry, steps, bit, i: five scalars → O(1)\n- no containers, no recursion, no auxiliary allocation\n- not counted: input string s (modified only by reading)",
+  "approach": "Process the binary string from right to left while tracking a single carry bit. For each bit except the leading one, compute the effective value (original bit + carry): 0 means even (1 step, divide by 2), 1 means odd (2 steps - add 1 then divide by 2, carry becomes 1), 2 means even-with-carry (1 step, divide by 2, carry stays 1). After the loop, if the leading bit + carry equals 2, one final divide is needed. This avoids materializing the number or simulating string additions, giving O(n) time and O(1) space.",
+  "hints": [
+    "Scanning the bits from right to left, what single value carried over from the bits you've already processed determines whether the current bit behaves as even or odd?",
+    "Carry-based right-to-left scan. For \"1101\", the rightmost bit is '1' (odd): add 1 (generating a carry) then divide by 2 - 2 steps, carry becomes 1.",
+    "```\ncarry = 0, steps = 0\nfor i from n-1 down to 1:\n    bit = s[i] + carry\n    if bit == 0: steps += 1, carry = 0\n    elif bit == 1: steps += 2, carry = 1\n    else: steps += 1, carry = 1\nif s[0] + carry == 2: steps += 1\nreturn steps\n```",
+    "**Single bit \"1\"** - the number is already 1, zero steps needed.\n`Input: s = \"1\"` → `Expected: 0`\n⚠️ Bug: processing the leading bit inside the main loop (bit==1 → steps+=2) → returns 2\n\n**Power of two \"10\"** - one right shift reaches 1.\n`Input: s = \"10\"` → `Expected: 1`\n⚠️ Bug: treating the leading '1' as a regular bit in the loop (bit==1 → steps+=2) → returns 3\n\n**All ones \"1111\"** - every bit generates a carry that propagates left.\n`Input: s = \"1111\"` → `Expected: 5`\n⚠️ Bug: resetting carry to 0 when bit==2 instead of keeping carry=1 → returns 6\n\n**Large binary (500 bits)** - the value exceeds every integer type.\n`Input: s = \"1\" + string(499,'0')` → `Expected: 499`\n⚠️ Bug: parsing s into a long long before simulating → overflow, returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if the rule for odd numbers were \"subtract 1\" instead of \"add 1\"?",
+      "a": "Subtracting 1 from an odd number simply flips the trailing 1 to 0 with no carry propagation. Each '1' bit (except the leading bit) costs 2 steps (subtract 1, then divide by 2) and each '0' costs 1 step (divide by 2). The carry variable disappears entirely, simplifying to a single right-to-left pass. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if s.length can be up to 10^6?",
+      "a": "The algorithm is already O(n) time and O(1) space, so it scales directly with no structural change. The step count reaches at most ~2×10^6, which fits comfortably in a 32-bit int. O(n) time, O(1) space."
+    },
+    {
+      "q": "What if the binary string arrives as a one-way stream read left-to-right, and you cannot reverse it?",
+      "a": "The carry-based scan requires right-to-left processing, so a single forward pass won't work. You could buffer the string (O(n) space) then scan backward, or use a two-pass approach that first counts trailing structure. If reversing is disallowed and memory is O(1), the problem becomes significantly harder and may require a different formulation. O(n) time, O(n) space with buffering."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSteps(string s) {\n        int n = s.size();\n        int carry = 0;\n        int steps = 0;\n        for (int i = n - 1; i > 0; i--) {\n            int bit = (s[i] - '0') + carry;\n            if (bit == 0) {\n                steps += 1;\n                carry = 0;\n            } else if (bit == 1) {\n                steps += 2;\n                carry = 1;\n            } else {\n                steps += 1;\n                carry = 1;\n            }\n        }\n        if ((s[0] - '0') + carry == 2) {\n            steps += 1;\n        }\n        return steps;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "nth-magical-number",
+  "title": "Nth Magical Number",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "LCM Periodicity + Binary Search on Answer",
+  "tc": "O(log(a·b))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few long long scalars (L, k, full, rem, lo, hi, mid, cnt, ans): constant → O(1)\n- no containers, no recursion, no heap allocations\n- not counted: input parameters, returned int",
+  "approach": "Magical numbers are periodic with period L = lcm(a, b): the set of magical numbers in [1, L] is {a, 2a, …, L} ∪ {b, 2b, …, L}, containing k = L/a + L/b − 1 values (inclusion-exclusion). So the answer is `full·L + x` where `full = (n−1)/k` complete periods precede it and `x` is the `rem = (n−1)%k + 1`-th magical number inside [1, L]. We find `x` by binary searching the smallest value in [1, L] whose magical-count `⌊v/a⌋ + ⌊v/b⌋ − ⌊v/L⌋` reaches `rem`. This bounds the search range by L ≤ a·b, independent of n.",
+  "hints": [
+    "With n up to 10^9, you cannot enumerate magical numbers one by one. For a = 2, b = 3 the sequence is 2, 3, 4, 6, 8, 9, 10, 12, … - after what length does the entire pattern of magical numbers repeat shifted by that length?",
+    "Use LCM (least common multiple) as the period and binary search within one period. For a = 2, b = 3: LCM = 6, each block of 6 holds 4 magical numbers; n = 4 → 0 full blocks + 4th magical in [1, 6] = 6.",
+    "```\nL = lcm(a, b)\nk = L/a + L/b − 1          # magical count per period\nfull = (n − 1) / k\nrem  = (n − 1) % k + 1\nbinary search smallest x in [1, L]:\n    if x/a + x/b − x/L >= rem:  hi = x\n    else:                        lo = x + 1\nanswer = (full * L + x) mod 1e9+7\n```",
+    "**a equals b** - LCM equals a, exactly one magical number per period.\n`Input: n = 5, a = 4, b = 4` → `Expected: 20`\n⚠️ Bug: computing k = L/a + L/b without the −1 → k = 2, full = 2, returns 12.\n\n**Inclusion-exclusion double-count** - L is divisible by both a and b, counted twice.\n`Input: n = 3, a = 2, b = 4` → `Expected: 6`\n⚠️ Bug: k = L/a + L/b (no −1) → k = 3 but only 2 magical numbers exist in [1, 4], binary search never reaches count 3, returns 5 or loops.\n\n**Off-by-one in period indexing** - rem must be 1-indexed within the period.\n`Input: n = 4, a = 2, b = 3` → `Expected: 6`\n⚠️ Bug: using full = n/k, rem = n%k (0-indexed, no +1) → full = 1, rem = 0, x = 1, returns 7.\n\n**Overflow past INT_MAX** - full·L exceeds 2^31 − 1.\n`Input: n = 1000000000, a = 3, b = 5` → `Expected: 142857128`\n⚠️ Bug: storing full·L = 2142857130 in a 32-bit int → exceeds INT_MAX (2147483647), wraps to −4626518, final return 995373501."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to three divisors a, b, c - find the n-th number divisible by any of them.",
+      "a": "The period becomes lcm(a, b, c). Per-period count uses 3-term inclusion-exclusion: L/a + L/b + L/c − L/lcm(a,b) − L/lcm(a,c) − L/lcm(b,c) + L/lcm(a,b,c). Binary search inside [1, L] with the same count function. Time stays O(log(a·b·c)), space O(1)."
+    },
+    {
+      "q": "Count how many magical numbers lie in a closed range [lo, hi].",
+      "a": "Use the count function f(x) = x/a + x/b − x/lcm(a,b); the answer is f(hi) − f(lo − 1), each computed in O(1). Time O(1), space O(1)."
+    },
+    {
+      "q": "Up to 10^5 queries, each giving a different (a, b) pair with the same n - answer all queries fast.",
+      "a": "Each query is independent and costs O(log(a·b)) ≤ O(log(1.6·10^9)) ≈ 31 steps, so 10^5 queries run in ~3·10^6 operations with no preprocessing. Time O(Q·log(a·b)), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int nthMagicalNumber(int n, int a, int b) {\n        const long long MOD = 1000000007LL;\n        long long L = lcmLL(a, b);\n        long long k = L / a + L / b - 1;\n        long long full = (long long)(n - 1) / k;\n        long long rem  = (long long)(n - 1) % k + 1;\n        long long lo = 1, hi = L;\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2;\n            long long cnt = mid / a + mid / b - mid / L;\n            if (cnt >= rem) hi = mid;\n            else            lo = mid + 1;\n        }\n        long long ans = (full % MOD) * (L % MOD) % MOD + (lo % MOD);\n        return (int)(ans % MOD);\n    }\nprivate:\n    long long gcdLL(long long x, long long y) {\n        while (y) { long long t = x % y; x = y; y = t; }\n        return x;\n    }\n    long long lcmLL(long long x, long long y) {\n        return x / gcdLL(x, y) * y;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

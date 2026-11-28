@@ -1,0 +1,39 @@
+{
+  "slug": "range-module",
+  "title": "Range Module",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Ordered Map of Disjoint Intervals",
+  "tc": "O(log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- map<int,int> intervals: up to n entries (n = number of operations, ≤ 10^4) → O(n)\n- vector<pair<int,int>> toAdd: temporary, at most 2 entries per removeRange → O(1)\n- recursion: none\n- not counted: input, returned bool",
+  "approach": "Maintain a sorted map (`map<int,int>`) from interval start to end, keeping all intervals disjoint and non-adjacent (adjacent intervals are merged on insert). `addRange` finds all overlapping intervals via `upper_bound`, merges them into one, and reinserts. `removeRange` finds overlapping intervals, trims or splits each one (keeping the left part `[start,left)` and right part `[right,end)`), then erases the originals. `queryRange` finds the interval with the largest start ≤ `left` and checks whether its end ≥ `right`. Each interval is inserted and erased at most once across all operations, giving amortized O(log n) per call.",
+  "hints": [
+    "After a sequence of overlapping add and remove operations, what is the simplest invariant shape the tracked set of numbers always has?",
+    "Use a `map<int,int>` mapping each interval's start to its end, keeping all stored intervals disjoint and non-adjacent. Example: `addRange(10,20)` on an empty map inserts the single entry `10→20`.",
+    "```\naddRange(left, right):\n  find first interval with end >= left\n  merge all intervals with start <= right into [min_start, max_end]\n  insert merged interval\n\nqueryRange(left, right):\n  find interval with largest start <= left\n  return its end >= right\n\nremoveRange(left, right):\n  find first interval with end > left\n  for each interval with start < right:\n    keep [start, left) if start < left\n    keep [right, end) if end > right\n    erase original\n```",
+    "**Adjacent intervals** - adding [20,30) when [10,20) already exists\n`addRange(10,20); addRange(20,30); queryRange(15,25)` → `Expected: true`\n⚠️ Bug: using `it->second <= left` instead of `it->second < left` in addRange → adjacent intervals stay separate → queryRange returns false\n\n**Remove splits interval** - removing [14,16) from [10,20) leaves two pieces\n`addRange(10,20); removeRange(14,16); queryRange(16,17)` → `Expected: true`\n⚠️ Bug: only re-adding the left piece `[start,left)` and forgetting the right piece `[right,end)` → queryRange(16,17) returns false\n\n**Query on empty map** - querying before any add\n`queryRange(5,10)` → `Expected: false`\n⚠️ Bug: decrementing `upper_bound` iterator without checking `it == begin()` → undefined behavior on empty map\n\n**Remove with no overlap** - removing a range far from any tracked interval\n`addRange(10,20); removeRange(100,200); queryRange(50,60)` → `Expected: false`\n⚠️ Bug: in removeRange, not skipping intervals whose end ≤ left (missing `if (it->second <= left) ++it`) → erases [10,20) and re-inserts [10,100) → queryRange(50,60) returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if we also need to query the count of tracked numbers within [left, right)?",
+      "a": "Store each interval's length and maintain a Fenwick tree over compressed endpoints. Each add/remove updates the Fenwick tree in O(log n); each count query sums partial overlaps in O(log n). The map still tracks interval boundaries; the Fenwick tree tracks total covered length."
+    },
+    {
+      "q": "What if left and right can be up to 10^18?",
+      "a": "The map approach still works because it only stores interval endpoints, not every value. The number of intervals is bounded by the operation count, so the map stays small. Switch key and value types to `long long`."
+    },
+    {
+      "q": "What if we need to support adding a weight to all numbers in a range instead of binary tracking?",
+      "a": "Switch to a segment tree with lazy propagation over coordinate-compressed endpoints. The map-of-intervals approach relies on the binary nature of tracking and does not extend to arbitrary weighted range updates."
+    }
+  ],
+  "code": {
+    "cpp": "class RangeModule {\n    map<int, int> intervals;\npublic:\n    RangeModule() {}\n    \n    void addRange(int left, int right) {\n        auto it = intervals.upper_bound(left);\n        if (it != intervals.begin()) {\n            --it;\n            if (it->second < left) ++it;\n        }\n        while (it != intervals.end() && it->first <= right) {\n            left = min(left, it->first);\n            right = max(right, it->second);\n            it = intervals.erase(it);\n        }\n        intervals[left] = right;\n    }\n    \n    bool queryRange(int left, int right) {\n        auto it = intervals.upper_bound(left);\n        if (it == intervals.begin()) return false;\n        --it;\n        return it->second >= right;\n    }\n    \n    void removeRange(int left, int right) {\n        auto it = intervals.upper_bound(left);\n        if (it != intervals.begin()) {\n            --it;\n            if (it->second <= left) ++it;\n        }\n        vector<pair<int, int>> toAdd;\n        while (it != intervals.end() && it->first < right) {\n            if (it->first < left)\n                toAdd.push_back({it->first, left});\n            if (it->second > right)\n                toAdd.push_back({right, it->second});\n            it = intervals.erase(it);\n        }\n        for (auto& p : toAdd)\n            intervals[p.first] = p.second;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}
