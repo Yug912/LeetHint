@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-convert-all-elements-to-zero",
+  "title": "Minimum Operations to Convert All Elements to Zero",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack (in-place)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int ans, top, i, x: constant → O(1)\n- nums reused in-place as the stack (top ≤ read index always) → O(1) auxiliary\n- no recursion, no extra containers",
+  "approach": "Scan left to right maintaining a strictly increasing monotonic stack of \"active\" positive values. When a new value x arrives, pop all stack entries strictly greater than x (a smaller value to the right splits those segments). If x > 0 and the stack top is not already x, push x and increment the answer - this value needs its own operation. Each distinct uninterrupted run of a value corresponds to exactly one operation, and the stack tracks precisely those boundaries. Reuse the input array itself as the stack storage since the stack top never passes the current read index.",
+  "hints": [
+    "As you scan left to right, when does a value force a brand-new operation versus being covered by an operation you would already count? The array can have up to 10^5 elements, so a per-subarray search is too slow.",
+    "Use a strictly increasing monotonic stack. On [3,1,2,1]: read 3→push(ans=1); read 1→pop 3, push(ans=2); read 2→push(ans=3); read 1→pop 2, top is already 1 so skip. Answer 3.",
+    "```\nans = 0, top = -1\nfor x in nums:\n    while top >= 0 and stack[top] > x:\n        top -= 1\n    if x > 0 and (top < 0 or stack[top] != x):\n        top += 1\n        stack[top] = x\n        ans += 1\nreturn ans\n```",
+    "**Single zero** - only element is already zero\n`Input: nums = [0]` → `Expected: 0`\n⚠️ Bug: not guarding `x > 0` before pushing → returns 1\n\n**All equal nonzero** - one value, one operation suffices\n`Input: nums = [5,5,5]` → `Expected: 1`\n⚠️ Bug: pushing without checking `stack[top] != x` → returns 3\n\n**Repeated value after pop** - equal value reappears, must not double-count\n`Input: nums = [3,1,2,1]` → `Expected: 3`\n⚠️ Bug: popping with `>=` instead of `>` pops the matching 1, then re-pushes → returns 4\n\n**Leading zero then value** - zero must be skipped, value still counted\n`Input: nums = [0,2]` → `Expected: 1`\n⚠️ Bug: treating 0 as a stack element and counting it → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^9?",
+      "a": "The algorithm is purely comparison-based, so value magnitude is irrelevant. Time stays O(n), space O(1). No code change needed."
+    },
+    {
+      "q": "Elements arrive in a stream; output the answer after each new element. What changes?",
+      "a": "Keep the in-place stack persistent across appends. Each new element does amortized O(1) pops and at most one push, so total time is O(n) and you emit the running count each step. Space remains O(1) auxiliary."
+    },
+    {
+      "q": "What if the array is circular (subarrays can wrap around)?",
+      "a": "Conceptually duplicate to length 2n and run the same scan, but a value whose segment wraps the boundary is counted once, not twice. Deduplicate by checking whether the first and last surviving stack entries are equal after the doubled pass. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums) {\n        int ans = 0;\n        int top = -1;\n        int n = (int)nums.size();\n        for (int i = 0; i < n; i++) {\n            int x = nums[i];\n            while (top >= 0 && nums[top] > x) {\n                top--;\n            }\n            if (x > 0 && (top < 0 || nums[top] != x)) {\n                top++;\n                nums[top] = x;\n                ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

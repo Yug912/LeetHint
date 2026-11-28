@@ -1,0 +1,40 @@
+{
+  "slug": "largest-multiple-of-three",
+  "title": "Largest Multiple of Three",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort + Greedy Remainder Fixing",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[10]: fixed 10 slots → O(1)\n- int sum, r, removed: scalars → O(1)\n- initializer lists {2,5,8}, {1,4,7}: fixed 3 elements → O(1)\n- string result: O(n) but returned output (not counted per LeetCode convention)\n- recursion depth: none",
+  "approach": "A number is divisible by 3 iff its digit sum is divisible by 3. Count digits 0-9 in a fixed array, compute the total sum mod 3, then remove the fewest smallest digits whose remainder fixes the sum: if remainder is 1, drop one digit from {1,4,7} (or two from {2,5,8}); if remainder is 2, drop one from {2,5,8} (or two from {1,4,7}). Build the answer by emitting digits 9→0, collapsing all-zero results to \"0\". This is O(n) time and O(1) extra space.",
+  "hints": [
+    "If you rearrange the same chosen digits into different orders, does the divisibility by three ever change? What does that tell you about what actually determines it?",
+    "Use a fixed-size count[10] array. In Example 2, digit sum = 8+6+7+1+0 = 22 (remainder 1 mod 3), so remove the smallest available digit with remainder 1 - the '1' - leaving 8,7,6,0, which sorted descending gives \"8760\".",
+    "```\ncount digits 0-9 into count[10]; compute total sum\nr = sum mod 3\nif r == 1: remove 1 from {1,4,7}, or if none, remove 2 from {2,5,8}\nif r == 2: remove 1 from {2,5,8}, or if none, remove 2 from {1,4,7}\nbuild result by appending count[d] copies of d, for d = 9 down to 0\nif result is empty return \"\"; if it starts with '0' return \"0\"\n```",
+    "**All zeros** - every digit is 0, so the sum is 0 but the raw output has leading zeros.\n`Input: digits = [0,0,0]` → `Expected: \"0\"`\n⚠️ Bug: not collapsing leading zeros → returns \"000\"\n\n**Must remove two digits** - sum mod 3 is 1 but no remainder-1 digit exists, so two remainder-2 digits must go.\n`Input: digits = [2,2,2,2,2]` → `Expected: \"222\"`\n⚠️ Bug: only trying single-digit removal and giving up → returns \"\"\n\n**One removal beats two** - when sum mod 3 is 2, a single remainder-2 digit can be dropped, keeping more digits than dropping two remainder-1 digits.\n`Input: digits = [1,1,1,2]` → `Expected: \"111\"`\n⚠️ Bug: always removing two remainder-1 digits for r==2 instead of first trying one remainder-2 digit → returns \"21\"\n\n**No valid answer** - the only digit is 1, which alone is not a multiple of 3 and cannot be combined with anything.\n`Input: digits = [1]` → `Expected: \"\"`\n⚠️ Bug: returning \"0\" for an empty result (`return result.empty() ? \"0\" : result;`) → returns \"0\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the answer must be the largest multiple of 9 instead of 3?",
+      "a": "The same digit-sum divisibility property holds for 9. Compute sum mod 9; if nonzero, remove the fewest smallest digits whose combined remainder equals that value mod 9. The removal logic checks more combinations (1 or 2 digits summing to the target), but the counting-sort framework, O(n) time, and O(1) space remain unchanged."
+    },
+    {
+      "q": "What if we need the largest multiple of an arbitrary k (not just 3 or 9)?",
+      "a": "The digit-sum trick does not generalize. Use DP over the array tracking, for each remainder mod k, the longest achievable digit sequence. This costs O(n·k) time and O(k) space, feasible when k is small."
+    },
+    {
+      "q": "What if digits arrive as an infinite stream and you must answer queries at any point with O(1) memory?",
+      "a": "Maintain count[10] and a running sum at all times - both O(1). When queried, apply the same remainder-fixing logic on the current counts and build the output. The only per-query cost is constructing the result string, which is O(n) in the current stream length and unavoidable."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string largestMultipleOfThree(vector<int>& digits) {\n        int count[10] = {0};\n        int sum = 0;\n        for (int d : digits) {\n            count[d]++;\n            sum += d;\n        }\n\n        int r = sum % 3;\n        if (r == 1) {\n            if (count[1] > 0) count[1]--;\n            else if (count[4] > 0) count[4]--;\n            else if (count[7] > 0) count[7]--;\n            else {\n                int removed = 0;\n                for (int d : {2, 5, 8}) {\n                    while (count[d] > 0 && removed < 2) {\n                        count[d]--;\n                        removed++;\n                    }\n                }\n            }\n        } else if (r == 2) {\n            if (count[2] > 0) count[2]--;\n            else if (count[5] > 0) count[5]--;\n            else if (count[8] > 0) count[8]--;\n            else {\n                int removed = 0;\n                for (int d : {1, 4, 7}) {\n                    while (count[d] > 0 && removed < 2) {\n                        count[d]--;\n                        removed++;\n                    }\n                }\n            }\n        }\n\n        string result;\n        for (int d = 9; d >= 0; d--) {\n            if (count[d] > 0) {\n                result.append(count[d], static_cast<char>('0' + d));\n            }\n        }\n\n        if (result.empty()) return \"\";\n        if (result[0] == '0') return \"0\";\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-win-from-two-segments",
+  "title": "Maximize Win From Two Segments",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers / Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (ans, bestLeft, lj, j, i, n): constant → O(1)\n- no containers, no recursion, no heap\n- not counted: input vector prizePositions",
+  "approach": "Use two pointers over the sorted array. For each right end `i` of the second segment, keep `j` as the leftmost index with `prizePositions[j] >= prizePositions[i] - k`, so the second window is `[j, i]`. Maintain a running max `bestLeft` of single-window counts for windows ending strictly before `j`: whenever `j` advances, compute the window count ending at the old `j` (via a third pointer `lj`) and fold it into `bestLeft`. The answer is `max over i of (i-j+1) + bestLeft`. Since `i`, `j`, `lj` each move only forward, this is O(n) time and O(1) space.",
+  "hints": [
+    "The array is sorted. Once you fix the second segment's right end at index `i`, which prizes could a first segment cover without sharing any prize index with the second one?",
+    "Two-pointer sliding window with a running maximum. Maintain `j` (left end of the second window) and `bestLeft` (best single-window count ending before `j`). For `[1,1,2,2,3,3,5]`, k=2: when `i=6` (value 5), `j` advances to 4 and `bestLeft` becomes 4 from window `[0,3]`, giving 4+3=7.",
+    "```\nbestLeft = 0, j = 0, lj = 0, ans = 0\nfor i in 0..n-1:\n    while prizePositions[j] < prizePositions[i] - k:\n        while prizePositions[lj] < prizePositions[j] - k: lj++\n        bestLeft = max(bestLeft, j - lj + 1)\n        j++\n    ans = max(ans, (i - j + 1) + bestLeft)\nreturn ans\n```",
+    "**Single element** - only one prize exists.\n`Input: prizePositions = [5], k = 0` → `Expected: 1`\n⚠️ Bug: returning 0 when `n < 2` → returns 0.\n\n**Boundary inclusion** - a prize exactly at `prizePositions[i] - k` must be inside the second window.\n`Input: prizePositions = [1,3], k = 2` → `Expected: 2`\n⚠️ Bug: using `prizePositions[j] <= prizePositions[i] - k` instead of `<` → j advances to 1, returns 1.\n\n**Two disjoint clusters** - one segment cannot cover both clusters.\n`Input: prizePositions = [1,2,10,11], k = 1` → `Expected: 4`\n⚠️ Bug: resetting `bestLeft = 0` inside the `i` loop → bestLeft never accumulates, returns 2.\n\n**Huge k** - a single segment already covers every prize.\n`Input: prizePositions = [1,2,3], k = 100` → `Expected: 3`\n⚠️ Bug: forcing the two segments to be disjoint in position range → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if the two segments must be position-disjoint (not just prize-disjoint)?",
+      "a": "Change the boundary so the first window ends before `prizePositions[j] - k` instead of before index `j`. The two-pointer structure is identical; only the comparison threshold shifts. Still O(n) time, O(1) space."
+    },
+    {
+      "q": "What if you may pick up to `m` segments instead of 2?",
+      "a": "Use DP: `dp[t][i] = max(dp[t][i-1], (i-j+1) + dp[t-1][j-1])` where `j` is the window's left end. Roll over `t` for O(m·n) time and O(n) space."
+    },
+    {
+      "q": "What if `prizePositions` is not sorted?",
+      "a": "Sort in place first, then run the same two-pointer. Sorting is O(n log n) time and O(log n) stack via introsort; the scan stays O(n). Total O(n log n) time, O(log n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximizeWin(vector<int>& prizePositions, int k) {\n        int n = prizePositions.size();\n        int ans = 0, bestLeft = 0, lj = 0, j = 0;\n        for (int i = 0; i < n; i++) {\n            while (prizePositions[j] < prizePositions[i] - k) {\n                while (prizePositions[lj] < prizePositions[j] - k) lj++;\n                bestLeft = max(bestLeft, j - lj + 1);\n                j++;\n            }\n            ans = max(ans, (i - j + 1) + bestLeft);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

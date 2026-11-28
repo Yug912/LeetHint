@@ -1,0 +1,51 @@
+{
+  "slug": "count-integers-in-intervals",
+  "title": "Count Integers in Intervals",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Ordered Map Interval Merging",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- map<int,int> intervals: up to n entries (one per add call in the worst case of no merges) → O(n)\n- long long total: O(1)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Use an ordered map (`std::map<int,int>`) keyed by left endpoint to maintain a set of non-overlapping, non-adjacent intervals, plus a running `total` of covered integers. On each `add`, find the insertion point with `upper_bound(left)`, check whether the predecessor overlaps or is adjacent (`predecessor.right >= left - 1`), merge it if so, then walk forward merging every interval whose `left <= right + 1`, subtracting each erased interval's length from `total` before erasing. Finally insert the merged `[left, right]` and add its length. `count` returns `total` in O(1). Each interval is inserted and erased at most once, so the amortized cost per `add` is O(log n).",
+  "hints": [
+    "If the stored intervals never overlapped each other, what would counting the covered integers reduce to? The total number of calls is at most 10^5, but values reach 10^9.",
+    "Use an ordered map (`std::map`) keyed by left endpoint, storing the right endpoint, plus a running total. Adding `[5,8]` when `[2,3]` and `[7,10]` exist: `[7,10]` overlaps, so merge into `[5,10]`, subtract 4 (old length), add 6 (new length).",
+    "```\nadd(left, right):\n  it = upper_bound(left)\n  if predecessor exists and predecessor.right >= left - 1:\n    extend left/right, subtract predecessor length, erase predecessor\n  while it exists and it.left <= right + 1:\n    extend right, subtract it length, erase it, advance\n  insert [left, right], add its length to total\ncount:\n  return total\n```",
+    "**Contained interval** - new interval fully inside an existing one\n`add(2,10); add(3,5); count()` → `Expected: 9`\n⚠️ Bug: skipping the backward predecessor check → inserts [3,5] separately, returns 12\n\n**Single element** - interval with left == right\n`add(5,5); count()` → `Expected: 1`\n⚠️ Bug: computing length as right - left instead of right - left + 1 → returns 0\n\n**Bridging interval** - new interval connects two existing intervals\n`add(1,3); add(7,9); add(2,8); count()` → `Expected: 9`\n⚠️ Bug: only merging backward, not forward → leaves [1,8] and [7,9] overlapping, returns 11\n\n**Duplicate** - same interval added twice\n`add(2,3); add(2,3); count()` → `Expected: 2`\n⚠️ Bug: inserting without erasing the old overlapping interval → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if you also need to support `remove(left, right)` - deleting a previously added interval?",
+      "a": "Removing is far harder because a merged interval may need to split. Store the original intervals in a separate multiset; on remove, delete from the multiset and rebuild the merged map from scratch. TC: O(n log n) per remove (full rebuild), SC: O(n)."
+    },
+    {
+      "q": "What if you need `countInRange(L, R)` - the number of covered integers within a query range [L, R]?",
+      "a": "Walk the map from `lower_bound(L)` to `upper_bound(R)`, summing `min(it.right, R) - max(it.left, L) + 1` for each intersecting interval. TC: O(log n + k) where k is the number of intersecting stored intervals, SC: O(1)."
+    },
+    {
+      "q": "What if you need to return the k-th smallest covered integer?",
+      "a": "Walk the map from the beginning, accumulating interval lengths until the running sum reaches k. The answer is `interval.left + (k - prev_sum - 1)` inside the found interval. TC: O(m) where m is the number of stored intervals; with an augmented balanced BST storing subtree sums, this drops to O(log n)."
+    }
+  ],
+  "code": {
+    "cpp": "class CountIntervals {\nprivate:\n    map<int, int> intervals;\n    long long total;\npublic:\n    CountIntervals() : total(0) {\n        \n    }\n    \n    void add(int left, int right) {\n        auto it = intervals.upper_bound(left);\n        if (it != intervals.begin()) {\n            auto pit = it;\n            --pit;\n            if (pit->second >= left - 1) {\n                left = min(left, pit->first);\n                right = max(right, pit->second);\n                total -= (long long)(pit->second - pit->first + 1);\n                intervals.erase(pit);\n            }\n        }\n        while (it != intervals.end() && it->first <= right + 1) {\n            right = max(right, it->second);\n            total -= (long long)(it->second - it->first + 1);\n            it = intervals.erase(it);\n        }\n        intervals[left] = right;\n        total += (long long)(right - left + 1);\n    }\n    \n    int count() {\n        return (int)total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 5,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-pairs-satisfying-inequality",
+  "title": "Number of Pairs Satisfying Inequality",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Fenwick Tree / BIT with Coordinate Compression",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> a: n entries → O(n)\n- vector<int> vals: up to 2n entries → O(n)\n- vector<int> bit: up to 2n+2 entries → O(n)\n- recursion depth: none\n- not counted: input nums1/nums2, returned long long",
+  "approach": "Rearrange `nums1[i] - nums1[j] <= nums2[i] - nums2[j] + diff` to `a[i] <= a[j] + diff` where `a[k] = nums1[k] - nums2[k]`. Scan left to right; for each `j`, count previously seen indices `i < j` with `a[i] <= a[j] + diff`, then insert `a[j]`. A Fenwick tree (BIT) over coordinate-compressed values of `a[i]` and `a[i]+diff` answers each query in O(log n). Correctness follows because every valid pair `(i,j)` with `i<j` is counted exactly once when we reach `j`.",
+  "hints": [
+    "Move every term with index `i` to one side and every term with index `j` to the other side of the inequality. What single per-index quantity then fully determines whether a pair `(i, j)` is valid?",
+    "Define `a[k] = nums1[k] - nums2[k]`; the condition becomes `a[i] <= a[j] + diff`. Use a Fenwick tree (BIT) over coordinate-compressed values: for `j=0..n-1`, query how many prior `a[i] <= a[j]+diff`, then insert `a[j]`. In Example 1, `a=[1,0,4]`; at `j=2`, prior values `{1,0}` are both `<= 4+1`, adding 2 to the running total of 3.",
+    "```\na[k] = nums1[k] - nums2[k]\ncompress all a[k] and a[k]+diff into ranks\nfor j = 0 .. n-1:\n    ans += BIT.prefix_sum(rank of largest value <= a[j] + diff)\n    BIT.add(rank of a[j], +1)\nreturn ans\n```",
+    "**Overflow** - all pairs valid, count exceeds 2^31-1\n`nums1 = [0]*100000, nums2 = [0]*100000, diff = 0` → `Expected: 4999950000`\n⚠️ Bug: accumulating `ans` in `int` → returns a wrapped negative/garbage value (e.g. -705032704)\n\n**Duplicates** - all `a[i]` equal, diff = 0\n`nums1 = [1,1,1], nums2 = [0,0,0], diff = 0` → `Expected: 3`\n⚠️ Bug: using strict `<` instead of `<=` when comparing `a[i]` to `a[j]+diff` → returns 0\n\n**Negatives** - `a[i]` and `a[j]+diff` can be negative\n`nums1 = [-5,5], nums2 = [5,-5], diff = 0` → `Expected: 1`\n⚠️ Bug: indexing BIT directly by raw value without coordinate compression → returns 0 or crashes on negative indices\n\n**Boundary index** - first element must not count itself\n`nums1 = [10,0], nums2 = [0,0], diff = 0` → `Expected: 0`\n⚠️ Bug: calling `BIT.add(a[j])` before `BIT.query(a[j]+diff)` in the loop → counts the current `j` itself, returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if `diff` could be updated between queries online, with pairs counted over a sliding window of the last `k` indices?",
+      "a": "Keep the BIT but also maintain a deque of inserted values; when the window slides past index `j-k`, remove `a[j-k]` from the BIT. Each operation stays O(log n), giving O(n log n) total time and O(n) space."
+    },
+    {
+      "q": "What if the arrays arrive as a stream with unknown length and only O(√n) memory is allowed?",
+      "a": "Buffer incoming indices in blocks of size √n; when a block fills, sort it and merge-query against previously finalized blocks. Each element is queried against O(√n) sorted blocks via binary search, yielding O(n√n log n) time and O(√n) space."
+    },
+    {
+      "q": "What if the inequality were `nums1[i] - nums1[j] < nums2[i] - nums2[j] + diff` (strict) and we needed the count of pairs with equality too?",
+      "a": "The rearrangement is identical; for the strict count, query values `< a[j]+diff` (use `lower_bound` instead of `upper_bound`). For the equality count, query the exact rank of `a[j]+diff` minus the rank strictly below. Both reuse the same BIT in one pass, still O(n log n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long numberOfPairs(vector<int>& nums1, vector<int>& nums2, int diff) {\n        int n = nums1.size();\n        vector<int> a(n);\n        for (int i = 0; i < n; i++) a[i] = nums1[i] - nums2[i];\n        vector<int> vals;\n        vals.reserve(2 * n);\n        for (int i = 0; i < n; i++) {\n            vals.push_back(a[i]);\n            vals.push_back(a[i] + diff);\n        }\n        sort(vals.begin(), vals.end());\n        vals.erase(unique(vals.begin(), vals.end()), vals.end());\n        int m = vals.size();\n        vector<int> bit(m + 2, 0);\n        auto update = [&](int i) {\n            for (; i <= m; i += i & (-i)) bit[i]++;\n        };\n        auto query = [&](int i) -> long long {\n            long long s = 0;\n            for (; i > 0; i -= i & (-i)) s += bit[i];\n            return s;\n        };\n        long long ans = 0;\n        for (int j = 0; j < n; j++) {\n            int pos = upper_bound(vals.begin(), vals.end(), a[j] + diff) - vals.begin();\n            ans += query(pos);\n            int p = lower_bound(vals.begin(), vals.end(), a[j]) - vals.begin() + 1;\n            update(p);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "selling-pieces-of-wood",
+  "title": "Selling Pieces of Wood",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Grid Dimensions",
+  "tc": "O(m·n·(m+n))",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- `vector<vector<long long>> dp`: (m+1)×(n+1) entries → O(m·n)\n- loop variables: O(1)\n- no recursion",
+  "approach": "Let `dp[i][j]` = maximum money obtainable from an `i × j` piece. Initialize `dp[h][w] = price` for each given price entry (taking the max if duplicates existed, though the problem guarantees distinct shapes). For each `(i, j)`, the answer is the max of: selling it directly (already stored), any vertical cut `dp[i][k] + dp[i][j-k]` for `1 ≤ k < j`, or any horizontal cut `dp[k][j] + dp[i-k][j]` for `1 ≤ k < i`. Processing in increasing order of `i` then `j` guarantees subproblems are solved first. Correctness follows because every cutting strategy corresponds to a sequence of binary splits, and the optimal substructure holds: the best way to handle each child piece is independent of the other.",
+  "hints": [
+    "A single cut splits an m×n piece into two smaller rectangles. Given m, n ≤ 200, how many distinct piece sizes could ever appear during any sequence of cuts?",
+    "Use a 2D DP table where `dp[i][j]` is the best money from an i×j piece. For Example 1's `dp[3][5]`, a horizontal cut at height 2 gives `dp[2][5] + dp[1][5]`, and you take the max over all cut positions plus the direct-sale value.",
+    "```\nfor i in 1..m:\n  for j in 1..n:\n    for k in 1..j-1:\n      dp[i][j] = max(dp[i][j], dp[i][k] + dp[i][j-k])\n    for k in 1..i-1:\n      dp[i][j] = max(dp[i][j], dp[k][j] + dp[i-k][j])\nreturn dp[m][n]\n```",
+    "**Smallest input** - a 1×1 piece with no matching price has no valid cut.\n`m=1, n=1, prices=[]` → `Expected: 0`\n⚠️ Bug: indexing `prices[0]` without checking emptiness → undefined behavior / crash.\n\n**Overflow** - 200×200 unit pieces each priced 10^6 sum to 4×10^10, past 2^31−1.\n`m=200, n=200, prices=[[1,1,1000000]]` → `Expected: 40000000000`\n⚠️ Bug: storing `dp` as `int` → signed overflow wraps to a negative/garbage value like `-294967296`.\n\n**Cut beats selling whole** - four 1×1 pieces can outprice one 2×2 piece.\n`m=2, n=2, prices=[[2,2,5],[1,1,3]]` → `Expected: 12`\n⚠️ Bug: only checking the direct-sale value and skipping the cut loops → returns `5`.\n\n**No beneficial cut** - sometimes the whole piece is already optimal.\n`m=3, n=3, prices=[[3,3,100]]` → `Expected: 100`\n⚠️ Bug: forcing at least one cut (e.g., initializing `dp[i][j]=0` and only updating from cuts) → returns `0`."
+  ],
+  "followUps": [
+    {
+      "q": "What if pieces could be rotated (swapping height and width)?",
+      "a": "Before running DP, for each price entry also set `dp[w][h] = max(dp[w][h], price)` so both orientations are sellable. The cut transitions stay identical. Complexity unchanged: O(m·n·(m+n))."
+    },
+    {
+      "q": "What if m, n could be up to 10^5 but only O(prices.length) shapes matter?",
+      "a": "A sparse memoized recursion over only the dimensions reachable from (m,n) via cuts that hit priced sizes would be needed, but in the worst case the state space still explodes, so you'd likely need additional structure (e.g., only cutting at priced heights/widths). Worst case remains large; practical complexity depends on input sparsity."
+    },
+    {
+      "q": "What if each cut had a fixed cost c deducted from the total?",
+      "a": "Subtract `c` inside each cut transition: `dp[i][k] + dp[i][j-k] - c` and `dp[k][j] + dp[i-k][j] - c`. The base case (selling directly) pays no cost. Complexity unchanged: O(m·n·(m+n))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long sellingWood(int m, int n, vector<vector<int>>& prices) {\n        vector<vector<long long>> dp(m + 1, vector<long long>(n + 1, 0));\n        for (auto& p : prices) {\n            int h = p[0], w = p[1];\n            long long pr = p[2];\n            if (h <= m && w <= n && pr > dp[h][w]) {\n                dp[h][w] = pr;\n            }\n        }\n        for (int i = 1; i <= m; ++i) {\n            for (int j = 1; j <= n; ++j) {\n                for (int k = 1; k < j; ++k) {\n                    long long val = dp[i][k] + dp[i][j - k];\n                    if (val > dp[i][j]) dp[i][j] = val;\n                }\n                for (int k = 1; k < i; ++k) {\n                    long long val = dp[k][j] + dp[i - k][j];\n                    if (val > dp[i][j]) dp[i][j] = val;\n                }\n            }\n        }\n        return dp[m][n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "construct-product-matrix",
+  "title": "Construct Product Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix-Suffix Product",
+  "tc": "O(n*m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long prefix, suffix: two scalars → O(1)\n- vector<vector<int>> p: n×m output (not counted per LeetCode convention)\n- no recursion, no other containers",
+  "approach": "Compute p[i][j] = (product of all cells before (i,j) in row-major order) × (product of all cells after (i,j)), all mod 12345. Pass 1 iterates left-to-right, storing the running prefix product into each output cell. Pass 2 iterates right-to-left, multiplying each cell by the running suffix product. This avoids division and uses only O(1) auxiliary space beyond the output array.",
+  "hints": [
+    "With up to 10^5 cells, recomputing the full product for each cell from scratch is too slow. If you process cells in reading order, what information from earlier cells could you reuse when computing the next cell's answer?",
+    "Use prefix and suffix running products. Pass 1 (left-to-right): store the running prefix product in each output cell. Pass 2 (right-to-left): multiply each cell by the running suffix product. For grid [[1,2],[3,4]], pass 1 sets p[1][1]=6 (1·2·3); pass 2 multiplies by suffix 1, giving 6.",
+    "```\nprefix = 1\nfor each cell (i,j) in reading order:\n    p[i][j] = prefix\n    prefix = prefix * grid[i][j] mod MOD\n\nsuffix = 1\nfor each cell (i,j) in reverse reading order:\n    p[i][j] = p[i][j] * suffix mod MOD\n    suffix = suffix * grid[i][j] mod MOD\n```",
+    "**Smallest input** - n*m = 2, the minimum allowed.\n`Input: [[5,7]]` → `Expected: [[7,5]]`\n⚠️ Bug: initializing the running product to 0 instead of 1 → all outputs become 0, returns `[[0,0]]`\n\n**Overflow** - running product (up to 12344) × grid value (up to 10^9) ≈ 1.2×10^13 exceeds 2^31−1.\n`Input: [[12344,1000000000,1]]` → `Expected: [[5620,12344,6725]]`\n⚠️ Bug: using `int` for the running product → `12344 * 1000000000` wraps mod 2^32 to 3754065408, then `% 12345 = 288`, returns `[[5620,12344,288]]`\n\n**Multiple of modulus** - a grid element equals 12345, zeroing out other cells' products.\n`Input: [[12345],[2],[1]]` → `Expected: [[2],[0],[0]]`\n⚠️ Bug: not reducing each p[i][j] mod 12345 → p[1][0] stays 12345 and p[2][0] stays 24690, returns `[[2],[12345],[24690]]`\n\n**Single column** - n > 1, m = 1, tests reverse iteration over rows.\n`Input: [[3],[5],[7]]` → `Expected: [[35],[21],[15]]`\n⚠️ Bug: iterating the second pass in forward row order instead of reverse → suffix accumulates from the wrong end, returns `[[3],[45],[1575]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the modulus were not prime and you were allowed to use division?",
+      "a": "You could compute the total product mod MOD once, then divide by each grid[i][j]. But since MOD may not be prime, modular inverses don't always exist (e.g., when gcd(grid[i][j], MOD) > 1). The prefix-suffix approach sidesteps this entirely and works for any modulus."
+    },
+    {
+      "q": "What if the grid arrives as a stream and cannot be stored entirely?",
+      "a": "You would need two passes over the stream. Pass 1 stores prefix products in an O(n*m) buffer. Pass 2 re-reads the stream in reverse (or buffers it) and multiplies by the running suffix. If the stream cannot be re-read, you must buffer the entire input, making it O(n*m) space."
+    },
+    {
+      "q": "What if grid values can change between queries asking for the product-except-self?",
+      "a": "Flatten the grid into a 1D array and build a segment tree storing subtree products mod 12345. Each query becomes a range-product lookup in O(log N), and each update is O(log N). Build cost is O(N), where N = n*m."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> constructProductMatrix(vector<vector<int>>& grid) {\n        int n = grid.size();\n        int m = grid[0].size();\n        const int MOD = 12345;\n        vector<vector<int>> p(n, vector<int>(m));\n        \n        long long prefix = 1;\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < m; j++) {\n                p[i][j] = (int)prefix;\n                prefix = (prefix * (grid[i][j] % MOD)) % MOD;\n            }\n        }\n        \n        long long suffix = 1;\n        for (int i = n - 1; i >= 0; i--) {\n            for (int j = m - 1; j >= 0; j--) {\n                p[i][j] = (int)((p[i][j] * suffix) % MOD);\n                suffix = (suffix * (grid[i][j] % MOD)) % MOD;\n            }\n        }\n        \n        return p;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

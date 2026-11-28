@@ -1,0 +1,40 @@
+{
+  "slug": "destroy-sequential-targets",
+  "title": "Destroy Sequential Targets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Counting",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> cnt: up to n entries → O(n)\n- unordered_map<int,int> mn: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "A seed value `v` destroys exactly those targets `w` with `w % space == v % space` (and `w >= v`). To maximize destroyed targets within a residue class, we should seed with the smallest element of that class, which then destroys every element in the class. So we group elements by `nums[i] % space`, track each group's count and minimum value, then pick the group with the largest count, breaking ties by the smallest minimum value.",
+  "hints": [
+    "Pick any seed value `v` from the array. What single arithmetic property is shared by every target `w` that the machine destroys with that seed?",
+    "Use a hash map keyed by `nums[i] % space`. In Example 1 (space=2) the residues are 1,1,0,1,1,1 - residue 1 has count 5 and minimum value 1, so the answer is 1.",
+    "```\nfor each x in nums:\n    r = x mod space\n    count[r] += 1\n    minVal[r] = min(minVal[r], x)\nbest = 0, ans = 0\nfor each residue r in count:\n    if count[r] > best or (count[r] == best and minVal[r] < ans):\n        best = count[r]\n        ans = minVal[r]\nreturn ans\n```",
+    "**Single element** - only one target exists\n`nums = [5], space = 10` → `Expected: 5`\n⚠️ Bug: initializing `ans = 0` and never updating it when `bestCount` starts at 0 and the loop uses `>=` without reassigning → returns 0\n\n**Tie-breaking by minimum seed** - two residue classes have equal counts\n`nums = [3,5,2,4], space = 2` → `Expected: 2`\n⚠️ Bug: updating `ans` only when `count[r] > best` (ignoring ties) → returns 3\n\n**Duplicates decide the winner** - duplicates in one residue class make it the max\n`nums = [1,1,2,2,2], space = 2` → `Expected: 2`\n⚠️ Bug: deduplicating `nums` before counting residues → returns 1\n\n**Space larger than every value** - each target is its own residue class\n`nums = [6,2,5], space = 100` → `Expected: 2`\n⚠️ Bug: assuming `space < nums[i]` and computing `nums[i] - space` as the residue → returns a negative/garbage value"
+  ],
+  "followUps": [
+    {
+      "q": "What if `space` could be 0, so `c * space` is always 0?",
+      "a": "Then each seed destroys only targets equal to itself. The answer becomes the minimum value among the most frequent elements. Time stays O(n), space O(n) for the frequency map."
+    },
+    {
+      "q": "What if you could seed with any positive integer, not just values present in `nums`?",
+      "a": "The optimal seed for a residue class is still the smallest element in that class, since a smaller seed destroys a superset of targets. The answer and algorithm are unchanged."
+    },
+    {
+      "q": "What if `nums` arrives as a stream too large to fit in memory?",
+      "a": "Keep only the per-residue count and minimum in a hash map, updating as each element arrives and discarding the element afterward. Time O(n), space O(min(n, space)) residues."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int destroyTargets(vector<int>& nums, int space) {\n        unordered_map<int,int> cnt;\n        unordered_map<int,int> mn;\n        for (int x : nums) {\n            int r = x % space;\n            cnt[r]++;\n            auto it = mn.find(r);\n            if (it == mn.end() || x < it->second) mn[r] = x;\n        }\n        int bestCount = 0, ans = 0;\n        for (auto& p : cnt) {\n            int r = p.first, c = p.second;\n            if (c > bestCount || (c == bestCount && mn[r] < ans)) {\n                bestCount = c;\n                ans = mn[r];\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

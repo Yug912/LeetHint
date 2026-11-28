@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-moves-to-spread-stones-over-grid",
+  "title": "Minimum Moves to Spread Stones Over Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Backtracking / Minimum-Cost Assignment",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- emptyCells vector: up to 8 entries → O(1)\n- sources vector: up to 4 entries → O(1)\n- excess vector: up to 4 entries → O(1)\n- recursion depth: up to 8 → O(1)\n- ans: O(1)\n- not counted: input grid",
+  "approach": "Each empty cell must receive exactly one stone; each cell with `c > 1` stones supplies `c-1` extras. Moving one stone between two cells costs the Manhattan distance (grid moves are side-adjacent, so shortest path = `|dr|+|dc|`). The problem reduces to assigning each empty cell to a surplus cell (respecting each surplus cell's available count) to minimize total Manhattan distance. With at most 4 surplus cells and at most 8 empty cells, recursive backtracking over all valid assignments is trivially fast.",
+  "hints": [
+    "Nine stones must end up one-per-cell: each empty cell receives exactly one stone and each cell holding more than one gives away its surplus. On a grid where a move steps between side-adjacent cells, what single quantity fixes the cost of relocating one stone from a surplus cell to an empty cell?",
+    "Recursive backtracking: for each empty cell, try every surplus cell that still has extras, add the Manhattan distance, recurse, undo. Example 1: empty cell (0,2) takes from surplus (2,1) → cost |0−2|+|2−1| = 3.",
+    "```\ncollect emptyCells and surplus cells (with excess = grid-1)\nfunction dfs(idx, cost):\n    if idx == len(emptyCells): update ans; return\n    for each surplus cell s with excess[s] > 0:\n        excess[s] -= 1\n        dfs(idx+1, cost + manhattan(emptyCells[idx], s))\n        excess[s] += 1\ndfs(0, 0); return ans\n```",
+    "**Already solved** - grid already has exactly one stone per cell\n`[[1,1,1],[1,1,1],[1,1,1]]` → `Expected: 0`\n⚠️ Bug: only updating `ans` inside the source-choosing loop (no base case when `idx == size`) → returns `INT_MAX`\n\n**Single source, eight empty** - one cell holds all 9 stones\n`[[9,0,0],[0,0,0],[0,0,0]]` → `Expected: 18`\n⚠️ Bug: capping each source's usable excess at 1 → cannot serve all 8 empty cells, returns `INT_MAX`\n\n**Two sources, asymmetric split** - nearest greedy misassigns\n`[[3,0,3],[1,0,1],[1,0,0]]` → `Expected: 8`\n⚠️ Bug: greedy \"assign each empty cell to its closest surplus cell\" without backtracking → assigns (2,1) to (0,0) for 3 and (2,2) to (0,0) for 4, total 10\n\n**Tie between sources** - two surplus cells equidistant from an empty cell\n`[[2,0,2],[1,1,1],[1,1,0]]` → `Expected: 2`\n⚠️ Bug: breaking ties by always picking the lower-index source first without exploring the alternative → may force a later empty cell onto a farther source, returning 3"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to an n×n grid with n² stones. What changes?",
+      "a": "The number of empty and surplus cells can grow to O(n²), so a^b backtracking explodes. Model it as a min-cost bipartite matching (surplus stones on one side, empty cells on the other, edge weight = Manhattan distance) and run the Hungarian algorithm. Time O(n^6), space O(n^2)."
+    },
+    {
+      "q": "Suppose a move may also go diagonally (8 directions). How does the answer change?",
+      "a": "The per-stone relocation cost becomes Chebyshev distance `max(|dr|,|dc|)` instead of Manhattan. The same backtracking framework applies unchanged-only the distance function differs. Time and space stay O(a^b) and O(1) for the 3×3 case."
+    },
+    {
+      "q": "Suppose the grid is huge but you only have O(b) memory. How do you solve it?",
+      "a": "Use DP over a bitmask of the (at most ~8) empty cells: `dp[mask]` = minimum cost to fill the empty cells indicated by `mask`, transitioning by adding one surplus stone. This needs O(2^b · a) time and O(2^b) space, avoiding deep recursion."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<pair<int,int>> emptyCells, sources;\n    vector<int> excess;\n    int ans;\n    void dfs(int idx, int cost) {\n        if (idx == (int)emptyCells.size()) {\n            if (cost < ans) ans = cost;\n            return;\n        }\n        for (int i = 0; i < (int)sources.size(); i++) {\n            if (excess[i] > 0) {\n                excess[i]--;\n                int d = abs(emptyCells[idx].first - sources[i].first)\n                      + abs(emptyCells[idx].second - sources[i].second);\n                dfs(idx + 1, cost + d);\n                excess[i]++;\n            }\n        }\n    }\npublic:\n    int minimumMoves(vector<vector<int>>& grid) {\n        emptyCells.clear();\n        sources.clear();\n        for (int i = 0; i < 3; i++)\n            for (int j = 0; j < 3; j++) {\n                if (grid[i][j] == 0) emptyCells.push_back({i, j});\n                else if (grid[i][j] > 1) sources.push_back({i, j});\n            }\n        excess.assign(sources.size(), 0);\n        for (int i = 0; i < (int)sources.size(); i++)\n            excess[i] = grid[sources[i].first][sources[i].second] - 1;\n        ans = INT_MAX;\n        dfs(0, 0);\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

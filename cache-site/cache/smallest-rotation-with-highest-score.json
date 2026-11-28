@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-rotation-with-highest-score",
+  "title": "Smallest Rotation with Highest Score",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Difference Array / Line Sweep",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> diff(n+1, 0): difference array of size n+1 → O(n)\n- recursion depth: none\n- not counted: input vector nums, returned int",
+  "approach": "For each original index j with value v = nums[j], after rotating by k it lands at position p = (j − k + n) % n and earns a point when v ≤ p. As k increases from 0 to n−1, p decreases from j to 0 (for k ≤ j) then jumps to n−1 and decreases to 1 (for k > j), so the valid k-values form at most two contiguous intervals: [0, j−v] when v ≤ j, and [j+1, min(n−1, j+n−v)]. We mark each interval on a difference array and prefix-sum to find the k with maximum coverage (smallest on ties).",
+  "hints": [
+    "For a fixed original index j, as k goes 0 → n−1, the new position (j−k+n)%n first drops from j to 0, then jumps to n−1 and drops to 1. For which contiguous ranges of k does nums[j] stay ≤ its new position?",
+    "Use a difference array (line sweep). For each j, add +1 at the start and −1 just past the end of every k-range where nums[j] earns a point, then prefix-sum the array. Example: j=0, v=2, n=5 earns points for k∈[1,3], so diff[1]++ and diff[4]−−.",
+    "```\ndiff = zeros(n+1)\nfor j in 0..n-1:\n    v = nums[j]\n    if v <= j:  mark interval [0, j-v]      # diff[0]++; diff[j-v+1]--\n    mark interval [j+1, min(n-1, j+n-v)]   # diff[j+1]++; diff[r2+1]--\nscore = 0, best = -1, bestK = 0\nfor k in 0..n-1:\n    score += diff[k]\n    if score > best: best = score; bestK = k\nreturn bestK\n```",
+    "**Tie / all zeros** - every rotation yields the same score, so the smallest k must win.\n`Input: nums = [0,0,0]` → `Expected: 0`\n⚠️ Bug: using `>=` instead of `>` when comparing score to best → returns `2`.\n\n**Wrap-around required** - elements with v > j only earn points after their position wraps past 0.\n`Input: nums = [2,3,1,4,0]` → `Expected: 3`\n⚠️ Bug: handling only the k ≤ j case and skipping the wrap-around interval → returns `0`.\n\n**Boundary v == j** - the element earns a point exactly at k = 0 (position j), so the first interval is [0,0].\n`Input: nums = [0,1]` → `Expected: 0`\n⚠️ Bug: using `v < j` instead of `v <= j` for the first interval → returns `1`.\n\n**Uncapped second interval** - j+n−v can exceed n−1 (e.g. j=n−1, v=0 gives 2n−1).\n`Input: nums = [0,0]` → `Expected: 0`\n⚠️ Bug: setting `r2 = j+n−v` without `min(n−1, …)` then doing `diff[r2+1]−−` → out-of-bounds write."
+  ],
+  "followUps": [
+    {
+      "q": "What if the scoring rule were nums[i] < i (strictly less) instead of ≤?",
+      "a": "Each interval's right endpoint shifts left by 1: first becomes [0, j−v−1] (when v < j) and second becomes [j+1, min(n−1, j+n−v−1)]. Same difference-array sweep, still O(n) time and O(n) space."
+    },
+    {
+      "q": "If n can be 10^7 and you cannot allocate an extra O(n) array, how do you reduce auxiliary memory?",
+      "a": "Reuse the input vector itself as the difference array (overwrite nums with diff values), since it is passed by reference and no longer needed afterward. This gives O(1) auxiliary space while keeping O(n) time."
+    },
+    {
+      "q": "What if elements of nums can be updated between queries, and after each update you must return the best k?",
+      "a": "Maintain the difference array inside a Fenwick (BIT) tree supporting range-add / point-query, so each element update (removing two old intervals and adding two new ones) costs O(log n) and a full best-k scan costs O(n log n). Time becomes O((n+q) log n) with O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int bestRotation(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> diff(n + 1, 0);\n        for (int j = 0; j < n; j++) {\n            int v = nums[j];\n            if (v <= j) {\n                diff[0]++;\n                diff[j - v + 1]--;\n            }\n            int l2 = j + 1;\n            int r2 = min(n - 1, j + n - v);\n            if (l2 <= r2) {\n                diff[l2]++;\n                diff[r2 + 1]--;\n            }\n        }\n        int bestK = 0, bestScore = -1, score = 0;\n        for (int k = 0; k < n; k++) {\n            score += diff[k];\n            if (score > bestScore) {\n                bestScore = score;\n                bestK = k;\n            }\n        }\n        return bestK;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

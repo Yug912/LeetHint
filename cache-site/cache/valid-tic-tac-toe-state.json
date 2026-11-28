@@ -1,0 +1,40 @@
+{
+  "slug": "valid-tic-tac-toe-state",
+  "title": "Valid Tic-Tac-Toe State",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting & Invariant Checking",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers allocated; only a few int/bool locals → O(1)\n- No recursion → O(1)\n- Input board not counted",
+  "approach": "A valid tic-tac-toe board must satisfy three invariants. First, the count of X's must equal the count of O's or be exactly one more (since X always moves first and players alternate). Second, at most one player can have a winning line - if both have three-in-a-row, the game would have ended when the first player won. Third, if X has a winning line, X must have just played, so X count = O count + 1; if O has a winning line, O must have just played, so X count = O count. These conditions are both necessary and sufficient for a 3×3 board.",
+  "hints": [
+    "Since X always moves first and players alternate, what must always be true about the relationship between the number of X's and O's on any reachable board? The board is a fixed 3×3 grid.",
+    "Count X and O characters, then check all 8 lines (3 rows, 3 columns, 2 diagonals) for wins. For board [\"XOX\",\"O O\",\"XOX\"]: xCount=5, oCount=4, neither player wins → valid.",
+    "```\ncount X and O on the board\nif X count is not O count and not O count + 1: return false\nxWins = does any of 8 lines have all X\noWins = does any of 8 lines have all O\nif xWins and oWins: return false\nif xWins and X count != O count + 1: return false\nif oWins and X count != O count: return false\nreturn true\n```",
+    "**Both players win** - Two complete lines exist simultaneously, impossible in a valid game.\n`Input: [\"XXX\",\"OOO\",\"   \"]` → `Expected: false`\n⚠️ Bug: skipping the both-win check → returns `true`\n\n**X wins with equal counts** - X has a winning line but counts are equal, meaning O moved after X won.\n`Input: [\"XXX\",\"OO \",\"O  \"]` → `Expected: false`\n⚠️ Bug: not checking `xWins implies xCount == oCount + 1` → returns `true`\n\n**O wins with X having extra** - O has a winning line but X count exceeds O count by one, meaning X moved after O won.\n`Input: [\"OOO\",\"XX \",\"X X\"]` → `Expected: false`\n⚠️ Bug: not checking `oWins implies xCount == oCount` → returns `true`\n\n**Count difference exceeds one** - Two X's with zero O's, impossible since players alternate.\n`Input: [\"XX \",\"   \",\"   \"]` → `Expected: false`\n⚠️ Bug: only checking `xCount >= oCount` instead of `xCount == oCount || xCount == oCount + 1` → returns `true`"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to an N×N board where a player wins with K in a row. How does the approach change?",
+      "a": "The counting invariant stays the same. The win-check becomes O(N²) by scanning each row, column, and diagonal for K consecutive same characters. The both-win and count-vs-winner checks remain identical. TC becomes O(N²), SC stays O(1)."
+    },
+    {
+      "q": "Instead of checking validity, count the number of distinct valid move sequences that reach the given board.",
+      "a": "Enumerate all permutations of the filled cells consistent with turn order, pruning any sequence where a win occurs before the last move. Use backtracking with the same win-check at each step. TC is O(M! × M) where M is the number of filled cells (at most 9), SC is O(M) for the recursion stack."
+    },
+    {
+      "q": "Given a valid board state, determine whether the player whose turn it is can force a win from this position.",
+      "a": "Run a minimax search over all legal next moves, using the same win-check to detect terminal states. Return true if any move leads to a forced win. TC is O(9! ) worst case for an empty board, SC is O(9) for the recursion depth."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool validTicTacToe(vector<string>& board) {\n        int xCount = 0, oCount = 0;\n        for (int i = 0; i < 3; i++) {\n            for (int j = 0; j < 3; j++) {\n                if (board[i][j] == 'X') xCount++;\n                else if (board[i][j] == 'O') oCount++;\n            }\n        }\n        if (xCount != oCount && xCount != oCount + 1) return false;\n\n        bool xWins = checkWin(board, 'X');\n        bool oWins = checkWin(board, 'O');\n\n        if (xWins && oWins) return false;\n        if (xWins && xCount != oCount + 1) return false;\n        if (oWins && xCount != oCount) return false;\n\n        return true;\n    }\n\nprivate:\n    bool checkWin(vector<string>& board, char c) {\n        for (int i = 0; i < 3; i++) {\n            if (board[i][0] == c && board[i][1] == c && board[i][2] == c) return true;\n            if (board[0][i] == c && board[1][i] == c && board[2][i] == c) return true;\n        }\n        if (board[0][0] == c && board[1][1] == c && board[2][2] == c) return true;\n        if (board[0][2] == c && board[1][1] == c && board[2][0] == c) return true;\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

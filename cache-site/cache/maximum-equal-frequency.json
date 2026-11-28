@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-equal-frequency",
+  "title": "Maximum Equal Frequency",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency-of-frequencies tracking",
+  "tc": "O(n)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- vector<int> count(100001): frequency of each value → O(V)\n- vector<int> freq(100001): count of values at each frequency → O(V)\n- not counted: input nums, returned int",
+  "approach": "Iterate left to right, maintaining `count[x]` (occurrences of value `x`), `freq[f]` (how many distinct values currently have frequency `f`), and `maxFreq`. After adding element `i` (prefix length `len = i+1`), the prefix is \"good\" iff one of three shapes holds: (A) `maxFreq == 1` (delete any one, all remaining appear once); (B) exactly one value appears once and all others appear `maxFreq` times - delete the singleton, so `freq[1]==1 && freq[maxFreq]*maxFreq == len-1`; (C) exactly one value appears `maxFreq` times and all others appear `maxFreq-1` times - delete one copy of the max-freq value, so `freq[maxFreq]==1 && (freq[maxFreq-1]+1)*(maxFreq-1) == len-1`. Take the largest `len` that is good.",
+  "hints": [
+    "After deleting one element, what must be true about how many times each remaining value appears? The array length can be up to 10^5.",
+    "Keep two arrays: `count[x]` = occurrences of value `x`, and `freq[f]` = how many distinct values currently have frequency `f`, plus running `maxFreq`. At prefix length 7 of Example 1 we have `freq={2:3, 1:1}`, `maxFreq=2`: one singleton (5) to delete, the other three values all at frequency 2.",
+    "```\nfor each x at index i (len = i+1):\n    decrement freq[count[x]], increment count[x], increment freq[count[x]]\n    update maxFreq\n    good = (maxFreq == 1)\n          or (freq[1]==1 and freq[maxFreq]*maxFreq == len-1)\n          or (freq[maxFreq]==1 and (freq[maxFreq-1]+1)*(maxFreq-1) == len-1)\n    if good: ans = len\nreturn ans\n```",
+    "**All elements equal** - a single distinct value repeated.\n`Input: nums = [1,1,1]` → `Expected: 3`\n⚠️ Bug: omitting Case C (one value at maxFreq, delete one of its copies) → returns 2.\n\n**All distinct** - every value appears exactly once.\n`Input: nums = [1,2,3,4]` → `Expected: 4`\n⚠️ Bug: not treating `maxFreq == 1` as valid → returns 0.\n\n**Two copies of one value** - smallest non-trivial prefix.\n`Input: nums = [1,1]` → `Expected: 2`\n⚠️ Bug: Case C check using `freq[maxFreq-1]*(maxFreq-1)` instead of `(freq[maxFreq-1]+1)*(maxFreq-1)` → returns 1.\n\n**Singleton plus uniform block** - one outlier to delete.\n`Input: nums = [1,1,2,2,3]` → `Expected: 5`\n⚠️ Bug: Case B check using `freq[maxFreq]*maxFreq == len` instead of `== len-1` → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums arrives as an unbounded stream you cannot store?",
+      "a": "Process each element online, keeping only `count` and `freq` maps plus `maxFreq`; the three goodness checks are O(1) per element. Time stays O(n) expected, space O(U) where U is distinct values seen so far."
+    },
+    {
+      "q": "What if you must remove exactly k elements instead of 1?",
+      "a": "Generalize the checks: after removing k, all remaining values share frequency f, so the frequency-of-frequencies distribution must be collapsible by subtracting k total from the top end. This needs examining a few candidate f values around maxFreq, giving O(n) per check but more cases; overall O(n) with careful counting."
+    },
+    {
+      "q": "What if nums[i] can be up to 10^9 (or negative)?",
+      "a": "Replace the fixed-size `count` array with an `unordered_map<int,int>` keyed by value; `freq` can stay an array indexed by frequency (still ≤ n). Time O(n) expected, space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxEqualFreq(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> count(100001, 0);\n        vector<int> freq(100001, 0);\n        int maxFreq = 0;\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            int x = nums[i];\n            if (count[x] > 0) freq[count[x]]--;\n            count[x]++;\n            freq[count[x]]++;\n            if (count[x] > maxFreq) maxFreq = count[x];\n            int len = i + 1;\n            bool valid = false;\n            if (maxFreq == 1) {\n                valid = true;\n            } else if (freq[1] == 1 && freq[maxFreq] * maxFreq == len - 1) {\n                valid = true;\n            } else if (freq[maxFreq] == 1 &&\n                       (freq[maxFreq - 1] + 1) * (maxFreq - 1) == len - 1) {\n                valid = true;\n            }\n            if (valid) ans = len;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

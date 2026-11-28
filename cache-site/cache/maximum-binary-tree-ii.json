@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-binary-tree-ii",
+  "title": "Maximum Binary Tree II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Right-Spine Traversal",
+  "tc": "O(h)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- TreeNode* node: 1 allocated node → O(1)\n- TreeNode* curr: 1 pointer → O(1)\n- not counted: input tree, returned tree",
+  "approach": "Since val is appended to the end of array a, it can only affect the right spine of the maximum tree. Traverse down the right spine iteratively: if val exceeds the root, val becomes the new root with the old tree as its left child. Otherwise, walk down the right spine until finding a node whose right child is null or has value less than val, then insert val there with the displaced subtree as its left child. This runs in O(h) time with O(1) extra space.",
+  "hints": [
+    "Since val is appended to the end of array a, which part of the maximum tree is the only part that could change?\nThe array b is a copy of a with val appended at the end.",
+    "Iterative right-spine traversal. In Example 3 (root=[5,2,3,null,1], val=4): 4 < 5 so move right; 4 > 3 so 4 takes 3's spot with 3 as its left child.",
+    "```\nif val > root.val:\n    return new Node(val, left=root)\ncurr = root\nwhile curr.right exists and curr.right.val > val:\n    curr = curr.right\nnewNode = Node(val, left=curr.right)\ncurr.right = newNode\nreturn root\n```",
+    "**Smallest input, val larger** - Tree has a single node and val exceeds it.\n`Input: root = [1], val = 5` → `Expected: [5,1]`\n⚠️ Bug: not checking val > root->val first, going to right-spine traversal → returns [1,null,5]\n\n**val is global maximum (Example 1)** - val is larger than every node in the tree.\n`Input: root = [4,1,3,null,null,2], val = 5` → `Expected: [5,4,null,1,3,null,null,2]`\n⚠️ Bug: skipping the root check, only traversing right spine → returns [4,1,5,null,null,3,null,null,2]\n\n**val inserted mid-spine, losing subtree (Example 3)** - val falls between two right-spine nodes.\n`Input: root = [5,2,3,null,1], val = 4` → `Expected: [5,2,4,null,1,3]`\n⚠️ Bug: setting curr->right = node without first saving node->left = curr->right → returns [5,2,4,null,1]\n\n**val is smallest, reversed comparison (Example 2)** - val is smaller than all right-spine nodes.\n`Input: root = [5,2,4,null,1], val = 3` → `Expected: [5,2,4,null,1,null,3]`\n⚠️ Bug: using < instead of > in the while loop condition → returns [5,2,3,null,1,4]"
+  ],
+  "followUps": [
+    {
+      "q": "What if val can be inserted at any position in the array, not just appended?",
+      "a": "Reconstruct the original array via an inorder traversal of the maximum tree (which recovers the original element order), insert val at the specified position, then rebuild the maximum tree from scratch. This takes O(n) time and O(n) space."
+    },
+    {
+      "q": "What if the tree has 10^5 nodes instead of 100?",
+      "a": "The iterative right-spine approach already handles this in O(h) time and O(1) space. For a balanced tree h = O(log n); for a skewed tree h = O(n). Both are well within the 10^8 operations budget for n = 10^5."
+    },
+    {
+      "q": "What if we need to insert k values at once, all appended to the array?",
+      "a": "Insert them sequentially using the same right-spine traversal. Total time is O(k·h) where h is the maximum tree height during insertions. Space remains O(1). For large k, reconstructing the array and rebuilding the tree in O(n+k) time and space is more efficient."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* insertIntoMaxTree(TreeNode* root, int val) {\n        TreeNode* node = new TreeNode(val);\n        if (root == nullptr) return node;\n        if (val > root->val) {\n            node->left = root;\n            return node;\n        }\n        TreeNode* curr = root;\n        while (curr->right != nullptr && curr->right->val > val) {\n            curr = curr->right;\n        }\n        node->left = curr->right;\n        curr->right = node;\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

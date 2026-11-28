@@ -1,0 +1,51 @@
+{
+  "slug": "complete-binary-tree-inserter",
+  "title": "Complete Binary Tree Inserter",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Level-Order BFS with Candidate Queue",
+  "tc": "O(n + k)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> candidates: up to n/2 + 1 entries (last-level nodes + possibly one partial parent) → O(n)\n- queue<TreeNode*> q (constructor BFS): up to n/2 entries at widest level → O(n), freed after constructor\n- TreeNode* root: O(1)\n- not counted: input tree, returned root pointer",
+  "approach": "Maintain a queue of \"candidate\" nodes - nodes in the complete binary tree that have at least one missing child, in level-order. On initialization, BFS the tree and collect all such nodes. On insert, the front of the queue is the next parent: if it lacks a left child, attach there (parent stays in queue since it still needs a right child); otherwise attach as right child and pop the parent (now complete). The new node always enters the queue. This guarantees O(1) per insert and keeps the tree complete.",
+  "hints": [
+    "In a complete binary tree, which node receives the next inserted child? Walk the tree level by level, left to right - what property identifies the first node that is not yet \"full\"?",
+    "Use a queue of candidate parents (nodes missing at least one child). With tree [1, 2], node 1 is at the front with a missing right child, so insert(3) attaches 3 as 1's right child and returns 1.",
+    "```\nconstructor:\n  BFS from root\n  collect every node with < 2 children into a queue\n\ninsert(v):\n  parent = front of queue\n  if parent.left is empty:\n    parent.left = new Node(v)\n  else:\n    parent.right = new Node(v)\n    pop parent from queue\n  push new Node(v) to queue\n  return parent.val\n\nget_root:\n  return root\n```",
+    "**Single node** - root has no children at all\n`Input: [[1]], insert(2)` → `Expected: 1`\n⚠️ Bug: checking `parent->right` before `parent->left` → sets 2 as right child, tree becomes [1,null,2] instead of [1,2]\n\n**Left insertion keeps parent** - parent still needs right child afterward\n`Input: [[1,2,3]], insert(4), insert(5)` → `Expected: 2, 2`\n⚠️ Bug: popping parent after left-child insertion → insert(5) returns 3 instead of 2\n\n**Right insertion must pop** - parent is now complete\n`Input: [[1,2]], insert(3), insert(4)` → `Expected: 1, 2`\n⚠️ Bug: not popping parent after right-child insertion → insert(4) overwrites node 1's right child and returns 1 instead of 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree can have up to 10^9 nodes - can you still support O(1) insert without storing all candidates?",
+      "a": "Track the total node count. To find the insertion parent, write the count in binary, drop the leading 1, then walk from the root using each remaining bit (0 = left, 1 = right). This gives O(log n) per insert and O(1) auxiliary space."
+    },
+    {
+      "q": "What if you also need to support deleting the most recently inserted node?",
+      "a": "Decrement the node count and use the same binary-navigation trick to reach the last node, then detach it from its parent. Each delete is O(log n); the tree stays complete because you always remove the rightmost last-level node."
+    },
+    {
+      "q": "What if the tree is stored as an array (heap-style indexing) instead of linked nodes?",
+      "a": "Insert is just appending to the array - the parent of the new node at index n is at index (n−1)/2. No queue is needed; both insert and get_root are O(1) with O(1) auxiliary space beyond the array itself."
+    }
+  ],
+  "code": {
+    "cpp": "class CBTInserter {\n    TreeNode* root;\n    queue<TreeNode*> candidates;\npublic:\n    CBTInserter(TreeNode* root) {\n        this->root = root;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            TreeNode* node = q.front();\n            q.pop();\n            if (!node->left || !node->right) {\n                candidates.push(node);\n            }\n            if (node->left) q.push(node->left);\n            if (node->right) q.push(node->right);\n        }\n    }\n    \n    int insert(int val) {\n        TreeNode* newNode = new TreeNode(val);\n        TreeNode* parent = candidates.front();\n        if (!parent->left) {\n            parent->left = newNode;\n        } else {\n            parent->right = newNode;\n            candidates.pop();\n        }\n        candidates.push(newNode);\n        return parent->val;\n    }\n    \n    TreeNode* get_root() {\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

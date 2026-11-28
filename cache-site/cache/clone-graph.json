@@ -1,0 +1,51 @@
+{
+  "slug": "clone-graph",
+  "title": "Clone Graph",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "DFS with Visited Map",
+  "tc": "O(V + E)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- unordered_map<Node*, Node*> mp: up to V entries → O(V)\n- recursion call stack: worst case O(V) for a chain-shaped graph\n- not counted: input graph, returned cloned graph",
+  "approach": "Use DFS with a hash map that maps each original `Node*` to its cloned `Node*`. When visiting a node, create its clone, record the mapping *before* recursing into neighbors (so back-edges find the existing clone), then recursively clone each neighbor and append the result to the clone's neighbor list. If a node is already in the map, return the stored clone. This guarantees every node is cloned exactly once and all edges are faithfully reproduced, including cycles.",
+  "hints": [
+    "When you follow a neighbor pointer in an undirected graph, what happens when that neighbor points back to a node you've already started cloning?\nThe graph is undirected, so every edge appears in both nodes' neighbor lists.",
+    "Use a hash map (`unordered_map<Node*, Node*>`) to record each original-to-clone mapping, then DFS from the start node.\nFor node 1 in Example 1: create clone1, store `map[node1] = clone1`, then recurse into neighbors 2 and 4.",
+    "```\nfunction clone(node):\n    if node is null: return null\n    map = empty map\n    return dfs(node, map)\n\nfunction dfs(node, map):\n    if node in map: return map[node]\n    clone = new Node(node.val)\n    map[node] = clone\n    for each neighbor of node:\n        clone.neighbors.add(dfs(neighbor, map))\n    return clone\n```",
+    "**Empty graph** - the reference is null because there are no nodes.\n`Input: adjList = []` → `Expected: []`\n⚠️ Bug: accessing `node->val` without a null check → null pointer dereference, runtime error\n\n**Single isolated node** - one node with val=1 and no neighbors.\n`Input: adjList = [[]]` → `Expected: [[]]`\n⚠️ Bug: returning the input node directly instead of allocating a new one → shallow copy, wrong answer\n\n**Two-node cycle** - node 1 and node 2 are each other's only neighbor.\n`Input: adjList = [[2],[1]]` → `Expected: [[2],[1]]`\n⚠️ Bug: recursively cloning neighbors without any visited tracking → infinite recursion, stack overflow\n\n**Map entry timing** - setting the map entry after the neighbor loop creates duplicates on back-edges.\n`Input: adjList = [[2],[1]]` → `Expected: [[2],[1]]`\n⚠️ Bug: writing `mp[node] = clone` after the for-loop instead of before → when node 2's neighbor (node 1) is processed, node 1 isn't in the map yet, so a second clone of node 1 is created; clone2 then points to this duplicate instead of the returned clone1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph could be disconnected and you're given a list of all nodes?",
+      "a": "Iterate over every node in the list. For each node not yet in the map, run the same DFS clone and collect the cloned roots. TC stays O(V+E), SC stays O(V)."
+    },
+    {
+      "q": "What if recursion depth is a concern (e.g., 10^5 nodes in a chain)?",
+      "a": "Replace DFS with an iterative BFS using a queue. Push the start node, create its clone, then for each dequeued node create clones of unvisited neighbors and link them. TC O(V+E), SC O(V) with no recursion stack."
+    },
+    {
+      "q": "What if you need to serialize the graph to a string and deserialize it later?",
+      "a": "Use BFS to assign each node an index, then write the adjacency list as a string. To deserialize, create all nodes first, then fill in neighbors from the adjacency list. TC O(V+E), SC O(V+E) for the serialized form."
+    }
+  ],
+  "code": {
+    "cpp": "/*\n// Definition for a Node.\nclass Node {\npublic:\n    int val;\n    vector<Node*> neighbors;\n    Node() {\n        val = 0;\n        neighbors = vector<Node*>();\n    }\n    Node(int _val) {\n        val = _val;\n        neighbors = vector<Node*>();\n    }\n    Node(int _val, vector<Node*> _neighbors) {\n        val = _val;\n        neighbors = _neighbors;\n    }\n};\n*/\n\nclass Solution {\npublic:\n    Node* cloneGraph(Node* node) {\n        if (!node) return nullptr;\n        unordered_map<Node*, Node*> mp;\n        return dfs(node, mp);\n    }\nprivate:\n    Node* dfs(Node* node, unordered_map<Node*, Node*>& mp) {\n        if (mp.count(node)) return mp[node];\n        Node* clone = new Node(node->val);\n        mp[node] = clone;\n        for (Node* neighbor : node->neighbors) {\n            clone->neighbors.push_back(dfs(neighbor, mp));\n        }\n        return clone;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

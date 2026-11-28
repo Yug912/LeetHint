@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-to-make-all-characters-equal",
+  "title": "Minimum Cost to Make All Characters Equal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy on Adjacent Differences",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long ans, left, right: scalars → O(1)\n- int n, j: scalars → O(1)\n- not counted: input string s",
+  "approach": "Each operation flips exactly one internal adjacent boundary: op1 at index i flips the match status of pair (i, i+1); op2 at index i flips pair (i-1, i). To end with all characters equal, every adjacent pair must match, so each originally-mismatched pair (j, j+1) needs exactly one operation cutting it - either op1 at j (cost j+1) or op2 at j+1 (cost n−1−j). Boundaries are independent, so the answer is the sum of min(j+1, n−1−j) over all mismatched adjacent pairs.",
+  "hints": [
+    "When operation 1 is applied at index i, how many adjacent pairs (j, j+1) in the string actually change their match/mismatch status? The string length can be up to 10^5.",
+    "Greedy independence: each mismatched adjacent pair (j, j+1) is fixed by exactly one operation, so pay min(j+1, n−1−j) per pair. For s=\"0011\", the only mismatch is pair (1,2): min(2, 2) = 2.",
+    "```\nans = 0\nfor j from 0 to n-2:\n    if s[j] != s[j+1]:\n        ans += min(j+1, n-1-j)\nreturn ans\n```",
+    "**Single character** - n=1, no adjacent pairs exist.\n`Input: s = \"0\"` → `Expected: 0`\n⚠️ Bug: looping `for j in 0..n-1` (should be n-2) and reading s[j+1] → out-of-bounds access, undefined output.\n\n**All characters equal** - every adjacent pair already matches.\n`Input: s = \"1111\"` → `Expected: 0`\n⚠️ Bug: initialising `ans = 1` instead of `0` → returns 1.\n\n**Alternating string** - every adjacent pair is a mismatch, maximising the sum.\n`Input: s = \"010101\"` → `Expected: 9`\n⚠️ Bug: using `min(j, n-1-j)` instead of `min(j+1, n-1-j)` (forgetting op1 costs i+1) → returns 6.\n\n**Overflow** - n=10^5 fully alternating; sum ≈ n²/4 = 2.5×10^9 > 2^31−1.\n`Input: s = \"0101...\" (length 10^5)` → `Expected: 2500000000`\n⚠️ Bug: accumulating in `int ans` → signed overflow, returns a negative value."
+  ],
+  "followUps": [
+    {
+      "q": "What if operation costs were arbitrary arrays cost1[i] and cost2[i] instead of i+1 and n−i?",
+      "a": "Independence still holds since each operation affects exactly one internal boundary. For each mismatched pair j, pay min(cost1[j], cost2[j+1]). Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if op1 can be used at most K times total across the whole string?",
+      "a": "Boundaries are no longer fully independent. For each mismatched pair, compute the saving from using op1 vs op2, then pick the K pairs with the largest positive saving to assign op1 (the rest get op2). Sorting gives O(n log n), nth_element gives O(n)."
+    },
+    {
+      "q": "What if the string arrives as a stream, one character at a time, with O(1) memory?",
+      "a": "The current solution already inspects only adjacent pairs and keeps a running sum, so it streams naturally: hold the previous character and the running total, add min(j+1, n−1−j) when a new character differs from the previous. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimumCost(string s) {\n        int n = s.size();\n        long long ans = 0;\n        for (int j = 0; j < n - 1; j++) {\n            if (s[j] != s[j + 1]) {\n                long long left = j + 1;\n                long long right = (long long)(n - 1) - j;\n                ans += (left < right) ? left : right;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

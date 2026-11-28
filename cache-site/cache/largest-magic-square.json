@@ -1,0 +1,40 @@
+{
+  "slug": "largest-magic-square",
+  "title": "Largest Magic Square",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum + Brute Force Enumeration",
+  "tc": "O(m·n·K²)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- rowSum: m × (n+1) ints → O(m·n)\n- colSum: (m+1) × n ints → O(m·n)\n- diag1: (m+1) × (n+1) ints → O(m·n)\n- diag2: (m+1) × (n+1) ints → O(m·n)\n- recursion depth: none\n- not counted: input grid, returned int",
+  "approach": "Use 2D prefix sums for rows, columns, and both diagonals so any segment sum is O(1). Iterate over every top-left corner (r,c) and try sizes k from largest to smallest. For each candidate, compute both diagonal sums in O(1); if they match, verify all k row sums and k column sums equal that target. Break on the first valid k per corner since we go largest-first. Every 1×1 grid is trivially magic, so initialize the answer to 1.",
+  "hints": [
+    "With m, n ≤ 50, there are at most 2500 top-left corners and 50 possible sizes. For each candidate square, what is the minimum work needed to verify all its row, column, and diagonal sums are equal?",
+    "Use 2D prefix sums for rows, columns, and both diagonals. In Example 1, the main diagonal of the 3×3 square at (1,1) is diag1[4][4] − diag1[1][1] = 19 − 7 = 12.",
+    "```\nbuild rowSum, colSum, diag1, diag2 prefix arrays\nmaxSize = 1\nfor each top-left (r, c):\n    for k from min(m-r, n-c) down to 2:\n        d1 = diag1[r+k][c+k] - diag1[r][c]\n        d2 = diag2[r+k][c] - diag2[r][c+k]\n        if d1 != d2: continue\n        check all k row sums and k col sums == d1\n        if all match: maxSize = k; break\nreturn maxSize\n```",
+    "**Smallest input** - A 1×1 grid is trivially a magic square.\n`Input: [[5]]` → `Expected: 1`\n⚠️ Bug: initializing maxSize to 0 instead of 1 → returns 0\n\n**Diagonal mismatch** - All row and column sums match but the two diagonals differ.\n`Input: [[2,1],[1,2]]` → `Expected: 1`\n⚠️ Bug: skipping the `d1 != d2` check → returns 2\n\n**All equal values** - Every sub-square is magic, so the answer is min(m, n).\n`Input: [[3,3],[3,3]]` → `Expected: 2`\n⚠️ Bug: iterating k upward from 1 and returning on first match → returns 1\n\n**Single row** - Only 1×1 squares are possible.\n`Input: [[1,2,3,4]]` → `Expected: 1`\n⚠️ Bug: not clamping k to min(m−r, n−c), accessing colSum out of bounds → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is 1000×1000 - how would you optimize?",
+      "a": "Precompute for every pair of rows whether their sums match over every column range using a rolling comparison, reducing the per-candidate row check to O(1). Combined with prefix sums for columns and diagonals, each candidate becomes O(k) instead of O(k). New TC: O(m²·n + m·n·K), SC: O(m·n)."
+    },
+    {
+      "q": "What if the magic square must contain all distinct integers?",
+      "a": "Add a hash-set membership check for all k² cells inside each candidate square. This adds O(k²) per candidate, making total TC O(m·n·K³). For m, n ≤ 50 this is still under 10⁷ operations. SC increases by O(K²) for the temporary set."
+    },
+    {
+      "q": "What if you must return all magic squares, not just the largest?",
+      "a": "Remove the `break` after finding a valid k and continue checking all smaller sizes for each corner. Collect every valid (r, c, k) triple into a result vector. TC stays O(m·n·K²); SC becomes O(number of magic squares) for the output list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestMagicSquare(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n\n        vector<vector<int>> rowSum(m, vector<int>(n + 1, 0));\n        vector<vector<int>> colSum(m + 1, vector<int>(n, 0));\n        vector<vector<int>> diag1(m + 1, vector<int>(n + 1, 0));\n        vector<vector<int>> diag2(m + 1, vector<int>(n + 1, 0));\n\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                rowSum[i][j + 1] = rowSum[i][j] + grid[i][j];\n                colSum[i + 1][j] = colSum[i][j] + grid[i][j];\n                diag1[i + 1][j + 1] = diag1[i][j] + grid[i][j];\n                diag2[i + 1][j] = diag2[i][j + 1] + grid[i][j];\n            }\n        }\n\n        int maxSize = 1;\n\n        for (int r = 0; r < m; r++) {\n            for (int c = 0; c < n; c++) {\n                int maxK = min(m - r, n - c);\n                for (int k = maxK; k >= 2; k--) {\n                    int br = r + k - 1;\n                    int bc = c + k - 1;\n\n                    int d1 = diag1[br + 1][bc + 1] - diag1[r][c];\n                    int d2 = diag2[br + 1][c] - diag2[r][bc + 1];\n\n                    if (d1 != d2) continue;\n\n                    int target = d1;\n                    bool ok = true;\n\n                    for (int i = r; i <= br && ok; i++) {\n                        if (rowSum[i][bc + 1] - rowSum[i][c] != target)\n                            ok = false;\n                    }\n                    for (int j = c; j <= bc && ok; j++) {\n                        if (colSum[br + 1][j] - colSum[r][j] != target)\n                            ok = false;\n                    }\n\n                    if (ok) {\n                        maxSize = max(maxSize, k);\n                        break;\n                    }\n                }\n            }\n        }\n\n        return maxSize;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

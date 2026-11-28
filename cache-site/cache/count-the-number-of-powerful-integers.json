@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-powerful-integers",
+  "title": "Count the Number of Powerful Integers",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Digit DP",
+  "tc": "O(log finish)",
+  "sc": "O(log finish)",
+  "spaceBreakdown": "- vector<long long> powv: up to k+1 ≈ 16 entries → O(log finish)\n- string xs: up to 16 chars → O(log finish)\n- recursion depth: none (iterative)\n- not counted: input parameters, returned value",
+  "approach": "Every powerful integer has the form `prefix + s`, where each digit of `prefix` is in `[0, limit]`. To count powerful integers in `[1, x]`, we count valid prefixes of length `k = len(x) - len(s)` that keep `prefix + s ≤ x` using digit DP. At each position, if the bound's digit exceeds `limit`, all `limit+1` choices go free (multiplied by precomputed `(limit+1)^remaining`); otherwise, digits `0..d-1` go free and `d` stays tight. The answer is `count(finish) - count(start-1)`.",
+  "hints": [
+    "Every powerful integer ends with the fixed string `s`, so which part of the number is actually free to vary, and what single constraint must that varying part satisfy relative to the upper bound `x`?",
+    "Digit DP on the prefix. For `finish=6000`, `s=\"124\"`, `limit=4`: the number is `prefix(1 digit) + \"124\"`; count prefixes in `[0,4]` whose concatenation with `\"124\"` stays `≤ 6000`.",
+    "```\ncount(x):\n  xs = digits of x; k = len(xs) - len(s)\n  if k < 0: return 0\n  precompute pow[b] = (limit+1)^b  for b in 0..k\n  result = 0; tight = true\n  for i in 0..k-1 while tight:\n    d = xs[i]\n    if d > limit:\n      result += (limit+1) * pow[k-1-i];  tight = false\n    else:\n      result += d * pow[k-1-i]   # digits 0..d-1 go free\n  if tight and xs[k:] >= s: result += 1\n  return result\nanswer = count(finish) - count(start-1)\n```",
+    "**Empty prefix (k=0)** - the bound has the same length as `s`, so the prefix is empty.\n`Input: start=1, finish=1, limit=1, s=\"1\"` → `Expected: 1`\n⚠️ Bug: requiring `k≥1` and returning 0 for empty prefix → returns 0\n\n**Suffix equals bound exactly** - the tight path must include equality.\n`Input: start=124, finish=124, limit=4, s=\"124\"` → `Expected: 1`\n⚠️ Bug: using `xs.substr(k) > s` (strict) instead of `>=` → returns 0\n\n**Prefix digit exceeds limit** - all `limit+1` lower digits go free.\n`Input: start=1, finish=54124, limit=4, s=\"124\"` → `Expected: 25`\n⚠️ Bug: adding `limit * pow[...]` instead of `(limit+1) * pow[...]` when `d > limit` → returns 20\n\n**Large powers overflow int** - `(limit+1)^k` with `limit=9, k=15` gives `10^15 > 2^31`.\n`Input: start=1, finish=1000000000000000, limit=9, s=\"1\"` → `Expected: 100000000000000`\n⚠️ Bug: storing `powv` as `int` → `10^14` overflows → returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if `limit` can be 0, meaning every digit must be exactly 0?",
+      "a": "Then the only valid prefix digit is 0, so the only powerful integer is `s` itself (with leading zeros collapsed). The DP still works: `(limit+1)^b = 1` for all `b`, and each position contributes `0 * pow[...]` unless the bound digit is 0. Time and space stay O(log finish)."
+    },
+    {
+      "q": "What if `s` can have leading zeros?",
+      "a": "The suffix comparison `xs.substr(k) >= s` still works lexicographically for equal-length strings. However, `stoll(s)` would drop leading zeros, so we must compare strings directly rather than numeric values. Time and space unchanged."
+    },
+    {
+      "q": "What if we need to answer many `(start, finish)` queries on the same `s` and `limit`?",
+      "a": "Precompute `count(x)` as a function that only depends on the digit string of `x`. Each query is still O(log finish), but we avoid recomputing `to_string` overhead. For billions of queries, precompute prefix counts for all digit-lengths up to 16 in O(log finish) total, then each query is O(1). Space becomes O(log finish) for the precomputed table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long numberOfPowerfulInt(long long start, long long finish, int limit, string s) {\n        long long sv = stoll(s);\n        auto count = [&](long long x) -> long long {\n            if (x < sv) return 0;\n            string xs = to_string(x);\n            int n = (int)xs.size();\n            int m = (int)s.size();\n            if (n < m) return 0;\n            int k = n - m;\n            vector<long long> powv(k + 1);\n            powv[0] = 1;\n            for (int i = 1; i <= k; i++) powv[i] = powv[i - 1] * (limit + 1);\n            long long result = 0;\n            bool tight = true;\n            for (int i = 0; i < k && tight; i++) {\n                int digit = xs[i] - '0';\n                if (digit > limit) {\n                    result += (long long)(limit + 1) * powv[k - 1 - i];\n                    tight = false;\n                } else {\n                    result += (long long)digit * powv[k - 1 - i];\n                }\n            }\n            if (tight && xs.substr(k) >= s) result += 1;\n            return result;\n        };\n        return count(finish) - count(start - 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

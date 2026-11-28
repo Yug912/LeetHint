@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-beautiful-subarrays",
+  "title": "Count the Number of Beautiful Subarrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix XOR + Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> seen: up to n+1 distinct prefix-XOR values → O(n)\n- recursion depth: none\n- not counted: input vector, returned long long",
+  "approach": "Each operation flips the k-th bit in exactly two chosen elements, so the XOR of the entire subarray is invariant under every operation. To reach all zeros the subarray's XOR must be 0, and conversely XOR 0 means every bit appears an even number of times across the subarray, so the bits can be paired up and eliminated by repeated operations. Thus a subarray is beautiful iff its XOR is 0. Using prefix XOR, subarray [l+1..r] has XOR 0 iff prefix[r] == prefix[l]; sweep left to right with a hash map counting earlier occurrences of each prefix value.",
+  "hints": [
+    "Each operation flips the k-th bit in exactly two chosen elements. What single quantity, computed over the whole subarray, stays unchanged no matter which pair of indices and which bit you pick?",
+    "Maintain a running prefix XOR and a hash map counting how many earlier prefixes equal each value; a subarray [l+1..r] has XOR 0 exactly when prefix[r] == prefix[l]. For nums=[4,3,1,2,4], after processing 4,3,1,2 the prefix XOR is 4, which was seen once before (after the first element), so [3,1,2] is counted.",
+    "```\nseen = {0: 1}\npx = 0\nans = 0\nfor x in nums:\n    px = px XOR x\n    ans += seen[px]\n    seen[px] += 1\nreturn ans\n```",
+    "**Single zero** - one element that is already beautiful\n`Input: [0]` → `Expected: 1`\n⚠️ Bug: not seeding seen[0]=1 before the loop → returns 0\n\n**Single nonzero** - one element that cannot be cleared\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: counting every index unconditionally instead of only matching prefixes → returns 1\n\n**All zeros** - every subarray is beautiful\n`Input: [0,0,0]` → `Expected: 6`\n⚠️ Bug: declaring `int ans` instead of `long long` → on n=10^5 all zeros, ans = 10^5·(10^5-1)/2 ≈ 4,999,950,000 overflows 2^31-1 and wraps negative\n\n**No matching prefixes** - XOR values all distinct\n`Input: [1,10,4]` → `Expected: 0`\n⚠️ Bug: adding seen[px] after incrementing it (order swapped) → counts the current index itself, returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if each nums[i] can be as large as 10^18?",
+      "a": "Nothing changes structurally; XOR is still the invariant and the beautiful condition is still XOR 0. Just widen the prefix variable and the hash-map key to 64-bit integers. Time stays O(n), space O(n)."
+    },
+    {
+      "q": "Count subarrays whose XOR equals a given target T (not necessarily 0).",
+      "a": "Same sweep, but for each prefix px add seen[px XOR T] to the answer, then increment seen[px]. A subarray [l+1..r] has XOR T iff prefix[r] XOR prefix[l] == T. Time O(n), space O(n)."
+    },
+    {
+      "q": "The array arrives as an unbounded stream and you cannot store all prefixes.",
+      "a": "Keep a fixed-capacity hash map with LRU eviction (or a Count-Min sketch for an approximate count) and accept that very old matching prefixes may be forgotten, giving a lower bound on the true count. Time per element is O(1) amortized; space becomes O(b) for a fixed budget b instead of O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long beautifulSubarrays(vector<int>& nums) {\n        unordered_map<int,int> seen;\n        seen[0] = 1;\n        int px = 0;\n        long long ans = 0;\n        for (int x : nums) {\n            px ^= x;\n            auto it = seen.find(px);\n            if (it != seen.end()) {\n                ans += it->second;\n                it->second += 1;\n            } else {\n                seen[px] = 1;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

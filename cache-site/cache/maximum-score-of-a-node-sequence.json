@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-score-of-a-node-sequence",
+  "title": "Maximum Score of a Node Sequence",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Top-K Pruning on Graph Edges",
+  "tc": "O(n + E)",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- adj: vector of n vectors holding 2E ints total → O(n + E)\n- top3: vector of n vectors, each ≤3 ints → O(n)\n- loop variables / ans: O(1)\n- not counted: input scores, edges",
+  "approach": "For a length-4 sequence a-b-c-d, fix the middle edge (b,c). Then a must be a neighbor of b (a≠c) and d a neighbor of c (d≠b), with a≠d. For each node, keep only its top-3 neighbors by score (found via one linear scan, not a full sort). Top-3 is tight: if the optimal a is not among b's top-3 neighbors, at least two higher-scoring neighbors exist that are neither c nor d, so we could improve-contradiction. For each edge, try the ≤3×3 neighbor pairs, skip invalid ones (a=c, d=b, a=d), track the max. Total work is O(n+E).",
+  "hints": [
+    "For a length-4 sequence a-b-c-d, the middle edge b-c is one of the given edges. Once b and c are fixed, what kind of nodes must a and d be, and given up to 5×10^4 edges, how many candidates for each end can you afford to check?",
+    "For each node, keep only its 3 highest-scoring neighbors via a single linear scan (no sort). For edge (0,1) in Example 1, node 0's top-3 neighbors are [2,1] and node 1's are [2,3,0]; trying their pairs yields [2,0,1,3] with score 24.",
+    "```\nfor each node i:\n    scan adj[i] once, keep 3 neighbors with highest scores → top3[i]\nfor each edge (u, v):\n    for a in top3[u]:\n        if a == v: continue\n        for b in top3[v]:\n            if b == u or b == a: continue\n            ans = max(ans, scores[a] + scores[u] + scores[v] + scores[b])\nreturn ans if ans was updated else -1\n```",
+    "**Star graph (no valid sequence)** - center node connects to all others; no path of 4 distinct nodes exists.\n`Input: scores = [1,2,3,4,5], edges = [[0,1],[0,2],[0,3],[0,4]]` → `Expected: -1`\n⚠️ Bug: not checking `a != v` → picks a=v, counts node twice, returns a positive score.\n\n**Top-2 insufficient** - the optimal end node is the 3rd-best neighbor of the middle node.\n`Input: scores = [1,10,9,8,7], edges = [[0,1],[0,2],[0,3],[1,2],[1,4]]` → `Expected: 28`\n⚠️ Bug: storing only top 2 neighbors per node → returns 27 (misses sequence 3-0-1-2).\n\n**Duplicate end node** - u and v share a high-scoring neighbor that could be picked as both a and b.\n`Input: scores = [1,1,100,10], edges = [[0,1],[0,2],[1,2],[0,3],[1,3]]` → `Expected: 112`\n⚠️ Bug: not checking `a != b` → returns 202 (counts node 2 twice: 100+1+1+100).\n\n**Middle node reused as end** - v is among u's top-3 neighbors by score.\n`Input: scores = [1,10,2,3], edges = [[0,1],[0,2],[1,2],[1,3],[0,3]]` → `Expected: 16`\n⚠️ Bug: not checking `a != v` → returns 24 (counts node 1 as both end and middle: 10+1+10+3)."
+  ],
+  "followUps": [
+    {
+      "q": "What if the sequence length is 6 instead of 4 (a-b-c-d-e-f)?",
+      "a": "Fix the two middle edges (c,d) and (d,e) or the middle pair. For each node keep top-3 neighbors as before, then for each pair of adjacent edges sharing a node, combine the outer neighbors. Time becomes O(E) with a larger constant; space stays O(n+E)."
+    },
+    {
+      "q": "What if edges can have duplicate entries or self-loops?",
+      "a": "Deduplicate edges and skip self-loops when building adjacency. Use a set per node or sort+unique on the edge list first, adding O(E log E) time. The top-3 scan and enumeration logic remain unchanged."
+    },
+    {
+      "q": "What if the graph is streamed (edges arrive one at a time) and you must answer after each insertion?",
+      "a": "Maintain the top-3 neighbor list per node incrementally: when a new edge (u,v) arrives, insert v into top3[u] if it beats the current 3rd, and vice versa. Recompute only sequences using edge (u,v) with the updated top-3 lists-O(1) per insertion. Total O(E) time, O(n+E) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumScore(vector<int>& scores, vector<vector<int>>& edges) {\n        int n = scores.size();\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        vector<vector<int>> top3(n);\n        for (int i = 0; i < n; i++) {\n            int a = -1, b = -1, c = -1;\n            for (int nb : adj[i]) {\n                if (a == -1 || scores[nb] > scores[a]) {\n                    c = b; b = a; a = nb;\n                } else if (b == -1 || scores[nb] > scores[b]) {\n                    c = b; b = nb;\n                } else if (c == -1 || scores[nb] > scores[c]) {\n                    c = nb;\n                }\n            }\n            if (a != -1) top3[i].push_back(a);\n            if (b != -1) top3[i].push_back(b);\n            if (c != -1) top3[i].push_back(c);\n        }\n        long long ans = -1;\n        for (auto& e : edges) {\n            int u = e[0], v = e[1];\n            for (int a : top3[u]) {\n                if (a == v) continue;\n                for (int b : top3[v]) {\n                    if (b == u || b == a) continue;\n                    long long s = (long long)scores[a] + scores[u] + scores[v] + scores[b];\n                    if (s > ans) ans = s;\n                }\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

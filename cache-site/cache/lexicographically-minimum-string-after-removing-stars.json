@@ -1,0 +1,40 @@
+{
+  "slug": "lexicographically-minimum-string-after-removing-stars",
+  "title": "Lexicographically Minimum String After Removing Stars",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> buckets[26]: total n entries across all 26 vectors → O(n)\n- vector<bool> removed: n entries → O(n)\n- string result: up to n chars (returned output, not counted)\n- no recursion, no heap, no sort",
+  "approach": "Process the string left to right, maintaining 26 stacks (one per letter) that store indices of non-removed characters seen so far. When a `*` is encountered, scan the stacks from 'a' to 'z' to find the smallest character that still has entries, and remove its rightmost occurrence (pop the top of that stack, mark the index as deleted). Removing the rightmost smallest character on ties is optimal because it preserves earlier occurrences of small characters, yielding a lexicographically smaller result. After processing, build the result from non-removed, non-`*` characters.",
+  "hints": [
+    "When a `*` must remove the smallest character to its left and there are several copies of that smallest character, which copy should you remove to make the remaining string as small as possible?",
+    "Use 26 stacks (one per letter) storing character indices. For \"aaba*\", when the `*` is reached, the 'a' stack holds [0,1,3]; pop the top (index 3) to get \"aab\".",
+    "```\nfor each index i in s:\n    if s[i] is '*':\n        for c from 'a' to 'z':\n            if stack[c] is not empty:\n                mark stack[c].top as removed\n                stack[c].pop\n                break\n    else:\n        stack[s[i]].push(i)\nbuild result from non-removed, non-'*' characters\n```",
+    "**Ties - rightmost wins** - Multiple copies of the smallest character exist; which one you remove changes the result.\n`Input: \"aaba*\"` → `Expected: \"aab\"`\n⚠️ Bug: removing the leftmost smallest character (index 0) instead of the rightmost (index 3) → returns \"aba\"\n\n**Smallest is not most recent** - The smallest character to the left of `*` is not the last one pushed.\n`Input: \"bac*\"` → `Expected: \"bc\"`\n⚠️ Bug: always removing the most recently added character (stack top, 'c') instead of the smallest ('a') → returns \"ba\"\n\n**Consecutive stars** - Two `*` in a row, each removing a different character.\n`Input: \"cba**\"` → `Expected: \"c\"`\n⚠️ Bug: not updating the smallest-character tracker after the first removal, so the second `*` targets the already-removed 'a' → returns \"cb\"\n\n**Removing largest instead of smallest** - Scanning buckets in the wrong direction.\n`Input: \"abc*\"` → `Expected: \"bc\"`\n⚠️ Bug: scanning buckets from 'z' to 'a' instead of 'a' to 'z', removing 'c' instead of 'a' → returns \"ab\""
+  ],
+  "followUps": [
+    {
+      "q": "What if each `*` must remove the k smallest characters to its left (k given as a parameter)?",
+      "a": "Use the same 26-bucket approach. For each `*`, scan buckets from 'a' to 'z', removing up to k characters total by popping from the right of each non-empty bucket. Since total removals are bounded by n, time remains O(26n) = O(n). Space stays O(n)."
+    },
+    {
+      "q": "What if the alphabet includes uppercase letters and digits (62 symbols total)?",
+      "a": "Expand the bucket array from 26 to 62 entries, ordered by ASCII value. The algorithm is identical - scan buckets in order to find the smallest available character. Time becomes O(62n) = O(n), space O(n)."
+    },
+    {
+      "q": "What if you must use only O(1) extra space (modifying the input in place)?",
+      "a": "Without auxiliary stacks, each `*` requires scanning backwards through the string to find the smallest non-deleted character to its left, giving O(n²) time. Mark deleted characters in-place with a sentinel, then compact the string in a final pass. Time degrades to O(n²), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string clearStars(string s) {\n        int n = s.size();\n        vector<int> buckets[26];\n        vector<bool> removed(n, false);\n        \n        for (int i = 0; i < n; i++) {\n            if (s[i] == '*') {\n                for (int c = 0; c < 26; c++) {\n                    if (!buckets[c].empty()) {\n                        int idx = buckets[c].back();\n                        buckets[c].pop_back();\n                        removed[idx] = true;\n                        break;\n                    }\n                }\n            } else {\n                buckets[s[i] - 'a'].push_back(i);\n            }\n        }\n        \n        string result;\n        for (int i = 0; i < n; i++) {\n            if (s[i] != '*' && !removed[i]) {\n                result += s[i];\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

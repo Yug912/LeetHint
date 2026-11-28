@@ -1,0 +1,40 @@
+{
+  "slug": "collect-coins-in-a-tree",
+  "title": "Collect Coins in a Tree",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Topological Sort (Leaf Pruning)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<unordered_set<int>> adj: n sets, total n-1 edges stored twice → O(n)\n- queue<int> q: up to n entries → O(n)\n- vector<int> leaves: up to n entries → O(n)\n- not counted: input coins/edges, returned int",
+  "approach": "The key insight is that we never need to visit coinless leaves - they contribute nothing. First, iteratively prune all leaves that have no coin (like topological sort on a tree). After this, every leaf has a coin. Since we can collect coins at distance ≤ 2, we don't need to visit the leaves themselves or their parents - so we prune 2 more layers of leaves. The remaining nodes form the minimal subtree we must traverse. Since we must return to the start, every edge in this subtree is traversed twice, giving answer = max(0, (remaining_nodes - 1) * 2).",
+  "hints": [
+    "In a tree, if a leaf has no coin, is there ever a reason to travel to it? What about a long chain of coinless nodes hanging off the coin-bearing part of the tree?",
+    "Use topological sort (iterative leaf pruning with a queue). First, repeatedly remove every leaf whose coin is 0. In Example 2, node 6 (degree 1, coin 0) is removed first, then its parent 5 is re-checked.",
+    "```\nqueue all leaves with coin == 0\nwhile queue not empty:\n    pop leaf, remove edge to its parent\n    if parent is now a leaf with coin == 0, enqueue it\nrepeat 2 times:\n    collect all current leaves, remove them and their edges\ncount nodes with degree > 0\nreturn max(0, (count - 1) * 2)\n```",
+    "**All coins zero** - no coin exists anywhere, so every node is redundant.\n`Input: coins = [0,0,0,0,0,0,0], edges = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]]` → `Expected: 0`\n⚠️ Bug: skipping the coinless-leaf pruning step, going straight to 2-layer removal → returns 4 instead of 0\n\n**Two adjacent coin nodes** - both pruned in the 2-layer step, leaving nothing.\n`Input: coins = [1,1], edges = [[0,1]]` → `Expected: 0`\n⚠️ Bug: returning (remaining - 1) * 2 without max(0, ...) → returns -2 instead of 0\n\n**Coinless leaf chain** - a long path of coinless nodes on both sides of a single coin.\n`Input: coins = [0,0,0,0,1,0,0,0,0], edges = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]]` → `Expected: 0`\n⚠️ Bug: removing coinless leaves in a single pass instead of iterating until convergence → returns 4 instead of 0\n\n**Skewed path with coins at both ends** - tests exactly 2 layers of leaf removal.\n`Input: coins = [1,0,0,0,0,0,1], edges = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]]` → `Expected: 4`\n⚠️ Bug: removing only 1 layer of leaves instead of 2 → returns 8 instead of 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the collection radius were k instead of 2 - how would the algorithm change?",
+      "a": "Replace the fixed 2-layer pruning loop with k iterations of leaf removal. Everything else stays the same. Time complexity remains O(n) since each node is removed at most once across all phases."
+    },
+    {
+      "q": "What if coins could be collected only at distance exactly 2 (not ≤ 2)?",
+      "a": "The pruning logic changes: coinless leaves are still removed, but only 1 layer of leaves is pruned (not 2), since you must be at distance exactly 2 from each coin. The answer formula stays max(0, (remaining - 1) * 2). Time complexity is still O(n)."
+    },
+    {
+      "q": "What if the graph were a general undirected graph instead of a tree?",
+      "a": "The problem becomes much harder - finding a minimum closed walk visiting a set of vertices in a general graph is related to the Steiner tree problem (NP-hard). For small graphs you could use DP over subsets; for large graphs you would need approximation algorithms."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int collectTheCoins(vector<int>& coins, vector<vector<int>>& edges) {\n        int n = coins.size();\n        if (n <= 1) return 0;\n        \n        vector<unordered_set<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].insert(e[1]);\n            adj[e[1]].insert(e[0]);\n        }\n        \n        // Step 1: Iteratively remove leaves that have no coin\n        queue<int> q;\n        for (int i = 0; i < n; i++) {\n            if (adj[i].size() == 1 && coins[i] == 0) {\n                q.push(i);\n            }\n        }\n        \n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            if (adj[u].empty()) continue;\n            int parent = *adj[u].begin();\n            adj[u].clear();\n            adj[parent].erase(u);\n            if (adj[parent].size() == 1 && coins[parent] == 0) {\n                q.push(parent);\n            }\n        }\n        \n        // Step 2: Remove 2 layers of leaves (we can collect at distance 2)\n        for (int layer = 0; layer < 2; layer++) {\n            vector<int> leaves;\n            for (int i = 0; i < n; i++) {\n                if (adj[i].size() == 1) {\n                    leaves.push_back(i);\n                }\n            }\n            for (int u : leaves) {\n                if (adj[u].empty()) continue;\n                int parent = *adj[u].begin();\n                adj[u].clear();\n                adj[parent].erase(u);\n            }\n        }\n        \n        // Count remaining nodes with degree > 0\n        int remaining = 0;\n        for (int i = 0; i < n; i++) {\n            if (adj[i].size() > 0) remaining++;\n        }\n        \n        return max(0, (remaining - 1) * 2);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

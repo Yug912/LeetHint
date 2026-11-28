@@ -1,0 +1,51 @@
+{
+  "slug": "build-a-matrix-with-conditions",
+  "title": "Build a Matrix With Conditions",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Topological Sort (Kahn's Algorithm)",
+  "tc": "O(k^2 + n + m)",
+  "sc": "O(k + max(n, m))",
+  "spaceBreakdown": "- adj (inside topoSort, reused for rows then cols, not simultaneous): up to k + E edges → O(k + E)\n- indeg vector: k+1 ints → O(k)\n- queue: up to k nodes → O(k)\n- order vector: k ints → O(k)\n- rowPos, colPos: k+1 ints each → O(k)\n- matrix: k×k ints → O(k²) but this is the returned output (not counted)",
+  "approach": "Each row condition `[a, b]` means `a` must have a smaller row index than `b` - a directed edge `a→b`. The column conditions are independent and form a separate directed graph on the same vertices. Run Kahn's topological sort on each graph; the position of each number in the resulting order is its row (resp. column) index. If either sort fails to emit all `k` nodes, a cycle exists and we return `{}`. Otherwise place number `v` at `(rowPos[v], colPos[v])`.",
+  "hints": [
+    "Each row condition forces one number's row index to be strictly smaller than another's, and column conditions do the same for column indices independently. If you trace chains like \"A above B above C\", what configuration of these chains would make it impossible to assign distinct row indices to every number?",
+    "Use topological sort (Kahn's algorithm) on a directed graph where each condition `[a, b]` is an edge `a→b`. For `rowConditions = [[1,2],[3,2]]`, edges `1→2` and `3→2` yield a valid order like `[1,3,2]`, giving row indices 1→0, 3→1, 2→2.",
+    "```\nbuild graph: for each [a,b], add edge a→b, indeg[b]++\nqueue = all nodes with indeg 0\norder = []\nwhile queue not empty:\n    u = pop queue\n    order.append(u)\n    for v in adj[u]:\n        indeg[v]--\n        if indeg[v] == 0: push v\nif len(order) != k: return {}   // cycle\nposition[v] = index of v in order\n```\nRun this once for rows, once for cols, then place each number v at (rowPos[v], colPos[v]).",
+    "**Cycle in row conditions** - conditions form a directed cycle, no valid row order exists.\n`Input: k=3, rowConditions=[[1,2],[2,3],[3,1]], colConditions=[[1,2]]` → `Expected: []`\n⚠️ Bug: returning a matrix whenever topoSort emits any nodes without checking `order.size() == k` → returns a matrix with only some numbers placed and others missing.\n\n**Duplicate conditions** - the same `[a,b]` appears multiple times.\n`Input: k=2, rowConditions=[[1,2],[1,2]], colConditions=[[1,2],[1,2]]` → `Expected: [[1,0],[0,2]]`\n⚠️ Bug: deduping edges in the adjacency list with a set but computing indegree from the raw conditions list → indeg[2]=2 but only decremented once, node 2 never queued, returns `[]`.\n\n**Disconnected node** - some number 1..k never appears in any condition.\n`Input: k=3, rowConditions=[[1,2]], colConditions=[[2,3]]` → `Expected: e.g. [[1,0,0],[0,2,0],[0,0,3]]`\n⚠️ Bug: building the graph only over numbers that appear in conditions → number 3 absent from the topological order, matrix leaves cell for 3 empty.\n\n**Cycle in column conditions only** - rows are fine, columns are cyclic.\n`Input: k=3, rowConditions=[[1,2]], colConditions=[[1,2],[2,3],[3,1]]` → `Expected: []`\n⚠️ Bug: checking for cycles only in row conditions and skipping the same check for columns → returns a matrix that violates column constraints."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^6 - you cannot allocate a k×k matrix?",
+      "a": "Return two arrays `rowPos[1..k]` and `colPos[1..k]` instead of the matrix. The topological sort is unchanged and still O(k + E); the caller reconstructs any cell on demand. Space drops from O(k²) to O(k + E)."
+    },
+    {
+      "q": "Conditions arrive one at a time in a stream; after each insertion, report whether a valid matrix still exists?",
+      "a": "Re-running Kahn's algorithm after each insertion costs O(k + E) per query. For a faster online version, maintain indegrees and a set of zero-indegree nodes incrementally; a cycle appears exactly when an inserted edge creates a back-edge inside the current DAG - detectable with dynamic cycle detection, but the simple re-run is correct and often fast enough."
+    },
+    {
+      "q": "Among all valid matrices, find one minimizing the sum of `row[v] + col[v]` over all v?",
+      "a": "The row and column orders are independent, so minimize `sum(row[v])` and `sum(col[v])` separately. Any topological order has the same multiset of indices {0..k-1}, so the sum is fixed; the objective is constant across valid orders - return any valid matrix."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> buildMatrix(int k, vector<vector<int>>& rowConditions, vector<vector<int>>& colConditions) {\n        vector<int> rowOrder = topoSort(k, rowConditions);\n        if (rowOrder.empty()) return {};\n        vector<int> colOrder = topoSort(k, colConditions);\n        if (colOrder.empty()) return {};\n        \n        vector<int> rowPos(k + 1), colPos(k + 1);\n        for (int i = 0; i < k; i++) {\n            rowPos[rowOrder[i]] = i;\n            colPos[colOrder[i]] = i;\n        }\n        \n        vector<vector<int>> matrix(k, vector<int>(k, 0));\n        for (int v = 1; v <= k; v++) {\n            matrix[rowPos[v]][colPos[v]] = v;\n        }\n        return matrix;\n    }\nprivate:\n    vector<int> topoSort(int k, vector<vector<int>>& conditions) {\n        vector<vector<int>> adj(k + 1);\n        vector<int> indeg(k + 1, 0);\n        for (auto& c : conditions) {\n            int a = c[0], b = c[1];\n            adj[a].push_back(b);\n            indeg[b]++;\n        }\n        queue<int> q;\n        for (int i = 1; i <= k; i++) {\n            if (indeg[i] == 0) q.push(i);\n        }\n        vector<int> order;\n        order.reserve(k);\n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            order.push_back(u);\n            for (int v : adj[u]) {\n                if (--indeg[v] == 0) q.push(v);\n            }\n        }\n        if ((int)order.size() != k) return {};\n        return order;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 1,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

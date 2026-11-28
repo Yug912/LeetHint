@@ -1,0 +1,52 @@
+{
+  "slug": "3sum",
+  "title": "3Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Two Pointers on Sorted Array",
+  "tc": "O(n²)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(nums): in-place, introsort uses O(log n) stack → O(log n), treated as O(1) for in-place sorting\n- result vector: not counted (returned output)\n- no other containers allocated",
+  "approach": "Sort the array, then for each index `i` (skipping duplicate values), fix `nums[i]` and run a two-pointer scan on the remainder to find pairs summing to `-nums[i]`. When a match is found, record the triplet and skip over duplicate values at both pointers to avoid duplicate triplets. Sorting enables the two-pointer search and makes deduplication trivial - just skip consecutive equal values.",
+  "hints": [
+    "If you commit to one of the three numbers, what must the other two add up to? The array has at most 3000 elements.",
+    "Sort the array, then for each fixed first element use two pointers (one from the left, one from the right) to find pairs summing to its negation. Example: sorted `[-4,-1,-1,0,1,2]`; fixing `-1`, pointers at `-1` and `2` give sum `1 = -(-1)`, yielding `[-1,-1,2]`.",
+    "```\nsort array\nfor i from 0 to n-3:\n    skip if nums[i] == nums[i-1]\n    left = i+1, right = n-1\n    while left < right:\n        sum = nums[i] + nums[left] + nums[right]\n        if sum == 0:\n            record triplet\n            skip duplicate left values, skip duplicate right values\n            left++, right--\n        elif sum < 0:\n            left++\n        else:\n            right--\n```",
+    "**All equal zeros** - three identical elements form a valid triplet.\n`Input: nums = [0,0,0]` → `Expected: [[0,0,0]]`\n⚠️ Bug: deduplicating `i` with `if (nums[i] == nums[i+1]) continue;` → returns `[]` (skips i=0 because nums[0]==nums[1])\n\n**Duplicate triplets** - same triplet reachable from different indices.\n`Input: nums = [-1,0,1,2,-1,-4]` → `Expected: [[-1,-1,2],[-1,0,1]]`\n⚠️ Bug: not skipping duplicate `i` values → returns `[[-1,-1,2],[-1,0,1],[-1,0,1]]`\n\n**Repeated pair values** - multiple identical values at the two-pointer positions.\n`Input: nums = [-2,0,0,2,2]` → `Expected: [[-2,0,2]]`\n⚠️ Bug: not skipping duplicate left/right values after a match → returns `[[-2,0,2],[-2,0,2]]`\n\n**Smallest input** - exactly three elements.\n`Input: nums = [1,2,-3]` → `Expected: [[-3,1,2]]`\n⚠️ Bug: loop bound `i < n - 3` instead of `i < n - 2` → returns `[]` (loop never executes)"
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve 3Sum if the array is a read-only stream and cannot be sorted?",
+      "a": "For each element, maintain a hash set of previously seen values. For every pair (current, previous), check if the negation of their sum exists in the set. Deduplicate by normalizing each triplet (sort its three values) and storing in a result set. TC becomes O(n²), SC becomes O(n) for the hash set plus O(number of triplets) for deduplication."
+    },
+    {
+      "q": "What if you must count the number of valid triplets instead of listing them?",
+      "a": "Same sorted two-pointer approach, but when a match is found with duplicate values at the pointers, count how many copies of each value lie between the pointers and multiply (e.g., `c1 * c2` when left and right values differ, or `C(c, 2)` when they are the same value). TC stays O(n²), SC stays O(1)."
+    },
+    {
+      "q": "What if `nums[i]` can be up to 10⁹?",
+      "a": "Three values can sum to 3×10⁹, which exceeds `INT_MAX` (≈2.1×10⁹). Cast each element to `long long` before summing so the comparison does not overflow. TC and SC are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> threeSum(vector<int>& nums) {\n        vector<vector<int>> result;\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        for (int i = 0; i < n - 2; i++) {\n            if (i > 0 && nums[i] == nums[i - 1]) continue;\n            int left = i + 1, right = n - 1;\n            while (left < right) {\n                long long sum = (long long)nums[i] + nums[left] + nums[right];\n                if (sum == 0) {\n                    result.push_back({nums[i], nums[left], nums[right]});\n                    while (left < right && nums[left] == nums[left + 1]) left++;\n                    while (left < right && nums[right] == nums[right - 1]) right--;\n                    left++;\n                    right--;\n                } else if (sum < 0) {\n                    left++;\n                } else {\n                    right--;\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": true,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 30,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

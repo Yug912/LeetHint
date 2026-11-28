@@ -1,0 +1,40 @@
+{
+  "slug": "task-scheduler-ii",
+  "title": "Task Scheduler II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Simulation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,long long> lastDone: up to n distinct task types → O(n)\n- recursion depth: none\n- not counted: input vector, returned scalar",
+  "approach": "Simulate day-by-day, processing tasks in order. Maintain a hash map recording the last day each task type was completed. For each task, advance the day by 1; if this task type was done before and fewer than `space` full days have elapsed since then (i.e., `day - lastDone <= space`), jump the day forward to `lastDone + space + 1`. This greedy \"wait as late as possible\" strategy is optimal because delaying a task never helps any future task-only the same-type constraint matters, and jumping to the earliest legal day minimizes total days.",
+  "hints": [
+    "When you reach a task whose type you completed before, what single piece of information about that earlier completion tells you the earliest legal day to do it again? The constraint `space ≤ tasks.length` means waiting periods can be long relative to the schedule.",
+    "Use a hash map from task type → last completion day. Example 1, third task (type 1, last done day 1): current day is 3, 3−1=2 ≤ 3, so jump to day 1+3+1=5.",
+    "```\nday = 0\nlastDone = empty map\nfor each task t:\n    day = day + 1\n    if t in lastDone and day - lastDone[t] <= space:\n        day = lastDone[t] + space + 1\n    lastDone[t] = day\nreturn day\n```",
+    "**Single task** - only one task to complete.\n`Input: tasks = [1], space = 1` → `Expected: 1`\n⚠️ Bug: initializing `day = 1` then incrementing per task → returns 2\n\n**All identical tasks** - every task is the same type, forcing maximum spacing.\n`Input: tasks = [1,1,1], space = 2` → `Expected: 7`\n⚠️ Bug: using `day - lastDone[t] < space` instead of `<=` → returns 6 (allows the second task on day 3 instead of day 4)\n\n**Overflow** - 10⁵ tasks with space up to 10⁵ gives day ≈ 10⁵ × 10⁵ = 10¹⁰.\n`Input: tasks = [1,1,1,…] (10⁵ ones), space = 100000` → `Expected: 10000000000`\n⚠️ Bug: declaring `day` as `int` → wraps around past 2³¹−1, returns a negative or wrong value\n\n**Large task type values** - task types can be up to 10⁹.\n`Input: tasks = [1000000000, 1000000000], space = 1` → `Expected: 3`\n⚠️ Bug: indexing an array by task type → out-of-bounds access / memory error"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could reorder tasks freely to minimize total days?",
+      "a": "Greedily pick, each day, the task type with the most remaining occurrences that isn't on cooldown. Use a max-heap keyed by remaining count plus a cooldown queue. TC: O(n log k), SC: O(k) where k is the number of distinct types."
+    },
+    {
+      "q": "What if `space` varied per task type (given as a map)?",
+      "a": "Store the per-type space alongside `lastDone` in the same map. The algorithm is otherwise identical-replace the global `space` with the looked-up value. TC: O(n), SC: O(k)."
+    },
+    {
+      "q": "What if tasks arrive as an online stream and you must commit without seeing future tasks?",
+      "a": "The greedy strategy is already online-optimal because the spacing constraint only depends on past completions. Maintain `lastDone` as tasks arrive and apply the same jump logic. TC: O(n), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long taskSchedulerII(vector<int>& tasks, int space) {\n        unordered_map<int, long long> lastDone;\n        long long day = 0;\n        for (int t : tasks) {\n            day++;\n            auto it = lastDone.find(t);\n            if (it != lastDone.end() && day - it->second <= space) {\n                day = it->second + space + 1;\n            }\n            lastDone[t] = day;\n        }\n        return day;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

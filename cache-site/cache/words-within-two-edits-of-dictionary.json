@@ -1,0 +1,40 @@
+{
+  "slug": "words-within-two-edits-of-dictionary",
+  "title": "Words Within Two Edits of Dictionary",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Brute Force Pairwise Comparison",
+  "tc": "O(Q · D · L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<string> result: holds up to Q strings (returned output, not counted)\n- int diff: O(1)\n- not counted: input vectors, returned vector",
+  "approach": "For each query word, compare it against every dictionary word position-by-position, counting mismatched characters (Hamming distance). If any dictionary word differs in at most 2 positions, the query qualifies and is added to the answer in original order. With at most 100 queries × 100 dictionary words × 100 characters = 10^6 comparisons, brute force is well within budget. Early termination on the inner character loop (break once diff > 2) and on the dictionary loop (break once a match is found) keeps it fast.",
+  "hints": [
+    "With at most 100 queries, 100 dictionary words, and 100 characters per word, what is the maximum total number of character comparisons if you check every query against every dictionary word? The constraint n ≤ 100 on every dimension makes this number small.",
+    "Direct pairwise comparison: for each query, count positions where it differs from each dictionary word; if any count is ≤ 2, include the query. Example: \"word\" vs \"wood\" differs only at index 2 (r vs o) → 1 edit, so \"word\" qualifies.",
+    "```\nfor each query q:\n  for each dictionary word d:\n    count positions i where q[i] != d[i]\n    if count <= 2:\n      add q to answer\n      break\n```",
+    "**Exactly two edits (boundary)** - query needs precisely 2 edits, no fewer.\n`queries = [\"abc\"], dictionary = [\"axy\"]` → `Expected: [\"abc\"]`\n⚠️ Bug: using `diff < 2` instead of `diff <= 2` → returns `[]`\n\n**No match within two edits** - every dictionary word differs in ≥ 3 positions.\n`queries = [\"yes\"], dictionary = [\"not\"]` → `Expected: []`\n⚠️ Bug: always pushing the query without checking the diff threshold → returns `[\"yes\"]`\n\n**Duplicate queries** - same query string appears twice in queries.\n`queries = [\"ab\",\"ab\"], dictionary = [\"ab\"]` → `Expected: [\"ab\",\"ab\"]`\n⚠️ Bug: storing matches in a set to dedupe → returns `[\"ab\"]`\n\n**Exact match (zero edits)** - query already equals a dictionary word.\n`queries = [\"wood\"], dictionary = [\"wood\"]` → `Expected: [\"wood\"]`\n⚠️ Bug: requiring `diff >= 1` (treating 0 as \"not a real edit\") → returns `[]`\n\n**Single-character words** - minimum allowed length.\n`queries = [\"a\"], dictionary = [\"b\"]` → `Expected: [\"a\"]` (1 edit ≤ 2)\n⚠️ Bug: loop bound `i < q.size()-1` underflows when size is 1 (unsigned) → returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "If dictionary.length grows to 10^6 but queries stay small, how would you speed this up?",
+      "a": "Build a trie over the dictionary words. For each query, run a bounded DFS that tracks the current edit count and prunes any branch where edits exceed 2. Time becomes O(Q · L · 26^2) in the worst case of exploring two-level substitutions; space is O(D · L) for the trie."
+    },
+    {
+      "q": "If word length L grows to 10^5, how do you keep each comparison fast?",
+      "a": "Bit-pack the strings into 64-bit blocks and use XOR + popcount to compute Hamming distance in O(L/64) per pair instead of O(L). Overall time stays O(Q · D · L/64); space is O(1) auxiliary."
+    },
+    {
+      "q": "If queries arrive as a stream and the dictionary is fixed, how do you avoid recomparing against all dictionary words each time?",
+      "a": "Preprocess the dictionary once into a trie, then answer each streaming query with the same bounded-edit DFS. Preprocessing is O(D · L); each query is answered in O(L · 26^2) worst case, with O(D · L) persistent space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> twoEditWords(vector<string>& queries, vector<string>& dictionary) {\n        vector<string> result;\n        for (const string& q : queries) {\n            for (const string& d : dictionary) {\n                int diff = 0;\n                int n = (int)q.size();\n                for (int i = 0; i < n; i++) {\n                    if (q[i] != d[i]) {\n                        diff++;\n                        if (diff > 2) break;\n                    }\n                }\n                if (diff <= 2) {\n                    result.push_back(q);\n                    break;\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

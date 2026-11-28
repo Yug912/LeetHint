@@ -1,0 +1,51 @@
+{
+  "slug": "all-oone-data-structure",
+  "title": "All O`one Data Structure",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Doubly-Linked List of Buckets + Hash Map",
+  "tc": "O(L)",
+  "sc": "O(n*L)",
+  "spaceBreakdown": "- unordered_map<string, Node*> mp: up to n entries → O(n)\n- Linked list nodes (head, tail sentinels + count buckets): at most n+2 → O(n)\n- unordered_set<string> keys inside each node: total n keys across all sets → O(n)\n- No recursion, no auxiliary containers",
+  "approach": "Maintain a doubly-linked list of \"count buckets\" sorted ascending by count; each bucket stores a count value and an unordered_set of keys at that count. A hash map maps each key to its bucket. Since inc/dec change a key's count by exactly 1, the key only moves to an adjacent bucket - we check the neighbor, reuse it if its count matches, or insert a new bucket in O(1). Empty buckets are unlinked. getMaxKey/getMinKey read the tail/head bucket's first key.",
+  "hints": [
+    "Each inc/dec changes a key's count by exactly 1. In a collection sorted by count, how far does a key need to move after one such change?",
+    "Use a doubly-linked list of count-buckets (each = a count + set of keys at that count), sorted ascending, plus a hash map from key → its bucket. After inc(\"hello\") twice then inc(\"leet\"), the list is bucket(1,{leet}) ↔ bucket(2,{hello}).",
+    "```\ninc(key):\n  if key absent:\n    if first bucket has count 1: add key to it\n    else: insert new bucket(1) right after head\n  else:\n    move key from cur to bucket(count+1)\n      - reuse cur.next if its count matches, else insert new bucket after cur\n    remove cur if its key-set is now empty\n```",
+    "**Empty structure** - no keys have been inserted\n`Input: [\"AllOne\",\"getMaxKey\"] [[],[]]` → `Expected: \"\"`\n⚠️ Bug: accessing tail->prev->keys.begin() without checking tail->prev == head → dereferences empty set on sentinel, undefined behavior\n\n**Decrement to zero** - key's count drops to 0\n`Input: [\"AllOne\",\"inc\",\"dec\",\"getMaxKey\"] [[],[\"a\"],[\"a\"],[]]` → `Expected: \"\"`\n⚠️ Bug: creating a bucket with count 0 instead of erasing the key → returns \"a\"\n\n**Empty bucket not removed** - last key leaves a count bucket\n`Input: [\"AllOne\",\"inc\",\"inc\",\"inc\",\"dec\",\"getMinKey\"] [[],[\"a\"],[\"a\"],[\"b\"],[\"b\"],[]]` → `Expected: \"a\"`\n⚠️ Bug: not removing the now-empty bucket(1) → getMinKey accesses the empty set of bucket(1), undefined behavior\n\n**Ties overwritten** - multiple keys share the same count\n`Input: [\"AllOne\",\"inc\",\"inc\",\"inc\",\"inc\",\"dec\",\"getMaxKey\"] [[],[\"a\"],[\"a\"],[\"b\"],[\"b\"],[\"b\"],[]]` → `Expected: \"a\"`\n⚠️ Bug: storing one key per count (map<int,string>) → bucket(2) was overwritten to \"b\" when b reached 2, so after dec(\"b\") it still returns \"b\" instead of \"a\""
+  ],
+  "followUps": [
+    {
+      "q": "What if getMaxKey must return ALL keys with the maximum count, not just one?",
+      "a": "Return a reference to the unordered_set stored in the tail bucket - no structural change needed. Lookup is O(1); enumerating all k tied keys is O(k). The bucket design already supports this because it stores sets, not single keys."
+    },
+    {
+      "q": "What if inc/dec can change a key's count by an arbitrary delta k instead of just ±1?",
+      "a": "Replace the linked list with an ordered map (e.g., std::map<int, Bucket*>) keyed by count for O(log n) predecessor/successor lookup. Each operation becomes O(log n) since you must find or create the target count bucket at an arbitrary position. The hash map from key to bucket pointer stays the same."
+    },
+    {
+      "q": "What if the stream is infinite and memory is limited to O(k) for only the top-k most frequent keys?",
+      "a": "Maintain a min-heap of size k keyed by frequency; on each inc/dec, update the key's position in O(log k). Keys that fall below the k-th frequency are evicted. getMaxKey returns the heap's maximum in O(1); getMinKey among the top-k returns the heap root in O(1), but global getMinKey is no longer supported."
+    }
+  ],
+  "code": {
+    "cpp": "class AllOne {\n    struct Node {\n        int count;\n        unordered_set<string> keys;\n        Node* prev;\n        Node* next;\n        Node(int c) : count(c), prev(nullptr), next(nullptr) {}\n    };\n\n    Node* head;\n    Node* tail;\n    unordered_map<string, Node*> mp;\n\n    void insertAfter(Node* node, Node* newNode) {\n        newNode->prev = node;\n        newNode->next = node->next;\n        node->next->prev = newNode;\n        node->next = newNode;\n    }\n\n    void removeNode(Node* node) {\n        node->prev->next = node->next;\n        node->next->prev = node->prev;\n        delete node;\n    }\n\npublic:\n    AllOne() {\n        head = new Node(0);\n        tail = new Node(0);\n        head->next = tail;\n        tail->prev = head;\n    }\n\n    void inc(string key) {\n        if (mp.find(key) == mp.end()) {\n            Node* first = head->next;\n            if (first != tail && first->count == 1) {\n                first->keys.insert(key);\n                mp[key] = first;\n            } else {\n                Node* newNode = new Node(1);\n                newNode->keys.insert(key);\n                insertAfter(head, newNode);\n                mp[key] = newNode;\n            }\n        } else {\n            Node* cur = mp[key];\n            int newCount = cur->count + 1;\n            Node* nxt = cur->next;\n            cur->keys.erase(key);\n            if (nxt != tail && nxt->count == newCount) {\n                nxt->keys.insert(key);\n                mp[key] = nxt;\n            } else {\n                Node* newNode = new Node(newCount);\n                newNode->keys.insert(key);\n                insertAfter(cur, newNode);\n                mp[key] = newNode;\n            }\n            if (cur->keys.empty()) {\n                removeNode(cur);\n            }\n        }\n    }\n\n    void dec(string key) {\n        Node* cur = mp[key];\n        int newCount = cur->count - 1;\n        cur->keys.erase(key);\n        if (newCount == 0) {\n            mp.erase(key);\n        } else {\n            Node* prev = cur->prev;\n            if (prev != head && prev->count == newCount) {\n                prev->keys.insert(key);\n                mp[key] = prev;\n            } else {\n                Node* newNode = new Node(newCount);\n                newNode->keys.insert(key);\n                insertAfter(cur->prev, newNode);\n                mp[key] = newNode;\n            }\n        }\n        if (cur->keys.empty()) {\n            removeNode(cur);\n        }\n    }\n\n    string getMaxKey() {\n        if (tail->prev == head) return \"\";\n        return *tail->prev->keys.begin();\n    }\n\n    string getMinKey() {\n        if (head->next == tail) return \"\";\n        return *head->next->keys.begin();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 2,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

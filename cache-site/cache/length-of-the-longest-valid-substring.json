@@ -1,0 +1,40 @@
+{
+  "slug": "length-of-the-longest-valid-substring",
+  "title": "Length of the Longest Valid Substring",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(F·L)",
+  "spaceBreakdown": "- unordered_set<string> ban: up to 10^5 entries, total chars ≤ 10^6 → O(F·L)\n- temporary substr strings: ≤ 10 chars each, not persistent → O(1)\n- recursion depth: none\n- not counted: input word, forbidden vector",
+  "approach": "Use a sliding window [left, right] over `word`. Since every forbidden string has length ≤ 10, for each new `right` we only need to inspect the ≤ 10 substrings ending at `right`. If `word[right-L+1 .. right]` is forbidden, the window cannot contain it, so we push `left` to `right-L+2` (taking the max over all such constraints, since the tightest one wins). The answer is the maximum window size seen. Correctness: any forbidden substring ending at some index `j` was detected when `right == j` and forced `left` past its start, so the window never contains a forbidden substring.",
+  "hints": [
+    "Each forbidden string is at most 10 characters long. For a fixed right end of a candidate substring, how many distinct ending positions of forbidden patterns could possibly overlap that right end?",
+    "Use a sliding window with a hash set of forbidden strings. At `right = 7` in \"cbaaaabc\", check substrings \"c\", \"bc\", \"abc\", \"aabc\", ... ending at index 7; none are in {\"aaa\",\"cb\"}, so the window [4,7] of length 4 is valid.",
+    "```\nban = set(forbidden)\nleft = 0, ans = 0\nfor right in 0..n-1:\n    for L in 1..10 while right-L+1 >= left:\n        if word[right-L+1 .. right] in ban:\n            left = max(left, right-L+2)\n    ans = max(ans, right-left+1)\nreturn ans\n```",
+    "**Single character forbidden** - the forbidden list contains a one-letter string that appears in word.\n`Input: word = \"a\", forbidden = [\"a\"]` → `Expected: 0`\n⚠️ Bug: initializing `ans = 1` instead of `0` → returns `1`\n\n**Overlapping forbidden occurrences** - forbidden pattern repeats consecutively.\n`Input: word = \"aaaa\", forbidden = [\"aa\"]` → `Expected: 1`\n⚠️ Bug: only checking the longest L first and breaking after one match → may miss that moving left still leaves another \"aa\" inside, returns `2`\n\n**Forbidden starts before left** - a forbidden substring would begin at an index < left.\n`Input: word = \"abc\", forbidden = [\"abc\",\"bc\",\"c\"]` → `Expected: 2`\n⚠️ Bug: not guarding `right-L+1 >= left` and updating left from an out-of-window start → can shrink left backward, returns `1`\n\n**All characters forbidden** - every single letter is forbidden.\n`Input: word = \"ab\", forbidden = [\"a\",\"b\",\"ab\"]` → `Expected: 0`\n⚠️ Bug: forgetting to take `max(left, ...)` and instead assigning `left = right-L+2` unconditionally → returns `1`"
+  ],
+  "followUps": [
+    {
+      "q": "What if forbidden strings could be up to length 1000?",
+      "a": "Replace the inner O(L) substring+hash check with an Aho-Corasick automaton built over `forbidden`; feed `word` character by character and, at each position, use the failure links to find the longest forbidden suffix ending there, then move `left` past its start. Time becomes O(n + total forbidden length), space O(total forbidden length × alphabet)."
+    },
+    {
+      "q": "What if `word` arrives as a streaming character stream of unknown length?",
+      "a": "Keep the same window idea but only retain the last 10 characters in a ring buffer (since max forbidden length is 10); emit the running max when the stream ends. Memory drops to O(10) plus the forbidden set; time stays O(n)."
+    },
+    {
+      "q": "What if you must also return one longest valid substring, not just its length?",
+      "a": "Track the `(left, right)` pair whenever `ans` is updated, then return `word.substr(bestLeft, bestLen)` at the end. Time and space complexity are unchanged (the returned string is the output, not auxiliary)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestValidSubstring(string word, vector<string>& forbidden) {\n        unordered_set<string> ban(forbidden.begin(), forbidden.end());\n        int n = (int)word.size();\n        int left = 0, ans = 0;\n        for (int right = 0; right < n; right++) {\n            for (int L = 1; L <= 10 && right - L + 1 >= left; L++) {\n                string s = word.substr(right - L + 1, L);\n                if (ban.count(s)) {\n                    left = max(left, right - L + 2);\n                }\n            }\n            ans = max(ans, right - left + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

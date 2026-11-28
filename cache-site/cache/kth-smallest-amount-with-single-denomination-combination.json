@@ -1,0 +1,40 @@
+{
+  "slug": "kth-smallest-amount-with-single-denomination-combination",
+  "title": "Kth Smallest Amount With Single Denomination Combination",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search + Inclusion-Exclusion",
+  "tc": "O(2^n · n · log(k · min(coins)))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers/arrays allocated; all variables are scalars\n- Lambda captures by reference (constant space)\n- No recursion\n- not counted: input vector, returned scalar",
+  "approach": "The producible amounts form the union of arithmetic sequences (multiples of each coin). Binary search on the answer x: for a candidate x, count distinct producible amounts ≤ x using inclusion-exclusion over all 2^n − 1 non-empty subsets of coins, where each subset S contributes (−1)^{|S|+1} · ⌊x / lcm(S)⌋. The k-th smallest is the smallest x with count(x) ≥ k. The upper bound k × min(coins) is valid because the smallest coin alone produces k multiples within that range.",
+  "hints": [
+    "For coins [5,2], the amount 10 is a multiple of both 5 and 2. When listing distinct producible amounts up to some bound, what determines whether an amount gets counted more than once?",
+    "Binary search on the answer x, counting distinct producible amounts ≤ x via inclusion-exclusion. For x=10, coins [5,2]: count = 10/2 + 10/5 − 10/lcm(2,5) = 5+2−1 = 6.",
+    "```\nlo = 1, hi = k * min(coins)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    cnt = 0\n    for each non-empty subset S of coins:\n        l = lcm of coins in S  (skip if l > mid)\n        if |S| is odd: cnt += mid / l\n        else: cnt -= mid / l\n    if cnt >= k: hi = mid\n    else: lo = mid + 1\nreturn lo\n```",
+    "**Upper bound overflow** - k can be 2×10^9 and min(coins) up to 25, so the product reaches 5×10^10.\n`Input: coins = [2], k = 2000000000` → `Expected: 4000000000`\n⚠️ Bug: `int hi = k * minCoin` → 4×10^9 exceeds INT_MAX, wraps to negative → returns garbage\n\n**Overlapping multiples** - when one coin divides another, naive summation double-counts shared multiples.\n`Input: coins = [2,4,8], k = 5` → `Expected: 10`\n⚠️ Bug: summing `mid/coins[i]` without inclusion-exclusion → count(8) = 4+2+1 = 7 ≥ 5, returns 8\n\n**Off-by-one comparison** - the k-th smallest is the first x where count(x) reaches k.\n`Input: coins = [3,5,7], k = 1` → `Expected: 3`\n⚠️ Bug: using `count(mid) > k` instead of `>= k` → count(3)=1 is not > 1, keeps searching, returns 5\n\n**LCM exceeds search value** - for large subsets the LCM can far exceed x, so dividing x by a garbage LCM gives wrong counts.\n`Input: coins = [2,3,5,7,11,13,17,19,23,4,8,9,16,25,6], k = 1` → `Expected: 2`\n⚠️ Bug: using `int l` for LCM without capping against x → LCM of full subset = 26771144400 overflows int → wrong count"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could combine coins of different denominations (standard coin change)?",
+      "a": "The problem becomes related to the Frobenius coin problem. For small amounts, use a bitset DP to mark reachable values up to max(coins)^2, then binary search with a prefix-sum count over the DP. For large k, once past the Frobenius gap every integer is reachable, so the answer is gap + (k − reachable_below_gap). TC: O(max(coins)^2 + log k)."
+    },
+    {
+      "q": "What if coins.length ≤ 25 instead of 15?",
+      "a": "2^25 ≈ 33M subsets per count call is too slow. Since all coins ≤ 25, every subset LCM divides LCM(1..25) = 26771144400. Precompute the signed inclusion-exclusion coefficient for each distinct LCM value (at most ~1000 divisors), then each count call iterates only over those. TC: O(D · log(k · 25)) where D ≈ 1000."
+    },
+    {
+      "q": "What if coins[i] ≤ 10^9?",
+      "a": "LCMs grow extremely fast, so almost all subsets have LCM > x and contribute 0. The algorithm is unchanged but the overflow check `l / g > x / c` is critical - use `long long` throughout and skip subsets whose LCM exceeds x as soon as detected. TC unchanged: O(2^n · n · log(k · min(coins)))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long findKthSmallest(vector<int>& coins, int k) {\n        int n = coins.size();\n        int minCoin = *min_element(coins.begin(), coins.end());\n        long long hi = (long long)k * minCoin;\n        \n        auto gcdll = [](long long a, long long b) -> long long {\n            while (b) { long long t = a % b; a = b; b = t; }\n            return a;\n        };\n        \n        auto count = [&](long long x) -> long long {\n            long long res = 0;\n            int total = 1 << n;\n            for (int mask = 1; mask < total; mask++) {\n                long long l = 1;\n                int bits = 0;\n                bool skip = false;\n                for (int i = 0; i < n; i++) {\n                    if (mask & (1 << i)) {\n                        bits++;\n                        long long c = coins[i];\n                        long long g = gcdll(l, c);\n                        if (l / g > x / c) { skip = true; break; }\n                        l = l / g * c;\n                    }\n                }\n                if (skip) continue;\n                long long cnt = x / l;\n                if (bits & 1) res += cnt;\n                else res -= cnt;\n            }\n            return res;\n        };\n        \n        long long lo = 1;\n        while (lo < hi) {\n            long long mid = (lo + hi) / 2;\n            if (count(mid) >= k) hi = mid;\n            else lo = mid + 1;\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

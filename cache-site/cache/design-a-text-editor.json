@@ -1,0 +1,51 @@
+{
+  "slug": "design-a-text-editor",
+  "title": "Design a Text Editor",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two-Stack / Gap Buffer",
+  "tc": "O(k)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string left: up to n characters (n = total text across all calls) → O(n)\n- string right: up to n characters → O(n)\n- recursion depth: none\n- not counted: returned substrings (≤ 10 chars each)",
+  "approach": "Maintain two strings: `left` (text before cursor, in order) and `right` (text after cursor, stored reversed). All mutations happen at the back of either string - `push_back`/`pop_back` are O(1) amortized. Moving the cursor left shifts characters from the back of `left` to the back of `right`; moving right does the reverse. The last-10-chars query is a simple `substr` from the back of `left`. Every operation is O(k) where k ≤ 40.",
+  "hints": [
+    "When the cursor sits in the middle of the text, which characters actually change during each operation - only those adjacent to the cursor, or the entire text?",
+    "Use two strings: `left` for text before the cursor and `right` for text after it (stored in reverse). Moving the cursor left shifts characters from the back of `left` to the back of `right` - e.g., with `left=\"leetpractice\"`, `cursorLeft(8)` pops 8 chars off `left` and pushes them onto `right`, leaving `left=\"leet\"`.",
+    "```\naddText(text):     append text to left\ndeleteText(k):     actual = min(k, |left|); resize left; return actual\ncursorLeft(k):     move min(k,|left|) chars from back of left to back of right\n                   return last min(10,|left|) chars of left\ncursorRight(k):    move min(k,|right|) chars from back of right to back of left\n                   return last min(10,|left|) chars of left\n```",
+    "**Delete beyond available** - left has fewer characters than k\n`[\"TextEditor\",\"addText\",\"deleteText\"], [[],[\"ab\"],[5]]` → `Expected: [null,null,2]`\n⚠️ Bug: returning k instead of min(k, left.size()) → returns 5\n\n**Cursor left at position 0** - cursor already at leftmost, left becomes empty\n`[\"TextEditor\",\"addText\",\"cursorLeft\"], [[],[\"abc\"],[10]]` → `Expected: [null,null,\"\"]`\n⚠️ Bug: not clamping move count to left.size(), popping from empty string → undefined behavior\n\n**Return fewer than 10 chars** - left has only 1 char after the move\n`[\"TextEditor\",\"addText\",\"cursorLeft\"], [[],[\"ab\"],[1]]` → `Expected: [null,null,\"a\"]`\n⚠️ Bug: always calling substr(size-10) without min(10,size) → substr with wrapped index, crash\n\n**Cursor right at end** - right string is empty, cursor cannot move\n`[\"TextEditor\",\"addText\",\"cursorRight\"], [[],[\"abc\"],[10]]` → `Expected: [null,null,\"abc\"]`\n⚠️ Bug: not clamping move count to right.size(), popping from empty right → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "If k and text.length can be up to 10^5 with 10^5 calls, how would you optimize beyond O(k) per call?",
+      "a": "Replace the two strings with a balanced BST (rope) where each node stores a substring and its subtree size. Split and merge run in O(log n), so cursor moves become O(log n) instead of O(k). The last-10-chars query walks from the cursor split point using subtree sizes. Total time drops to O(Q log n)."
+    },
+    {
+      "q": "What if you need to support selecting a range of text and copying it?",
+      "a": "Track a selection start position alongside the cursor. Copying extracts the characters between the two positions from `left` and/or `right`, costing O(selection length). With a rope, you can split out the selected range in O(log n) and read it without copying."
+    },
+    {
+      "q": "What if the editor must support undo/redo for all operations?",
+      "a": "Push each operation onto an undo stack with enough info to reverse it: addText stores the text length (undo = deleteText), deleteText stores the deleted text (undo = addText at cursor), cursor moves store k (undo = opposite direction). Redo uses a parallel stack. Space is O(total text ever inserted) in the worst case."
+    }
+  ],
+  "code": {
+    "cpp": "class TextEditor {\n    string left, right; // right stored in reverse order\npublic:\n    TextEditor() {\n        \n    }\n    \n    void addText(string text) {\n        left += text;\n    }\n    \n    int deleteText(int k) {\n        int actual = min(k, (int)left.size());\n        left.resize(left.size() - actual);\n        return actual;\n    }\n    \n    string cursorLeft(int k) {\n        int move = min(k, (int)left.size());\n        for (int i = 0; i < move; i++) {\n            right.push_back(left.back());\n            left.pop_back();\n        }\n        int len = min(10, (int)left.size());\n        return left.substr(left.size() - len);\n    }\n    \n    string cursorRight(int k) {\n        int move = min(k, (int)right.size());\n        for (int i = 0; i < move; i++) {\n            left.push_back(right.back());\n            right.pop_back();\n        }\n        int len = min(10, (int)left.size());\n        return left.substr(left.size() - len);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

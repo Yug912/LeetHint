@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-pairs-of-interchangeable-rectangles",
+  "title": "Number of Pairs of Interchangeable Rectangles",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Table Counting",
+  "tc": "O(n log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long, int> count: up to n entries (one per distinct reduced ratio) → O(n)\n- recursion depth: none\n- not counted: input vector, returned long long",
+  "approach": "Two rectangles are interchangeable iff their width-to-height ratios are equal. Reduce each ratio to simplest form by dividing both dimensions by their GCD to avoid floating-point issues. Use a hash map to count occurrences of each reduced ratio. For each rectangle, the number of new pairs it forms equals the current count for its ratio; add this to the running total before incrementing the count.",
+  "hints": [
+    "With n up to 10^5, comparing every pair would require roughly 5 × 10^9 checks. What single property of a rectangle determines which others it can pair with?",
+    "Use a hash map keyed by the reduced width:height fraction (divide both by their GCD). For [4,8], GCD(4,8)=4, giving reduced form 1:2; look up and increment its count.",
+    "```\nfor each rectangle (w, h):\n    g = gcd(w, h)\n    key = (w/g, h/g)\n    result += count[key]\n    count[key] += 1\nreturn result\n```",
+    "**Single rectangle** - n=1, no pairs possible\n`Input: [[1,1]]` → `Expected: 0`\n⚠️ Bug: initializing result to 1 → returns 1\n\n**Overflow** - 10^5 identical rectangles give 99999×100000/2 = 4999950000 pairs\n`Input: [[1,1],[1,1],...repeated 10^5 times]` → `Expected: 4999950000`\n⚠️ Bug: using int for result → returns 704982704\n\n**Unreduced fractions** - same ratio, different dimensions\n`Input: [[2,4],[3,6],[5,10]]` → `Expected: 3`\n⚠️ Bug: using raw (w,h) as key without GCD → returns 0\n\n**Product collision** - different ratios, same width×height product\n`Input: [[2,3],[3,2]]` → `Expected: 0`\n⚠️ Bug: using w*h as key → both give 6, returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must use only O(1) extra space (beyond modifying the input)?",
+      "a": "Sort the rectangles in place by their reduced width:height ratio, then scan for consecutive runs of equal ratios. Each run of length k contributes k*(k-1)/2 pairs. Time O(n log n) for sorting, space O(log n) for the sort stack."
+    },
+    {
+      "q": "Instead of the count, return all pairs of interchangeable rectangle indices.",
+      "a": "For each ratio group of size k, generate all k*(k-1)/2 index pairs. Time becomes O(n + P) where P is the total pair count (up to O(n^2) in the worst case). Space for the output is O(P)."
+    },
+    {
+      "q": "What if rectangles arrive one at a time in a stream and you must output the running pair count after each insertion?",
+      "a": "Maintain the same hash map of reduced ratios to counts. For each new rectangle, add the current count for its ratio to the running total, then increment that ratio's count. Each update is O(1) average time, O(k) total space where k is the number of distinct ratios seen."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int gcd(int a, int b) {\n        while (b) {\n            int t = b;\n            b = a % b;\n            a = t;\n        }\n        return a;\n    }\npublic:\n    long long interchangeableRectangles(vector<vector<int>>& rectangles) {\n        unordered_map<long long, int> count;\n        long long result = 0;\n        for (auto& r : rectangles) {\n            int w = r[0], h = r[1];\n            int g = gcd(w, h);\n            long long key = (long long)(w / g) * 100001 + (h / g);\n            result += count[key];\n            count[key]++;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

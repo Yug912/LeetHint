@@ -1,0 +1,40 @@
+{
+  "slug": "special-permutations",
+  "title": "Special Permutations",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(n² · 2ⁿ)",
+  "sc": "O(n · 2ⁿ)",
+  "spaceBreakdown": "- dp table: (1<<n) × n longs → O(n · 2ⁿ)\n- recursion stack: none (iterative)\n- not counted: input vector, returned int",
+  "approach": "With n ≤ 14, brute force over all 14! permutations is infeasible. Use bitmask DP: state = (mask of used indices, index of last placed element). Transition by appending any unused index `j` where `nums[last]` and `nums[j]` divide each other. The answer is the sum over all `dp[full_mask][i]`. This is correct because the only information needed to extend a partial permutation is which elements remain and what the last element is (the divisibility condition only depends on adjacent pairs).",
+  "hints": [
+    "With n ≤ 14, checking all 14! permutations is far too many. What two pieces of information about a partially-built permutation are sufficient to determine how many ways it can be completed?",
+    "Use bitmask DP with state (mask of used indices, last index). For nums=[2,3,6], from mask={2} ending at index 2 (value 6), we extend with index 0 (value 2) since 6 % 2 == 0.",
+    "```\ndp[mask][last] = count of permutations using exactly indices in mask, ending at last\nfor each mask, last:\n    for each next index j not in mask:\n        if nums[last] % nums[j] == 0 or nums[j] % nums[last] == 0:\n            dp[mask | (1<<j)][j] += dp[mask][last]\nanswer = sum of dp[full_mask][i] for all i\n```",
+    "**Smallest input** - n=2, only one adjacent pair to check\n`Input: nums = [2,4]` → `Expected: 2`\n⚠️ Bug: initializing dp only for index 0 instead of all singletons → returns 1\n\n**No valid permutation** - no two elements divide each other\n`Input: nums = [2,3,5]` → `Expected: 0`\n⚠️ Bug: skipping the divisibility check before transitioning → returns 6\n\n**Overflow** - 14! ≈ 8.7×10¹⁰ exceeds 2³¹−1\n`Input: nums = [1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192]` → `Expected: 178290591`\n⚠️ Bug: storing dp in `int` instead of `long long` → returns garbage (negative or wrapped value)\n\n**All pairs divide** - every permutation is special\n`Input: nums = [1,2,4]` → `Expected: 6`\n⚠️ Bug: forgetting to take modulo during accumulation → returns 6 here but overflows for n=14"
+  ],
+  "followUps": [
+    {
+      "q": "What if n could be up to 20?",
+      "a": "2²⁰ × 20 = 20M states with 20² × 2²⁰ ≈ 4×10⁸ transitions - borderline TLE. You'd need meet-in-the-middle: split into two halves, enumerate valid half-permutations, then combine halves whose boundary pair satisfies divisibility. Time becomes roughly O(2^(n/2) · n²)."
+    },
+    {
+      "q": "What if nums could contain duplicates?",
+      "a": "The DP still runs but overcounts identical permutations. Divide the final answer by the product of factorials of each value's multiplicity, or deduplicate by treating equal values as indistinguishable in the mask (group identical values and assign them in batches)."
+    },
+    {
+      "q": "What if the divisibility condition must hold for ALL pairs, not just adjacent ones?",
+      "a": "This simplifies drastically: partition nums into groups where every pair within a group is mutually divisible (chains under divisibility). Only permutations entirely within one group qualify, so the answer is the sum over groups of (group size)!."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int specialPerm(vector<int>& nums) {\n        int n = nums.size();\n        const long long MOD = 1000000007;\n        vector<vector<long long>> dp(1 << n, vector<long long>(n, 0));\n        for (int i = 0; i < n; i++) dp[1 << i][i] = 1;\n        for (int mask = 1; mask < (1 << n); mask++) {\n            for (int last = 0; last < n; last++) {\n                if (!(mask & (1 << last))) continue;\n                if (dp[mask][last] == 0) continue;\n                for (int nxt = 0; nxt < n; nxt++) {\n                    if (mask & (1 << nxt)) continue;\n                    if (nums[last] % nums[nxt] == 0 || nums[nxt] % nums[last] == 0) {\n                        int newMask = mask | (1 << nxt);\n                        dp[newMask][nxt] = (dp[newMask][nxt] + dp[mask][last]) % MOD;\n                    }\n                }\n            }\n        }\n        long long ans = 0;\n        int full = (1 << n) - 1;\n        for (int i = 0; i < n; i++) ans = (ans + dp[full][i]) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

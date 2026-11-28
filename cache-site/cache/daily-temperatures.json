@@ -1,0 +1,51 @@
+{
+  "slug": "daily-temperatures",
+  "title": "Daily Temperatures",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-17",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> answer: n entries → O(n)  \n- vector<int> stack (implemented with std::vector<int>): up to n indices → O(n)  \n- recursion depth: none  \n- not counted: input vector, returned answer vector",
+  "approach": "Scanning the days from right to left we keep a stack of indices whose temperatures form a strictly decreasing sequence. For each day we pop all indices with temperature ≤ current, because they can never be the next warmer day. The top of the stack (if any) is the closest future day that is warmer, so the answer is its index minus the current index. This yields a linear‑time monotonic‑stack solution.",
+  "hints": [
+    "When you look at a particular day, which future day determines its answer - the first warmer one or any warmer one later?  \nThe temperature values are bounded between 30 and 100.",
+    "Use a **monotonic decreasing stack** that stores indices of days.  \nExample: for temperatures = [73,74,75,71,…] processing day 2 (value 75) pops indices of 71 and 69 because they are not warmer, leaving the next warmer day at index 6.",
+    "for i from n‑1 downto 0:\n    while stack not empty and temps[stack.top] <= temps[i]:\n        stack.pop\n    if stack empty: answer[i] = 0\n    else: answer[i] = stack.top - i\n    stack.push(i)",
+    "**Single element** - only one temperature, no future day.  \n`Input: [50]` → `Expected: [0]`  \n⚠️ Bug: initializing answer with -1 and never overwriting → returns `[-1]`.\n\n**All decreasing** - no warmer day appears later.  \n`Input: [90,80,70,60]` → `Expected: [0,0,0,0]`  \n⚠️ Bug: using `<` instead of `<=` when popping → would keep index 1 for day 0 and output `[1,0,0,0]`.\n\n**All equal** - temperatures never become strictly higher.  \n`Input: [70,70,70]` → `Expected: [0,0,0]`  \n⚠️ Bug: using `>=` in the pop condition removes equal temperatures too early, leading to empty stack and correct output, but if the condition is `>` (i.e., not popping equal) the algorithm would incorrectly treat equal days as warmer and output `[1,1,0]`.\n\n**Large monotonic increase** - each day’s answer is 1.  \n`Input: [30,31,32,33,34]` → `Expected: [1,1,1,1,0]`  \n⚠️ Bug: forgetting to push the current index after processing → stack never grows, all answers become 0."
+  ],
+  "followUps": [
+    {
+      "q": "How would you modify the solution if temperatures arrived as a stream and you had to answer each query online (i.e., after each new temperature you must output the wait for that day)?",
+      "a": "Process the stream from left to right, maintaining the same decreasing stack of indices. When a new temperature arrives, pop indices with temperature ≤ current, then the top of the stack (if any) gives the answer for the new day; finally push its index. This keeps O(1) amortized time per arrival and O(n) total space."
+    },
+    {
+      "q": "Suppose the temperature range is no longer limited to 30‑100 but can be any 32‑bit integer. Can you still achieve O(n) time without a stack?",
+      "a": "Yes. Keep an auxiliary array `next[101]` (or a hash map for arbitrary values) that stores the nearest future index for each possible temperature greater than the current one. For each day you scan temperatures higher than `temps[i]` to find the minimum stored index. With a bounded range this is O(1) per day; with an unbounded range you need the stack, so the stack remains the optimal O(n) solution."
+    },
+    {
+      "q": "What if the problem required you to return the answers in‑place, modifying the input vector and using only O(1) extra memory?",
+      "a": "Since the input values (30‑100) are needed during the scan, you can first copy the temperatures to a temporary array of size 71 (constant) to keep the original values, then reuse the input vector to store the answers. The monotonic stack can be replaced by a fixed‑size array of 71 entries that records the latest index for each temperature, giving O(1) extra space while preserving O(n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> dailyTemperatures(vector<int>& temperatures) {\n        int n = temperatures.size();\n        vector<int> answer(n, 0);\n        vector<int> st;               // stack of indices, decreasing temperatures\n        st.reserve(n);\n        for (int i = n - 1; i >= 0; --i) {\n            while (!st.empty() && temperatures[st.back()] <= temperatures[i]) {\n                st.pop_back();\n            }\n            if (!st.empty()) {\n                answer[i] = st.back() - i;\n            }\n            // else answer[i] stays 0\n            st.push_back(i);\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": false,
+    "examples": "3/3",
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

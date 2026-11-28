@@ -1,0 +1,40 @@
+{
+  "slug": "rearrange-characters-to-make-target-string",
+  "title": "Rearrange Characters to Make Target String",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Counting",
+  "tc": "O(|s| + |target|)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26]: fixed 26 ints → O(1)\n- int tcnt[26]: fixed 26 ints → O(1)\n- recursion depth: none\n- not counted: input strings, returned int",
+  "approach": "Count how many times each lowercase letter appears in `s` and in `target`. For every letter that `target` needs, the number of copies that letter alone can support is `count_s[c] / count_target[c]` (integer division). The overall answer is the minimum of these ratios across all letters present in `target`, because the scarcest letter is the bottleneck. This is correct since each copy of `target` consumes exactly its letter multiset, and copies are independent.",
+  "hints": [
+    "In Example 2, there are extra 'a' and 'b' left over, yet a second \"abc\" is impossible. What single resource runs out first?",
+    "Use two frequency arrays of size 26 (one for `s`, one for `target`). For Example 1, 'c' appears 2 times in `s` and 1 time in `target`, so 'c' alone allows 2/1 = 2 copies; the answer is the minimum such ratio over all letters of `target`.",
+    "count_s = frequencies of each char in s\ncount_t = frequencies of each char in target\nans = +infinity\nfor c in 'a'..'z':\n    if count_t[c] > 0:\n        ans = min(ans, count_s[c] / count_t[c])\nreturn ans",
+    "**Smallest input** - both strings are a single identical character.\n`Input: s = \"a\", target = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing `ans` to 0 instead of `INT_MAX` → returns 0\n\n**Missing letter** - target needs a letter absent from s.\n`Input: s = \"abc\", target = \"xyz\"` → `Expected: 0`\n⚠️ Bug: iterating only over letters present in `s` and skipping the rest, leaving `ans = INT_MAX` → returns 2147483647\n\n**All same letter** - s and target are identical strings of one repeated letter.\n`Input: s = \"aaaaa\", target = \"aaaaa\"` → `Expected: 1`\n⚠️ Bug: counting distinct letters in target instead of total occurrences (tcnt['a'] = 1) → returns 5\n\n**Target longer than s** - target requires more letters than s has.\n`Input: s = \"ab\", target = \"abc\"` → `Expected: 0`\n⚠️ Bug: only iterating over letters that appear in `s`, missing 'c' entirely → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "`s` arrives as a stream of unknown length and cannot be stored. How do you compute the answer online?",
+      "a": "Keep a 26-element frequency array and update it per incoming character. When the stream ends, run the same min-over-target computation. Time O(|s|), space O(1)."
+    },
+    {
+      "q": "Rearrangement is not allowed - you must pick indices i1 < i2 < ... < ik forming `target`, maximizing the number of disjoint such subsequences.",
+      "a": "Greedy scan: walk through `s`, match `target`'s characters in order; each time a full match completes, increment the answer and restart from `target[0]`. Time O(|s|), space O(1)."
+    },
+    {
+      "q": "You are given k different target strings and must maximize the total number of copies formed, sharing the letters of `s`.",
+      "a": "This becomes a small integer linear program over the 26 letter counts; with |s| ≤ 100 the counts are tiny, so branch-and-bound or DP over remaining counts is feasible. Time exponential in k in the worst case, space O(26) for the state."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int rearrangeCharacters(string s, string target) {\n        int cnt[26] = {0};\n        int tcnt[26] = {0};\n        for (char c : s) cnt[c - 'a']++;\n        for (char c : target) tcnt[c - 'a']++;\n        int ans = INT_MAX;\n        for (int i = 0; i < 26; i++) {\n            if (tcnt[i] > 0) {\n                ans = min(ans, cnt[i] / tcnt[i]);\n            }\n        }\n        return ans == INT_MAX ? 0 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

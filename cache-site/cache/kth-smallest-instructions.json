@@ -1,0 +1,40 @@
+{
+  "slug": "kth-smallest-instructions",
+  "title": "Kth Smallest Instructions",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Combinatorial Greedy Construction",
+  "tc": "O((row + col) × min(row, col))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: O(row + col) but not counted (returned output)\n- comb() local variables (res, i): O(1)\n- main loop variables (hLeft, vLeft, k, c): O(1)\n- no recursion, no containers",
+  "approach": "Build the instruction string character by character. At each position, if we place 'H', the number of valid completions is C(remaining_positions - 1, v_remaining). If k ≤ this count, place 'H'; otherwise place 'V' and subtract the count from k. This works because 'H' < 'V' lexicographically, so all strings starting with 'H' come before those starting with 'V', and the binomial coefficient counts exactly how many completions exist for each choice.",
+  "hints": [
+    "If you fix the first character of the instruction string, how many valid completions exist for each choice of 'H' versus 'V'? The constraints give row, column ≤ 15, so the total string length is at most 30.",
+    "Use binomial coefficients (combinatorics). For destination=[2,3] with k=2: C(4,2)=6 strings start with 'H', and since 2 ≤ 6, place 'H' and continue with the same k.",
+    "```\nh_left = column, v_left = row\nfor each of (row + column) positions:\n    if h_left == 0: append 'V', v_left--\n    else if v_left == 0: append 'H', h_left--\n    else:\n        c = C(h_left + v_left - 1, v_left)\n        if k <= c: append 'H', h_left--\n        else: append 'V', k -= c, v_left--\nreturn result\n```",
+    "**Smallest input** - only 2 characters to place, both choices active.\n`Input: destination=[1,1], k=1` → `Expected: \"HV\"`\n⚠️ Bug: not guarding hLeft==0 before calling comb → returns \"HH\" (places H when none remain)\n\n**k at H/V boundary** - k exactly equals the count of H-prefixed strings.\n`Input: destination=[2,3], k=6` → `Expected: \"HVVHH\"`\n⚠️ Bug: using `k < c` instead of `k <= c` → returns \"VHHHV\" (flips to V one step too early)\n\n**Largest k** - all V's must be placed before any H.\n`Input: destination=[2,3], k=10` → `Expected: \"VVHHH\"`\n⚠️ Bug: decrementing k to 0-indexed at start but still using `k <= c` (1-indexed comparison) → returns \"VHVHH\" (the 9th string instead of 10th)"
+  ],
+  "followUps": [
+    {
+      "q": "If row and column can be up to 10^5, how would you handle the binomial coefficients?",
+      "a": "C(200000, 100000) is astronomically large. Instead of computing exact values, cap the binomial coefficient at k+1 during multiplication - once the running product exceeds k, return k+1 immediately. This avoids overflow and keeps each comb call O(min(row, col)) with early termination. The greedy logic stays identical."
+    },
+    {
+      "q": "If a third move 'D' (diagonal, advancing both row and column by 1) were added, how would the approach change?",
+      "a": "At each step, consider choices in lexicographic order. For each candidate character, count completions using multinomial coefficients: (h_left + v_left + d_left)! / (h_left! × v_left! × d_left!). Pick the smallest character whose completion count is ≥ k, subtract if needed, and continue. The greedy structure is unchanged."
+    },
+    {
+      "q": "If k can be up to 10^18, what changes in the implementation?",
+      "a": "Nothing changes for these constraints - C(30,15) ≈ 1.55×10^8 fits easily in long long. If row+column grew to 60, C(60,30) ≈ 1.18×10^17 still fits in long long. Beyond that, cap intermediate binomial values at k (since we only compare against k) to prevent overflow while preserving correct comparison results."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string kthSmallestPath(vector<int>& destination, int k) {\n        int row = destination[0];\n        int col = destination[1];\n        int hLeft = col, vLeft = row;\n        string result;\n        int total = row + col;\n        for (int i = 0; i < total; i++) {\n            if (hLeft == 0) {\n                result += 'V';\n                vLeft--;\n            } else if (vLeft == 0) {\n                result += 'H';\n                hLeft--;\n            } else {\n                long long c = comb(hLeft + vLeft - 1, vLeft);\n                if ((long long)k <= c) {\n                    result += 'H';\n                    hLeft--;\n                } else {\n                    result += 'V';\n                    k -= (int)c;\n                    vLeft--;\n                }\n            }\n        }\n        return result;\n    }\nprivate:\n    long long comb(int n, int r) {\n        if (r < 0 || r > n) return 0;\n        if (r > n - r) r = n - r;\n        long long res = 1;\n        for (int i = 0; i < r; i++) {\n            res = res * (n - i) / (i + 1);\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

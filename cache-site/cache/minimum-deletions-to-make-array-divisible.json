@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-deletions-to-make-array-divisible",
+  "title": "Minimum Deletions to Make Array Divisible",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "GCD Reduction",
+  "tc": "O(n + m log M)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int g, minValid, deletions, loop counters: all O(1) scalars\n- recursion depth: none\n- no containers allocated",
+  "approach": "The key insight is that an element x divides all elements of numsDivide if and only if x divides their GCD. Compute g = gcd of all elements in numsDivide, then find the smallest element in nums that divides g (return -1 if none exists). The answer is the count of elements in nums strictly smaller than this minimum valid element, since those must all be deleted. This avoids sorting - two linear scans of nums suffice.",
+  "hints": [
+    "If a number x divides both a and b, what other number computable from a and b must x also divide? Both arrays can contain up to 10^5 elements.",
+    "Compute the GCD of all elements in numsDivide using the Euclidean algorithm. For numsDivide = [9,6,9,3,15]: gcd(9,6)=3, gcd(3,9)=3, gcd(3,3)=3, gcd(3,15)=3, so g=3.",
+    "```\ng = gcd of all numsDivide elements\nminValid = INF\nfor x in nums: if g % x == 0: minValid = min(minValid, x)\nif minValid == INF: return -1\ncount = 0\nfor x in nums: if x < minValid: count++\nreturn count\n```",
+    "**No valid divisor** - no element in nums divides the GCD of numsDivide\n`Input: nums = [4,3,6], numsDivide = [8,2,6,10]` → `Expected: -1`\n⚠️ Bug: returning 0 when minValid is never updated instead of -1 → returns 0\n\n**GCD equals 1** - only the value 1 can divide it\n`Input: nums = [2,3,4], numsDivide = [7,11]` → `Expected: -1`\n⚠️ Bug: taking the minimum of nums without checking g % x == 0 → returns 0\n\n**All elements equal and valid** - zero deletions needed\n`Input: nums = [3,3,3], numsDivide = [6,9]` → `Expected: 0`\n⚠️ Bug: counting elements <= minValid instead of < minValid → returns 3\n\n**Duplicates below the valid minimum** - each copy must be deleted\n`Input: nums = [2,2,2,3], numsDivide = [6,9]` → `Expected: 3`\n⚠️ Bug: counting distinct values below minValid instead of total occurrences → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if numsDivide arrives as a data stream too large to fit in memory?",
+      "a": "Maintain a running GCD: g starts at the first value, then g = gcd(g, next) for each incoming element. GCD only decreases, so stop early if g hits 1. This uses O(1) space regardless of stream length. TC remains O(m log M)."
+    },
+    {
+      "q": "What if nums is fixed and you receive many different numsDivide queries online?",
+      "a": "Sort nums once and build a prefix-count array. For each query, compute g = gcd(numsDivide), then scan sorted nums to find the smallest element dividing g, and binary search to count elements below it. TC: O(n log n) preprocessing, O(n) per query."
+    },
+    {
+      "q": "What if you must minimize the sum of deleted elements instead of their count?",
+      "a": "Sort nums and compute prefix sums. For each valid element x (dividing g), the deletion sum is the prefix sum of all elements before x. Find the minimum such prefix sum. TC: O(n log n), SC: O(n) for prefix sums."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int gcd(int a, int b) {\n        while (b) {\n            int t = b;\n            b = a % b;\n            a = t;\n        }\n        return a;\n    }\npublic:\n    int minOperations(vector<int>& nums, vector<int>& numsDivide) {\n        int g = numsDivide[0];\n        for (int i = 1; i < (int)numsDivide.size(); i++) {\n            g = gcd(g, numsDivide[i]);\n            if (g == 1) break;\n        }\n        \n        int minValid = INT_MAX;\n        for (int x : nums) {\n            if (g % x == 0) {\n                minValid = min(minValid, x);\n            }\n        }\n        \n        if (minValid == INT_MAX) return -1;\n        \n        int deletions = 0;\n        for (int x : nums) {\n            if (x < minValid) deletions++;\n        }\n        \n        return deletions;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

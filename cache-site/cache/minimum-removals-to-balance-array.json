@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-removals-to-balance-array",
+  "title": "Minimum Removals to Balance Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window on Sorted Array",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- local variables (n, best, j, i, limit): O(1)\n- input array sorted in place: not counted (LeetCode convention)",
+  "approach": "Sort the array so that for any chosen minimum `nums[i]`, all elements that can coexist with it (i.e., `nums[j] ≤ k * nums[i]`) form a contiguous suffix starting at `i`. Use two pointers: for each `i` as the left end, advance `j` as far right as possible while `nums[j] ≤ k * nums[i]`. The window `[i, j)` is balanced with size `j - i`. Since the array is sorted and `k` is constant, the limit `k * nums[i]` is non-decreasing, so `j` only moves forward - giving an O(n) scan after sorting. The answer is `n - max_window_size`.",
+  "hints": [
+    "If you could designate one element as the smallest in the final array, what must be true of every other element you keep - and once the numbers are in increasing order, where do all those valid elements sit relative to it? The array has up to 10^5 elements, so checking every subset is infeasible.",
+    "Sort the array, then use two pointers (sliding window). For Example 1, sorted `nums = [1, 2, 5]`, `k = 2`: with `i = 0` (min = 1), the limit is `2`, so `j` advances past 1 and 2 but stops before 5 - window `[1, 2]` has size 2, answer = 3 − 2 = 1.",
+    "```\nsort nums\nbest = 1, j = 0\nfor i from 0 to n-1:\n    limit = k * nums[i]   (use 64-bit)\n    while j < n and nums[j] <= limit:\n        j = j + 1\n    best = max(best, j - i)\nreturn n - best\n```",
+    "**Single element** - n = 1, always balanced by definition\n`Input: nums = [5], k = 1` → `Expected: 0`\n⚠️ Bug: looping `for (int i = 0; i < n - 1; i++)` with `best = 0` → loop body never runs, returns 1\n\n**Overflow** - k × nums[i] = 5 × 10^9 exceeds 2^31 − 1\n`Input: nums = [1000000000, 1000000000], k = 5` → `Expected: 0`\n⚠️ Bug: `int limit = k * nums[i]` → 5×10^9 overflows to 705,032,704, j never advances past i, returns 1\n\n**All equal, k = 1** - every element identical, no removals needed\n`Input: nums = [3,3,3,3], k = 1` → `Expected: 0`\n⚠️ Bug: `while (j < n && nums[j] < limit)` (strict `<`) → window size 0 for every i, best stays 1, returns 3\n\n**Off-by-one in window size** - k = 1 with distinct elements, only single-element windows are valid\n`Input: nums = [1,2,3], k = 1` → `Expected: 2`\n⚠️ Bug: computing `size = j - i + 1` instead of `j - i` → size overcounts by 1, best = 2, returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "Given multiple queries each with a different k, answer all of them efficiently.",
+      "a": "Sort the array once. For each query k, run the same two-pointer scan in O(n). Total time is O(n log n + q·n) where q is the number of queries, space stays O(log n)."
+    },
+    {
+      "q": "Return the actual remaining array after optimal removals, not just the count.",
+      "a": "Track the best window boundaries `best_i` and `best_j` during the scan. After the loop, return the subarray `nums[best_i .. best_j - 1]`. Same O(n log n) time and O(log n) space; the returned vector is output (not counted)."
+    },
+    {
+      "q": "The array is too large to fit in memory and arrives as a stream; minimize working memory.",
+      "a": "Use an external merge sort to order the data on disk, then stream through with two pointers reading sequential blocks. Time remains O(n log n) but working memory drops to O(1) beyond the I/O buffers; the sorted copy lives in external storage."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minRemoval(vector<int>& nums, int k) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        int best = 1;\n        int j = 0;\n        for (int i = 0; i < n; i++) {\n            long long limit = (long long)k * nums[i];\n            while (j < n && nums[j] <= limit) j++;\n            if (j - i > best) best = j - i;\n        }\n        return n - best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

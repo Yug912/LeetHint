@@ -1,0 +1,51 @@
+{
+  "slug": "lru-cache",
+  "title": "LRU Cache",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Hash Map + Doubly Linked List",
+  "tc": "O(1)",
+  "sc": "O(capacity)",
+  "spaceBreakdown": "- unordered_map<int,Node*> cache: up to `capacity` entries → O(capacity)\n- doubly linked list nodes: up to `capacity` live nodes (+2 dummy sentinels) → O(capacity)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Use a hash map mapping each key to its node for O(1) lookup, paired with a doubly linked list that keeps entries ordered from most recently used (front) to least recently used (back). On `get`, move the accessed node to the front. On `put`, update and move to front if the key exists; otherwise insert at front and, if over capacity, remove the node just before the tail (the LRU entry) and erase it from the map. Dummy head/tail sentinels eliminate boundary checks.",
+  "hints": [
+    "For every operation to finish in constant time, what two independent facts about a cached entry must you be able to read AND update in O(1): its value, and something about its position relative to other entries?",
+    "A hash map (key → node) combined with a doubly linked list ordered by recency. In the example, `put(3,3)` with cache `{1,2}` at capacity 2: miss on 3, insert node 3 at front, then evict the tail node (key 2).",
+    "```\nget(key):\n  if key in map:\n    node = map[key]\n    detach(node); insert_at_front(node)\n    return node.value\n  return -1\n\nput(key, value):\n  if key in map:\n    node = map[key]; node.value = value\n    detach(node); insert_at_front(node)\n  else:\n    node = new Node(key, value)\n    map[key] = node; insert_at_front(node)\n    if map.size > capacity:\n      lru = tail.prev\n      detach(lru); map.erase(lru.key); free(lru)\n```",
+    "**Capacity 1** - every put evicts the sole previous entry.\n`LRUCache(1); put(1,1); put(2,2); get(1)` → `Expected: -1`\n⚠️ Bug: erasing the node from the list but forgetting `map.erase(lru->key)` → returns `1` (stale map entry).\n\n**Update existing key at capacity** - updating must not evict anything.\n`LRUCache(2); put(1,1); put(2,2); put(1,10); get(1)` → `Expected: 10`\n⚠️ Bug: treating the update path as a fresh insert and evicting the tail → returns `-1` or evicts key 2 incorrectly.\n\n**Key equals 0** - 0 is a valid key under `0 <= key <= 10^4`.\n`LRUCache(2); put(0,5); get(0)` → `Expected: 5`\n⚠️ Bug: using `0` as an internal \"not found\" sentinel → returns `-1`.\n\n**Value equals 0** - 0 is a valid value under `0 <= value <= 10^5`.\n`LRUCache(2); put(1,0); get(1)` → `Expected: 0`\n⚠️ Bug: returning `0` to mean \"miss\" instead of a distinct sentinel → returns `-1` or misclassifies a real 0.\n\n**get then evict ordering** - a get must promote the key above newer puts.\n`LRUCache(2); put(1,1); put(2,2); get(1); put(3,3); get(2)` → `Expected: -1`\n⚠️ Bug: forgetting to move the node to front on `get` → key 2 survives and `get(2)` returns `2` instead of `-1`."
+  ],
+  "followUps": [
+    {
+      "q": "Add a per-entry TTL (time-to-live); expired entries must not be returned.",
+      "a": "Store an expiration timestamp in each node. On `get`/`put`, check the node's expiry; if past, treat as a miss, detach it, and erase from the map. Lazy expiry keeps every operation O(1); space stays O(capacity)."
+    },
+    {
+      "q": "Support a `resize(int newCapacity)` operation that can shrink or grow the cache.",
+      "a": "Store `cap` as a mutable field. On shrink, repeatedly evict the tail node until `map.size() <= newCapacity`; on grow, just update `cap`. Resize is O(k) where k is the number of evictions; get/put remain O(1)."
+    },
+    {
+      "q": "Support `evictLRU(int k)` that removes the k least recently used entries in one call.",
+      "a": "Walk backward from the tail sentinel k times, detaching each node and erasing its key from the map. The call is O(k) (amortized O(1) per evicted entry); get/put complexity is unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class LRUCache {\nprivate:\n    struct Node {\n        int key;\n        int value;\n        Node* prev;\n        Node* next;\n        Node(int k, int v) : key(k), value(v), prev(nullptr), next(nullptr) {}\n    };\n\n    int cap;\n    unordered_map<int, Node*> cache;\n    Node* head; // dummy, MRU side\n    Node* tail; // dummy, LRU side\n\n    void detach(Node* node) {\n        node->prev->next = node->next;\n        node->next->prev = node->prev;\n    }\n\n    void insertAtFront(Node* node) {\n        node->next = head->next;\n        node->prev = head;\n        head->next->prev = node;\n        head->next = node;\n    }\n\npublic:\n    LRUCache(int capacity) {\n        cap = capacity;\n        head = new Node(0, 0);\n        tail = new Node(0, 0);\n        head->next = tail;\n        tail->prev = head;\n    }\n\n    int get(int key) {\n        auto it = cache.find(key);\n        if (it == cache.end()) return -1;\n        Node* node = it->second;\n        detach(node);\n        insertAtFront(node);\n        return node->value;\n    }\n\n    void put(int key, int value) {\n        auto it = cache.find(key);\n        if (it != cache.end()) {\n            Node* node = it->second;\n            node->value = value;\n            detach(node);\n            insertAtFront(node);\n            return;\n        }\n        Node* node = new Node(key, value);\n        cache[key] = node;\n        insertAtFront(node);\n        if ((int)cache.size() > cap) {\n            Node* lru = tail->prev;\n            detach(lru);\n            cache.erase(lru->key);\n            delete lru;\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": true,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 18,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

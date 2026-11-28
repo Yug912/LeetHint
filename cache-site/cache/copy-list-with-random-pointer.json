@@ -1,0 +1,51 @@
+{
+  "slug": "copy-list-with-random-pointer",
+  "title": "Copy List with Random Pointer",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "In-place pointer interweaving",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers, no recursion, no auxiliary arrays.\n- A handful of Node* locals (cur, copy, newHead): O(1).\n- The interweaving temporarily mutates the input list but fully restores it; per the rules, in-place input modification counts as O(1).\n- Not counted: the n newly allocated nodes (the returned output).",
+  "approach": "Use the interweaving technique: insert each copy immediately after its original (A→A'→B→B'→...). Then a copy's random target is just `original.random.next` (when random is non-null), since the copy of any node sits right behind it. Finally, detach the two lists to restore the original and return the new head. This avoids any hash map because the original-to-copy mapping is encoded structurally in the `next` pointers.",
+  "hints": [
+    "When a node's random pointer targets some other node in the list, what must you already have access to before you can wire up the corresponding copy's random pointer? The list length is at most 1000.",
+    "Interweave each new node right after its original: A→A'→B→B'→C→C'. Then for original node B whose random is C, the copy B' gets `B.random.next` = C' as its random.",
+    "```\nfor each cur in original:\n    insert copy(cur.val) between cur and cur.next\nfor each cur in original:\n    if cur.random: cur.next.random = cur.random.next\nnewHead = head.next\nfor each cur in original:\n    copy = cur.next\n    cur.next = copy.next\n    if copy.next: copy.next = copy.next.next\nreturn newHead\n```",
+    "**Empty list** - head is null, no nodes to copy.\n`Input: head = []` → `Expected: []`\n⚠️ Bug: skipping the null guard and reading `head->next` → undefined behavior / crash.\n\n**Single node pointing to itself** - the only node's random is itself.\n`Input: head = [[1,0]]` → `Expected: [[1,0]]`\n⚠️ Bug: setting `copy->random = cur->random` (without `.next`) → copy's random points to the original node, output `[[1,0]]` but with a pointer into the old list, which LeetCode rejects.\n\n**All randoms null** - every random pointer is null across the whole list.\n`Input: head = [[1,null],[2,null],[3,null]]` → `Expected: [[1,null],[2,null],[3,null]]`\n⚠️ Bug: unconditionally dereferencing `cur->random->next` without a null check → crash on the first node.\n\n**Random points backward to head** - a later node's random targets an earlier node (Example 1 has node 13 → node 7).\n`Input: head = [[7,null],[13,0]]` → `Expected: [[7,null],[13,0]]`\n⚠️ Bug: only handling forward random pointers and skipping backward ones → 13'.random stays null, output `[[7,null],[13,null]]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if you are forbidden from modifying the input list at all?",
+      "a": "Use an unordered_map<Node*, Node*> mapping each original node to its freshly allocated copy. First pass allocates all copies and fills the map; second pass sets `copy->next = map[cur->next]` and `copy->random = map[cur->random]`. Time stays O(n), space becomes O(n)."
+    },
+    {
+      "q": "What if random may also point to nodes outside this list (external nodes you must not clone)?",
+      "a": "Detect external targets during the mapping pass (e.g., by marking/listing in-list nodes first) and leave such a copy's random null, or store the external pointer verbatim. The interweaving trick no longer works because `cur->random->next` may not be a copy; fall back to the hash-map approach with an explicit in-list membership check. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if the list is a forward-only stream you can traverse just twice and cannot hold in memory?",
+      "a": "In pass 1, emit each node's value and the index of its random target (record positions in a hash map from pointer to index). In pass 2, rebuild from the recorded array, assigning random by index. Time O(n), space O(n) for the index map and the recorded array, but you never need random access to the original nodes after pass 1."
+    }
+  ],
+  "code": {
+    "cpp": "/*\n// Definition for a Node.\nclass Node {\npublic:\n    int val;\n    Node* next;\n    Node* random;\n    \n    Node(int _val) {\n        val = _val;\n        next = NULL;\n        random = NULL;\n    }\n};\n*/\n\nclass Solution {\npublic:\n    Node* copyRandomList(Node* head) {\n        if (!head) return nullptr;\n\n        // Step 1: interweave copies after each original node.\n        for (Node* cur = head; cur; cur = cur->next->next) {\n            Node* copy = new Node(cur->val);\n            copy->next = cur->next;\n            cur->next = copy;\n        }\n\n        // Step 2: assign random pointers using the interweaved structure.\n        for (Node* cur = head; cur; cur = cur->next->next) {\n            if (cur->random) {\n                cur->next->random = cur->random->next;\n            }\n        }\n\n        // Step 3: detach the copied list and restore the original list.\n        Node* newHead = head->next;\n        for (Node* cur = head; cur; cur = cur->next) {\n            Node* copy = cur->next;\n            cur->next = copy->next;          // restore original\n            if (copy->next) {\n                copy->next = copy->next->next;  // link copies together\n            }\n        }\n\n        return newHead;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:nemotron-SEA-LION-v4.8-120b-a12b"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "check-knight-tour-configuration",
+  "title": "Check Knight Tour Configuration",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation / Matrix Traversal",
+  "tc": "O(n^2)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `dr` and `dc` arrays: fixed size 8 → O(1)\n- loop variables: fixed number → O(1)\n- not counted: input grid",
+  "approach": "Since the grid contains a permutation of $0 \\dots n^2-1$, every cell is visited exactly once by definition. We only need to verify that the knight starts at the top-left cell (so `grid[0][0] == 0`) and that every value $v$ (except the maximum) has its successor $v+1$ exactly a knight's move away. We iterate through all cells, and for each cell, check its 8 knight neighbors to see if any holds the value `grid[i][j] + 1`.",
+  "hints": [
+    "Since the grid values are a permutation of $0 \\dots n^2-1$, what property must hold between the cell containing $v$ and the cell containing $v+1$ for the tour to be valid?",
+    "Check the 8 possible knight moves from each cell to find the next value. For example, in Example 1, from cell (0,0) with value 0, a knight move to (1,2) gives value 1.",
+    "```\nif grid[0][0] != 0: return false\nfor each cell (i, j):\n    if grid[i][j] == n*n - 1: continue\n    found = false\n    for each of 8 knight neighbors (ni, nj):\n        if in bounds and grid[ni][nj] == grid[i][j] + 1:\n            found = true\n            break\n    if not found: return false\nreturn true\n```",
+    "**Invalid move** - A step that is not a valid knight move.\n`Input: [[0,3,6],[5,8,1],[2,7,4]]` → `Expected: false`\n⚠️ Bug: Using `abs(ni - i) + abs(nj - j) <= 3` instead of exact knight move check → returns `true` because it accepts the 1-step move from 7 to 8.\n\n**Boundary indices** - Knight moves from edge cells go out of bounds.\n`Input: [[0,11,16,5,20],[17,4,19,10,15],[12,1,8,21,6],[3,18,23,14,9],[24,13,2,7,22]]` → `Expected: true`\n⚠️ Bug: Accessing `grid[ni][nj]` without bounds checking → memory access violation on edge cells like (0,0) where neighbors are out of bounds.\n\n**Last move** - The highest value has no successor.\n`Input: [[0,11,16,5,20],[17,4,19,10,15],[12,1,8,21,6],[3,18,23,14,9],[24,13,2,7,22]]` → `Expected: true`\n⚠️ Bug: Forgetting to skip the cell with value `n*n - 1` → returns `false` because no neighbor contains `n*n`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is so large that $O(n^2)$ time is too slow, but we only need to check if a specific path is valid?",
+      "a": "If we are given the path as a list of coordinates, we can just check adjacent elements in the list in $O(n^2)$ time and $O(1)$ space, which is optimal since we must read the path. If the grid is given, $O(n^2)$ is optimal to read the grid."
+    },
+    {
+      "q": "What if the grid values are not guaranteed to be a permutation of $0 \\dots n^2-1$, but just distinct?",
+      "a": "We would first need to verify that the values are exactly $0 \\dots n^2-1$. We could do this by checking if the minimum is 0, maximum is $n^2-1$, and using a hash set or sorting to ensure all values are present, adding $O(n^2)$ time and space."
+    },
+    {
+      "q": "What if we wanted to find a valid knight's tour for a given $n$ instead of verifying one?",
+      "a": "This becomes the Knight's Tour problem, typically solved using backtracking with Warnsdorff's heuristic. The heuristic suggests moving to the square with the fewest onward moves, which often finds a solution in $O(n^2)$ time without extensive backtracking."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkValidGrid(vector<vector<int>>& grid) {\n        int n = grid.size();\n        if (grid[0][0] != 0) return false;\n        \n        int dr[8] = {-2, -2, -1, -1, 1, 1, 2, 2};\n        int dc[8] = {-1, 1, -2, 2, -2, 2, -1, 1};\n        \n        for (int i = 0; i < n; ++i) {\n            for (int j = 0; j < n; ++j) {\n                if (grid[i][j] == n * n - 1) continue;\n                bool found = false;\n                for (int k = 0; k < 8; ++k) {\n                    int ni = i + dr[k];\n                    int nj = j + dc[k];\n                    if (ni >= 0 && ni < n && nj >= 0 && nj < n && grid[ni][nj] == grid[i][j] + 1) {\n                        found = true;\n                        break;\n                    }\n                }\n                if (!found) return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

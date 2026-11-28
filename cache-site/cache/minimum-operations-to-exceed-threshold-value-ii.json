@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-operations-to-exceed-threshold-value-ii",
+  "title": "Minimum Operations to Exceed Threshold Value II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Heap / Priority Queue Simulation",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<long long> pq: up to n elements → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Use a min-heap to always access the two smallest elements efficiently. Repeatedly extract the two smallest values x and y, compute min(x,y)*2 + max(x,y), and push the result back. Stop when the heap's minimum is ≥ k or fewer than two elements remain. Use `long long` throughout because combining two values near 10⁹ produces ~3×10⁹, which overflows a 32-bit int.",
+  "hints": [
+    "Each operation replaces the two smallest values with a single larger one. What single property of the remaining array tells you whether you must continue or can stop?\n\nThe constraints guarantee an answer always exists.",
+    "Use a min-heap (priority queue). From Example 1, heap = {1,2,3,10,11}: pop 1 and 2, push 1*2+2=4, giving {3,4,10,11}.",
+    "```\npush all nums into min-heap\nops = 0\nwhile heap has ≥ 2 elements and heap.top() < k:\n    x = pop min, y = pop min\n    push min(x,y)*2 + max(x,y)\n    ops += 1\nreturn ops\n```",
+    "**Overflow** - combining two values near 10⁹ exceeds INT_MAX (2.1×10⁹).\n`Input: nums = [999999999,999999999,1000000000], k = 1000000000` → `Expected: 1`\n⚠️ Bug: using `int` for heap values → 999999999*2+999999999 = 2999999997 overflows to -1294967299, causing an extra operation, returns 2.\n\n**Already satisfied** - all elements ≥ k, zero operations needed.\n`Input: nums = [10,20,30], k = 10` → `Expected: 0`\n⚠️ Bug: using `pq.top() <= k` instead of `pq.top() < k` → operates on elements equal to k, returns 1.\n\n**Minimum size** - exactly two elements, one operation.\n`Input: nums = [1,5], k = 5` → `Expected: 1`\n⚠️ Bug: checking `pq.size() > 2` instead of `pq.size() >= 2` → never enters loop, returns 0.\n\n**Duplicates** - the pushed value reaches k but a smaller element still remains.\n`Input: nums = [2,2,2,2,2], k = 10` → `Expected: 4`\n⚠️ Bug: checking only the newly pushed value ≥ k instead of the heap minimum → after pushing 10 (ops=3), returns 3, but 6 is still in the heap."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10¹⁸?",
+      "a": "Values grow by roughly 3× per combination level, so after ~60 levels they exceed 10¹⁸. Use `long long` throughout (already done). The algorithm and complexity remain O(n log n) time and O(n) space, since the number of operations is still bounded by n−1."
+    },
+    {
+      "q": "What if the array arrives as a streaming input too large to fit in memory?",
+      "a": "Process elements in batches: load a batch, push into the heap, and drain the two smallest whenever the heap minimum is below k. This keeps the heap size bounded by the batch size B. Time complexity becomes O(n log B) and space drops to O(B)."
+    },
+    {
+      "q": "What if the operation formula changes to min(x,y) * c + max(x,y) for a given constant c?",
+      "a": "The same heap-based approach works unchanged-just replace the constant 2 with c. The result is always ≥ max(x,y), so the minimum is non-decreasing and correctness is identical. Overflow risk increases with larger c, so use `long long`. Complexity is unchanged: O(n log n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minOperations(vector<int>& nums, int k) {\n        priority_queue<long long, vector<long long>, greater<long long>> pq;\n        for (int x : nums) pq.push(x);\n        int ops = 0;\n        while (pq.size() >= 2 && pq.top() < k) {\n            long long x = pq.top(); pq.pop();\n            long long y = pq.top(); pq.pop();\n            pq.push(min(x, y) * 2 + max(x, y));\n            ops++;\n        }\n        return ops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

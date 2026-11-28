@@ -1,0 +1,40 @@
+{
+  "slug": "make-number-of-distinct-characters-equal",
+  "title": "Make Number of Distinct Characters Equal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Array Enumeration",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt1[26]: fixed 26 ints → O(1)\n- int cnt2[26]: fixed 26 ints → O(1)\n- scalar variables d1, d2, nd1, nd2, loop indices → O(1)\n- no recursion, no dynamic containers\n- not counted: input strings word1, word2",
+  "approach": "Build frequency arrays (size 26) for both words and compute initial distinct counts. Then try all 26×26 pairs of characters (c1 present in word1, c2 present in word2). For each pair, compute the new distinct counts incrementally: word1 loses c1 (distinct drops only if c1 had count 1) and gains c2 (distinct rises only if c2 was absent); word2 loses c2 and gains c1 symmetrically. If c1 == c2 the swap is a no-op, so just check if the original distinct counts are already equal. Return true if any pair yields equal distinct counts.",
+  "hints": [
+    "What determines whether the count of distinct characters in a string changes when one character is replaced by another? The alphabet has only 26 lowercase letters.",
+    "Use two frequency arrays of size 26 (one per word). Try all 26×26 character pairs, updating distinct counts incrementally. For word1 = \"abcc\", word2 = \"aab\": swapping c1 = 'c' (count 2) with c2 = 'a' (count 2) keeps word1 at 3 distinct and brings word2 to 3 distinct.",
+    "```\ncount1, count2 = frequency arrays for word1, word2\nd1, d2 = number of nonzero entries in count1, count2\nfor c1 in 0..25 where count1[c1] > 0:\n    for c2 in 0..25 where count2[c2] > 0:\n        if c1 == c2:\n            if d1 == d2: return true\n        else:\n            nd1 = d1 - (1 if count1[c1]==1 else 0) + (1 if count1[c2]==0 else 0)\n            nd2 = d2 - (1 if count2[c2]==1 else 0) + (1 if count2[c1]==0 else 0)\n            if nd1 == nd2: return true\nreturn false\n```",
+    "**Same-character swap** - c1 == c2 means the swap is a no-op; distinct counts do not change.\n`Input: word1 = \"a\", word2 = \"aa\"` → `Expected: true`\n⚠️ Bug: Applying remove/add logic when c1 == c2 instead of treating it as no-op → returns false (computes nd1 = 0, nd2 = 1)\n\n**Equal distinct counts, unequal character counts** - d1 == d2 but the only available swap changes counts asymmetrically.\n`Input: word1 = \"a\", word2 = \"bb\"` → `Expected: false`\n⚠️ Bug: Returning true immediately when d1 == d2 → returns true\n\n**All same character per string** - Each string consists of one character repeated multiple times.\n`Input: word1 = \"aaa\", word2 = \"bbb\"` → `Expected: true`\n⚠️ Bug: Only iterating over characters with count == 1 → returns false (no character has count 1, loop body never executes)\n\n**Single character, different** - Both strings have length 1 with different characters.\n`Input: word1 = \"a\", word2 = \"b\"` → `Expected: true`\n⚠️ Bug: Skipping the swap loop when either string has length 1 → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need the minimum number of swaps to make distinct counts equal?",
+      "a": "Model it as BFS over states defined by the two frequency arrays. Each state transitions via one swap (26×26 edges). Check distinct-count equality at each visited state. Time complexity: O(26² × number of reachable states), which can be large but is bounded by the product of frequency distributions."
+    },
+    {
+      "q": "What if the alphabet is all Unicode characters instead of 26 lowercase letters?",
+      "a": "Replace the fixed-size arrays with hash maps. Iterate over pairs of distinct characters actually present, giving O(D1 × D2) pairs where D1, D2 are the distinct-character counts. Time complexity: O(n + m + D1 × D2), space: O(D1 + D2)."
+    },
+    {
+      "q": "What if the strings are too large to fit in memory and arrive as streams?",
+      "a": "Maintain only the frequency map (26 entries) while streaming each string - the map is O(1) space regardless of string length. The swap simulation needs only the two frequency maps, never the full strings. Time: O(n + m), space: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isItPossible(string word1, string word2) {\n        int cnt1[26] = {0}, cnt2[26] = {0};\n        for (char c : word1) cnt1[c - 'a']++;\n        for (char c : word2) cnt2[c - 'a']++;\n        int d1 = 0, d2 = 0;\n        for (int i = 0; i < 26; i++) {\n            if (cnt1[i] > 0) d1++;\n            if (cnt2[i] > 0) d2++;\n        }\n        for (int c1 = 0; c1 < 26; c1++) {\n            if (cnt1[c1] == 0) continue;\n            for (int c2 = 0; c2 < 26; c2++) {\n                if (cnt2[c2] == 0) continue;\n                if (c1 == c2) {\n                    if (d1 == d2) return true;\n                    continue;\n                }\n                int nd1 = d1, nd2 = d2;\n                if (cnt1[c1] == 1) nd1--;\n                if (cnt1[c2] == 0) nd1++;\n                if (cnt2[c2] == 1) nd2--;\n                if (cnt2[c1] == 0) nd2++;\n                if (nd1 == nd2) return true;\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

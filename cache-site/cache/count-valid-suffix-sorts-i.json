@@ -1,0 +1,52 @@
+{
+  "slug": "count-valid-suffix-sorts-i",
+  "title": "Count Valid Suffix Sorts I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Prefix-Suffix Matching",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[100001]: fixed-size array (100001 entries, constant) → O(1)\n- recursion depth: none\n- not counted: input arrays nums and target",
+  "approach": "First verify nums and target have identical value frequencies (sorting preserves frequencies, so a mismatch means answer 0). Then observe that sorting suffix nums[i..n-1] leaves the prefix [0..i-1] unchanged, so it must already equal target[0..i-1]. The suffix, once sorted non-increasingly, equals target[i..n-1] iff target[i..n-1] is already non-increasing (since the multisets match when frequencies are equal). Compute p = longest matching prefix length and q = start of the longest non-increasing suffix of target; the answer is max(0, min(p, n-1) - q + 1).",
+  "hints": [
+    "When you sort only the suffix nums[i..n-1], which positions of the array are guaranteed to keep their original values from nums?",
+    "Use a frequency array to verify nums and target share the same multiset, then linear scans for the longest matching prefix and longest non-increasing suffix of target. In Example 2, the matching prefix has length 3 and the non-increasing suffix of target starts at index 2, so indices 2 and 3 are valid.",
+    "```\nif frequency of nums ≠ frequency of target:\n    return 0\np = longest prefix length with nums[i] == target[i]\nq = start of longest non-increasing suffix of target\nreturn max(0, min(p, n-1) - q + 1)\n```",
+    "**Single element** - n=1, the only suffix is the entire array\n`Input: nums = [5], target = [5]` → `Expected: 1`\n⚠️ Bug: computing `min(p, n)` instead of `min(p, n-1)` gives upper=1, returning 1-0+1=2\n\n**Frequency mismatch** - same values appear but with different counts\n`Input: nums = [1,1], target = [1,2]` → `Expected: 0`\n⚠️ Bug: skipping the frequency check gives p=1, q=1, returning min(1,1)-1+1=1\n\n**All equal** - every element identical in both arrays\n`Input: nums = [2,2,2], target = [2,2,2]` → `Expected: 3`\n⚠️ Bug: using `>` instead of `>=` in the non-increasing check sets q=2, returning min(3,2)-2+1=1\n\n**Full match, non-increasing** - nums equals target and target is already sorted descending\n`Input: nums = [3,2,1], target = [3,2,1]` → `Expected: 3`\n⚠️ Bug: not capping the prefix length at n-1 gives upper=3, returning 3-0+1=4"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] and target[i] can be up to 10^9?",
+      "a": "Replace the fixed-size frequency array with an unordered_map<int,int>. The frequency check becomes O(n) expected time and O(n) space; the prefix and suffix scans remain unchanged."
+    },
+    {
+      "q": "What if you must use only O(1) extra space beyond the input?",
+      "a": "Sort both arrays in place and compare element-by-element to verify frequency equality in O(n log n) time. Then compute the prefix match and non-increasing suffix as before. Total O(n log n) time, O(log n) space for introsort's recursion stack."
+    },
+    {
+      "q": "What if you could sort the suffix in either non-increasing or non-decreasing order, and want indices where at least one choice yields target?",
+      "a": "Compute both the longest non-increasing suffix start (q_desc) and longest non-decreasing suffix start (q_asc) of target. A prefix-matching index i is valid if i >= q_desc or i >= q_asc. The answer is the size of the union of [q_desc, min(p,n-1)] and [q_asc, min(p,n-1)], computed in O(n) time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countSuffix(vector<int>& nums, vector<int>& target) {\n        int n = nums.size();\n        \n        // Check frequency equality using a fixed-size array\n        int freq[100001] = {0};\n        for (int i = 0; i < n; i++) {\n            freq[nums[i]]++;\n            freq[target[i]]--;\n        }\n        for (int i = 0; i <= 100000; i++) {\n            if (freq[i] != 0) return 0;\n        }\n        \n        // Longest matching prefix length\n        int p = 0;\n        while (p < n && nums[p] == target[p]) p++;\n        \n        // Start of longest non-increasing suffix of target\n        int q = n - 1;\n        while (q > 0 && target[q - 1] >= target[q]) q--;\n        \n        // Count valid indices: q <= i <= min(p, n-1)\n        int upper = min(p, n - 1);\n        return max(0, upper - q + 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": true,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

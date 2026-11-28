@@ -1,0 +1,40 @@
+{
+  "slug": "fruits-into-baskets-iii",
+  "title": "Fruits Into Baskets III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Segment Tree (point update, range max query with first-position search)",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> tree: 2*size where size is next power of 2 ≥ n → O(n)\n- recursion depth: none (iterative)\n- not counted: input vectors fruits/baskets",
+  "approach": "Build a max segment tree over the original basket indices (each leaf stores that basket's capacity, or 0 once used). For each fruit, traverse the tree from the root always preferring the left child when its subtree max ≥ fruit quantity - this finds the leftmost available basket with sufficient capacity in O(log n). Mark it used by setting the leaf to 0 and pulling up. If the root max < fruit, the fruit is unplaced.",
+  "hints": [
+    "What property do all valid baskets for a given fruit share, and which specific basket among them must be chosen to satisfy the leftmost rule? The constraints give $n \\le 10^5$.",
+    "Use a Segment Tree. For `fruits = [4,2,5]` and `baskets = [3,5,4]`, sorting baskets gives `[(3,0), (4,2), (5,1)]`. For fruit 4, valid baskets are `[(4,2), (5,1)]`, and we need the one with the minimum original index, which is 1.",
+    "sort baskets by capacity, keeping original indices\nbuild segment tree over sorted baskets storing minimum original index\nfor each fruit:\n    L = binary search first index in sorted baskets with capacity >= fruit\n    if L exists:\n        min_idx = query segment tree for minimum value in range [L, n-1]\n        if min_idx is not infinity:\n            update segment tree at min_idx's position to infinity\n            continue\n    increment unplaced count\nreturn unplaced count",
+    "**Leftmost rule** - multiple valid baskets, must pick the leftmost.\n`Input: fruits = [1, 2], baskets = [2, 1]` → `Expected: 1`\n⚠️ Bug: using a set to pick the basket with the smallest sufficient capacity instead of the leftmost → places fruit 1 in basket 1 and fruit 2 in basket 0, returns 0.\n\n**All elements equal** - all baskets have the same capacity.\n`Input: fruits = [5,5,5], baskets = [5,5,5]` → `Expected: 0`\n⚠️ Bug: using `upper_bound` instead of `lower_bound` for binary search → skips all baskets with capacity 5, returns 3.\n\n**Fruit larger than all baskets** - fruit capacity exceeds all baskets.\n`Input: fruits = [10], baskets = [5]` → `Expected: 1`\n⚠️ Bug: query function missing out-of-bounds check (`ql > r || qr < l`) → returns root minimum index 0, places fruit in basket 0, returns 0.\n\n**Smallest input** - $n = 1$, fruit fits exactly.\n`Input: fruits = [1], baskets = [1]` → `Expected: 0`\n⚠️ Bug: initializing segment tree size to `2 * n` instead of `4 * n` → heap buffer overflow or wrong query results."
+  ],
+  "followUps": [
+    {
+      "q": "What if the baskets array is updated dynamically between fruit placements?",
+      "a": "The segment tree already supports point updates in $O(\\log n)$ time. If an external update changes a basket's capacity, we can just perform another point update on the segment tree to reflect the new capacity or availability before processing the next fruit. The overall time complexity remains $O((n + u) \\log n)$ where $u$ is the number of updates."
+    },
+    {
+      "q": "What if we need to place fruits in the rightmost available basket instead of the leftmost?",
+      "a": "We would change the segment tree to maintain the maximum original index instead of the minimum. The query logic would then select the basket with the largest index in the valid suffix. The time and space complexity remain $O(n \\log n)$ and $O(n)$ respectively."
+    },
+    {
+      "q": "What if a basket can hold multiple fruit types, up to its capacity?",
+      "a": "This becomes a different problem where we need to track remaining capacities. We could use a segment tree that maintains the maximum remaining capacity in each range. For each fruit, we query for the leftmost basket with remaining capacity $\\ge$ fruit, place it, and update the basket's remaining capacity. The time complexity would be $O(n \\log n)$."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numOfUnplacedFruits(vector<int>& fruits, vector<int>& baskets) {\n        int n = (int)baskets.size();\n        int size = 1;\n        while (size < n) size *= 2;\n        vector<int> tree(2 * size, 0);\n        for (int i = 0; i < n; i++) tree[size + i] = baskets[i];\n        for (int i = size - 1; i >= 1; i--) tree[i] = max(tree[2 * i], tree[2 * i + 1]);\n\n        int unplaced = 0;\n        for (int f : fruits) {\n            if (tree[1] < f) {\n                unplaced++;\n                continue;\n            }\n            int node = 1;\n            while (node < size) {\n                if (tree[2 * node] >= f) node = 2 * node;\n                else node = 2 * node + 1;\n            }\n            int pos = node - size;\n            tree[node] = 0;\n            for (node /= 2; node >= 1; node /= 2) {\n                tree[node] = max(tree[2 * node], tree[2 * node + 1]);\n            }\n        }\n        return unplaced;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

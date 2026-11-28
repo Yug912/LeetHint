@@ -1,0 +1,51 @@
+{
+  "slug": "all-nodes-distance-k-in-binary-tree",
+  "title": "All Nodes Distance K in Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS on Tree as Undirected Graph",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<TreeNode*, TreeNode*> parent: up to n−1 entries → O(n)\n- unordered_set<TreeNode*> visited: up to n entries → O(n)\n- queue<TreeNode*> q: up to O(n) at the widest BFS level → O(n)\n- stack<TreeNode*> st: up to n entries, freed before BFS → O(n) peak\n- not counted: input tree, returned vector<int>",
+  "approach": "The tree only provides downward (parent→child) pointers, but nodes at distance K from target may lie through ancestors. We first build a parent map via iterative DFS, then run BFS from the target treating the tree as an undirected graph (neighbors = left child, right child, parent). When BFS reaches depth K, all nodes currently in the queue are exactly the answer. This is correct because BFS explores nodes in order of increasing distance, and the visited set prevents revisiting.",
+  "hints": [
+    "In a binary tree each node knows its children but not its parent. If the target sits deep in the tree, which direction must you also be able to travel to reach every node at distance K?",
+    "Build a parent-pointer map via DFS, then run BFS from the target treating left, right, and parent as neighbors. From target node 5, BFS level 1 reaches {6, 2, 3}; level 2 reaches {7, 4, 1}.",
+    "```\nbuild parent map: DFS from root, record parent of each node\nBFS from target with a visited set:\n  dist = 0, queue = [target], visited = {target}\n  while queue not empty:\n    if dist == k: return values of all nodes currently in queue\n    for each node in current level:\n      enqueue unvisited left child, right child, and parent\n    dist = dist + 1\n  return empty list\n```",
+    "**k = 0** - the target node itself is the only node at distance 0\n`Input: root = [3,5,1,6,2,0,8,null,null,7,4], target = 5, k = 0` → `Expected: [5]`\n⚠️ Bug: incrementing `dist` before the `dist == k` check → returns `[]`\n\n**Skewed tree** - tree is a left-leaning chain, target is the deepest leaf\n`Input: root = [1,2,null,3,null,4,null], target = 4, k = 2` → `Expected: [2]`\n⚠️ Bug: only traversing left/right children from target, never looking up to parent → returns `[]`\n\n**Target is root** - root has no parent entry in the parent map\n`Input: root = [3,5,1,6,2,0,8,null,null,7,4], target = 3, k = 1` → `Expected: [5,1]`\n⚠️ Bug: using `parent[node]` with `[]` operator inserts a null entry and pushes NULL to the queue → crash when dereferencing `NULL->val`\n\n**k exceeds tree diameter** - no node exists at that distance\n`Input: root = [1], target = 1, k = 3` → `Expected: []`\n⚠️ Bug: omitting the `return {}` fallthrough after the while loop → undefined behavior (no return on non-void path)"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to answer many (target, k) queries on the same tree?",
+      "a": "Precompute each node's depth and use binary lifting for LCA. Distance between any two nodes = depth(a) + depth(b) − 2·depth(lca(a,b)). For each query, iterate all nodes and check if distance equals k. Preprocessing O(n log n), each query O(n)."
+    },
+    {
+      "q": "What if you must return the actual paths from target to each node at distance K, not just the values?",
+      "a": "During BFS, store the path (list of node pointers) alongside each queue entry. When you reach distance K, the stored paths are the answers. Time stays O(n); space becomes O(n·k) since each path can be up to k nodes long."
+    },
+    {
+      "q": "What if the tree has 10^7 nodes and memory is tight?",
+      "a": "If modifying the input is allowed, store parent pointers directly in the TreeNode fields, eliminating the O(n) parent map. Use a bitset indexed by node value (values are in [0, 500]) for the visited set instead of a hash set, reducing auxiliary space to O(n) for the queue only."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> distanceK(TreeNode* root, TreeNode* target, int k) {\n        unordered_map<TreeNode*, TreeNode*> parent;\n        stack<TreeNode*> st;\n        st.push(root);\n        while (!st.empty()) {\n            TreeNode* node = st.top(); st.pop();\n            if (node->left) {\n                parent[node->left] = node;\n                st.push(node->left);\n            }\n            if (node->right) {\n                parent[node->right] = node;\n                st.push(node->right);\n            }\n        }\n\n        unordered_set<TreeNode*> visited;\n        visited.insert(target);\n        queue<TreeNode*> q;\n        q.push(target);\n        int dist = 0;\n        while (!q.empty()) {\n            if (dist == k) {\n                vector<int> result;\n                while (!q.empty()) {\n                    result.push_back(q.front()->val);\n                    q.pop();\n                }\n                return result;\n            }\n            int sz = q.size();\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front(); q.pop();\n                if (node->left && !visited.count(node->left)) {\n                    visited.insert(node->left);\n                    q.push(node->left);\n                }\n                if (node->right && !visited.count(node->right)) {\n                    visited.insert(node->right);\n                    q.push(node->right);\n                }\n                auto it = parent.find(node);\n                if (it != parent.end() && !visited.count(it->second)) {\n                    visited.insert(it->second);\n                    q.push(it->second);\n                }\n            }\n            dist++;\n        }\n        return {};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

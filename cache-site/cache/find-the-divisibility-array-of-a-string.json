@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-divisibility-array-of-a-string",
+  "title": "Find the Divisibility Array of a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Running Remainder (Modular Arithmetic)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long r: single variable → O(1)\n- int n: single variable → O(1)\n- vector<int> div(n): n entries → O(n), but this is the returned output (not counted)",
+  "approach": "The numeric value of a prefix can have up to 10^5 digits, far exceeding any integer type. Instead of storing the full value, we track only the remainder modulo m. If r is the remainder of word[0..i-1], then the remainder of word[0..i] is (r * 10 + digit) % m. We mark div[i] = 1 when this remainder is 0. Using long long avoids overflow since r < m ≤ 10^9 and r * 10 < 10^10.",
+  "hints": [
+    "The prefix can have up to 10^5 digits - far beyond any integer type. What single quantity about each prefix, much smaller than the prefix itself, is both sufficient to test divisibility by m and derivable from the same quantity for the previous prefix?",
+    "Track the running remainder modulo m. For \"998244353\" with m=3: prefix \"9\" gives remainder (0*10+9)%3 = 0 → divisible; prefix \"99\" gives (0*10+9)%3 = 0 → divisible; prefix \"998\" gives (0*10+8)%3 = 2 → not divisible.",
+    "```\nr = 0\nfor i from 0 to n-1:\n    r = (r * 10 + (word[i] - '0')) mod m\n    div[i] = 1 if r == 0 else 0\nreturn div\n```",
+    "**Single digit** - the entire string is one character.\n`Input: word = \"5\", m = 5` → `Expected: [1]`\n⚠️ Bug: initializing r to 1 instead of 0 → returns [0]\n\n**Checking only the current digit** - each digit alone is tested instead of the accumulated prefix.\n`Input: word = \"17\", m = 7` → `Expected: [0,0]`\n⚠️ Bug: computing `(word[i]-'0') % m` instead of the running remainder → returns [0,1]\n\n**Overflow with large m** - r can reach ~10^9, so r*10 reaches ~10^10 which exceeds 2^31-1.\n`Input: word = \"3000000000\", m = 1000000000` → `Expected: [0,0,0,0,0,0,0,0,0,1]`\n⚠️ Bug: using `int` for r instead of `long long` → r*10 overflows at i=9, returns [0,0,0,0,0,0,0,0,0,0]\n\n**Checking remainder before update** - the old remainder is tested instead of the new one.\n`Input: word = \"1010\", m = 10` → `Expected: [0,1,0,1]`\n⚠️ Bug: testing `r == 0` before computing `r = (r*10+digit) % m` → returns [1,0,1,0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if you receive multiple queries, each with a different modulus m, on the same string word?",
+      "a": "Since the remainder recurrence depends on m, each query requires its own O(n) scan. With q queries the total time is O(q·n). If all moduli are known upfront you can run them in parallel passes, but each still needs its own remainder variable."
+    },
+    {
+      "q": "What if word arrives as a streaming input and you cannot store the full string?",
+      "a": "The solution already processes one character at a time using only the current remainder r, so it works as-is on a stream. Emit div[i] as each character arrives. TC = O(n), SC = O(1) auxiliary."
+    },
+    {
+      "q": "What if you need divisibility by k different moduli simultaneously for each prefix?",
+      "a": "Maintain k separate running remainders, one per modulus. For each character, update all k remainders in parallel. TC = O(n·k), SC = O(k) for the remainder variables (plus O(n·k) if you return k separate arrays)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> divisibilityArray(string word, int m) {\n        int n = word.size();\n        vector<int> div(n);\n        long long r = 0;\n        for (int i = 0; i < n; i++) {\n            r = (r * 10 + (word[i] - '0')) % m;\n            div[i] = (r == 0) ? 1 : 0;\n        }\n        return div;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

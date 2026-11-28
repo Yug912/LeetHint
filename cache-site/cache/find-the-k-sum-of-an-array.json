@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-k-sum-of-an-array",
+  "title": "Find the K-Sum of an Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "K-th Smallest Subset Sum via Heap",
+  "tc": "O(n log n + k log k)",
+  "sc": "O(n + k)",
+  "spaceBreakdown": "- vector<long long> a: n entries → O(n)\n- priority_queue: up to O(k) entries → O(k)\n- sort(): O(log n) stack\n- not counted: input nums, returned value",
+  "approach": "The maximum subsequence sum is the sum of all positive numbers. Every other subsequence sum equals this maximum minus some non-negative deduction: omitting a positive number or including a negative number both subtract that number's absolute value. So the k-th largest subsequence sum = maxSum − (k-th smallest subset sum of the absolute values). We sort absolute values ascending and use a min-heap to generate the k smallest subset sums: from each popped (sum, idx), push \"add next element\" and \"replace last element with next\" variants. Pop k−1 times (the 1st smallest is 0 = empty subset), and the last popped value is the k-th smallest subset sum.",
+  "hints": [
+    "The largest subsequence sum takes every positive number. With k ≤ 2000 but n up to 10^5, you can't enumerate all 2^n sums. Starting from that maximum, what kind of values would you subtract to reach every smaller sum?",
+    "Use a min-heap to generate the k smallest subset sums of the sorted absolute values. For nums = [2,4,-2], maxSum = 6, absolute values sorted = [2,2,4]; the 5th smallest subset sum is 4, so the answer is 6 − 4 = 2.",
+    "```\nmaxSum = sum of all positive nums\na = sorted absolute values of nums\nheap = min-heap, push (a[0], 1)\nsmallest = 0\nrepeat k-1 times:\n    (sum, idx) = heap.pop()\n    smallest = sum\n    if idx < n:\n        heap.push(sum + a[idx], idx+1)\n        heap.push(sum - a[idx-1] + a[idx], idx+1)\nreturn maxSum - smallest\n```",
+    "**Overflow** - n = 10^5, all nums[i] = 10^9, so maxSum = 10^14\n`Input: nums = [1000000000] × 100000, k = 1` → `Expected: 100000000000000`\n⚠️ Bug: using `int` for maxSum → overflow produces garbage\n\n**All negatives** - maxSum = 0, so the answer is non-positive\n`Input: nums = [-1,-2,-3], k = 4` → `Expected: -3`\n⚠️ Bug: computing maxSum as sum of all elements instead of only positives → maxSum = -6, returns -9\n\n**Duplicates** - repeated values produce duplicate sums that count separately\n`Input: nums = [2,2], k = 3` → `Expected: 2`\n⚠️ Bug: deduplicating subset sums with a set → only 3 distinct sums {4,2,0}, returns 0 as 3rd largest\n\n**k = 1** - answer is just maxSum, loop body never executes\n`Input: nums = [-5], k = 1` → `Expected: 0`\n⚠️ Bug: initializing smallest to a[0] instead of 0 → returns -5\n\n**Single element, k = 2** - only two subsequence sums exist\n`Input: nums = [5], k = 2` → `Expected: 0`\n⚠️ Bug: not pushing a[0] into the heap when n = 1 → heap is empty, pop crashes or returns wrong value"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 2^n (up to 10^5 elements)?",
+      "a": "The heap approach becomes O(2^n log 2^n), which is infeasible. Instead, binary search on the answer: for a candidate sum S, count how many subset sums are ≤ S using a meet-in-the-middle or DP-on-sorted-values counting technique. This gives O(n log n · log(range)) time."
+    },
+    {
+      "q": "What if elements arrive in a stream and you must maintain the k-th largest subsequence sum online?",
+      "a": "Maintain the k smallest subset sums of absolute values seen so far in a sorted structure. When a new element arrives, merge existing sums with sums + |new element|, keeping only the k smallest. Each insertion costs O(k), giving O(nk) total time and O(k) space."
+    },
+    {
+      "q": "What if you need the k-th largest contiguous subarray sum instead of subsequence sum?",
+      "a": "This is a different problem. Use binary search on the answer with a sliding-window or prefix-sum counting approach: for a candidate S, count subarrays with sum ≥ S in O(n) time. Total complexity is O(n log(range))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long kSum(vector<int>& nums, int k) {\n        long long maxSum = 0;\n        for (int x : nums) {\n            if (x > 0) maxSum += x;\n        }\n        \n        vector<long long> a;\n        for (int x : nums) {\n            a.push_back(abs((long long)x));\n        }\n        sort(a.begin(), a.end());\n        \n        int n = (int)a.size();\n        \n        priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<>> pq;\n        pq.push({a[0], 1});\n        \n        long long smallest = 0;\n        \n        for (int i = 0; i < k - 1; i++) {\n            auto [sum, idx] = pq.top();\n            pq.pop();\n            smallest = sum;\n            \n            if (idx < n) {\n                pq.push({sum + a[idx], idx + 1});\n                pq.push({sum - a[idx - 1] + a[idx], idx + 1});\n            }\n        }\n        \n        return maxSum - smallest;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

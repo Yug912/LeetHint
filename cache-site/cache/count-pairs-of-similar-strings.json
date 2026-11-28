@@ -1,0 +1,40 @@
+{
+  "slug": "count-pairs-of-similar-strings",
+  "title": "Count Pairs Of Similar Strings",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask Frequency Counting",
+  "tc": "O(n * L)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> freq: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector<string>& words, returned int",
+  "approach": "Two words are similar iff they contain the same set of distinct characters. Encode each word as a 26-bit integer mask (bit i set iff character 'a'+i appears). Then words are similar iff their masks are equal. Count the frequency of each mask and sum C(freq,2) = freq*(freq-1)/2 over all distinct masks. This avoids O(n^2) pair checks and dedupes repeated characters automatically.",
+  "hints": [
+    "With only lowercase English letters, what single invariant of a word determines exactly which other words it can pair with? Each word has length at most 100.",
+    "Encode each word as a 26-bit integer mask (bit i set if 'a'+i appears), then count pairs of words sharing the same mask using a frequency map. Example: \"aba\" → bits 0,1 set; \"aabb\" → bits 0,1 set → they form a pair.",
+    "```\nfreq = empty map\nfor each word w:\n    mask = 0\n    for each char c in w:\n        mask |= (1 << (c - 'a'))\n    freq[mask] += 1\nans = 0\nfor each count c in freq:\n    ans += c * (c - 1) / 2\nreturn ans\n```",
+    "**Single word** - only one word exists, so no pair is possible.\n`Input: words = [\"abc\"]` → `Expected: 0`\n⚠️ Bug: initializing ans to 1 instead of 0 → returns 1.\n\n**Duplicate letters inside a word** - a word repeats characters that another word also has.\n`Input: words = [\"aba\",\"aabb\"]` → `Expected: 1`\n⚠️ Bug: sorting each word without removing duplicates, then comparing → \"aab\" vs \"aabb\" → returns 0.\n\n**Same letters, different order** - anagram-like pair.\n`Input: words = [\"ab\",\"ba\"]` → `Expected: 1`\n⚠️ Bug: comparing raw strings with == → \"ab\" != \"ba\" → returns 0.\n\n**All identical words** - every word has the same character set.\n`Input: words = [\"a\",\"a\",\"a\"]` → `Expected: 3`\n⚠️ Bug: iterating i<j over words but comparing raw strings instead of masks, then summing matches → returns 3 only if masks used; using freq-1 instead of freq*(freq-1)/2 → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "If words.length could be up to 10^6, does the approach still hold?",
+      "a": "Yes. Computing each mask is O(L), and the frequency map holds at most min(n, 2^26) entries. Total time O(total characters), space O(min(n, 2^26))."
+    },
+    {
+      "q": "What if similarity meant \"share at least k distinct characters\" instead of \"same set\"?",
+      "a": "Still use 26-bit masks, but for each mask enumerate submasks with at least k bits set and aggregate counts with inclusion-exclusion to avoid double counting. Worst-case time depends on 2^26 when masks are dense."
+    },
+    {
+      "q": "What if words arrive in a stream and you must report the running pair count after each insertion?",
+      "a": "Maintain the frequency map. For each new word, compute its mask, add freq[mask] to the running answer, then increment freq[mask]. Time O(L) per insertion, space O(distinct masks)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int similarPairs(vector<string>& words) {\n        unordered_map<int,int> freq;\n        for (const string& w : words) {\n            int mask = 0;\n            for (char c : w) {\n                mask |= (1 << (c - 'a'));\n            }\n            freq[mask]++;\n        }\n        int ans = 0;\n        for (auto& p : freq) {\n            int c = p.second;\n            ans += c * (c - 1) / 2;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "taking-maximum-energy-from-the-mystic-dungeon",
+  "title": "Taking Maximum Energy From the Mystic Dungeon",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming (suffix accumulation)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int best: single variable → O(1)\n- energy array: modified in place, not counted (input)\n- no recursion, no extra containers",
+  "approach": "The key insight is that once you pick a starting index i, the entire path is forced: i → i+k → i+2k → ... until out of bounds. This means the total energy from index i equals energy[i] plus the total energy from index i+k. By processing indices right-to-left, each index's answer is built from an already-computed answer k positions ahead. We modify the energy array in place so energy[i] accumulates the suffix sum along its jump chain, then return the maximum value seen.",
+  "hints": [
+    "Once you pick a starting index, every subsequent magician you visit is forced. How does the journey starting at index i overlap with the journey starting at index i+k?\nn can be up to 10^5.",
+    "Use dynamic programming where dp[i] = energy[i] + dp[i+k] (or just energy[i] if i+k is out of bounds). For energy = [5,2,-10,-5,1], k = 3: compute dp[4] = 1 first, then dp[1] = 2 + dp[4] = 3.",
+    "```\nbest = -infinity\nfor i from n-1 down to 0:\n    if i + k < n:\n        energy[i] += energy[i + k]\n    best = max(best, energy[i])\nreturn best\n```",
+    "**All negative** - every magician takes energy, so the answer is the least negative single value.\n`Input: energy = [-2,-3,-1], k = 2` → `Expected: -1`\n⚠️ Bug: initializing best to 0 instead of INT_MIN → returns 0\n\n**k = 1 (consecutive jumps)** - the answer is the maximum suffix sum.\n`Input: energy = [5,2,-10,-5,1], k = 1` → `Expected: 1`\n⚠️ Bug: iterating left-to-right so energy[i+k] is read before being updated → returns wrong values\n\n**k = n-1 (maximum jump)** - each path visits at most 2 magicians.\n`Input: energy = [5,2,-10,-5,1], k = 4` → `Expected: 6`\n⚠️ Bug: using `i + k <= n` instead of `i + k < n` → reads energy[n] out of bounds\n\n**Single large positive at the end** - the best path ends at that element.\n`Input: energy = [-5,-5,-5,10], k = 2` → `Expected: 10`\n⚠️ Bug: returning the last computed dp value instead of the running max → returns -10"
+  ],
+  "followUps": [
+    {
+      "q": "What if each magician i has its own jump length jumps[i] instead of a fixed k?",
+      "a": "The same right-to-left DP applies: dp[i] = energy[i] + dp[i + jumps[i]] when in bounds. TC stays O(n), SC O(1) in place."
+    },
+    {
+      "q": "What if you can choose to stop absorbing at any point instead of being forced to continue?",
+      "a": "Change the recurrence to dp[i] = energy[i] + max(0, dp[i+k]), so a negative continuation is skipped. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if the energy array arrives as a reverse stream and you cannot store all n values?",
+      "a": "Maintain a circular buffer of size k holding the last k computed dp values. For each incoming element at index i, look up buffer[(i+k) % k] to add if valid, then store the result in buffer[i % k]. TC O(n), SC O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumEnergy(vector<int>& energy, int k) {\n        int n = (int)energy.size();\n        int best = INT_MIN;\n        for (int i = n - 1; i >= 0; i--) {\n            if (i + k < n) {\n                energy[i] += energy[i + k];\n            }\n            if (energy[i] > best) {\n                best = energy[i];\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

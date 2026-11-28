@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-maximum-number-of-marked-indices",
+  "title": "Find the Maximum Number of Marked Indices",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): C++ introsort recursion stack → O(log n)\n- no extra containers allocated\n- not counted: input vector (modified in place)",
+  "approach": "Sort the array. Binary search on k = number of pairs. To check if k pairs are feasible, pair the k smallest elements with the k largest elements in order (smallest small with smallest large). This greedy is optimal because any valid matching can be \"uncrossed\" into this canonical form without breaking feasibility. Return 2·k.",
+  "hints": [
+    "If exactly k pairs will be marked, which k elements must be the \"small\" member of each pair? The array can have up to 10^5 elements, so checking every pairing is too slow.",
+    "Sort the array, then binary search on k (number of pairs). For k=2 on sorted [2,4,5,9], pair the smallest k=[2,4] with the largest k=[5,9] in order: 2·2≤5 and 2·4≤9, both hold.",
+    "```\nsort nums\nlo, hi = 0, n/2\nwhile lo <= hi:\n    mid = (lo + hi) / 2\n    valid = true\n    for i in 0..mid-1:\n        if 2 * nums[i] > nums[n - mid + i]: valid = false\n    if valid: ans = mid; lo = mid + 1\n    else: hi = mid - 1\nreturn 2 * ans\n```",
+    "**Single element** - n=1, no pair can ever be formed.\n`Input: nums = [5]` → `Expected: 0`\n⚠️ Bug: returning `(n/2)*2` without the feasibility check → returns 0 (correct here) but the same code fails the next case.\n\n**All equal** - every element identical, and 2v > v for v ≥ 1.\n`Input: nums = [4,4,4,4]` → `Expected: 0`\n⚠️ Bug: assuming \"duplicates always pair\" and returning n → returns 4.\n\n**Duplicates that do satisfy** - small value exactly half of large value.\n`Input: nums = [2,2,4,4]` → `Expected: 4`\n⚠️ Bug: pairing adjacent sorted elements (2,2) then (4,4): 2·2=4≤2 is false → returns 0.\n\n**Already sorted ascending** - input needs no rearrangement.\n`Input: nums = [1,2,3,4]` → `Expected: 4`\n⚠️ Bug: pairing adjacent (1,2) and (3,4): 2·3=6≤4 is false → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] could be negative?",
+      "a": "Sorting still helps, but 2·nums[i] ≤ nums[j] now pairs negatives (very negative) with anything. The smallest-k with largest-k matching may no longer be optimal because a very negative i pairs with the smallest j, not the largest. You'd re-derive the matching direction per sign case; TC stays O(n log n)."
+    },
+    {
+      "q": "What if you must mark exactly k pairs (return whether feasible), not maximize?",
+      "a": "Run the same feasibility check once for that fixed k after sorting: verify 2·nums[i] ≤ nums[n-k+i] for all i in [0,k). TC O(n log n) for the sort plus O(k) for the check; SC O(log n)."
+    },
+    {
+      "q": "What if elements arrive in a stream and you must answer after each insertion?",
+      "a": "Maintain two multisets (small half and large half) via a balanced structure, re-checking the k smallest-vs-largest condition incrementally. Each insertion is O(log n) and re-validation O(k), so amortized O(log n) per element if k is tracked with a Fenwick/ordered-set over values; SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxNumOfMarkedIndices(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        int lo = 0, hi = n / 2, ans = 0;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            bool ok = true;\n            for (int i = 0; i < mid; i++) {\n                if (2 * nums[i] > nums[n - mid + i]) {\n                    ok = false;\n                    break;\n                }\n            }\n            if (ok) {\n                ans = mid;\n                lo = mid + 1;\n            } else {\n                hi = mid - 1;\n            }\n        }\n        return ans * 2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

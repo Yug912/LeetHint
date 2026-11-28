@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-grid-can-be-cut-into-sections",
+  "title": "Check if Grid can be Cut into Sections",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Interval Merging",
+  "tc": "O(m log m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- vector<pair<int,int>> intervals: up to m entries → O(m)\n- sort(): C++ introsort uses O(log m) stack\n- not counted: input rectangles, returned bool",
+  "approach": "Treat x and y dimensions independently. For each dimension, project every rectangle onto that axis as an interval [start, end]. Sort intervals by start and count how many non-overlapping groups exist (where touching at a boundary counts as separate, since a cut on a shared edge doesn't split any rectangle). If either dimension yields ≥ 3 groups, two cuts can be placed between consecutive groups to create three non-empty sections. This works because rectangles don't overlap, so any cut on a boundary between merged groups is valid.",
+  "hints": [
+    "If you project every rectangle onto just the x-axis (ignoring y), what property of those 1-D intervals tells you whether a vertical cut can be placed without slicing through any rectangle?",
+    "Sort the intervals by start and merge overlapping ones; count the resulting groups. In Example 1, the y-intervals [0,2],[2,3],[2,4],[4,5] produce 3 groups after merging, so the answer is true.",
+    "```\nfor each dimension d in {x, y}:\n    intervals = collect [rect[i][d], rect[i][d+2]] for all i\n    sort intervals by start\n    groups = 0, maxEnd = -infinity\n    for each (start, end) in intervals:\n        if start >= maxEnd:\n            groups = groups + 1\n        maxEnd = max(maxEnd, end)\n    if groups >= 3:\n        return true\nreturn false\n```",
+    "**Touching boundaries** - rectangles share an edge, so a cut on that edge is valid\n`Input: n=3, rectangles=[[0,0,1,3],[1,0,2,3],[2,0,3,3]]` → `Expected: true`\n⚠️ Bug: using `start > maxEnd` instead of `start >= maxEnd` → touching intervals merge into 1 group → returns `false`\n\n**Exactly 3 groups** - boundary of the `>= 3` threshold\n`Input: n=4, rectangles=[[0,0,1,4],[1,0,2,4],[2,0,4,4]]` → `Expected: true`\n⚠️ Bug: using `groups > 3` instead of `groups >= 3` → returns `false`\n\n**Only one dimension works** - x gives 1 group, y gives 3\n`Input: n=5, rectangles=[[0,0,5,1],[0,1,5,2],[0,2,5,3]]` → `Expected: true`\n⚠️ Bug: checking only the x-axis → x groups = 1 → returns `false`\n\n**No valid cut in either dimension** - both axes yield fewer than 3 groups\n`Input: n=4, rectangles=[[0,0,2,4],[2,0,4,2],[2,2,4,4]]` → `Expected: false`\n⚠️ Bug: returning true when `groups >= 2` instead of `groups >= 3` → x groups = 2 → returns `true`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed exactly k cuts (creating k+1 sections) instead of 2?",
+      "a": "Replace the threshold `groups >= 3` with `groups >= k+1`. The rest of the algorithm-sorting and merging intervals per dimension-is unchanged. Time complexity stays O(m log m), space O(m)."
+    },
+    {
+      "q": "What if cuts could be at any angle, not just horizontal or vertical?",
+      "a": "The projection approach no longer applies because an angled line can enter and exit a rectangle at arbitrary points. You would need computational geometry techniques to find two parallel lines that avoid all rectangles, likely requiring O(m²) or worse."
+    },
+    {
+      "q": "What if rectangles arrive in a stream and you can only store O(1) of them?",
+      "a": "A new rectangle can merge two previously separate groups, so you must track all current merged intervals-O(m) in the worst case. A true O(1)-space streaming solution is impossible; the best you can do is O(m) space with incremental merging as each rectangle arrives."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkValidCuts(int n, vector<vector<int>>& rectangles) {\n        return canCut(rectangles, 0) || canCut(rectangles, 1);\n    }\nprivate:\n    bool canCut(vector<vector<int>>& rectangles, int dim) {\n        int m = rectangles.size();\n        vector<pair<int,int>> intervals(m);\n        for (int i = 0; i < m; i++) {\n            intervals[i] = {rectangles[i][dim], rectangles[i][dim + 2]};\n        }\n        sort(intervals.begin(), intervals.end());\n        int groups = 0;\n        int maxEnd = -1;\n        for (auto& [s, e] : intervals) {\n            if (s >= maxEnd) groups++;\n            maxEnd = max(maxEnd, e);\n        }\n        return groups >= 3;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

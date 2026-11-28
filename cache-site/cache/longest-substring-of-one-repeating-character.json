@@ -1,0 +1,40 @@
+{
+  "slug": "longest-substring-of-one-repeating-character",
+  "title": "Longest Substring of One Repeating Character",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Segment Tree",
+  "tc": "O((n + k) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<Node> tree: 2*size ≤ 4n nodes → O(n)\n- recursion depth: none (iterative bottom-up)\n- not counted: input strings, returned vector<int> ans",
+  "approach": "Build an iterative segment tree over the string. Each node stores, for its segment: length, longest prefix of equal characters, longest suffix of equal characters, longest internal run, and the leftmost/rightmost characters. Merging two children combines prefix/suffix extensions when the boundary characters match, and the best run is the max of both children's best and the cross-boundary sum (left.suffix + right.prefix) when the touching characters agree. Each point update touches O(log n) nodes, and the root always holds the global answer.",
+  "hints": [
+    "With n, k ≤ 10^5, recomputing the longest run from scratch after each of the k updates is too slow. If you split the string into two halves, what four facts about each half would let you compute the longest single-character run of the full string by combining only those two halves?",
+    "Use a segment tree where each node stores segment length, longest equal-char prefix, longest equal-char suffix, longest internal run, and the leftmost/rightmost characters. For \"babacc\", merging the \"cc\" leaf (pref=suff=best=2) with its empty sibling keeps best=2, and after updating index 1 to 'b', the merge of \"bb\" and \"ba\" yields prefix=3, best=3.",
+    "```\nbuild leaves: each = {len=1, pref=1, suff=1, best=1, lc=c, rc=c}\nmerge(L, R):\n    if L.len==0: return R\n    if R.len==0: return L\n    pref = L.pref; if L.pref==L.len and L.rc==R.lc: pref = L.len + R.pref\n    suff = R.suff; if R.suff==R.len and L.rc==R.lc: suff = R.len + L.suff\n    best = max(L.best, R.best); if L.rc==R.lc: best = max(best, L.suff + R.pref)\n    return {L.len+R.len, pref, suff, best, L.lc, R.rc}\nfor each query: update leaf, walk up to root merging, output root.best\n```",
+    "**Single element** - n=1, the tree has one leaf that is also the root.\n`Input: s=\"a\", queryCharacters=\"b\", queryIndices=[0]` → `Expected: [1]`\n⚠️ Bug: starting `size` at 0 with `while(size<n) size<<=1` loops forever → returns nothing / TLE.\n\n**Merge across update point** - updating the middle character joins two equal runs.\n`Input: s=\"aabaa\", queryCharacters=\"a\", queryIndices=[2]` → `Expected: [5]`\n⚠️ Bug: computing `best = max(L.best, R.best)` without the cross-boundary term `L.suff + R.pref` → returns [3].\n\n**All equal then split** - every character identical, one update breaks the run.\n`Input: s=\"aaaa\", queryCharacters=\"b\", queryIndices=[1]` → `Expected: [2]`\n⚠️ Bug: forgetting to overwrite the leaf's `lc`/`rc` before recomputing parents → returns [4].\n\n**Update at boundary** - updating the last element extends a trailing run.\n`Input: s=\"ab\", queryCharacters=\"a\", queryIndices=[1]` → `Expected: [2]`\n⚠️ Bug: indexing the leaf as `size+idx-1` instead of `size+idx` → returns [1]."
+  ],
+  "followUps": [
+    {
+      "q": "What if queries can also ask for the longest run in an arbitrary substring [l, r]?",
+      "a": "Store the same five fields per node and support range queries by merging the O(log n) canonical nodes left-to-right with the same merge function. Each query is O(log n); updates stay O(log n). Space stays O(n)."
+    },
+    {
+      "q": "What if the alphabet were Unicode (up to 10^6 distinct characters)?",
+      "a": "Nothing changes in the segment tree logic - only the boundary equality checks L.rc == R.lc matter, not the alphabet size. Store characters as int codes; TC and SC are unchanged."
+    },
+    {
+      "q": "What if updates arrive as a streaming batch of 10^9 and you only need the answer after every block of 1000 updates?",
+      "a": "Buffer 1000 pending updates and apply them in one pass, rebuilding only the affected O(1000 log n) nodes via a dirty-set. Amortized TC becomes O(k log n / 1000 + k) ≈ O(k); SC for the dirty set is O(1000 log n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> longestRepeating(string s, string queryCharacters, vector<int>& queryIndices) {\n        int n = s.size();\n        struct Node {\n            int len;\n            int pref;\n            int suff;\n            int best;\n            char lc;\n            char rc;\n        };\n        int size = 1;\n        while (size < n) size <<= 1;\n        vector<Node> tree(2 * size);\n        const Node EMPTY{0, 0, 0, 0, (char)0, (char)0};\n        for (int i = 0; i < 2 * size; i++) tree[i] = EMPTY;\n        for (int i = 0; i < n; i++) {\n            tree[size + i] = {1, 1, 1, 1, s[i], s[i]};\n        }\n        auto merge = [&](Node& p, const Node& L, const Node& R) {\n            if (L.len == 0) { p = R; return; }\n            if (R.len == 0) { p = L; return; }\n            p.len = L.len + R.len;\n            p.lc = L.lc;\n            p.rc = R.rc;\n            p.pref = L.pref;\n            if (L.pref == L.len && L.rc == R.lc) p.pref = L.len + R.pref;\n            p.suff = R.suff;\n            if (R.suff == R.len && L.rc == R.lc) p.suff = R.len + L.suff;\n            p.best = max(L.best, R.best);\n            if (L.rc == R.lc) p.best = max(p.best, L.suff + R.pref);\n        };\n        for (int i = size - 1; i >= 1; i--) merge(tree[i], tree[2 * i], tree[2 * i + 1]);\n\n        vector<int> ans;\n        ans.reserve(queryIndices.size());\n        for (int q = 0; q < (int)queryCharacters.size(); q++) {\n            int idx = queryIndices[q];\n            char c = queryCharacters[q];\n            int pos = size + idx;\n            tree[pos] = {1, 1, 1, 1, c, c};\n            pos >>= 1;\n            while (pos >= 1) {\n                merge(tree[pos], tree[2 * pos], tree[2 * pos + 1]);\n                pos >>= 1;\n            }\n            ans.push_back(tree[1].best);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

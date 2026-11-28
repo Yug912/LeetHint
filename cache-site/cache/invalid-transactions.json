@@ -1,0 +1,40 @@
+{
+  "slug": "invalid-transactions",
+  "title": "Invalid Transactions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(N log N)",
+  "sc": "O(N)",
+  "spaceBreakdown": "- vector<Tx> txs: up to n elements → O(n)\n- vector<bool> is_invalid: up to n elements → O(n)\n- vector<int> diff: up to n elements per group → O(n)\n- unordered_map<string, int> city_counts: up to n entries per group → O(n)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "Sort the transactions by name and time. For each group of transactions with the same name, use a sliding window to maintain a range of transactions within 60 minutes. Keep a frequency map of cities in the current window. If the window contains more than one distinct city, every transaction in the window is invalid because each has a conflicting transaction within 60 minutes in a different city. Use a difference array to efficiently mark these ranges as invalid, and separately mark any transaction with an amount exceeding 1000.",
+  "hints": [
+    "If you group transactions by name, how does ordering them by time change the way you can check the 60-minute conflict rule?\nA transaction is invalid if it occurs within 60 minutes of another with the same name in a different city.",
+    "Sort transactions by name and time, then use a sliding window with a city frequency map.\nFor `[\"alice,20,800,mtv\",\"alice,50,100,beijing\"]`, the window covers both since 50-20 <= 60, and the map shows 2 cities, so both are invalid.",
+    "```\nsort transactions by name, then time\nfor each name group:\n    maintain a window [L, R] where time[R] - time[L] <= 60\n    keep a frequency map of cities in the window\n    if the map has > 1 distinct city:\n        mark all transactions in [L, R] as invalid\n    also mark any transaction with amount > 1000 as invalid\n```",
+    "**Boundary time difference** - Time difference is exactly 60 minutes.\n`Input: [\"alice,0,800,mtv\",\"alice,60,800,beijing\"]` → `Expected: [\"alice,0,800,mtv\",\"alice,60,800,beijing\"]`\n⚠️ Bug: using `< 60` instead of `<= 60` in the window condition → returns `[]`\n\n**Same city within 60 minutes** - Multiple transactions in the same city within 60 minutes.\n`Input: [\"alice,20,800,mtv\",\"alice,50,1200,mtv\"]` → `Expected: [\"alice,50,1200,mtv\"]`\n⚠️ Bug: marking all transactions in the window invalid regardless of distinct city count → returns `[\"alice,20,800,mtv\",\"alice,50,1200,mtv\"]`\n\n**Amount exactly 1000** - Transaction amount is exactly 1000.\n`Input: [\"alice,20,1000,mtv\"]` → `Expected: []`\n⚠️ Bug: using `amount >= 1000` instead of `amount > 1000` → returns `[\"alice,20,1000,mtv\"]`\n\n**Multiple names** - Transactions with different names but same times and different cities.\n`Input: [\"alice,20,800,mtv\",\"bob,20,800,beijing\"]` → `Expected: []`\n⚠️ Bug: not grouping by name before applying the sliding window → returns `[\"alice,20,800,mtv\",\"bob,20,800,beijing\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "If transactions arrive in a stream and must be processed online, how would you adapt your solution?",
+      "a": "Maintain a hash map from name to a sorted list (or balanced BST) of recent transactions. For each new transaction, query the BST for transactions within 60 minutes, and check if any have a different city. Time complexity becomes O(log K) per transaction, where K is the number of transactions per name in the 60-minute window."
+    },
+    {
+      "q": "If the time limit was 60 days instead of 60 minutes, how would the space complexity change?",
+      "a": "The sliding window would need to hold up to 60 days of transactions per name. In the worst case, this could be O(N) per name, leading to O(N) overall space, which is the same asymptotic bound but with a much larger constant factor."
+    },
+    {
+      "q": "What if a transaction is invalid if it occurs within 60 minutes of ANY other transaction, regardless of name?",
+      "a": "We would no longer group by name. We would sort all transactions by time and use a single sliding window over the entire array, maintaining a frequency map of cities. The time complexity remains O(N log N) and space complexity remains O(N)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct Tx {\n        string name;\n        int time;\n        int amount;\n        string city;\n        int index;\n    };\npublic:\n    vector<string> invalidTransactions(vector<string>& transactions) {\n        int n = transactions.size();\n        vector<Tx> txs(n);\n        for (int i = 0; i < n; ++i) {\n            const string& t = transactions[i];\n            int p1 = t.find(',');\n            int p2 = t.find(',', p1 + 1);\n            int p3 = t.find(',', p2 + 1);\n            txs[i].name = t.substr(0, p1);\n            txs[i].time = stoi(t.substr(p1 + 1, p2 - p1 - 1));\n            txs[i].amount = stoi(t.substr(p2 + 1, p3 - p2 - 1));\n            txs[i].city = t.substr(p3 + 1);\n            txs[i].index = i;\n        }\n        \n        sort(txs.begin(), txs.end(), [](const Tx& a, const Tx& b) {\n            if (a.name != b.name) return a.name < b.name;\n            return a.time < b.time;\n        });\n        \n        vector<bool> is_invalid(n, false);\n        \n        int i = 0;\n        while (i < n) {\n            int j = i;\n            while (j < n && txs[j].name == txs[i].name) {\n                j++;\n            }\n            int group_size = j - i;\n            vector<int> diff(group_size + 1, 0);\n            unordered_map<string, int> city_counts;\n            int distinct_cities = 0;\n            int L = 0;\n            for (int R = 0; R < group_size; ++R) {\n                city_counts[txs[i + R].city]++;\n                if (city_counts[txs[i + R].city] == 1) {\n                    distinct_cities++;\n                }\n                while (txs[i + R].time - txs[i + L].time > 60) {\n                    city_counts[txs[i + L].city]--;\n                    if (city_counts[txs[i + L].city] == 0) {\n                        distinct_cities--;\n                    }\n                    L++;\n                }\n                if (distinct_cities > 1) {\n                    diff[L]++;\n                    diff[R + 1]--;\n                }\n            }\n            \n            int curr = 0;\n            for (int k = 0; k < group_size; ++k) {\n                curr += diff[k];\n                if (curr > 0 || txs[i + k].amount > 1000) {\n                    is_invalid[txs[i + k].index] = true;\n                }\n            }\n            i = j;\n        }\n        \n        vector<string> res;\n        for (int k = 0; k < n; ++k) {\n            if (is_invalid[k]) {\n                res.push_back(transactions[k]);\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

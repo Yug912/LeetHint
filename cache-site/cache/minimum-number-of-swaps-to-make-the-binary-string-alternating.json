@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-swaps-to-make-the-binary-string-alternating",
+  "title": "Minimum Number of Swaps to Make the Binary String Alternating",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Enumeration",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, zeros, ones, mismatches, ans): constant → O(1)\n- no containers, no recursion, no heap allocation\n- not counted: input string s",
+  "approach": "A binary alternating string of length n has exactly two possible forms: one starting with '0' (\"0101…\") and one starting with '1' (\"1010…\"). For each form, first verify that the counts of 0s and 1s in s match the pattern's requirements (ceil(n/2) of one, floor(n/2) of the other). If they match, count the positions where s differs from the target pattern; each swap fixes two mismatched positions, so swaps = mismatches / 2. Return the minimum over all valid patterns, or -1 if neither pattern's counts are compatible.",
+  "hints": [
+    "For a binary string of length n, how many distinct alternating strings of that length can exist?",
+    "Greedy comparison against fixed target patterns: compare s to each candidate alternating string, count mismatched positions, and divide by 2 (each swap fixes two mismatches). For s = \"111000\" vs target \"101010\", positions 1 and 4 differ → 2 mismatches → 1 swap.",
+    "```\ncount zeros and ones in s\nfor each candidate pattern (start '0', start '1'):\n    if zeros and ones match pattern's required counts:\n        count positions where s[i] differs from pattern[i]\n        candidate = mismatches / 2\n        track minimum candidate\nreturn minimum, or -1 if no pattern was valid\n```",
+    "**Single character** - n = 1, any single character is already alternating.\n`Input: s = \"0\"` → `Expected: 0`\n⚠️ Bug: only checking patterns that require equal zeros and ones → returns -1\n\n**Impossible count** - counts of 0 and 1 cannot form any alternating string.\n`Input: s = \"1110\"` → `Expected: -1`\n⚠️ Bug: skipping the count-compatibility check, computing mismatches/2 directly → returns 0\n\n**Both patterns valid, different costs** - need to check both and take minimum.\n`Input: s = \"111000\"` → `Expected: 1`\n⚠️ Bug: only checking the pattern starting with '0' → returns 2\n\n**All same characters** - no valid alternating string possible.\n`Input: s = \"1111\"` → `Expected: -1`\n⚠️ Bug: not verifying count compatibility before computing swaps → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet were digits 0-9 instead of just 0 and 1?",
+      "a": "There would be k*(k-1) candidate alternating patterns (ordered pairs of distinct characters). For each, verify count compatibility and compute mismatches/2 as before. Time becomes O(k²·n), space O(k) for the frequency map. With k=10 and n=1000, this is still fast."
+    },
+    {
+      "q": "What if only adjacent swaps were allowed?",
+      "a": "For each valid target pattern, collect the positions where each character should go, then count inversions between the current ordering and the target ordering using merge-sort-based inversion counting. Time O(n log n) per pattern, space O(n) for the position arrays."
+    },
+    {
+      "q": "What if the string arrives as a stream and cannot be stored in memory?",
+      "a": "Make two streaming passes. First pass counts zeros and ones. Second pass uses the index parity to simultaneously track mismatches against both candidate patterns. Two passes, O(1) space beyond counters, same O(n) time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSwaps(string s) {\n        int n = s.size();\n        int zeros = 0, ones = 0;\n        for (char c : s) {\n            if (c == '0') zeros++;\n            else ones++;\n        }\n        \n        int ans = n + 1;\n        \n        // Pattern starting with '0': \"0101...\"\n        if (zeros == (n + 1) / 2 && ones == n / 2) {\n            int mismatches = 0;\n            for (int i = 0; i < n; i++) {\n                if (s[i] != ((i % 2 == 0) ? '0' : '1'))\n                    mismatches++;\n            }\n            ans = min(ans, mismatches / 2);\n        }\n        \n        // Pattern starting with '1': \"1010...\"\n        if (zeros == n / 2 && ones == (n + 1) / 2) {\n            int mismatches = 0;\n            for (int i = 0; i < n; i++) {\n                if (s[i] != ((i % 2 == 0) ? '1' : '0'))\n                    mismatches++;\n            }\n            ans = min(ans, mismatches / 2);\n        }\n        \n        return (ans > n) ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

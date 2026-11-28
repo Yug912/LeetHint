@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-area-of-square-hole-in-grid",
+  "title": "Maximize Area of Square Hole in Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Set Longest Consecutive Sequence",
+  "tc": "O(H + V)",
+  "sc": "O(H + V)",
+  "spaceBreakdown": "- unordered_set in longestConsecutive(hBars): up to H entries → O(H), freed before next call\n- unordered_set in longestConsecutive(vBars): up to V entries → O(V)\n- no recursion, no other containers",
+  "approach": "Removing a consecutive run of bars from position a to b creates a gap spanning from the fixed bar at a−1 to the fixed bar at b+1, giving gap length = (run length) + 1. We find the longest consecutive sequence in hBars and vBars using a hash set (O(H+V) time), add 1 to each to get the max gap per dimension, take the minimum as the square side, and return side².",
+  "hints": [
+    "When you remove several bars to open a hole, what property of the *removed* bars determines how wide the resulting gap is? The bars bordering the hole must remain fixed, so the gap can only span across bars you actually removed.",
+    "Use a hash set to find the longest consecutive integer run in each array. For hBars = [2,3], the set {2,3} yields a run of length 2, so the horizontal gap is 2 + 1 = 3.",
+    "```\nbuild hash set S from hBars\nmaxH = longest consecutive run in S\nbuild hash set S from vBars\nmaxV = longest consecutive run in S\nside = min(maxH + 1, maxV + 1)\nreturn side * side\n```",
+    "**Non-consecutive bars** - bars are not adjacent, so the gap is smaller than the full span\n`Input: n = 3, m = 3, hBars = [2,4], vBars = [2,4]` → `Expected: 4`\n⚠️ Bug: gap = max(bars) − min(bars) + 2 without checking consecutiveness → returns 16\n\n**All bars consecutive** - the entire array forms one run\n`Input: n = 5, m = 5, hBars = [2,3,4,5,6], vBars = [2,3,4,5,6]` → `Expected: 36`\n⚠️ Bug: using run length as the gap instead of run length + 1 → returns 25\n\n**One dimension has a longer run** - the square is limited by the shorter dimension\n`Input: n = 5, m = 1, hBars = [2,3,4], vBars = [2]` → `Expected: 4`\n⚠️ Bug: taking max of the two gaps instead of min → returns 16\n\n**Single bar in each array** - minimum removable set, run length 1\n`Input: n = 1, m = 1, hBars = [2], vBars = [2]` → `Expected: 4`\n⚠️ Bug: initializing best = 0 and skipping when no extension is found → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if hBars and vBars can each have up to 10^6 elements?",
+      "a": "The hash set approach already runs in O(H + V) time and space, so it scales directly. The only concern is memory; use a sorted array with a single linear scan (O(1) extra space) if memory is tight."
+    },
+    {
+      "q": "What if bars can be removed at a cost, and you have a budget B - maximize the square area?",
+      "a": "This becomes a budgeted selection problem: for each dimension, find the maximum gap achievable by removing a subset of bars with total cost ≤ B. A sliding window over sorted bars weighted by cost gives O(H log H + V log V) time."
+    },
+    {
+      "q": "What if the grid is huge (n, m up to 10^9) and you receive bars as a stream with no storage?",
+      "a": "Track only the current longest consecutive run using a hash set is impossible in a stream. Instead, sort on arrival or use a union-find structure keyed by bar index, giving O(H α(H)) time and O(H) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximizeSquareHoleArea(int n, int m, vector<int>& hBars, vector<int>& vBars) {\n        int maxH = longestConsecutive(hBars);\n        int maxV = longestConsecutive(vBars);\n        int side = min(maxH + 1, maxV + 1);\n        return side * side;\n    }\nprivate:\n    int longestConsecutive(vector<int>& bars) {\n        unordered_set<int> s(bars.begin(), bars.end());\n        int best = 0;\n        for (int x : s) {\n            if (s.count(x - 1)) continue;\n            int len = 1;\n            while (s.count(x + len)) len++;\n            best = max(best, len);\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

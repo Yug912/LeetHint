@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-distance-to-target-string-in-a-circular-array",
+  "title": "Shortest Distance to Target String in a Circular Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear Scan",
+  "tc": "O(n·L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, ans, i, right, left): constant → O(1)\n- no containers, no recursion, no heap/stack allocated\n- not counted: input vector `words`, input string `target`",
+  "approach": "In a circular array, from any starting index to any target index there are exactly two paths: clockwise and counterclockwise. Their step counts are `(i - startIndex + n) % n` and `(startIndex - i + n) % n` respectively. We scan every index; for each match with `target`, we compute the minimum of the two directional distances and track the overall minimum. If no match is found, return -1.",
+  "hints": [
+    "For any two distinct indices in a circular array of size n, what are the only two ways to travel from one to the other?",
+    "Linear scan: for each index i where `words[i] == target`, compute both circular distances and take the minimum. Example: at index 0 in `[\"hello\",\"i\",\"am\",\"leetcode\",\"hello\"]` with startIndex = 1, right = (0−1+5)%5 = 4, left = (1−0+5)%5 = 1, so candidate = 1.",
+    "```\nans = infinity\nfor i in 0 to n-1:\n    if words[i] == target:\n        right = (i - start + n) mod n\n        left  = (start - i + n) mod n\n        ans = min(ans, right, left)\nreturn -1 if ans == infinity else ans\n```",
+    "**Target at start** - target equals `words[startIndex]`, so distance is 0.\n`Input: words = [\"a\",\"b\",\"c\"], target = \"b\", startIndex = 1` → `Expected: 0`\n⚠️ Bug: skipping `i == startIndex` in the search loop → returns 2\n\n**Wrap-around shorter** - shortest path crosses the array boundary.\n`Input: words = [\"a\",\"b\",\"leetcode\"], target = \"leetcode\", startIndex = 0` → `Expected: 1`\n⚠️ Bug: using `abs(i - startIndex)` without modular arithmetic → returns 2\n\n**Left path shorter** - going counterclockwise is shorter than clockwise.\n`Input: words = [\"hello\",\"i\",\"am\",\"leetcode\",\"hello\"], target = \"hello\", startIndex = 1` → `Expected: 1`\n⚠️ Bug: only computing the right (clockwise) distance → returns 3\n\n**No match** - target string not present in the array.\n`Input: words = [\"i\",\"eat\",\"leetcode\"], target = \"ate\", startIndex = 0` → `Expected: -1`\n⚠️ Bug: initializing answer to 0 instead of a sentinel like `INT_MAX` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are up to 10^5 queries, each with a different target and startIndex, and n can be up to 10^5?",
+      "a": "Precompute a hash map from each word to its sorted list of occurrence indices. For each query, binary search that list to find the occurrence nearest to startIndex, then compute the circular distance. Time O(n + q·log k) where k is the max occurrences of any single word; space O(n)."
+    },
+    {
+      "q": "What if you can also jump to any index whose word equals the word at your current position, costing 1 step?",
+      "a": "Model this as BFS on a graph where each index connects to its circular neighbors and to all indices sharing the same word. BFS from startIndex until reaching any index with target. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if the words array arrives as a single-pass stream and you cannot store it all?",
+      "a": "In one pass, record only the indices where `words[i] == target` (at most n integers). After the stream ends, compute the minimum circular distance from startIndex to any recorded index. Time O(n), space O(k) where k is the number of target occurrences."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int closestTarget(vector<string>& words, string target, int startIndex) {\n        int n = words.size();\n        int ans = INT_MAX;\n        for (int i = 0; i < n; i++) {\n            if (words[i] == target) {\n                int right = (i - startIndex + n) % n;\n                int left = (startIndex - i + n) % n;\n                ans = min(ans, min(right, left));\n            }\n        }\n        return ans == INT_MAX ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

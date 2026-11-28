@@ -1,0 +1,51 @@
+{
+  "slug": "building-h2o",
+  "title": "Building H2O",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Barrier Synchronization",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- mutex mtx: fixed size → O(1)\n- condition_variable cv: fixed size → O(1)\n- int h, o: two integers → O(1)\n- unique_lock per call: stack-local, one per thread → O(1)\n- no recursion, no containers, no dynamic allocation",
+  "approach": "Use a mutex and condition variable as a barrier. Track how many hydrogen (`h`) and oxygen (`o`) threads have arrived in the current molecule. A hydrogen thread waits until `h < 2`, then increments `h`; an oxygen thread waits until `o < 1`, then increments `o`. When `h == 2 && o == 1`, the molecule is complete: reset both counters to 0 and notify all waiting threads. The lock is held during the release call so all three threads of one molecule bond before any thread of the next molecule proceeds.",
+  "hints": [
+    "Each molecule needs exactly 2 hydrogen and 1 oxygen. As threads arrive one at a time in any order, what condition tells you a complete molecule has assembled?",
+    "Use a mutex with a condition variable as a barrier. In Example 1 (`\"HOH\"`): when the 2nd H arrives and `o_count` is already 1, reset both counts to 0, notify all, then call `releaseHydrogen`.",
+    "```\nhydrogen():\n    lock mutex\n    wait until h_count < 2\n    h_count++\n    if h_count == 2 and o_count == 1:\n        reset both counts to 0\n        notify all\n    call releaseHydrogen\n    unlock mutex\n\noxygen():\n    lock mutex\n    wait until o_count < 1\n    o_count++\n    if h_count == 2 and o_count == 1:\n        reset both counts to 0\n        notify all\n    call releaseOxygen\n    unlock mutex\n```",
+    "**Excess hydrogen** - 3+ H threads arrive before any O\n`Input: \"HHHHOO\"` → `Expected: \"HHOHHO\"`\n⚠️ Bug: removing the `h < 2` wait predicate → 3rd H proceeds immediately → returns `\"HHHHOO\"` → groups of 3: `\"HHH\"` (0 oxygen, invalid)\n\n**Excess oxygen** - 2 O threads arrive before any H\n`Input: \"OOHHHH\"` → `Expected: \"OHHOHH\"`\n⚠️ Bug: removing the `o < 1` wait predicate → 2nd O proceeds immediately → returns `\"OOHHHH\"` → groups of 3: `\"OOH\"` (2 oxygen, invalid)\n\n**Lock released before bonding** - lock freed before calling release function\n`Input: \"HHOHHO\"` → `Expected: \"HHOHHO\"`\n⚠️ Bug: calling `lock.unlock()` before `releaseHydrogen()` → next molecule's H prints before current O → returns `\"HHHOHO\"` → groups: `\"HHH\"` (invalid)\n\n**Missing reset** - counters not zeroed after molecule completes\n`Input: \"HHHHHHOOO\"` → `Expected: \"HHOHHOHHO\"`\n⚠️ Bug: omitting `h=0; o=0;` after detecting complete molecule → 2nd molecule's H threads wait forever (h stays 2) → returns `\"HHO\"` then deadlocks"
+  ],
+  "followUps": [
+    {
+      "q": "What if you needed to form CO₂ (1C + 2O) with a third thread type?",
+      "a": "Add a `carbon` method with the same barrier pattern. Track three counters (h, o, c) and reset when all reach their targets (1C, 2O). Each thread type's wait predicate checks only its own counter. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the molecule formula is given at construction time as a string like \"C₆H₁₂O₆\"?",
+      "a": "Parse the formula in the constructor to extract element-to-count mappings stored in a map. Each element's thread method waits until its counter is below target, increments, and checks if all counters match. TC: O(n), SC: O(k) where k is the number of distinct elements."
+    },
+    {
+      "q": "What if release functions can block for arbitrary durations and you need maximum throughput?",
+      "a": "Release the lock before calling the release function, but add a second condition variable that the 3rd thread signals after resetting. The next molecule's threads wait on this \"bonding complete\" signal before proceeding, allowing the three release calls to run concurrently while still enforcing molecule ordering. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class H2O {\nprivate:\n    mutex mtx;\n    condition_variable cv;\n    int h = 0, o = 0;\npublic:\n    H2O() {\n        \n    }\n\n    void hydrogen(function<void()> releaseHydrogen) {\n        unique_lock<mutex> lock(mtx);\n        cv.wait(lock, [this]{ return h < 2; });\n        ++h;\n        if (h == 2 && o == 1) {\n            h = 0;\n            o = 0;\n            cv.notify_all();\n        }\n        // releaseHydrogen() outputs \"H\". Do not change or remove this line.\n        releaseHydrogen();\n    }\n\n    void oxygen(function<void()> releaseOxygen) {\n        unique_lock<mutex> lock(mtx);\n        cv.wait(lock, [this]{ return o < 1; });\n        ++o;\n        if (h == 2 && o == 1) {\n            h = 0;\n            o = 0;\n            cv.notify_all();\n        }\n        // releaseOxygen() outputs \"O\". Do not change or remove this line.\n        releaseOxygen();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}
