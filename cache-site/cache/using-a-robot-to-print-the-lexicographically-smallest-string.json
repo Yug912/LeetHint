@@ -1,0 +1,40 @@
+{
+  "slug": "using-a-robot-to-print-the-lexicographically-smallest-string",
+  "title": "Using a Robot to Print the Lexicographically Smallest String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Stack with Suffix Minimum",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<char> suffixMin: n entries → O(n)\n- string t (stack): up to n chars → O(n)\n- not counted: input s, returned string p",
+  "approach": "At each step the robot should write from `t` exactly when the top of `t` is ≤ the smallest character still remaining in `s`; otherwise it should push more from `s` until that smallest character reaches the top. Precompute a suffix-minimum array of `s`, then scan left to right: before pushing `s[i]`, pop from the stack while its top ≤ `suffixMin[i]` (the minimum of `s[i..n-1]`). After processing all of `s`, pop the remaining stack. This greedy is optimal because writing a character that is ≤ everything still coming can never be improved by delaying it.",
+  "hints": [
+    "With n up to 10^5, trying every operation sequence is impossible. At each step the robot either takes the next character from s or writes the top of t. What property of the characters still sitting in s determines which choice is better?",
+    "Use a stack for `t` and a suffix-minimum array for `s` where `suffixMin[i]` = smallest char in `s[i..n-1]`. Before pushing `s[i]`, pop the stack while its top ≤ `suffixMin[i]`. For `s = \"bac\"`, `suffixMin = [a,a,c]`; at `i=1` the top `'b'` > `'a'`, so we push `'a'` rather than writing.",
+    "```\ncompute suffixMin[i] = min(s[i..n-1]) for all i\nfor i from 0 to n-1:\n    while stack not empty and stack.top ≤ suffixMin[i]:\n        pop stack → append to result\n    push s[i] onto stack\npop all remaining stack → append to result\n```",
+    "**Single character** - n = 1, only one operation is possible.\n`Input: s = \"a\"` → `Expected: \"a\"`\n⚠️ Bug: loop `for (int i = 0; i < n-1; i++)` skips the only character → returns `\"\"`\n\n**Tie at top of stack** - top of t equals the smallest remaining char in s.\n`Input: s = \"aba\"` → `Expected: \"aab\"`\n⚠️ Bug: using `<` instead of `<=` in the pop condition → returns `\"aba\"`\n\n**Already ascending** - every character is already the smallest remaining.\n`Input: s = \"abc\"` → `Expected: \"abc\"`\n⚠️ Bug: forgetting the final while-loop that empties t → returns `\"ab\"`\n\n**Smallest char buried late** - the minimum is far from the front.\n`Input: s = \"bca\"` → `Expected: \"acb\"`\n⚠️ Bug: comparing top against `s[i]` (current char only) instead of `suffixMin[i]` → returns `\"bac\"`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the robot could also remove the first character of t (t acts as a deque, not a stack)?",
+      "a": "At each step write the smallest character currently in t if it is ≤ the minimum of the remaining s; otherwise push from s. Maintain t's contents in a min-heap or multiset for O(log n) extraction. TC becomes O(n log n), SC stays O(n)."
+    },
+    {
+      "q": "What if s contained both uppercase and lowercase letters with case-insensitive comparison?",
+      "a": "The algorithm is unchanged; only the comparison function changes - fold case when computing suffixMin and when comparing the stack top, but write the original character. TC remains O(n), SC O(n)."
+    },
+    {
+      "q": "What if s arrives as a stream with no look-ahead?",
+      "a": "Optimal output is impossible without future knowledge because a smaller character may arrive later. With a bounded look-ahead buffer of size k, apply the same greedy within the visible window for an approximate result. TC O(n), SC O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string robotWithString(string s) {\n        int n = s.size();\n        vector<char> suffixMin(n);\n        suffixMin[n - 1] = s[n - 1];\n        for (int i = n - 2; i >= 0; i--) {\n            suffixMin[i] = min(s[i], suffixMin[i + 1]);\n        }\n        string t, p;\n        for (int i = 0; i < n; i++) {\n            while (!t.empty() && t.back() <= suffixMin[i]) {\n                p.push_back(t.back());\n                t.pop_back();\n            }\n            t.push_back(s[i]);\n        }\n        while (!t.empty()) {\n            p.push_back(t.back());\n            t.pop_back();\n        }\n        return p;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

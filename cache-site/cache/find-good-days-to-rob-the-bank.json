@@ -1,0 +1,40 @@
+{
+  "slug": "find-good-days-to-rob-the-bank",
+  "title": "Find Good Days to Rob the Bank",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int leftViol, rightViol: two scalars → O(1)\n- int i, j: loop counters → O(1)\n- not counted: input vector `security`, returned vector `result`",
+  "approach": "For each candidate day `i`, the left window `[i-time, i]` must be non-increasing and the right window `[i, i+time]` must be non-decreasing. Instead of re-scanning `time` pairs per day, maintain two sliding violation counters: `leftViol` counts pairs in the left window where `security[j] < security[j+1]` (breaks non-increasing), and `rightViol` counts pairs in the right window where `security[j] > security[j+1]` (breaks non-decreasing). When advancing from day `i` to `i+1`, only two pairs enter and two pairs leave across both windows, so each transition is O(1). Day `i` is good exactly when both counters are zero.",
+  "hints": [
+    "When moving from candidate day i to day i+1, how many consecutive element pairs actually enter or leave the \"non-increasing before\" and \"non-decreasing after\" windows? The constraint n ≤ 10^5 makes an O(n · time) check too slow.",
+    "Use a sliding window with two violation counters - one for increasing pairs in the left window, one for decreasing pairs in the right window. For security = [5,3,3,3,5,6,2], time = 2, day 2 has left pairs (5,3),(3,3) with 0 increasing violations and right pairs (3,3),(3,5) with 0 decreasing violations, so it qualifies.",
+    "```\nif time == 0: return all days\nif n < 2*time+1: return empty\ncount leftViol (increasing pairs in [0, time]) and rightViol (decreasing pairs in [time, 2*time])\nif both zero: add time to result\nfor day from time+1 while day+time < n:\n    remove pair (day-time-1, day-time) from left, add pair (day-1, day) to left\n    remove pair (day-1, day) from right, add pair (day+time-1, day+time) to right\n    if both zero: add day to result\n```",
+    "**time = 0** - every day trivially qualifies with zero-length windows.\n`Input: security = [1,1,1,1,1], time = 0` → `Expected: [0,1,2,3,4]`\n⚠️ Bug: not special-casing time = 0, then accessing security[i-time-1] = security[-1] on the first slide → undefined behavior / crash.\n\n**Array too short** - n < 2*time+1 means no day has enough neighbors on both sides.\n`Input: security = [1,2,3], time = 2` → `Expected: []`\n⚠️ Bug: skipping the size guard and initializing the right window up to index 2*time = 4 → out-of-bounds read on security[4].\n\n**All equal values** - every interior day qualifies because equal consecutive values satisfy both non-increasing and non-decreasing.\n`Input: security = [3,3,3,3,3], time = 1` → `Expected: [1,2,3]`\n⚠️ Bug: using strict `<` instead of `<=` semantics (i.e. treating `security[j] <= security[j+1]` as a left violation) → returns `[]` because equal pairs are wrongly flagged.\n\n**Single valid day at boundary** - n = 2*time+1, only day `time` can qualify.\n`Input: security = [5,3,5], time = 1` → `Expected: [1]`\n⚠️ Bug: loop condition `i + time <= n` instead of `i + time < n` → accesses security[n] out of bounds on the final iteration."
+  ],
+  "followUps": [
+    {
+      "q": "What if `time` is given as an array `time[i]` specifying a different threshold for each day?",
+      "a": "Sort candidate days by their required window half-width and sweep left-to-right, maintaining the two violation counters over a dynamically growing/shrinking window. Each pair enters and leaves each counter at most once, giving O(n log n) time due to the sort, O(1) extra space."
+    },
+    {
+      "q": "What if `security` arrives as a streaming input and you must report good days online?",
+      "a": "Buffer the last `2*time+1` values in a circular buffer and maintain the two violation counters incrementally as new values arrive. Each new day costs O(1) to update and check; space is O(time) for the buffer."
+    },
+    {
+      "q": "What if you must return the longest contiguous run of good days instead of the full list?",
+      "a": "Run the same sliding window and track the current streak length whenever both counters are zero, resetting on any violation. This adds O(1) space on top of the existing counters and keeps time at O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> goodDaysToRobBank(vector<int>& security, int time) {\n        int n = security.size();\n        vector<int> result;\n        if (time == 0) {\n            for (int i = 0; i < n; i++) result.push_back(i);\n            return result;\n        }\n        if (n < 2 * time + 1) return result;\n\n        int leftViol = 0, rightViol = 0;\n\n        for (int j = 0; j < time; j++) {\n            if (security[j] < security[j + 1]) leftViol++;\n        }\n        for (int j = time; j < 2 * time; j++) {\n            if (security[j] > security[j + 1]) rightViol++;\n        }\n\n        if (leftViol == 0 && rightViol == 0) result.push_back(time);\n\n        for (int i = time + 1; i + time < n; i++) {\n            if (security[i - time - 1] < security[i - time]) leftViol--;\n            if (security[i - 1] < security[i]) leftViol++;\n\n            if (security[i - 1] > security[i]) rightViol--;\n            if (security[i + time - 1] > security[i + time]) rightViol++;\n\n            if (leftViol == 0 && rightViol == 0) result.push_back(i);\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

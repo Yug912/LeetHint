@@ -1,0 +1,40 @@
+{
+  "slug": "painting-a-grid-with-three-different-colors",
+  "title": "Painting a Grid With Three Different Colors",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Bitmask/State Compression",
+  "tc": "O((n + m) * 2^(2m))",
+  "sc": "O(2^(2m))",
+  "spaceBreakdown": "- vector<vector<int>> patterns: P entries of size m → O(P·m)\n- vector<vector<int>> compat: up to P² total entries → O(P²)\n- vector<long long> dp, ndp: P entries each → O(P)\n- temporary vector<int> col inside generation loop: O(m)\n- not counted: input parameters, return value",
+  "approach": "Since m ≤ 5, a single column has at most 3·2^(m−1) = 48 valid colorings (each cell differs from the one above). We enumerate all such column patterns, precompute which pairs are horizontally compatible (no cell matches), then run DP over columns: dp[pattern] = number of ways to color the grid up to the current column ending with that pattern. Each transition sums over all compatible previous patterns. The answer is the sum of dp over all patterns after n columns, mod 10^9+7.",
+  "hints": [
+    "Given m ≤ 5, how many distinct valid colorings can a single column have if no two vertically adjacent cells share a color?",
+    "Enumerate all valid column patterns (3·2^(m−1) of them), then use DP over columns where dp[pattern] sums over all horizontally-compatible previous patterns. For m=1, the three patterns [0],[1],[2] are pairwise compatible, giving 3·2^(n−1) total ways.",
+    "```\ngenerate all valid column patterns (vertically adjacent differ)\nbuild compat[i] = list of j where no cell of i matches j\ndp[p] = 1 for every pattern p\nrepeat n−1 times:\n    ndp[p] = 0 for all p\n    for each pattern i:\n        for each j in compat[i]:\n            ndp[j] += dp[i]   (mod 1e9+7)\n    dp = ndp\nreturn sum(dp) mod 1e9+7\n```",
+    "**Single cell** - m=1, n=1, no adjacency constraints at all.\n`Input: m=1, n=1` → `Expected: 3`\n⚠️ Bug: initializing dp to 0 instead of 1 → returns 0\n\n**Single row, two columns** - m=1, n=2, all three patterns are pairwise compatible.\n`Input: m=1, n=2` → `Expected: 6`\n⚠️ Bug: skipping the horizontal compatibility check and returning P^n = 3^2 = 9 → returns 9\n\n**Large n overflow** - m=5, n=1000, intermediate sums of up to 48 terms each near 10^9.\n`Input: m=5, n=1000` → `Expected: (some value mod 10^9+7)`\n⚠️ Bug: using int for ndp accumulation → 48 × 10^9 ≈ 4.8×10^10 overflows int → returns garbage\n\n**Unfiltered pattern generation** - m=5 generates 3^5=243 raw masks, only 48 are vertically valid.\n`Input: m=5, n=5` → `Expected: 580986`\n⚠️ Bug: using all 243 masks without filtering vertical conflicts → returns a wrong count larger than 580986"
+  ],
+  "followUps": [
+    {
+      "q": "What if m could be up to 10^5 and n up to 5?",
+      "a": "Swap roles: enumerate valid row patterns (length n ≤ 5, so at most 3·2^4 = 48) and DP over rows instead of columns. The algorithm is identical, just transposed. TC: O(m · 2^(2n)), SC: O(2^(2n))."
+    },
+    {
+      "q": "What if there were 4 colors instead of 3?",
+      "a": "Each column now has 4·3^(m−1) valid patterns (for m=5, that is 324). The DP structure is unchanged-just more patterns and a larger compatibility matrix. TC: O(n · (4·3^(m−1))²)."
+    },
+    {
+      "q": "What if you needed to reconstruct one valid coloring instead of just counting?",
+      "a": "Store a parent pointer for each (column, pattern) pair recording which previous pattern contributed to the best transition. After DP, backtrack from any pattern with dp > 0 at the last column. Space increases to O(n · P) for the parent table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int colorTheGrid(int m, int n) {\n        const int MOD = 1e9 + 7;\n        vector<vector<int>> patterns;\n        int total = 1;\n        for (int i = 0; i < m; i++) total *= 3;\n        for (int mask = 0; mask < total; mask++) {\n            vector<int> col(m);\n            int t = mask;\n            bool valid = true;\n            for (int i = 0; i < m; i++) {\n                col[i] = t % 3;\n                t /= 3;\n                if (i > 0 && col[i] == col[i - 1]) { valid = false; break; }\n            }\n            if (valid) patterns.push_back(col);\n        }\n        int P = patterns.size();\n        vector<vector<int>> compat(P);\n        for (int i = 0; i < P; i++) {\n            for (int j = 0; j < P; j++) {\n                bool ok = true;\n                for (int k = 0; k < m; k++) {\n                    if (patterns[i][k] == patterns[j][k]) { ok = false; break; }\n                }\n                if (ok) compat[i].push_back(j);\n            }\n        }\n        vector<long long> dp(P, 1);\n        for (int col = 1; col < n; col++) {\n            vector<long long> ndp(P, 0);\n            for (int i = 0; i < P; i++) {\n                if (dp[i] == 0) continue;\n                for (int j : compat[i]) {\n                    ndp[j] = (ndp[j] + dp[i]) % MOD;\n                }\n            }\n            dp = ndp;\n        }\n        long long ans = 0;\n        for (int i = 0; i < P; i++) ans = (ans + dp[i]) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "closest-prime-numbers-in-range",
+  "title": "Closest Prime Numbers in Range",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sieve of Eratosthenes",
+  "tc": "O(right log log right)",
+  "sc": "O(right)",
+  "spaceBreakdown": "- vector<bool> isPrime: right+1 bits → O(right)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "Use the Sieve of Eratosthenes to precompute all primes up to `right` in one pass, then scan the range [left, right] left-to-right tracking consecutive primes and their gaps. The first pair achieving a new minimum gap is recorded; since we scan in increasing order, ties automatically keep the smaller num1. If fewer than two primes appear, return [-1,-1].",
+  "hints": [
+    "With right up to 10^6, testing each number for primality individually is too slow - what single preprocessing pass marks every prime in [1, right] at once?",
+    "Use the Sieve of Eratosthenes up to `right`. For left=10, right=19 it marks 11,13,17,19 as prime; scanning left-to-right, the gap 13-11=2 is recorded before 19-17=2, so [11,13] wins.",
+    "```\nsieve primes up to right\nprev = -1, best = INF, ans = [-1,-1]\nfor i from left to right:\n    if isPrime[i]:\n        if prev != -1 and i - prev < best:\n            best = i - prev\n            ans = [prev, i]\n        prev = i\nreturn ans\n```",
+    "**Single prime in range** - only one prime exists so no pair is possible.\n`Input: left = 4, right = 6` → `Expected: [-1,-1]`\n⚠️ Bug: not checking `prev != -1` before computing gap → reads uninitialized prev and returns garbage like [0,5].\n\n**Tie on gap** - two pairs share the minimum gap; smallest num1 must win.\n`Input: left = 10, right = 19` → `Expected: [11,13]`\n⚠️ Bug: using `<=` instead of `<` when comparing gaps → overwrites with [17,19].\n\n**Range starts at 1** - 0 and 1 must be excluded from the sieve.\n`Input: left = 1, right = 3` → `Expected: [2,3]`\n⚠️ Bug: forgetting to mark isPrime[0]=isPrime[1]=false → treats 1 as prime and returns [1,2].\n\n**Smallest valid pair** - twin primes at the very start.\n`Input: left = 2, right = 3` → `Expected: [2,3]`\n⚠️ Bug: starting the outer sieve loop at i=1 → marks every number composite and returns [-1,-1].\n\n**Large right near 10^6** - sieve inner loop index i*i must not overflow int.\n`Input: left = 999900, right = 1000000` → `Expected: [999983,1000003]` is invalid (1000003 > right); actual primes near 10^6 give a valid pair.\n⚠️ Bug: using `int j = i*i` with i up to 1000 is fine, but casting `i*i <= right` with i as int and i near 46341 overflows - use `(long long)i*i`."
+  ],
+  "followUps": [
+    {
+      "q": "What if queries come in batches of many [left, right] pairs, all with right ≤ 10^6?",
+      "a": "Run the sieve once up to 10^6, then precompute the closest-prime answer for every prefix so each query is answered by a lookup of the best pair fully inside [left, right]. Preprocessing stays O(right log log right), each query O(1) with O(right) space for the answer table."
+    },
+    {
+      "q": "What if right can be up to 10^12 but left and right differ by at most 10^6?",
+      "a": "Use a segmented sieve: sieve primes up to √right (≤ 10^6) with a normal sieve, then use them to mark composites in the window [left, right] of size ≤ 10^6. Time O((√right) log log √right + (right-left) log log √right), space O(√right + right-left)."
+    },
+    {
+      "q": "What if you must answer online with O(1) space beyond the input?",
+      "a": "For each candidate in [left, right], test primality by trial division up to √candidate; track the best gap. This drops to O(1) auxiliary space but costs O((right-left)·√right) time, feasible only for small windows."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> closestPrimes(int left, int right) {\n        vector<bool> isPrime(right + 1, true);\n        isPrime[0] = isPrime[1] = false;\n        for (int i = 2; (long long)i * i <= right; i++) {\n            if (isPrime[i]) {\n                for (int j = i * i; j <= right; j += i) {\n                    isPrime[j] = false;\n                }\n            }\n        }\n        int prev = -1;\n        int bestDiff = INT_MAX;\n        vector<int> ans = {-1, -1};\n        for (int i = left; i <= right; i++) {\n            if (isPrime[i]) {\n                if (prev != -1) {\n                    int diff = i - prev;\n                    if (diff < bestDiff) {\n                        bestDiff = diff;\n                        ans = {prev, i};\n                    }\n                }\n                prev = i;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

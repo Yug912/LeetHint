@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-removable-characters",
+  "title": "Maximum Number of Removable Characters",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> removed: size n → O(n)\n- recursion depth: none\n- not counted: input strings, returned int",
+  "approach": "Binary search on the answer k. The key monotonicity: if p is still a subsequence after removing the first k indices of `removable`, it is also a subsequence after removing the first k-1 (fewer deletions only helps). For each candidate k, mark the first k removable indices as deleted, then run a standard two-pointer subsequence check of p against the unmarked characters of s. Find the largest k for which the check passes.",
+  "hints": [
+    "If p is still a subsequence after removing the first k indices of `removable`, must it also be a subsequence after removing the first k-1? What shape does that give the set of valid k values?",
+    "Binary search on k. For each candidate, mark the first k removable indices as deleted, then two-pointer check whether p is a subsequence of the surviving characters. Example: s=\"abcacb\", p=\"ab\", k=2 marks indices 3,1 → \"accb\", two-pointer matches 'a' at 0 and 'b' at 5 → valid.",
+    "```\nlo, hi = 0, len(removable)\nwhile lo < hi:\n    mid = (lo + hi + 1) / 2\n    if check(mid): lo = mid\n    else: hi = mid - 1\nreturn lo\n\ncheck(k):\n    mark first k indices in removable as deleted\n    j = 0\n    for i in 0..n-1:\n        if not marked[i] and s[i] == p[j]: j++\n    return j == len(p)\n```",
+    "**Empty removable** - `removable` has length 0, so no deletions are possible\n`Input: s = \"abc\", p = \"abc\", removable = []` → `Expected: 0`\n⚠️ Bug: setting `hi = removable.size() - 1` (signed underflow) → returns a huge negative or wrong value\n\n**All removable hit p's needed chars** - every removable index deletes a character p requires\n`Input: s = \"abcab\", p = \"abc\", removable = [0,1,2,3,4]` → `Expected: 0`\n⚠️ Bug: using `mid = (lo + hi) / 2` with `lo = mid` (no +1) → infinite loop / TLE\n\n**Boundary k = removable.size()** - removing every listed index still leaves p as a subsequence\n`Input: s = \"abab\", p = \"ab\", removable = [2,3]` → `Expected: 2`\n⚠️ Bug: setting `hi = removable.size() - 1` → returns 1\n\n**Single-character p** - p has length 1, so any deletion of its only needed char breaks it\n`Input: s = \"a\", p = \"a\", removable = []` → `Expected: 0`\n⚠️ Bug: returning `removable.size()` unconditionally without running the check → returns 0 here but fails cases where check(mid) is false for the last index"
+  ],
+  "followUps": [
+    {
+      "q": "What if `removable` could contain duplicates?",
+      "a": "Deduplicate first (sort or hash-set), then run the same binary search. TC becomes O(n log m + m log m), SC O(n) unchanged."
+    },
+    {
+      "q": "What if s and p are too large to hold in memory and arrive as streams?",
+      "a": "Keep `removable` in memory as a sorted set; for each candidate k, stream s once, skipping positions in the first k of removable, and two-pointer match p (also streamed). TC O(n log m), SC O(m)."
+    },
+    {
+      "q": "What if you must also return the resulting string after the optimal deletions?",
+      "a": "After finding max k, do one pass over s skipping the first k removable indices, appending survivors to a result string. TC O(n), SC O(n) for the output string."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumRemovals(string s, string p, vector<int>& removable) {\n        int n = s.size();\n        int m = removable.size();\n        int ps = p.size();\n        vector<bool> removed(n, false);\n        auto check = [&](int k) -> bool {\n            for (int i = 0; i < n; i++) removed[i] = false;\n            for (int i = 0; i < k; i++) removed[removable[i]] = true;\n            int j = 0;\n            for (int i = 0; i < n && j < ps; i++) {\n                if (!removed[i] && s[i] == p[j]) j++;\n            }\n            return j == ps;\n        };\n        int lo = 0, hi = m;\n        while (lo < hi) {\n            int mid = lo + (hi - lo + 1) / 2;\n            if (check(mid)) lo = mid;\n            else hi = mid - 1;\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

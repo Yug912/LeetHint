@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-k-divisible-components",
+  "title": "Maximum Number of K-Divisible Components",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Post-order Tree DP",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- adj: vector<vector<int>> with 2(n-1) entries → O(n)\n- sum: vector<long long> of size n → O(n)\n- parent: vector<int> of size n → O(n)\n- order: vector<int> of size n → O(n)\n- visited: vector<bool> of size n → O(n)\n- no recursion (iterative BFS) → O(1) stack",
+  "approach": "Root the tree at node 0 and run a post-order traversal (implemented as BFS to get a topological order, then process in reverse). For each node, accumulate its subtree sum. If a subtree's sum is divisible by k, that subtree can be cut off as its own component (increment the answer); otherwise its sum \"flows up\" to the parent. Because the total sum is guaranteed divisible by k, the root always counts, giving at least one component. The answer equals the number of subtrees whose sum % k == 0.",
+  "hints": [
+    "The total sum of all node values is guaranteed to be divisible by k. If you root the tree at node 0 and look at any subtree, what must its value sum satisfy for it to be safely cut off as its own component while the remaining nodes still form valid components?",
+    "Use a post-order traversal (BFS to order nodes, then process leaves-to-root) tracking each subtree's sum modulo k. In Example 1, node 1's subtree sums to 8+4=12, divisible by 6 → cut it (1 component); the root's whole-tree sum 18 is also divisible → answer 2.",
+    "```\nroot tree at 0, compute parent[] and BFS order\nans = 0\nfor u in reverse(order):\n    sum[u] += values[u]\n    if sum[u] % k == 0:\n        ans = ans + 1\n    else:\n        sum[parent[u]] += sum[u]\nreturn ans\n```",
+    "**Single node** - n = 1, no edges to remove.\n`Input: n = 1, edges = [], values = [6], k = 3` → `Expected: 1`\n⚠️ Bug: accessing `sum[parent[u]]` unconditionally when u is the root (parent = -1) → undefined behavior / crash.\n\n**Overflow** - n = 3·10^4 with every values[i] = 10^9 gives total sum 3·10^13 > 2^31−1.\n`Input: n = 3, edges = [[0,1],[1,2]], values = [1000000000,1000000000,1000000000], k = 3` → `Expected: 1`\n⚠️ Bug: using `vector<int> sum` instead of `long long` → sum wraps to a wrong value, returns 0 or 2.\n\n**Skewed tree** - a line of 3·10^4 nodes.\n`Input: n = 30000, edges = [[0,1],[1,2],...], values = [1,1,...,1], k = 30000` → `Expected: 1`\n⚠️ Bug: recursive DFS → stack overflow / segfault on the deep call chain.\n\n**Zero values** - a node with value 0 is divisible by any k.\n`Input: n = 3, edges = [[0,1],[0,2]], values = [0,3,3], k = 3` → `Expected: 3`\n⚠️ Bug: treating `sum[u] == 0` as \"not divisible\" (e.g. `if (sum[u] != 0 && sum[u] % k == 0)`) → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if values[i] could be negative?",
+      "a": "The same subtree-sum approach works, but C++ `%` on negatives can yield negative results. Normalize with `((sum[u] % k) + k) % k` before comparing to 0. TC stays O(n), SC stays O(n)."
+    },
+    {
+      "q": "What if you must minimize the number of components instead of maximize?",
+      "a": "Cut zero edges - since the total sum is divisible by k, a single component is always valid, so the answer is 1. TC O(1), SC O(1)."
+    },
+    {
+      "q": "What if the graph is a general undirected graph, not a tree?",
+      "a": "Maximizing k-divisible components becomes NP-hard (reduces to partition/subset-sum). The tree structure is what lets the linear post-order solution work; without it you'd need exponential search over edge cuts."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxKDivisibleComponents(int n, vector<vector<int>>& edges, vector<int>& values, int k) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        vector<long long> sum(n, 0);\n        vector<int> parent(n, -1);\n        vector<int> order;\n        order.reserve(n);\n        vector<bool> visited(n, false);\n        order.push_back(0);\n        visited[0] = true;\n        for (int i = 0; i < n; i++) {\n            int u = order[i];\n            for (int v : adj[u]) {\n                if (!visited[v]) {\n                    visited[v] = true;\n                    parent[v] = u;\n                    order.push_back(v);\n                }\n            }\n        }\n        int ans = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            int u = order[i];\n            sum[u] += values[u];\n            if (sum[u] % k == 0) {\n                ans++;\n            } else {\n                sum[parent[u]] += sum[u];\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

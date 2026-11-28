@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-fish-in-a-grid",
+  "title": "Maximum Number of Fish in a Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Connected Components / Flood Fill",
+  "tc": "O(m × n)",
+  "sc": "O(m × n)",
+  "spaceBreakdown": "- grid: modified in place (input, not counted as auxiliary) → O(1)\n- recursion call stack: worst-case depth m × n (snake-shaped path through all cells) → O(m × n)\n- no other containers allocated",
+  "approach": "The fisher can collect all fish in a connected component of water cells (cells with value > 0 that are 4-directionally adjacent). The answer is the maximum component sum. We iterate over every cell; when we find an unvisited water cell, we run DFS to sum all fish in its component, marking cells as visited by zeroing them in place. We track the maximum component sum across all components.",
+  "hints": [
+    "The fisher can move freely between adjacent water cells and catch all fish along the way. What does this tell you about which cells' fish can be collected in a single trip starting from one cell?",
+    "Use DFS (or BFS) to explore each connected component of water cells, summing fish values. In Example 1, starting DFS at cell (1,3) visits (1,3) and (2,3), summing 3 + 4 = 7.",
+    "```\nfor each cell (i, j):\n    if grid[i][j] > 0:\n        total = dfs(i, j)\n        maxFish = max(maxFish, total)\n\ndfs(r, c):\n    if out of bounds or grid[r][c] == 0:\n        return 0\n    fish = grid[r][c]\n    grid[r][c] = 0          # mark visited\n    return fish + dfs(r+1,c) + dfs(r-1,c) + dfs(r,c+1) + dfs(r,c-1)\n```",
+    "**All land** - every cell is 0, no water exists\n`Input: [[0,0],[0,0]]` → `Expected: 0`\n⚠️ Bug: initializing maxFish to INT_MIN instead of 0 → returns INT_MIN\n\n**Single water cell** - 1×1 grid with one fish\n`Input: [[5]]` → `Expected: 5`\n⚠️ Bug: summing only neighbor fish without adding grid[r][c] itself → returns 0\n\n**Cyclic water region** - four water cells forming a loop\n`Input: [[1,1],[1,1]]` → `Expected: 4`\n⚠️ Bug: not zeroing grid[r][c] before recursing into neighbors → infinite recursion / stack overflow\n\n**All water, max values** - every cell has 10 fish\n`Input: [[10,10],[10,10]]` → `Expected: 40`\n⚠️ Bug: returning 1 + dfs(neighbors) instead of grid[r][c] + dfs(neighbors) → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "If the grid were up to 1000×1000, how would you handle the recursion limit?",
+      "a": "Switch from recursive DFS to iterative BFS with a queue, or iterative DFS with an explicit stack. The algorithm and time complexity remain O(m×n), but you avoid stack overflow from deep recursion on large connected components."
+    },
+    {
+      "q": "If k fishers can start at different water cells simultaneously and each cell can only be fished once, what is the maximum total fish?",
+      "a": "Compute the sum of each connected component, sort the component sums in descending order, and take the top k. Time complexity is O(m×n + c log c) where c is the number of components; space remains O(m×n)."
+    },
+    {
+      "q": "If you could convert exactly one land cell to water, what is the maximum fish achievable?",
+      "a": "Precompute component IDs and sums via DFS. For each land cell, sum the distinct adjacent component sums plus the cell's potential fish value, and track the maximum. Time complexity O(m×n), space O(m×n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int m, n;\n    int dfs(vector<vector<int>>& grid, int r, int c) {\n        if (r < 0 || r >= m || c < 0 || c >= n || grid[r][c] == 0) return 0;\n        int fish = grid[r][c];\n        grid[r][c] = 0;\n        return fish + dfs(grid, r + 1, c) + dfs(grid, r - 1, c)\n                     + dfs(grid, r, c + 1) + dfs(grid, r, c - 1);\n    }\npublic:\n    int findMaxFish(vector<vector<int>>& grid) {\n        m = grid.size();\n        n = grid[0].size();\n        int maxFish = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] > 0) {\n                    maxFish = max(maxFish, dfs(grid, i, j));\n                }\n            }\n        }\n        return maxFish;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

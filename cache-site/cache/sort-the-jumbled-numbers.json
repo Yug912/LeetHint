@@ -1,0 +1,40 @@
+{
+  "slug": "sort-the-jumbled-numbers",
+  "title": "Sort the Jumbled Numbers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Stable Sort by Transformed Key",
+  "tc": "O(n log V + n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<long long,int>> keyed: n entries → O(n)\n- int digits[16]: fixed-size stack array → O(1)\n- stable_sort recursion stack: O(log n)\n- not counted: input `nums`, returned `result`",
+  "approach": "For each number in `nums`, compute its mapped value by walking its decimal digits from most significant to least, replacing each digit `d` with `mapping[d]` and accumulating `mapped = mapped*10 + mapping[d]`. The number `0` is a special case (mapped to `mapping[0]`). Then sort the numbers by `(mapped_value, original_index)`; including the index makes the sort stable for ties without relying on `stable_sort`. Finally, emit `nums` in the order of sorted indices. This is correct because the sort key is exactly the problem's mapped value, and the index tiebreaker enforces the required relative order for equal keys.",
+  "hints": [
+    "In Example 1, both 338 and 38 produce the same mapped value of 7. What does the problem require about their relative order in the output?",
+    "Sort the numbers by their mapped value using a stable sort (or pair each mapped value with its original index as a tiebreaker). For 991 with mapping [8,9,4,0,2,1,3,5,7,6]: digits 9,9,1 become 6,6,9, giving mapped value 669.",
+    "```\nfor each index i in nums:\n    decompose nums[i] into digits (most significant first)\n    mapped = 0\n    for each digit d:\n        mapped = mapped * 10 + mapping[d]\n    store pair (mapped, i)\nsort pairs by mapped (stable, or by (mapped, i))\noutput nums[pair.second] in sorted order\n```",
+    "**Zero in input** - nums contains 0, which has no digits to extract\n`Input: mapping=[9,0,1,2,3,4,5,6,7,8], nums=[0,1]` → `Expected: [1,0]` (0→9, 1→0)\n⚠️ Bug: `while (x > 0)` loop skips x=0, leaving mapped=0 for element 0 → both mapped 0 → stable order [0,1] WRONG\n\n**Leading zeros** - mapped value has leading zeros that must be dropped\n`Input: mapping=[8,9,4,0,2,1,3,5,7,6], nums=[338,38]` → `Expected: [338,38]` (both map to 7, stable)\n⚠️ Bug: comparing mapped values as strings \"007\" vs \"07\" → \"007\" > \"07\" → [38,338] WRONG\n\n**Ties** - multiple elements share the same mapped value\n`Input: mapping=[8,9,4,0,2,1,3,5,7,6], nums=[38,338]` → `Expected: [38,338]` (both 7, preserve input order)\n⚠️ Bug: using std::sort without index tiebreaker → [338,38] WRONG\n\n**Reverse sorted** - input is in reverse of expected order\n`Input: mapping=[0,1,2,3,4,5,6,7,8,9], nums=[789,456,123]` → `Expected: [123,456,789]`\n⚠️ Bug: comparator using `>` instead of `<` → [789,456,123] WRONG"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums arrives as a stream too large to fit in memory?",
+      "a": "Use external k-way merge sort: compute each element's mapped value on the fly, write sorted runs to disk, then merge them. Time stays O(n log n) in CPU work but becomes I/O-bound; auxiliary memory drops to O(run_size)."
+    },
+    {
+      "q": "What if the mapping changes across many sort queries on the same nums?",
+      "a": "Cache each number's digit decomposition once (a small array of ≤10 digits). For each query, recompute mapped values from cached digits in O(d) per number, then sort. Per-query time is O(n log n + n·d); the cache costs O(n·d) space."
+    },
+    {
+      "q": "What if nums values can be up to 10^18 (up to 19 digits)?",
+      "a": "Mapped values can reach 10^19, exceeding even `long long`. Use `__int128`, or compare mapped values as digit arrays lexicographically to avoid overflow entirely; the sort key becomes the digit array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> sortJumbled(vector<int>& mapping, vector<int>& nums) {\n        int n = nums.size();\n        vector<pair<long long, int>> keyed(n);\n        for (int i = 0; i < n; i++) {\n            long long m = 0;\n            int x = nums[i];\n            if (x == 0) {\n                m = mapping[0];\n            } else {\n                int digits[16];\n                int cnt = 0;\n                while (x > 0) {\n                    digits[cnt++] = x % 10;\n                    x /= 10;\n                }\n                for (int j = cnt - 1; j >= 0; j--) {\n                    m = m * 10 + mapping[digits[j]];\n                }\n            }\n            keyed[i] = {m, i};\n        }\n        stable_sort(keyed.begin(), keyed.end());\n        vector<int> result(n);\n        for (int i = 0; i < n; i++) {\n            result[i] = nums[keyed[i].second];\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

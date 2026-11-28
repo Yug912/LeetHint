@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-work-sessions-to-finish-the-tasks",
+  "title": "Minimum Number of Work Sessions to Finish the Tasks",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(n · 2^n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<pair<int,int>> dp: 2^n entries → O(2^n)\n- no recursion, no other containers\n- not counted: input tasks, returned int",
+  "approach": "Since n ≤ 14, we can encode the set of already-assigned tasks as a bitmask (2^n ≤ 16384 states). For each mask we store the minimum number of sessions used so far and, among arrangements achieving that minimum, the maximum remaining time in the currently-open session. Adding one task at a time either fits into the open session (remaining decreases) or opens a new session (sessions+1, remaining = sessionTime − task). Comparing states by (fewer sessions, then larger remaining) yields the optimal substructure, giving O(n·2^n) time and O(2^n) space.",
+  "hints": [
+    "With n ≤ 14, the set of tasks already finished is small enough to enumerate - what single integer could represent that set, and what two numbers would you need alongside it to know whether the next task fits without opening a new session?",
+    "Use bitmask DP where dp[mask] = (minSessions, maxRemainingInLastSession). For tasks=[1,2,3], sessionTime=3: from mask=0 with (0,0), adding task 1 (value 2) gives (1, 1); adding task 0 (value 1) to that gives (1, 0); adding task 2 (value 3) opens a new session → (2, 0).",
+    "```\ndp[0] = (0, 0)\nfor mask in 0..2^n-1:\n    (sess, rem) = dp[mask]\n    for each task i not in mask:\n        if rem >= tasks[i]: cand = (sess, rem - tasks[i])\n        else:                cand = (sess+1, sessionTime - tasks[i])\n        update dp[mask|1<<i] with cand\n            (keep smaller sess; on tie keep larger rem)\nreturn dp[2^n-1].sessions\n```",
+    "**Single task** - only one task to schedule.\n`tasks = [5], sessionTime = 15` → `Expected: 1`\n⚠️ Bug: initializing dp[0] = (1, sessionTime) and then on the first task decrementing remaining instead of opening a session → returns 1 correctly here but breaks the \"tie-break by larger remaining\" logic on bigger inputs.\n\n**All tasks fit in one session** - total equals sessionTime exactly.\n`tasks = [1,2,3,4,5], sessionTime = 15` → `Expected: 1`\n⚠️ Bug: using strict `rem > tasks[i]` instead of `rem >= tasks[i]` forces a new session whenever remaining exactly equals the task → returns 2.\n\n**Tie in session count** - two orderings reach the same mask with the same session count but different remaining.\n`tasks = [3,1,3,1,1], sessionTime = 8` → `Expected: 2`\n⚠️ Bug: updating dp[nmask] only when `nsess < dp[nmask].first` (ignoring the tie-break on remaining) → may discard the state with more remaining and return 3.\n\n**Task equals sessionTime** - a task fills a whole session.\n`tasks = [3,3], sessionTime = 3` → `Expected: 2`\n⚠️ Bug: treating `rem == 0` as \"session still open with 0 remaining\" and not opening a new one → returns 1.\n\n**Largest input** - n = 14, all tasks = 1, sessionTime = 15.\n`tasks = [1]*14, sessionTime = 15` → `Expected: 1`\n⚠️ Bug: iterating masks in arbitrary order without ensuring dp[mask] is finalized before use (e.g., processing nmask < mask) → returns wrong count."
+  ],
+  "followUps": [
+    {
+      "q": "What if sessionTime is not fixed but each session has its own limit given in an array?",
+      "a": "Sort sessions descending and greedily pack tasks via the same bitmask DP, but the state must also track which sessions are used (or remaining capacity per session), blowing up the state. With k sessions this becomes O(2^n · k!) unless sessions are interchangeable, in which case sorting + DP on (mask, sessionIndex) gives O(n · 2^n · k)."
+    },
+    {
+      "q": "What if n grows to 20 - can we still solve it exactly?",
+      "a": "2^20 ≈ 10^6 states times n=20 gives ~2·10^7 transitions, still feasible in C++ within the time limit using the same DP; memory O(2^20) pairs ≈ 16 MB is also fine. Beyond n ≈ 22 you'd need branch-and-bound or meet-in-the-middle."
+    },
+    {
+      "q": "What if tasks arrive in a stream and must be assigned irrevocably to a session as they arrive?",
+      "a": "The offline DP no longer applies; you'd use an online bin-packing heuristic such as Best-Fit (assign each task to the session with the smallest remaining time that still fits, else open a new session). This gives no optimality guarantee but runs in O(n log n) with a balanced BST of open sessions."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSessions(vector<int>& tasks, int sessionTime) {\n        int n = (int)tasks.size();\n        int full = 1 << n;\n        const int INF = 1e9;\n        // dp[mask] = {minSessions, maxRemainingInLastSession}\n        vector<pair<int,int>> dp(full, {INF, 0});\n        dp[0] = {0, 0};\n        for (int mask = 0; mask < full; mask++) {\n            int sess = dp[mask].first;\n            if (sess == INF) continue;\n            int rem = dp[mask].second;\n            for (int i = 0; i < n; i++) {\n                if (mask & (1 << i)) continue;\n                int nmask = mask | (1 << i);\n                int nsess, nrem;\n                if (rem >= tasks[i]) {\n                    nsess = sess;\n                    nrem = rem - tasks[i];\n                } else {\n                    nsess = sess + 1;\n                    nrem = sessionTime - tasks[i];\n                }\n                if (nsess < dp[nmask].first ||\n                    (nsess == dp[nmask].first && nrem > dp[nmask].second)) {\n                    dp[nmask] = {nsess, nrem};\n                }\n            }\n        }\n        return dp[full - 1].first;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

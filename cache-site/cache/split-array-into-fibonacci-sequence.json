@@ -1,0 +1,40 @@
+{
+  "slug": "split-array-into-fibonacci-sequence",
+  "title": "Split Array into Fibonacci Sequence",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Backtracking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> res: up to n elements (e.g., all zeros) → O(n)\n- string zs: at most 10 chars → O(1)\n- loop variables a, b, x, y, z: O(1)\n- not counted: input string, returned vector",
+  "approach": "The first two numbers determine the entire sequence (each subsequent term is the sum of the previous two). Since each number fits in a 32-bit signed integer (< 2^31), it has at most 10 digits. We enumerate all possible lengths (1-10) for the first two numbers, parse them (rejecting leading zeros), then greedily verify the rest of the string: at each position, compute the next term and check if the string starts with its decimal representation. Return the first valid sequence found, or [] if none.",
+  "hints": [
+    "Once you fix the first two numbers of the sequence, what freedom remains for the rest of the string? Each number must be less than 2^31, so it has at most 10 digits.",
+    "Enumerate all possible lengths (1-10) for the first two numbers, parse them, then walk forward checking if the string at the current position starts with the decimal representation of a+b. For \"1101111\", first=11, second=0 forces 11 next, which matches positions 3-4.",
+    "```\nfor len1 in 1..10:\n  for len2 in 1..10:\n    a = parse(num[0:len1]); b = parse(num[len1:len1+len2])\n    seq = [a, b]; pos = len1 + len2\n    while pos < n:\n      c = a + b\n      if num[pos:] starts with str(c): seq.append(c); pos += len(str(c)); a=b; b=c\n      else: break\n    if pos == n and len(seq) >= 3: return seq\nreturn []\n```",
+    "**Leading zero** - \"0\" alone is valid but \"01\" is not.\n`Input: \"0123\"` → `Expected: []`\n⚠️ Bug: parsing \"01\" as 1 without checking the leading-zero rule → returns [1,2,3]\n\n**All zeros** - every term is 0, producing the longest valid sequence.\n`Input: \"0000\"` → `Expected: [0,0,0,0]`\n⚠️ Bug: breaking on num[0]=='0' unconditionally instead of only when length > 1 → returns []\n\n**Overflow** - two numbers each < 2^31 can sum past the limit (2000000000 + 2000000000 = 4000000000 > 2^31−1).\n`Input: \"200000000020000000004000000000\"` → `Expected: []`\n⚠️ Bug: using `long long c = a + b` without checking `c >= 2^31`, then casting to int → c = 4000000000, to_string matches \"4000000000\", returns [2000000000, 2000000000, -294967296]\n\n**Partial match** - the Fibonacci pattern holds for several terms then breaks.\n`Input: \"112358130\"` → `Expected: []`\n⚠️ Bug: returning as soon as `res.size() >= 3` without checking the entire string is consumed → returns [1,1,2] (stops at idx=3, leaving \"358130\" unconsumed)"
+  ],
+  "followUps": [
+    {
+      "q": "What if num can be up to 10^5 digits long?",
+      "a": "The first two numbers still have at most 10 digits each (bounded by 2^31), so the enumeration of (len1, len2) pairs stays O(100). The verification loop runs O(n) with string comparisons of O(10) each. The approach scales directly. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if numbers can be arbitrarily large (no 2^31 bound)?",
+      "a": "The first two numbers could span up to n/2 digits each, making the enumeration O(n^2) pairs. Each verification step needs big-integer string addition O(n) per term, and there are O(n) terms. Use string-based addition. TC: O(n^3), SC: O(n)."
+    },
+    {
+      "q": "What if you must return the lexicographically smallest valid sequence?",
+      "a": "Try all (len1, len2) pairs, keep the lexicographically smallest valid sequence instead of returning the first. There are at most 100 pairs and each verification is O(n), so compare full sequences element-by-element to select the best. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> splitIntoFibonacci(string num) {\n        int n = num.size();\n        for (int i = 1; i <= 10 && i < n; i++) {\n            if (num[0] == '0' && i > 1) break;\n            long long a = 0;\n            bool okA = true;\n            for (int k = 0; k < i; k++) {\n                a = a * 10 + (num[k] - '0');\n                if (a >= (1LL << 31)) { okA = false; break; }\n            }\n            if (!okA) break;\n            for (int j = 1; j <= 10 && i + j < n; j++) {\n                if (num[i] == '0' && j > 1) break;\n                long long b = 0;\n                bool okB = true;\n                for (int k = i; k < i + j; k++) {\n                    b = b * 10 + (num[k] - '0');\n                    if (b >= (1LL << 31)) { okB = false; break; }\n                }\n                if (!okB) break;\n                vector<int> res = {(int)a, (int)b};\n                int idx = i + j;\n                long long x = a, y = b;\n                bool valid = true;\n                while (idx < n) {\n                    long long z = x + y;\n                    if (z >= (1LL << 31)) { valid = false; break; }\n                    string zs = to_string(z);\n                    if (num.compare(idx, zs.size(), zs) != 0) { valid = false; break; }\n                    idx += zs.size();\n                    res.push_back((int)z);\n                    x = y; y = z;\n                }\n                if (valid && (int)res.size() >= 3 && idx == n) return res;\n            }\n        }\n        return {};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

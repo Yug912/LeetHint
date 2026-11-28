@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-squareful-arrays",
+  "title": "Number of Squareful Arrays",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(2^n · n²)",
+  "sc": "O(2^n · n)",
+  "spaceBreakdown": "- vector<vector<int>> dp: (2^n) × n entries → O(2^n · n)\n- sort(): O(log n) stack → O(log n)\n- isSquare lambda: O(1)\n- not counted: input nums, return value",
+  "approach": "Sort the array so duplicates are adjacent, then use bitmask DP. State `dp[mask][last]` = number of ways to arrange the elements indicated by `mask` ending with index `last`. Transitions add an unused index `j` only if `nums[last]+nums[j]` is a perfect square. Duplicate permutations are avoided by skipping `j` when `nums[j]==nums[j-1]` and `j-1` is not yet in the mask (forcing equal values to be consumed in index order). The answer is the sum of `dp[full][i]` over all `i`.",
+  "hints": [
+    "When building a valid permutation left to right, what two facts about the prefix fully determine how many ways it can be extended to a complete valid arrangement?",
+    "Use bitmask DP with state (last index, used-mask). For [1,17,8] sorted to [1,8,17], from last=0 (value 1) you extend to index 1 because 1+8=9 is a perfect square.",
+    "sort nums\ndp[1<<i][i] = 1 for each distinct-starting i\nfor each mask:\n  for each last in mask:\n    for each j not in mask:\n      skip if nums[j]==nums[j-1] and j-1 not in mask\n      if nums[last]+nums[j] is perfect square:\n        dp[mask|1<<j][j] += dp[mask][last]\nreturn sum of dp[full][i]",
+    "**Single element** - with n=1 there are no adjacent pairs, so the one permutation is vacuously valid.\n`Input: nums = [5]` → `Expected: 1`\n⚠️ Bug: returning 0 when no adjacent pair is checked → returns 0\n\n**All duplicates** - equal values produce identical permutations that must be counted once.\n`Input: nums = [2,2,2]` → `Expected: 1`\n⚠️ Bug: not skipping duplicate values during transitions → returns 6\n\n**Zeros** - zero is a perfect square (0 = 0²), so [0,0] is valid.\n`Input: nums = [0,0]` → `Expected: 1`\n⚠️ Bug: treating 0 as not a perfect square → returns 0\n\n**No valid permutation** - no pair sums to a perfect square.\n`Input: nums = [1,1]` → `Expected: 0`\n⚠️ Bug: not checking the square condition on extension → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 20?",
+      "a": "The bitmask DP becomes O(2^20 · 20²) ≈ 400M, too slow. You would need meet-in-the-middle or exploit that the \"squareful\" graph has bounded degree, counting Hamiltonian paths via divide-and-conquer on subsets."
+    },
+    {
+      "q": "What if you must list all valid permutations instead of counting them?",
+      "a": "Store predecessor information in the same DP table and reconstruct paths by backtracking from each full-mask state. Time stays O(2^n · n²) but output size can be exponential."
+    },
+    {
+      "q": "What if elements can be negative?",
+      "a": "The perfect-square check still works since squares are non-negative; just verify the sum is ≥ 0 before testing. The algorithm and complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSquarefulPerms(vector<int>& nums) {\n        int n = nums.size();\n        sort(nums.begin(), nums.end());\n        \n        auto isSquare = [](long long x) -> bool {\n            if (x < 0) return false;\n            long long r = (long long)sqrt((double)x);\n            while (r * r > x) r--;\n            while ((r + 1) * (r + 1) <= x) r++;\n            return r * r == x;\n        };\n        \n        vector<vector<int>> dp(1 << n, vector<int>(n, 0));\n        for (int i = 0; i < n; i++) {\n            if (i > 0 && nums[i] == nums[i - 1]) continue;\n            dp[1 << i][i] = 1;\n        }\n        \n        for (int mask = 1; mask < (1 << n); mask++) {\n            for (int last = 0; last < n; last++) {\n                if (!(mask & (1 << last))) continue;\n                if (dp[mask][last] == 0) continue;\n                for (int j = 0; j < n; j++) {\n                    if (mask & (1 << j)) continue;\n                    if (j > 0 && nums[j] == nums[j - 1] && !(mask & (1 << (j - 1)))) continue;\n                    if (isSquare((long long)nums[last] + nums[j])) {\n                        dp[mask | (1 << j)][j] += dp[mask][last];\n                    }\n                }\n            }\n        }\n        \n        int full = (1 << n) - 1;\n        int ans = 0;\n        for (int i = 0; i < n; i++) ans += dp[full][i];\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-student-that-will-replace-the-chalk",
+  "title": "Find the Student that Will Replace the Chalk",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Modular Arithmetic with Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long total: single variable → O(1)\n- long long rem: single variable → O(1)\n- loop index i: single variable → O(1)\n- not counted: input vector chalk",
+  "approach": "The chalk consumption pattern repeats every n students. Compute the total chalk used per full cycle, reduce k modulo that total to skip all complete cycles, then walk the array once subtracting chalk[i] until the remaining chalk is strictly less than the next student's need. Use long long for the total since n × chalk[i] can reach 10^10, which overflows a 32-bit int.",
+  "hints": [
+    "The students cycle repeatedly, and each full cycle consumes the same fixed amount of chalk. With k up to 10^9 and n up to 10^5, simulating cycle by cycle is far too slow - what single quantity lets you skip all the complete cycles at once?",
+    "Compute the total chalk per cycle, then take k modulo that total to get the leftover after full cycles. For chalk = [3,4,1,2], k = 25: total = 10, remainder = 25 % 10 = 5, then walk the array subtracting until remainder < chalk[i].",
+    "```\ntotal = sum(chalk)\nrem = k mod total\nfor i = 0 to n-1:\n    if rem < chalk[i]:\n        return i\n    rem = rem - chalk[i]\n```",
+    "**Single student** - only one student exists, so they always replace.\n`Input: chalk = [5], k = 10` → `Expected: 0`\n⚠️ Bug: returning -1 when the loop finishes without matching → returns -1 instead of 0\n\n**Total overflows int** - n = 42950 and chalk[i] = 100000 gives total = 4,295,000,000, which exceeds 2^31 - 1.\n`Input: chalk = [100000]×42950, k = 1000000000` → `Expected: 10000`\n⚠️ Bug: storing total in an int → wraps to 32704, k % 32704 = 9792, returns 0 instead of 10000\n\n**Remainder equals a middle element** - the strict-less-than check matters.\n`Input: chalk = [2,3,5], k = 5` → `Expected: 2`\n⚠️ Bug: using `rem <= chalk[i]` instead of `rem < chalk[i]` → returns 1 instead of 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if chalk can be refilled by a fixed amount after each complete round?",
+      "a": "Reduce k modulo the total first. If the remainder still cannot cover a full round, walk the array as before. Otherwise subtract one round's total and add the refill, repeating until the remainder is below the total. Time O(n × number of refills), space O(1)."
+    },
+    {
+      "q": "What if n ≤ 10^6 and there are up to 10^5 queries, each with a different k?",
+      "a": "Precompute a prefix sum array of chalk. For each query, reduce k modulo the total, then binary search for the first prefix sum strictly greater than the remainder. Time O(n + q log n), space O(n)."
+    },
+    {
+      "q": "What if the chalk array arrives as a stream too large to store in memory?",
+      "a": "Make two passes over the stream: first pass computes the total, reduce k modulo total, second pass walks until remainder < chalk[i]. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int chalkReplacer(vector<int>& chalk, int k) {\n        long long total = 0;\n        for (int c : chalk) total += c;\n        long long rem = k % total;\n        for (int i = 0; i < (int)chalk.size(); i++) {\n            if (rem < chalk[i]) return i;\n            rem -= chalk[i];\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-matching-of-players-with-trainers",
+  "title": "Maximum Matching of Players With Trainers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers with Sorting",
+  "tc": "O(n log n + m log m)",
+  "sc": "O(log n + log m)",
+  "spaceBreakdown": "- sort(players): introsort recursion stack, depth O(log n)\n- sort(trainers): introsort recursion stack, depth O(log m)\n- scalar variables (n, m, i, j, count): O(1)\n- not counted: input vectors (modified in place)",
+  "approach": "Sort both arrays. Then scan with two pointers: for each player in ascending ability, find the smallest trainer whose capacity is sufficient. If the current trainer is too weak, skip it (it can never match any remaining player, who are all at least as strong). If it suffices, make the match and advance both pointers. This greedy is optimal because assigning the smallest sufficient trainer to each player leaves larger trainers available for stronger players.",
+  "hints": [
+    "If a trainer's capacity is enough for a strong player, what does that imply about every weaker player? Constraints allow up to 10^5 players and 10^5 trainers, so checking every player-trainer pair is too slow.",
+    "Sort both arrays and scan with two pointers. For players = [4,7,9] and trainers sorted to [2,5,8,8]: player 4 takes trainer 5, player 7 takes trainer 8, player 9 finds none → answer 2.",
+    "```\nsort players ascending\nsort trainers ascending\ni = 0, j = 0, count = 0\nwhile i < len(players) and j < len(trainers):\n    if players[i] <= trainers[j]:\n        count = count + 1\n        i = i + 1\n        j = j + 1\n    else:\n        j = j + 1\nreturn count\n```",
+    "**Equality boundary** - player ability exactly equals trainer capacity.\n`players = [1], trainers = [1]` → `Expected: 1`\n⚠️ Bug: using `<` instead of `<=` in the comparison → returns 0\n\n**No valid match** - every trainer is too weak for every player.\n`players = [5,6], trainers = [1,2,3]` → `Expected: 0`\n⚠️ Bug: accessing trainers[j] without checking j < m in the loop guard → out-of-bounds read\n\n**All equal values** - all players and trainers share the same ability/capacity.\n`players = [5,5,5], trainers = [5,5,5]` → `Expected: 3`\n⚠️ Bug: using `<` instead of `<=` → returns 0\n\n**More players than trainers** - extra players cannot all be matched.\n`players = [1,1,1], trainers = [10]` → `Expected: 1`\n⚠️ Bug: incrementing i and count but forgetting to increment j → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Trainers arrive one at a time in a stream; you must immediately assign or discard each. Players are known upfront. How do you maximize matches?",
+      "a": "Sort players by ability. When a trainer arrives, assign it to the highest-ability unmatched player it can handle - this preserves weaker players for future weaker trainers. Use a sorted structure with binary search to find that player. TC: O((n + m) log n), SC: O(n)."
+    },
+    {
+      "q": "Each trainer can train up to k players instead of just one. How does the approach change?",
+      "a": "Sort both arrays. For each trainer in ascending order, greedily assign up to k unmatched players whose ability is ≤ the trainer's capacity, starting from the smallest unmatched player. Use two pointers with a per-trainer counter that resets. TC: O(n log n + m log m), SC: O(1)."
+    },
+    {
+      "q": "Each player has a value; maximize total value of matched players instead of just the count.",
+      "a": "Sort players by ability and trainers ascending. Sweep trainers; maintain a max-heap of values for all unmatched players whose ability ≤ current trainer capacity. Insert players into the heap as the trainer pointer advances, then pop the highest-value player for each trainer. TC: O((n + m) log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int matchPlayersAndTrainers(vector<int>& players, vector<int>& trainers) {\n        sort(players.begin(), players.end());\n        sort(trainers.begin(), trainers.end());\n        int n = (int)players.size();\n        int m = (int)trainers.size();\n        int i = 0, j = 0, count = 0;\n        while (i < n && j < m) {\n            if (players[i] <= trainers[j]) {\n                count++;\n                i++;\n                j++;\n            } else {\n                j++;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

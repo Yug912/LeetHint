@@ -1,0 +1,40 @@
+{
+  "slug": "count-vowel-strings-in-ranges",
+  "title": "Count Vowel Strings in Ranges",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum",
+  "tc": "O(n + q)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> prefix: n+1 entries → O(n)\n- vector<int> ans: q entries → O(q) (returned output, not counted)\n- isVowel lambda: O(1) stack space\n- not counted: input words, input queries, returned vector",
+  "approach": "Precompute a prefix sum array where `prefix[i]` stores the count of valid strings (start and end with a vowel) in `words[0..i-1]`. For each query `[l, r]`, the answer is `prefix[r+1] - prefix[l]`, giving O(1) per query after O(n) preprocessing. A string is valid if both its first and last characters are vowels ('a','e','i','o','u').",
+  "hints": [
+    "With up to 10^5 queries each potentially scanning up to 10^5 words, a naive per-query scan would need 10^10 operations. What property of the valid-string counts would let you answer any contiguous-range question in constant time?",
+    "Use a prefix sum array: `prefix[i]` = number of valid strings in `words[0..i-1]`. For words = [\"aba\",\"bcb\",\"ece\",\"aa\",\"e\"], the prefix array is [0,1,1,2,3,4]. Query [0,2] → `prefix[3] - prefix[0]` = 2.",
+    "```\nprefix[0] = 0\nfor i in 0..n-1:\n    valid = isVowel(words[i].first) and isVowel(words[i].last)\n    prefix[i+1] = prefix[i] + valid\nfor each query [l, r]:\n    answer = prefix[r+1] - prefix[l]\n```",
+    "**Single character word** - A one-letter word like \"a\" has the same first and last character.\n`Input: words = [\"a\"], queries = [[0,0]]` → `Expected: [1]`\n⚠️ Bug: skipping words with length < 2 before checking both ends → returns [0]\n\n**Off-by-one in prefix subtraction** - Using `prefix[r] - prefix[l]` instead of `prefix[r+1] - prefix[l]` drops the element at index r.\n`Input: words = [\"aba\",\"bcb\",\"ece\",\"aa\",\"e\"], queries = [[0,2]]` → `Expected: [2]`\n⚠️ Bug: computing `prefix[r] - prefix[l]` → prefix[2]-prefix[0] = 1 → returns [1]\n\n**Only checking first character** - Forgetting to verify the last character is also a vowel.\n`Input: words = [\"ab\",\"cd\",\"ef\"], queries = [[0,2]]` → `Expected: [0]`\n⚠️ Bug: checking only `isVowel(words[i].front())` → \"ab\" and \"ef\" each count as 1 → returns [2]\n\n**Boundary query with l=0** - Query starting at index 0 must not access prefix[-1].\n`Input: words = [\"a\",\"e\",\"i\"], queries = [[0,2]]` → `Expected: [3]`\n⚠️ Bug: using `prefix[r] - prefix[l-1]` with l=0 → accesses prefix[-1] → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if words can be modified (point updates) between queries?",
+      "a": "Replace the static prefix array with a Fenwick tree (Binary Indexed Tree). Each update to a word re-evaluates its validity and updates the BIT in O(log n); each query is answered in O(log n) via two prefix queries. TC: O((n + q) log n), SC: O(n)."
+    },
+    {
+      "q": "What if each query also specifies which vowel the string must start with?",
+      "a": "Maintain five separate prefix sum arrays, one per starting vowel. Each query checks the relevant vowel's prefix array: `ans = prefixVowel[r+1] - prefixVowel[l]`. TC: O(n + q), SC: O(5n) = O(n)."
+    },
+    {
+      "q": "What if words arrive in a stream and queries are interleaved with new word arrivals?",
+      "a": "Append each new word's validity (0 or 1) to a running prefix sum vector. Queries over the current range use the same `prefix[r+1] - prefix[l]` formula. TC: O(1) amortized per word, O(1) per query, SC: O(n) growing."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> vowelStrings(vector<string>& words, vector<vector<int>>& queries) {\n        int n = words.size();\n        vector<int> prefix(n + 1, 0);\n        auto isVowel = [](char c) {\n            return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u';\n        };\n        for (int i = 0; i < n; i++) {\n            bool valid = isVowel(words[i].front()) && isVowel(words[i].back());\n            prefix[i + 1] = prefix[i] + (valid ? 1 : 0);\n        }\n        int q = queries.size();\n        vector<int> ans(q);\n        for (int i = 0; i < q; i++) {\n            int l = queries[i][0], r = queries[i][1];\n            ans[i] = prefix[r + 1] - prefix[l];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

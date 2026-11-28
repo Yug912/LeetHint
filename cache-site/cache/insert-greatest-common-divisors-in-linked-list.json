@@ -1,0 +1,40 @@
+{
+  "slug": "insert-greatest-common-divisors-in-linked-list",
+  "title": "Insert Greatest Common Divisors in Linked List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "In-Place Linked List Traversal",
+  "tc": "O(n log V)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode* cur: one pointer → O(1)\n- int g, int t: scalars → O(1)\n- new nodes created: part of returned output, not counted\n- recursion: none",
+  "approach": "Traverse the linked list once. For each adjacent pair (cur, cur->next), compute their GCD via Euclid's algorithm, create a new node holding that GCD, splice it between the two, then advance past the inserted node to the original successor. Each insertion is independent of all others, so a single pass suffices. Correctness follows because the GCD of each original adjacent pair is unaffected by prior insertions.",
+  "hints": [
+    "As you walk from one node to its neighbor, does the node you insert change what you need for the next pair? The list has at most 5000 nodes.",
+    "Single-pass linked-list traversal with in-place splicing. For [18,6,10,3]: at node 18, gcd(18,6)=6, insert a new node 6 between 18 and 6, then advance to the original node 6.",
+    "```\ncur = head\nwhile cur.next exists:\n    g = gcd(cur.val, cur.next.val)\n    newNode = Node(g, cur.next)\n    cur.next = newNode\n    cur = newNode.next\nreturn head\n```",
+    "**Smallest input** - only one node, no adjacent pairs exist\n`Input: head = [7]` → `Expected: [7]`\n⚠️ Bug: not checking `head->next` before the loop, accessing `cur->next->val` → null pointer dereference\n\n**One divides the other** - gcd equals the smaller value, not the remainder\n`Input: head = [6,3]` → `Expected: [6,3,3]`\n⚠️ Bug: returning `a % b` as the gcd → returns 0 → [6,0,3]\n\n**Coprime pair** - gcd is 1, the smallest possible\n`Input: head = [7,3]` → `Expected: [7,1,3]`\n⚠️ Bug: returning `a / b` as the gcd → returns 2 → [7,2,3]\n\n**Last pair boundary** - the final insertion must not loop forever\n`Input: head = [18,6,10,3]` → `Expected: [18,6,6,2,10,1,3]`\n⚠️ Bug: advancing `cur = cur->next` instead of skipping the inserted node → infinite loop inserting gcd(6,6)=6 repeatedly"
+  ],
+  "followUps": [
+    {
+      "q": "Insert the LCM instead of the GCD between each pair.",
+      "a": "Same single-pass structure, but compute LCM = a / gcd(a,b) * b (divide first to avoid overflow). With values up to 1000 the LCM fits in int; for larger values use long long. TC stays O(n log V), SC O(1)."
+    },
+    {
+      "q": "Node values can be up to 10^9. Does anything change?",
+      "a": "Euclidean GCD takes O(log V) ≈ 30 iterations per pair instead of ~10. TC becomes O(n log V) with V = 10^9, still well within budget for n = 5000. SC unchanged at O(1)."
+    },
+    {
+      "q": "The list arrives as a forward-only stream you traverse once and must emit nodes as you go.",
+      "a": "Buffer one previous value. Emit the previous node, compute gcd(prev, current), emit the gcd node, then advance. Needs O(1) memory beyond the output stream. TC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* insertGreatestCommonDivisors(ListNode* head) {\n        if (!head || !head->next) return head;\n        ListNode* cur = head;\n        while (cur->next) {\n            int g = gcd(cur->val, cur->next->val);\n            ListNode* node = new ListNode(g, cur->next);\n            cur->next = node;\n            cur = node->next;\n        }\n        return head;\n    }\nprivate:\n    int gcd(int a, int b) {\n        while (b) {\n            int t = b;\n            b = a % b;\n            a = t;\n        }\n        return a;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

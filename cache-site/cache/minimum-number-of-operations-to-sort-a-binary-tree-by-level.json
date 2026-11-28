@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-operations-to-sort-a-binary-tree-by-level",
+  "title": "Minimum Number of Operations to Sort a Binary Tree by Level",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Cycle Decomposition (Minimum Swaps to Sort)",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<TreeNode*> q: up to n/2 nodes (widest level) → O(n)\n- vector<int> level: up to n/2 entries (widest level) → O(n)\n- vector<int> sorted (inside countSwaps): up to n/2 entries → O(n)\n- unordered_map<int,int> targetPos: up to n/2 entries → O(n)\n- vector<bool> visited: up to n/2 entries → O(n)\n- sort() introsort stack: O(log n)\n- not counted: input tree, returned int",
+  "approach": "Since swaps only exchange values within a single level, each level can be solved independently. Use BFS to collect the values at each level. For each level's array, compute the minimum number of swaps to sort it using cycle decomposition: sort the array to find each value's target position, then follow the \"current position → target position\" links to identify cycles. A cycle of length *k* requires exactly *k* − 1 swaps, so the total for a level is *n* − (number of cycles). Sum across all levels.",
+  "hints": [
+    "Each swap exchanges two values within a single level. What does that tell you about how the levels relate to each other when counting operations?",
+    "For each level, compute the minimum swaps to sort using cycle decomposition: follow each value to its sorted position, forming cycles; a cycle of length *k* needs *k* − 1 swaps. For [7,6,8,5] → [5,6,7,8], the cycle 7→8→5→7 has length 3, needing 2 swaps.",
+    "```\nBFS to collect each level's values into an array\nfor each level array:\n    build sorted copy and map each value → its target index\n    for each unvisited index:\n        follow value → target index until returning to start\n        add (cycle length − 1) to answer\nreturn answer\n```",
+    "**Single node** - tree has only the root\n`Input: [1]` → `Expected: 0`\n⚠️ Bug: initializing `ans = 1` instead of `ans = 0` → returns 1\n\n**Already sorted** - every level already in increasing order\n`Input: [1,2,3,4,5,6]` → `Expected: 0`\n⚠️ Bug: adding `cycleLen` instead of `cycleLen - 1` → returns 6 (one cycle per element across all levels)\n\n**Skewed tree** - each level has one node, linked-list shape\n`Input: [1,null,2,null,3]` → `Expected: 0`\n⚠️ Bug: pushing `node->left` and `node->right` without a null check → pushes nullptr, then dereferences `node->val` → undefined behavior / crash\n\n**Two-element reversed level** - smallest non-trivial swap case\n`Input: [1,3,2]` → `Expected: 1`\n⚠️ Bug: using `targetPos[sorted[j]]` instead of `targetPos[arr[j]]` when following the cycle → every element maps to itself, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the actual pairs of values swapped, not just the count?",
+      "a": "During cycle traversal, each time you move an element toward its target position, record the pair of values being exchanged. A cycle of length k produces k − 1 recorded swap pairs. TC stays O(n log n), SC becomes O(n) for the output list."
+    },
+    {
+      "q": "What if values can repeat within a level?",
+      "a": "Assign each duplicate to the next available target position using stable sorting, then apply cycle decomposition as before. The result is optimal because equal values are interchangeable. TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if the tree is too large to fit in memory and nodes arrive as a stream?",
+      "a": "Process the BFS level by level: when a level is complete, immediately compute its swap count and discard the level data. Only the current level array and the BFS queue need to be in memory at once. TC O(n log n), SC O(w) where w is the widest level."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumOperations(TreeNode* root) {\n        int ans = 0;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int sz = q.size();\n            vector<int> level(sz);\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                level[i] = node->val;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            ans += countSwaps(level);\n        }\n        return ans;\n    }\nprivate:\n    int countSwaps(vector<int>& arr) {\n        int n = arr.size();\n        if (n <= 1) return 0;\n        vector<int> sorted = arr;\n        sort(sorted.begin(), sorted.end());\n        unordered_map<int, int> targetPos;\n        for (int i = 0; i < n; i++) targetPos[sorted[i]] = i;\n        vector<bool> visited(n, false);\n        int swaps = 0;\n        for (int i = 0; i < n; i++) {\n            if (visited[i]) continue;\n            int cycleLen = 0;\n            int j = i;\n            while (!visited[j]) {\n                visited[j] = true;\n                j = targetPos[arr[j]];\n                cycleLen++;\n            }\n            swaps += cycleLen - 1;\n        }\n        return swaps;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

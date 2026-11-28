@@ -1,0 +1,40 @@
+{
+  "slug": "intervals-between-identical-elements",
+  "title": "Intervals Between Identical Elements",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum on Grouped Indices",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> groups: stores all n indices across all groups → O(n)\n- vector<long long> prefix: max size equals the largest group (up to n) → O(n)\n- recursion depth: none\n- not counted: input arr, returned vector<long long> result",
+  "approach": "Group indices by their array value using a hash map; since we iterate left to right, each group is naturally sorted. For each group, build prefix sums of the indices. For the element at position k in a group (actual index p[k]), the left distance sum is k·p[k] − prefix[k] and the right distance sum is (total − prefix[k+1]) − (m−1−k)·p[k], where m is the group size. This avoids the O(m²) pairwise computation, giving O(n) total time. All arithmetic uses `long long` because the maximum answer (all elements equal, middle index) reaches ~2.5×10⁹, exceeding INT_MAX.",
+  "hints": [
+    "For a value appearing at many positions, the distance from one occurrence to all others splits into a left part and a right part. What single summary of the left-side positions would let you compute the left part without adding each distance one by one?",
+    "Prefix sums over each value's sorted index list. For value 3 at indices [2,5,6], prefix sums are [0,2,7,13]; at index 5 (k=1): left = 1×5 − 2 = 3, right = (13−7) − 1×5 = 1, total = 4.",
+    "```\ngroup indices by value (naturally sorted)\nfor each group p[0..m-1]:\n    prefix[0] = 0\n    for i in 0..m-1: prefix[i+1] = prefix[i] + p[i]\n    total = prefix[m]\n    for k in 0..m-1:\n        left  = k * p[k] - prefix[k]\n        right = (total - prefix[k+1]) - (m-1-k) * p[k]\n        answer[p[k]] = left + right\n```",
+    "**Single element** - only one occurrence of its value, so the answer is 0\n`Input: arr = [7]` → `Expected: [0]`\n⚠️ Bug: computing `(total - prefix[k+1]) / (m - 1 - k)` to get an average → division by zero when m=1, k=0\n\n**All equal values** - middle element's sum ≈ n²/4, which exceeds 2³¹−1 for large n\n`Input: arr = [1,1,1,1,1]` → `Expected: [10,7,6,7,10]`\n⚠️ Bug: storing prefix sums and answer as `int` → for n=10⁵ all equal, middle sum = 2×(49999×50000/2) = 2,499,950,000 > 2,147,483,647, wraps to −1,795,017,296\n\n**Boundary index in group** - first or last occurrence of a value, so one side sum is 0\n`Input: arr = [2,1,3,1,2,3,3]` → `Expected: [4,2,7,2,4,4,5]`\n⚠️ Bug: computing left sum as `k * p[k] - prefix[k-1]` (off-by-one) → accesses prefix[-1] when k=0, producing garbage for the first element of each group"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is too large to fit in memory and arrives as a stream?",
+      "a": "Make two passes over the stream. First pass writes each value's index list to disk. Second pass reads each list, computes prefix sums, and writes answers. Time stays O(n) with I/O overhead; space drops to O(max frequency) per value in memory."
+    },
+    {
+      "q": "What if elements can be updated (arr[i] changes value) and you must re-answer after each update?",
+      "a": "Maintain a sorted set (e.g., balanced BST or Fenwick tree) of indices per value, plus a Fenwick tree for prefix sums of indices per value. An update removes the old index from one value's structure and inserts into another. Each update costs O(log n) and re-querying the affected elements costs O(log n) each."
+    },
+    {
+      "q": "What if the distance metric is (i−j)² instead of |i−j|?",
+      "a": "Expand Σ(i−j)² = count·i² − 2i·Σj + Σj². Maintain prefix sums of indices and prefix sums of squared indices per group. Each query is O(1) after O(n) preprocessing, same overall O(n) time and O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<long long> getDistances(vector<int>& arr) {\n        int n = arr.size();\n        unordered_map<int, vector<int>> groups;\n        for (int i = 0; i < n; i++) {\n            groups[arr[i]].push_back(i);\n        }\n        vector<long long> result(n, 0);\n        for (auto& [val, indices] : groups) {\n            (void)val;\n            int m = indices.size();\n            vector<long long> prefix(m + 1, 0);\n            for (int i = 0; i < m; i++) {\n                prefix[i + 1] = prefix[i] + indices[i];\n            }\n            long long total = prefix[m];\n            for (int k = 0; k < m; k++) {\n                long long left = (long long)k * indices[k] - prefix[k];\n                long long right = (total - prefix[k + 1]) - (long long)(m - 1 - k) * indices[k];\n                result[indices[k]] = left + right;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

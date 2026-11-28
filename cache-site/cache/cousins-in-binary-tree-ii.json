@@ -1,0 +1,40 @@
+{
+  "slug": "cousins-in-binary-tree-ii",
+  "title": "Cousins in Binary Tree II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Level-order BFS (two-pass)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> levelSum: up to h entries (h = height) → O(h)\n- queue<TreeNode*> q: up to the widest level → O(n) worst case\n- not counted: input tree, returned root",
+  "approach": "A node's cousins are exactly the nodes at its depth that do NOT share its parent - i.e., all same-depth nodes minus its siblings (including itself). So: (1) compute the total value at each depth, then (2) for each parent, set each child's new value to (depth sum of children's level) − (sum of that parent's children's old values). Two BFS passes suffice; the root has no cousins so it becomes 0.",
+  "hints": [
+    "For a node at depth d, which other nodes at depth d are guaranteed NOT to be its cousins?\nThe tree can have up to 10^5 nodes, so recomputing cousin sums per node by scanning the level is too slow.",
+    "Use BFS twice: first to record each level's total value, then again to rewrite each child as (next level's total) − (sum of its parent's children). Example 1, depth 2: level total = 1+10+7 = 18; node 1's sibling group sum = 1+10 = 11, so its new value = 18 − 11 = 7.",
+    "```\nBFS to fill levelSum[depth]\nset root.val = 0\nBFS again, tracking depth:\n    for each node at this depth:\n        childSum = (left? left.val : 0) + (right? right.val : 0)\n        cousinSum = levelSum[depth+1] - childSum\n        if left:  left.val  = cousinSum; enqueue\n        if right: right.val = cousinSum; enqueue\n```",
+    "**Single node** - only the root exists, no cousins at all.\n`Input: [1]` → `Expected: [0]`\n⚠️ Bug: indexing `levelSum[depth+1]` without checking the root has children → out-of-bounds read.\n\n**Skewed (linked-list-shaped) tree** - every node has exactly one child, so no node ever has a cousin.\n`Input: [1,2,null,3,null,4,null]` → `Expected: [0,0,0,0]`\n⚠️ Bug: assuming both children exist when computing `childSum` and dereferencing `node->left->val` unconditionally → null dereference.\n\n**Wide complete tree** - the bottom level holds ~n/2 nodes, stressing the queue.\n`Input: [1,2,3,4,5,6,7]` → `Expected: [0,0,0,0,0,0,0]`\n⚠️ Bug: using a `queue` sized by current level but enqueuing children inside the same loop without a per-level size snapshot → processes newly added nodes in the same level, corrupting cousin sums.\n\n**All-equal values** - every node value is identical, so cousin sums are just (count × value) − (sibling count × value).\n`Input: [5,5,5,5,5]` → `Expected: [0,0,0,5,5]`\n⚠️ Bug: overwriting a child's value before computing its sibling's childSum (e.g., updating `left.val` then reading `right.val` is fine, but updating in place while a sibling still references old values via a shared pointer) → stale reads give wrong cousin sums."
+  ],
+  "followUps": [
+    {
+      "q": "What if cousinship were defined by grandparent instead of parent (same depth, different grandparent)?",
+      "a": "Group nodes by grandparent instead of parent: sum each grandparent's grandchildren, then new value = levelSum − that grandparent-group sum. Still two BFS passes, O(n) time and O(n) space."
+    },
+    {
+      "q": "What if the tree could be modified by multiple queries online (values change between queries)?",
+      "a": "Maintain a Fenwick/segment structure over an Euler-tour indexing plus per-level totals, so a point update adjusts one level sum and one sibling group in O(log n). Each cousin-sum query then reads levelSum − siblingGroupSum in O(log n)."
+    },
+    {
+      "q": "What if the tree is too large to hold in memory and arrives as a stream level by level?",
+      "a": "Process two adjacent levels at a time: keep the current level's total and each parent's children-sum in a small buffer, emit rewritten children, then slide forward. O(width) space, single pass, no random access to earlier levels."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* replaceValueInTree(TreeNode* root) {\n        if (!root) return root;\n        vector<long long> levelSum;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int sz = (int)q.size();\n            long long s = 0;\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front(); q.pop();\n                s += node->val;\n                if (node->left)  q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            levelSum.push_back(s);\n        }\n        root->val = 0;\n        q.push(root);\n        int depth = 0;\n        while (!q.empty()) {\n            int sz = (int)q.size();\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front(); q.pop();\n                long long childSum = 0;\n                if (node->left)  childSum += node->left->val;\n                if (node->right) childSum += node->right->val;\n                long long cousinSum = (depth + 1 < (int)levelSum.size())\n                                      ? levelSum[depth + 1] - childSum\n                                      : 0;\n                if (node->left) {\n                    node->left->val = (int)cousinSum;\n                    q.push(node->left);\n                }\n                if (node->right) {\n                    node->right->val = (int)cousinSum;\n                    q.push(node->right);\n                }\n            }\n            depth++;\n        }\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

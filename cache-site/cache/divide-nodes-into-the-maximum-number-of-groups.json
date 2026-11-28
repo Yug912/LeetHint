@@ -1,0 +1,40 @@
+{
+  "slug": "divide-nodes-into-the-maximum-number-of-groups",
+  "title": "Divide Nodes Into the Maximum Number of Groups",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "BFS on Graph + Bipartite Check",
+  "tc": "O(n * (n + E))",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- adj (vector<vector<int>>): n+1 lists totaling 2E entries → O(n + E)\n- color (vector<int>): n+1 ints → O(n)\n- components (vector<vector<int>>): stores every node once total → O(n)\n- dist (vector<int>): n+1 ints, reused per BFS → O(n)\n- BFS queue: at most n elements → O(n)\n- not counted: input edges, returned int",
+  "approach": "The constraint |x − y| = 1 on every edge means adjacent nodes must have group numbers of opposite parity, so the graph must be bipartite; if any component is non-bipartite, return −1. For each connected component, the maximum number of groups equals the maximum BFS depth (over all possible starting nodes) plus one - this is the component's diameter + 1. We solve each component independently and sum the results. With n ≤ 500, running BFS from every node in every component is O(n·(n+E)) ≈ 5×10⁶, well within budget.",
+  "hints": [
+    "Given that every edge forces its two endpoints into groups whose indices differ by exactly 1, what can you say about the parity of group indices along any cycle in the graph?",
+    "Use BFS coloring to verify each component is bipartite (return −1 if not). For each connected component, run BFS from every node and take the maximum BFS depth + 1 as that component's group count. In Example 1, BFS from node 5 reaches depth 3, yielding 4 groups.",
+    "```\nfor each connected component:\n    if not bipartite: return -1\n    best = 0\n    for each node v in component:\n        run BFS from v, track max_depth\n        best = max(best, max_depth + 1)\n    answer += best\nreturn answer\n```",
+    "**Single node** - n=1 with no edges, one isolated node.\n`Input: n = 1, edges = []` → `Expected: 1`\n⚠️ Bug: initializing best to 1 instead of 0, then adding maxD+1 → returns 2\n\n**Odd cycle** - a triangle cannot be bipartitioned.\n`Input: n = 3, edges = [[1,2],[2,3],[3,1]]` → `Expected: -1`\n⚠️ Bug: skipping the bipartite check and relying only on BFS depth → returns 3\n\n**Path graph, wrong root** - BFS from the middle of a path gives fewer layers than from an endpoint.\n`Input: n = 3, edges = [[1,2],[2,3]]` → `Expected: 3`\n⚠️ Bug: running BFS from only one arbitrary node per component (e.g., node 2) → returns 2\n\n**Disconnected components** - two separate paths must be solved independently and summed.\n`Input: n = 6, edges = [[1,2],[2,3],[4,5],[5,6]]` → `Expected: 6`\n⚠️ Bug: treating the whole graph as one component and BFS from one node → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "If the graph is guaranteed to be a tree (connected, n−1 edges), how does the solution simplify?",
+      "a": "A tree is always bipartite, so the bipartite check is unnecessary. The diameter can be found with two BFS passes: BFS from any node to find the farthest node u, then BFS from u to find the farthest node v. The answer is dist(u,v) + 1. This runs in O(n) time and O(n) space."
+    },
+    {
+      "q": "If you also needed to output the actual group assignment for each node, how would you modify the solution?",
+      "a": "Track which starting node achieves the maximum BFS depth per component, then re-run BFS from that node and assign each node to group (depth + 1). This adds O(n) space for the assignment array and O(n + E) time for one extra BFS per component, not changing the overall complexity."
+    },
+    {
+      "q": "If n could be up to 10⁵, what changes?",
+      "a": "The O(n·(n+E)) approach is too slow. For general bipartite graphs, exact diameter still requires BFS from every node, so you would need a different strategy such as exploiting special graph structure. If the graph is a tree, the two-BFS diameter method gives O(n + E); for sparse bipartite graphs with bounded treewidth, tree-decomposition-based methods can achieve near-linear time."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int magnificentSets(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> adj(n + 1);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n\n        vector<int> color(n + 1, -1);\n        vector<vector<int>> components;\n\n        for (int i = 1; i <= n; i++) {\n            if (color[i] != -1) continue;\n            vector<int> comp;\n            queue<int> q;\n            q.push(i);\n            color[i] = 0;\n            bool ok = true;\n            while (!q.empty()) {\n                int u = q.front(); q.pop();\n                comp.push_back(u);\n                for (int v : adj[u]) {\n                    if (color[v] == -1) {\n                        color[v] = color[u] ^ 1;\n                        q.push(v);\n                    } else if (color[v] == color[u]) {\n                        ok = false;\n                    }\n                }\n            }\n            if (!ok) return -1;\n            components.push_back(comp);\n        }\n\n        int total = 0;\n        for (auto& comp : components) {\n            int best = 0;\n            for (int start : comp) {\n                vector<int> dist(n + 1, -1);\n                queue<int> q;\n                q.push(start);\n                dist[start] = 0;\n                int maxD = 0;\n                while (!q.empty()) {\n                    int u = q.front(); q.pop();\n                    for (int v : adj[u]) {\n                        if (dist[v] == -1) {\n                            dist[v] = dist[u] + 1;\n                            if (dist[v] > maxD) maxD = dist[v];\n                            q.push(v);\n                        }\n                    }\n                }\n                if (maxD + 1 > best) best = maxD + 1;\n            }\n            total += best;\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

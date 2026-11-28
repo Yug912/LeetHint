@@ -1,0 +1,40 @@
+{
+  "slug": "palindrome-partitioning-iii",
+  "title": "Palindrome Partitioning III",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Interval DP + Suffix DP",
+  "tc": "O(n²·k)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<vector<int>> cost: n×n entries → O(n²)\n- vector<vector<int>> dp: (n+1)×(k+1) entries → O(n·k) ≤ O(n²)\n- recursion call-stack: none (iterative)\n- not counted: input string s",
+  "approach": "Precompute `cost[i][j]` = minimum character changes to make substring `s[i..j]` a palindrome, using the recurrence `cost[i][j] = cost[i+1][j-1] + (s[i] != s[j])`. Then define `dp[pos][cnt]` = minimum changes to split the suffix `s[pos..]` into `cnt` palindromic chunks. Transition: `dp[pos][cnt] = min over j in [pos, n-1] of cost[pos][j] + dp[j+1][cnt-1]`. The answer is `dp[0][k]`. Correctness follows from optimal substructure: once a cut position `j` is chosen, the left part's cost is independent of the right part's optimal split.",
+  "hints": [
+    "Once you know how many character changes each substring needs to become a palindrome, what remains undecided about the overall answer? The constraints allow n ≤ 100.",
+    "Use dynamic programming. Precompute `cost[i][j]` = changes to make `s[i..j]` a palindrome via `cost[i][j] = cost[i+1][j-1] + (s[i]!=s[j])`, then `dp[pos][cnt]` = min changes to split suffix `s[pos..]` into `cnt` palindromes. For `s=\"abc\", k=2`: `cost[0][1]=1` (ab needs 1 change), `cost[2][2]=0`, so one candidate is `cost[0][1]+dp[2][1]=1+0=1`.",
+    "```\nfor len = 2..n:\n  for i = 0..n-len:\n    j = i+len-1\n    cost[i][j] = cost[i+1][j-1] + (s[i] != s[j])\ndp[n][0] = 0\nfor pos = n-1 down to 0:\n  for cnt = 1..k:\n    for j = pos..n-1:\n      dp[pos][cnt] = min(dp[pos][cnt], cost[pos][j] + dp[j+1][cnt-1])\nreturn dp[0][k]\n```",
+    "**Smallest input** - n = 1, single character must form one palindrome.\n`Input: s = \"a\", k = 1` → `Expected: 0`\n⚠️ Bug: initializing `cost[i][i] = 1` instead of `0` → returns `1`\n\n**k equals n** - every chunk is a single character, already a palindrome.\n`Input: s = \"abc\", k = 3` → `Expected: 0`\n⚠️ Bug: inner loop `for j = pos+1..n-1` (skipping single-char chunks) → returns `INT_MAX/2`\n\n**All equal characters** - no changes needed for any partition.\n`Input: s = \"aaa\", k = 1` → `Expected: 0`\n⚠️ Bug: cost recurrence `cost[i][j] = cost[i+1][j-1] + ...` with `cost` initialized to a nonzero sentinel → returns garbage\n\n**Boundary two-char palindrome cost** - adjacent pair must be compared directly.\n`Input: s = \"ab\", k = 1` → `Expected: 1`\n⚠️ Bug: computing `cost[0][1]` as `cost[1][0] + (s[0]!=s[1])` while leaving `cost[1][0]` uninitialized → returns garbage instead of `1`"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual partition (the k substrings), not just the minimal cost.",
+      "a": "Store a backpointer `choice[pos][cnt] = j` whenever `dp[pos][cnt]` is updated, then walk from `(0, k)` following the pointers to recover cut positions. Time stays O(n²·k); space becomes O(n·k) extra for the backpointers."
+    },
+    {
+      "q": "What if k is not fixed and you must return the minimum cost over all k from 1 to n?",
+      "a": "Compute the full `dp[pos][cnt]` table as before, then return `min over cnt in [1,n] of dp[0][cnt]`. Time is still O(n³) worst case; space unchanged at O(n²)."
+    },
+    {
+      "q": "Reduce auxiliary space to O(n) while keeping the same time complexity.",
+      "a": "Compute `dp` layer by layer over `cnt`, keeping only the previous `cnt-1` layer (O(n) space). Compute `cost[i][j]` on the fly inside the DP transition instead of storing the full table - this raises time to O(n³·k) but drops space to O(n). The trade-off is unavoidable since each `cost[i][j]` is recomputed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int palindromePartition(string s, int k) {\n        int n = s.size();\n        // cost[i][j] = min changes to make s[i..j] a palindrome\n        vector<vector<int>> cost(n, vector<int>(n, 0));\n        for (int len = 2; len <= n; len++) {\n            for (int i = 0; i + len - 1 < n; i++) {\n                int j = i + len - 1;\n                cost[i][j] = cost[i + 1][j - 1] + (s[i] != s[j] ? 1 : 0);\n            }\n        }\n        // dp[pos][cnt] = min changes for suffix s[pos..] split into cnt palindromes\n        const int INF = INT_MAX / 2;\n        vector<vector<int>> dp(n + 1, vector<int>(k + 1, INF));\n        dp[n][0] = 0;\n        for (int pos = n - 1; pos >= 0; pos--) {\n            for (int cnt = 1; cnt <= k; cnt++) {\n                for (int j = pos; j < n; j++) {\n                    if (dp[j + 1][cnt - 1] < INF) {\n                        dp[pos][cnt] = min(dp[pos][cnt], cost[pos][j] + dp[j + 1][cnt - 1]);\n                    }\n                }\n            }\n        }\n        return dp[0][k];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

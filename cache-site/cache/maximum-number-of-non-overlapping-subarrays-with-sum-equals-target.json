@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-non-overlapping-subarrays-with-sum-equals-target",
+  "title": "Maximum Number of Non-Overlapping Subarrays With Sum Equals Target",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy + Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> seen: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Track prefix sums in a hash set as you scan left to right. At each position, if (prefix_sum − target) is in the set, a subarray ending here sums to target - increment the count and reset the set to contain only the current prefix sum (preventing overlap). Greedily taking the earliest-ending valid subarray is optimal because it leaves the maximum remaining array for future subarrays.",
+  "hints": [
+    "What does the ending position of a valid subarray determine about how many more valid subarrays you can find to its right? The array can contain negative values (nums[i] as low as -10^4).",
+    "Use a hash set of prefix sums. At each index, check if (current prefix sum − target) was seen before. In Example 1 at index 1, prefix sum = 2 and 2 − 2 = 0 is in the set, so subarray [1,1] is found.",
+    "```\nseen = {0}\nprefix = 0\ncount = 0\nfor each num in nums:\n    prefix += num\n    if (prefix - target) in seen:\n        count += 1\n        seen = {prefix}\n    else:\n        seen.add(prefix)\nreturn count\n```",
+    "**Single element matching target** - n=1, the element itself equals target.\n`Input: nums = [5], target = 5` → `Expected: 1`\n⚠️ Bug: not inserting 0 into the seen set before the loop → returns 0\n\n**Overlapping candidates** - greedy reset prevents counting overlapping subarrays.\n`Input: nums = [1,1,1,1,1], target = 2` → `Expected: 2`\n⚠️ Bug: not clearing the seen set after finding a match → returns 4\n\n**Target is zero with all zeros** - each single zero is a valid non-empty subarray.\n`Input: nums = [0,0,0], target = 0` → `Expected: 3`\n⚠️ Bug: skipping elements equal to 0 when target is 0 → returns 0\n\n**Subarray not starting at index 0** - the matching prefix sum is not 0.\n`Input: nums = [1,3,4], target = 7` → `Expected: 1`\n⚠️ Bug: checking prefix == target instead of (prefix - target) in seen → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array arrives as a stream too large to store?",
+      "a": "The algorithm already processes elements one at a time left to right, so it works unchanged on a stream. Maintain the hash set and prefix sum, increment count on each match, and reset. Space is still O(n) worst case for the set, though resets keep it small in practice."
+    },
+    {
+      "q": "What if you must also return the start and end indices of each chosen subarray?",
+      "a": "Replace the hash set with a hash map storing the most recent index for each prefix sum. When a match is found, record (map[prefix - target], current_index) as a subarray, then reset the map to {prefix: current_index}. Time complexity stays O(n); the output list uses O(k) extra space where k is the answer."
+    },
+    {
+      "q": "What if each chosen subarray must have length at least L?",
+      "a": "Delay inserting each prefix sum into the set by L positions using a queue. At position i, only insert the prefix sum from position i - L, so matches always correspond to subarrays of length ≥ L. On reset, clear both the set and the queue. Time complexity remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxNonOverlapping(vector<int>& nums, int target) {\n        unordered_set<int> seen;\n        seen.insert(0);\n        int prefix = 0;\n        int count = 0;\n        for (int num : nums) {\n            prefix += num;\n            if (seen.count(prefix - target)) {\n                count++;\n                seen.clear();\n                seen.insert(prefix);\n            } else {\n                seen.insert(prefix);\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

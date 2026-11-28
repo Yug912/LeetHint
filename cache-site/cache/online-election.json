@@ -1,0 +1,39 @@
+{
+  "slug": "online-election",
+  "title": "Online Election",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search + Precomputation",
+  "tc": "O(n + q log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> times: copy of input, n entries → O(n)\n- vector<int> leaders: n entries → O(n)\n- vector<int> count: n entries, local to constructor → O(n) temporary\n- recursion depth: none\n- not counted: input persons/times, returned int",
+  "approach": "Precompute the leader after each vote by maintaining a per-person vote count. When a person's count reaches or exceeds the current maximum, they become the new leader - this correctly handles ties because we process votes in time order, so the person who just voted has the most recent vote among tied candidates. For each query, binary search the times array for the largest time ≤ t and return the precomputed leader at that index.",
+  "hints": [
+    "Between two consecutive vote times, can the leader of the election ever change?",
+    "Precompute the leader after each vote, then binary search the times array for each query. After the vote at time 5 (person 1), the leader becomes 1, so any query in [5, 10) returns 1.",
+    "```\nconstructor(persons, times):\n  for i in 0..n-1:\n    count[persons[i]] += 1\n    if count[persons[i]] >= max_count:\n      max_count = count[persons[i]]\n      leader = persons[i]\n    leaders[i] = leader\n\nquery(t):\n  idx = largest index where times[idx] <= t\n  return leaders[idx]\n```",
+    "**Single vote** - n=1, only one vote in the entire election.\n`Input: persons=[0], times=[0], q(5)` → `Expected: 0`\n⚠️ Bug: binary search with `times[mid] < t` instead of `<=` → finds no valid index, accesses leaders[-1]\n\n**Tie-breaking** - A vote creates a tie at the top of the count.\n`Input: persons=[0,1,1,0,0,1,0], times=[0,5,10,15,20,25,30], q(25)` → `Expected: 1`\n⚠️ Bug: using `count[p] > maxCount` instead of `>=` → person 0 stays leader at time 25, returns 0\n\n**Query at exact vote time** - t equals a vote time exactly, so that vote counts.\n`Input: persons=[0,1,1,0,0,1,0], times=[0,5,10,15,20,25,30], q(15)` → `Expected: 0`\n⚠️ Bug: binary search with `times[mid] < t` instead of `<=` → finds time 10, returns 1\n\n**Query beyond last vote** - t is larger than all vote times in the array.\n`Input: persons=[0,1,1,0,0,1,0], times=[0,5,10,15,20,25,30], q(100)` → `Expected: 0`\n⚠️ Bug: binary search with `lo = mid` instead of `lo = mid + 1` when times[mid] <= t → infinite loop when lo and hi differ by 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if votes can be retracted after being cast?",
+      "a": "We would need a data structure supporting increment, decrement, and max queries, such as a segment tree over vote counts or a balanced BST keyed by (count, last_vote_time). Each retraction and re-query would cost O(log n), and precomputation of leaders would no longer be valid since the leader can change backward."
+    },
+    {
+      "q": "What if the times array is not sorted?",
+      "a": "Sort the votes by time first in O(n log n), then proceed with the same precomputation and binary search approach. The overall constructor time becomes O(n log n) and query time remains O(log n)."
+    },
+    {
+      "q": "What if new votes and queries arrive interleaved in an online fashion?",
+      "a": "Maintain a balanced BST of (time, leader) pairs for leader-change events. When a new vote arrives at a time after all previous votes, update counts and potentially insert a new leader-change event. For queries, binary search the event BST. Each vote and query is O(log n) where n is the number of leader-change events."
+    }
+  ],
+  "code": {
+    "cpp": "class TopVotedCandidate {\n    vector<int> times;\n    vector<int> leaders;\npublic:\n    TopVotedCandidate(vector<int>& persons, vector<int>& times) {\n        this->times = times;\n        int n = persons.size();\n        leaders.resize(n);\n        vector<int> count(n, 0);\n        int maxCount = 0;\n        int leader = 0;\n        for (int i = 0; i < n; i++) {\n            int p = persons[i];\n            count[p]++;\n            if (count[p] >= maxCount) {\n                maxCount = count[p];\n                leader = p;\n            }\n            leaders[i] = leader;\n        }\n    }\n    \n    int q(int t) {\n        int idx = upper_bound(times.begin(), times.end(), t) - times.begin() - 1;\n        return leaders[idx];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

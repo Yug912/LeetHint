@@ -1,0 +1,40 @@
+{
+  "slug": "delete-nodes-from-linked-list-present-in-array",
+  "title": "Delete Nodes From Linked List Present in Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Direct Addressing Table",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bool bad[100001]: fixed 100001 bytes, independent of input size → O(1)\n- ListNode dummy: single stack node → O(1)\n- no recursion, no dynamic containers\n- not counted: input nums, input list, returned list",
+  "approach": "Since all node values and nums values are bounded by 10^5 (a constant independent of input size), we can use a fixed-size boolean array of size 100001 to mark which values should be removed. We insert a dummy node before the head, then walk the list: whenever `curr->next` has a marked value, we unlink it by advancing `curr->next` past it; otherwise we step `curr` forward. The dummy node handles the case where the original head must be removed.",
+  "hints": [
+    "The constraints state 1 ≤ Node.val ≤ 10^5. How does knowing the exact, bounded range of every possible value change how you'd check membership?",
+    "Use a fixed-size boolean array of size 100001 indexed by value. For nums = [1,2,3], set bad[1]=bad[2]=bad[3]=true, then scan the list skipping any node whose val is marked.",
+    "```\ncreate boolean array bad[0..100000], all false\nfor each x in nums:\n    bad[x] = true\ndummy.next = head\ncurr = dummy\nwhile curr.next != null:\n    if bad[curr.next.val]:\n        curr.next = curr.next.next\n    else:\n        curr = curr.next\nreturn dummy.next\n```",
+    "**Head removed** - the first node's value is in nums\n`nums = [1], head = [1,2,3]` → `Expected: [2,3]`\n⚠️ Bug: starting traversal at head without a dummy node → returns [1,2,3]\n\n**Tail removed** - the last node's value is in nums\n`nums = [3], head = [1,2,3]` → `Expected: [1,2]`\n⚠️ Bug: checking curr->val instead of curr->next->val → returns [1,2,3]\n\n**Consecutive removals** - two adjacent nodes both need removal\n`nums = [2,3], head = [1,2,3,4]` → `Expected: [1,4]`\n⚠️ Bug: advancing curr after setting curr->next = curr->next.next → returns [1,3,4]\n\n**Single survivor** - all but one node removed\n`nums = [1,2,3], head = [1,2,3,4]` → `Expected: [4]`\n⚠️ Bug: returning head instead of dummy.next → returns [1,2,3,4]"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums is updated between multiple list-modification queries?",
+      "a": "Keep the boolean array persistent across queries and update individual entries when nums changes. Each query still traverses the list in O(n); value updates are O(1). SC stays O(1) since the array is fixed-size."
+    },
+    {
+      "q": "What if node values can be up to 10^9?",
+      "a": "A fixed-size boolean array is no longer feasible. Store nums in an unordered_set<int> for O(1) average lookup. TC stays O(n + m); SC becomes O(m)."
+    },
+    {
+      "q": "What if the list is a stream you can only traverse once with limited memory?",
+      "a": "Load nums into the boolean array first (O(m) time, O(1) space), then traverse the stream once, unlinking marked nodes in place. Only one-step lookahead is needed, so a single pass suffices. TC: O(n + m), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    ListNode* modifiedList(vector<int>& nums, ListNode* head) {\n        bool bad[100001] = {false};\n        for (int x : nums) bad[x] = true;\n        ListNode dummy(0, head);\n        ListNode* curr = &dummy;\n        while (curr->next) {\n            if (bad[curr->next->val]) {\n                curr->next = curr->next->next;\n            } else {\n                curr = curr->next;\n            }\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

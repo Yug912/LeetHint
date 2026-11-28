@@ -1,0 +1,40 @@
+{
+  "slug": "removing-minimum-number-of-magic-beans",
+  "title": "Removing Minimum Number of Magic Beans",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting + Enumeration",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): C++ introsort uses O(log n) stack (in-place, input modified) → O(log n)\n- long long total, best: O(1) scalars\n- int n, i: O(1) scalars\n- not counted: input vector (modified in place)",
+  "approach": "For a fixed target value m, bags with fewer than m beans must be emptied entirely, and bags with m or more beans are reduced to exactly m. The total beans removed equals total_sum − (count of bags with ≥ m beans) × m. We only need to try m values that appear in the array. After sorting, for each index i, choosing beans[i] as m means bags i through n−1 (count n−i) stay non-empty. We minimize total_sum − (n−i) × beans[i] over all i.",
+  "hints": [
+    "If you fix a target value m that every non-empty bag must end up with, which bags must be emptied entirely and which only need partial removal?",
+    "Sort the array. For each index i, treat beans[i] as the target m: bags before i are emptied, bags from i onward are reduced to m. Removals = total_sum − (n−i) × beans[i]. For Example 1 sorted [1,4,5,6] with total 16: at i=1, removals = 16 − 3×4 = 4.",
+    "```\nsort beans\ntotal = sum of all beans\nbest = total\nfor i from 0 to n-1:\n    kept = (n - i) * beans[i]\n    removed = total - kept\n    best = min(best, removed)\nreturn best\n```",
+    "**Single bag** - n=1, the loop must execute at least once\n`Input: beans = [42]` → `Expected: 0`\n⚠️ Bug: loop `for (int i = 1; i < n; i++)` → never executes, returns initial best (42) instead of 0\n\n**Sum overflow** - 10^5 bags × 10^5 beans = 10^10 total\n`Input: beans = [100000, 100000, ..., 100000]` (10^5 elements) → `Expected: 0`\n⚠️ Bug: `int total` → 10^10 overflows 32-bit int (max ~2.1×10^9), returns garbage\n\n**Reverse sorted** - descending input breaks position-based logic\n`Input: beans = [6,5,4,1]` → `Expected: 4`\n⚠️ Bug: skipping sort → at i=0, m=6, kept=4×6=24 > total=16, removed = 16−24 = −8, returns −8\n\n**Multiplication overflow** - (n−i) × beans[i] exceeds int\n`Input: beans = [1, 100000, 100000, ..., 100000]` (1 + 99999 copies of 100000) → `Expected: 1`\n⚠️ Bug: `(n - i) * beans[i]` as int → at i=1, 99999 × 100000 ≈ 10^10 overflows int, returns wrong removal"
+  ],
+  "followUps": [
+    {
+      "q": "What if beans[i] can be up to 10^9?",
+      "a": "The algorithm is unchanged. Total sum reaches 10^5 × 10^9 = 10^14 and the product (n−i) × beans[i] reaches 10^14, both fitting in long long. TC remains O(n log n), SC O(1)."
+    },
+    {
+      "q": "What if the array arrives as a stream too large to store entirely?",
+      "a": "Since beans[i] ≤ 10^5, use a frequency array of size 10^5+1. Process the stream once to fill frequencies and accumulate total, then iterate values in ascending order, tracking how many bags remain. TC: O(n + max_val), SC: O(max_val)."
+    },
+    {
+      "q": "What if at least k bags must remain non-empty?",
+      "a": "Only consider indices i where n − i ≥ k in the sorted array. Skip candidates that leave fewer than k bags. The rest of the logic is identical. TC: O(n log n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimumRemoval(vector<int>& beans) {\n        sort(beans.begin(), beans.end());\n        int n = beans.size();\n        long long total = 0;\n        for (int i = 0; i < n; i++) {\n            total += beans[i];\n        }\n        long long best = total;\n        for (int i = 0; i < n; i++) {\n            long long kept = (long long)(n - i) * beans[i];\n            long long removed = total - kept;\n            if (removed < best) {\n                best = removed;\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "longest-binary-subsequence-less-than-or-equal-to-k",
+  "title": "Longest Binary Subsequence Less Than or Equal to K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long value, int length: scalars → O(1)\n- loop index i: scalar → O(1)\n- not counted: input string s, returned int",
+  "approach": "Zeros always add length without adding value, so we keep every '0'. For '1's, we scan right-to-left: each '1' we keep is placed at the least-significant available bit position (the current subsequence length), which is the cheapest way to include it. We include it only if doing so keeps the running value ≤ k. This greedy is optimal because placing a '1' as far right as possible minimizes its contribution, and skipping a '1' never enables including a more-significant one later. Since k ≤ 10⁹, any bit at position ≥ 31 exceeds k, so we guard the shift.",
+  "hints": [
+    "Which digits in a binary number add nothing to its value regardless of position? The note says the subsequence may contain leading zeros.",
+    "Greedy right-to-left scan: always keep '0's; for each '1', keep it only if adding 2^(current length) stays ≤ k. In s = \"1001010\", k = 5: from the right take '0', '1' (val 2), '0', skip '1' (would be 10), '0', '0', skip '1' → length 5.",
+    "```\nvalue = 0, length = 0\nfor i from n-1 down to 0:\n    if s[i] == '0':\n        length += 1\n    else if length < 31:\n        add = 1 << length\n        if value + add <= k:\n            value += add\n            length += 1\nreturn length\n```",
+    "**Boundary equality** - the subsequence value lands exactly on k.\n`Input: s = \"101\", k = 5` → `Expected: 3`\n⚠️ Bug: using `value + add < k` instead of `<= k` → returns 2\n\n**Single character equal to k** - n = 1, the only bit equals k.\n`Input: s = \"1\", k = 1` → `Expected: 1`\n⚠️ Bug: using `< k` instead of `<= k` → returns 0\n\n**Shift overflow with many leading zeros** - length grows past 30 before a '1' appears.\n`Input: s = \"00000000000000000000000000000000000000000000000001\", k = 1000000000` → `Expected: 50`\n⚠️ Bug: computing `int add = 1 << length` with length = 50 and no guard → undefined behavior\n\n**All ones, small k** - every '1' pushes the value past k quickly.\n`Input: s = \"1111\", k = 5` → `Expected: 2`\n⚠️ Bug: including every '1' without checking cumulative value ≤ k → returns 4 (value 15 > 5)"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10¹⁸?",
+      "a": "The same greedy works; use `long long` throughout and raise the shift guard to `length < 62` so `1LL << length` never overflows or triggers undefined behavior. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if s.length can be up to 10⁵?",
+      "a": "Nothing changes - the algorithm is a single O(n) pass with O(1) extra space, so it handles 10⁵ comfortably within the time budget."
+    },
+    {
+      "q": "Return the actual longest subsequence instead of just its length.",
+      "a": "Collect the kept indices during the right-to-left pass, then reverse them to restore original order. Time remains O(n); space becomes O(n) for the output string."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestSubsequence(string s, int k) {\n        int n = s.size();\n        long long value = 0;\n        int length = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s[i] == '0') {\n                length++;\n            } else {\n                if (length < 31) {\n                    long long add = 1LL << length;\n                    if (value + add <= k) {\n                        value += add;\n                        length++;\n                    }\n                }\n            }\n        }\n        return length;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

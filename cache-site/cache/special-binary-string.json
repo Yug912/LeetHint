@@ -1,0 +1,40 @@
+{
+  "slug": "special-binary-string",
+  "title": "Special Binary String",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Divide and Conquer with Sorting",
+  "tc": "O(n² log n)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<string> parts: up to n/2 strings, each up to O(n) → O(n²)\n- recursion call-stack depth: O(n) in worst case (skewed nesting)\n- string res: up to O(n) per level\n- sort(): O(log n) stack\n- not counted: input string s",
+  "approach": "A special binary string decomposes into \"mountains\": maximal special substrings that return to balance only at their endpoints. Each mountain has the form \"1\" + (inner special string) + \"0\", where the inner part is itself special. We recursively process the inner part of each mountain, then sort the mountains at each level in descending lexicographic order and concatenate. This works because consecutive mountains can be freely swapped via the allowed operation, so the lexicographically largest arrangement is the descending sort.",
+  "hints": [
+    "If you track a running balance (+1 for '1', −1 for '0'), what does it mean when the balance returns to zero - and what is the structure of the substring between two consecutive zero-balance points?",
+    "Use recursion: split the string at every point where the running balance hits zero to get \"mountains,\" recursively optimize each mountain's interior, then sort the mountains descending. For \"11011000\" the whole string is one mountain with interior \"101100,\" which splits into \"10\" and \"1100\" → sorted to \"110010\" → wrapped to \"11100100.\"",
+    "```\nfunction f(s):\n    parts = []\n    cnt = 0, start = 0\n    for i in range(len(s)):\n        cnt += 1 if s[i]=='1' else -1\n        if cnt == 0:\n            inner = f(s[start+1 : i])\n            parts.append(\"1\" + inner + \"0\")\n            start = i + 1\n    sort parts descending\n    return concatenate(parts)\n```",
+    "**Single mountain** - the entire string is one mountain, so improvement only comes from its interior\n`Input: \"11011000\"` → `Expected: \"11100100\"`\n⚠️ Bug: sorting only top-level mountains without recursing into each mountain's interior → returns \"11011000\"\n\n**Wrong sort order** - multiple mountains at the same level need descending sort\n`Input: \"101100\"` → `Expected: \"110010\"`\n⚠️ Bug: sorting parts in ascending order → returns \"101100\"\n\n**Deep nesting** - mountains nested two levels deep\n`Input: \"1110110000\"` → `Expected: \"1111001000\"`\n⚠️ Bug: only recursing one level deep → returns \"1110110000\"\n\n**Fixed point** - already the lexicographically largest\n`Input: \"11100100\"` → `Expected: \"11100100\"`\n⚠️ Bug: sorting all characters of the string → returns \"11110000\""
+  ],
+  "followUps": [
+    {
+      "q": "What if s.length can be up to 10^5?",
+      "a": "Replace substring copies with index ranges and use suffix-array-based or rolling-hash comparisons for O(1) string comparisons during sort. This brings the total to O(n log n) time and O(n) space, since each character appears in exactly one part per recursion level and the recursion tree has O(n) total nodes."
+    },
+    {
+      "q": "How would you count the number of distinct reachable strings?",
+      "a": "At each level, the number of distinct orderings is the multinomial coefficient of the mountain multiset, multiplied by the product of interior counts for each mountain. Compute this recursively; the result grows exponentially, so return it modulo a large prime. Time is O(n log n) per level with the same recursion structure."
+    },
+    {
+      "q": "What if you could swap any two special substrings, not just consecutive ones?",
+      "a": "The answer is identical - descending sort at each level - because any permutation of mountains is directly reachable. The algorithm stays the same, but the correctness proof simplifies: you no longer need the consecutive-swap transitivity argument."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string makeLargestSpecial(string s) {\n        if (s.empty()) return \"\";\n        vector<string> parts;\n        int cnt = 0, start = 0;\n        for (int i = 0; i < (int)s.size(); i++) {\n            if (s[i] == '1') cnt++;\n            else cnt--;\n            if (cnt == 0) {\n                string inner = makeLargestSpecial(s.substr(start + 1, i - start - 1));\n                parts.push_back(\"1\" + inner + \"0\");\n                start = i + 1;\n            }\n        }\n        sort(parts.begin(), parts.end(), [](const string& a, const string& b) {\n            return a > b;\n        });\n        string res;\n        for (const auto& p : parts) res += p;\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

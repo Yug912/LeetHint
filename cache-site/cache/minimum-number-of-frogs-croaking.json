@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-frogs-croaking",
+  "title": "Minimum Number of Frogs Croaking",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "State Machine Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[5]: fixed 5 elements → O(1)\n- string s = \"croak\": fixed 5 chars → O(1)\n- int frogs, ans: scalars → O(1)\n- no recursion, no heap, no queue",
+  "approach": "Track five counters for the states c→r→o→a→k. Each character must follow its predecessor in \"croak\": 'r' needs an unmatched 'c', 'o' needs an unmatched 'r', etc. When 'c' arrives, reuse a frog that just finished (a 'k' is pending) if one exists; otherwise start a new frog. The answer is the peak number of simultaneously active frogs. If any predecessor count is zero when needed, or any frog is left mid-croak at the end, return -1.",
+  "hints": [
+    "When a 'c' appears, what determines whether it must belong to a brand-new frog versus one that already completed a full \"croak\"? The string length can be up to 10^5, so you cannot try every possible assignment of characters to frogs.",
+    "Use a 5-element counter array for states c, r, o, a, k. On 'c', if a finished frog exists (k-counter > 0) reuse it; otherwise increment the frog count. In \"crcoakroak\", the 'c' at index 2 starts a new frog because no 'k' has appeared yet, giving a peak of 2.",
+    "```\ncnt[5] = {0}, frogs = 0, ans = 0\nfor ch in string:\n    idx = index of ch in \"croak\"\n    if idx == 0:                      # 'c'\n        if cnt[4] > 0: cnt[4]--       # reuse finished frog\n        cnt[0]++; frogs++; ans = max(ans, frogs)\n    else:\n        if cnt[idx-1] == 0: return -1\n        cnt[idx-1]--; cnt[idx]++\n        if idx == 4: frogs--           # 'k' finishes a frog\nreturn frogs == 0 ? ans : -1\n```",
+    "**Smallest valid input** - exactly one complete croak.\n`Input: \"croak\"` → `Expected: 1`\n⚠️ Bug: initialising `ans` to 0 and never updating it on the first 'c' → returns 0\n\n**Incomplete croak** - a frog starts but never finishes.\n`Input: \"c\"` → `Expected: -1`\n⚠️ Bug: returning `ans` without checking `frogs == 0` at the end → returns 1\n\n**Finished frog reused** - one frog croaks twice sequentially.\n`Input: \"croakcroak\"` → `Expected: 1`\n⚠️ Bug: always starting a new frog on 'c' (never checking `cnt[4] > 0`) → returns 2\n\n**Invalid double letter** - second 'o' has no pending 'r'.\n`Input: \"croakcrook\"` → `Expected: -1`\n⚠️ Bug: not checking `cnt[idx-1] == 0` before decrementing → returns 1\n\n**Two interleaved frogs** - all counts peak at 2.\n`Input: \"ccrrooaakk\"` → `Expected: 2`\n⚠️ Bug: tracking only `cnt[0]` (c-count) as the answer instead of peak active frogs → returns 2 (coincidentally correct here, but fails on \"croakcroak\" by returning 1 when the bug above is also present)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the input is an infinite stream and you must report the minimum frogs so far after each character?",
+      "a": "The same counter array and frog-count logic process each character in O(1). After each step, if valid, the running max is the current answer; if any predecessor is missing, emit -1 and halt. TC O(1) per character, SC O(1)."
+    },
+    {
+      "q": "What if multiple frog species exist, each with a different call string (e.g., \"croak\" and \"ribbit\")?",
+      "a": "Maintain a separate 5-element (or length-m) counter array per species. Each incoming character decrements the appropriate predecessor counter for every species whose pattern contains it, and you track the peak total active frogs across all species. TC O(n × s) where s is the number of species, SC O(s × max_pattern_length)."
+    },
+    {
+      "q": "What if you must also output which frog ID produces each character?",
+      "a": "Replace each counter with a pool of available frog IDs. On 'c', pop a finished frog ID (or allocate a new one); carry that same ID through r, o, a, k. The counter logic stays identical; only the storage changes from counts to ID queues. TC O(n), SC O(n) for the output assignment."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minNumberOfFrogs(string croakOfFrogs) {\n        int cnt[5] = {0, 0, 0, 0, 0};\n        string s = \"croak\";\n        int frogs = 0, ans = 0;\n        for (char ch : croakOfFrogs) {\n            int idx = (int)s.find(ch);\n            if (idx == 0) {\n                if (cnt[4] > 0) cnt[4]--;\n                cnt[0]++;\n                frogs++;\n                if (frogs > ans) ans = frogs;\n            } else {\n                if (cnt[idx - 1] == 0) return -1;\n                cnt[idx - 1]--;\n                cnt[idx]++;\n                if (idx == 4) frogs--;\n            }\n        }\n        return frogs == 0 ? ans : -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

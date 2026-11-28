@@ -1,0 +1,40 @@
+{
+  "slug": "queens-that-can-attack-the-king",
+  "title": "Queens That Can Attack the King",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Directional Search",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bool board[8][8]: fixed 64 booleans → O(1)\n- int dx[8], int dy[8]: fixed arrays → O(1)\n- not counted: input queens, returned result vector",
+  "approach": "From the king's position, scan outward in all 8 directions (horizontal, vertical, diagonal). In each direction, step one square at a time until we either find a queen (which can attack the king) or go off the board. The first queen encountered in each direction is the one that can directly attack, since any queen further along the same ray would be blocked. A boolean 8×8 grid marks queen positions for O(1) lookup.",
+  "hints": [
+    "How many distinct straight lines pass through any given square on a chessboard? The board is 8×8 with 0-indexed coordinates.",
+    "Use a boolean 8×8 grid to mark queen positions, then scan outward from the king in each of the 8 directions. In Example 1 with king at [0,0], scanning right hits queen [0,1] immediately - that queen attacks.",
+    "```\nmark queen positions on 8×8 grid\nfor each of 8 directions (dx, dy):\n    x, y = king + (dx, dy)\n    while (x, y) on board:\n        if queen at (x, y):\n            add (x, y) to result\n            break\n        x += dx, y += dy\nreturn result\n```",
+    "**Corner king** - King at [0,0] has only 3 on-board directions (right, down, down-right).\n`Input: queens = [[0,1],[1,0],[1,1]], king = [0,0]` → `Expected: [[0,1],[1,0],[1,1]]`\n⚠️ Bug: checking only 4 cardinal directions (up/down/left/right) → returns `[[0,1],[1,0]]`\n\n**Multiple queens same ray** - Only the nearest queen in each direction can attack.\n`Input: queens = [[0,1],[0,2],[0,3]], king = [0,0]` → `Expected: [[0,1]]`\n⚠️ Bug: not breaking after finding the first queen → returns `[[0,1],[0,2],[0,3]]`\n\n**Boundary row 0** - Queen at row 0 when king is at row 1 in the same column.\n`Input: queens = [[0,1]], king = [1,1]` → `Expected: [[0,1]]`\n⚠️ Bug: using `x > 0` instead of `x >= 0` in the while condition → returns `[]`\n\n**No valid attacks** - No queen lies on any of the 8 rays from the king.\n`Input: queens = [[2,1],[1,2],[2,3]], king = [0,0]` → `Expected: []`\n⚠️ Bug: checking Chebyshev distance ≤ 2 instead of ray alignment → returns `[[2,1],[1,2]]`"
+  ],
+  "followUps": [
+    {
+      "q": "If the board were n×n with n up to 10^5, how would the solution change?",
+      "a": "Replace the 8×8 boolean grid with an unordered_set of queen positions for O(1) lookup. Scan 8 directions from the king, each up to n steps. TC: O(n), SC: O(q) where q is the number of queens."
+    },
+    {
+      "q": "Given a fixed set of queens, how would you handle multiple queries with different king positions?",
+      "a": "Preprocess queens into an unordered_set once. For each query, scan 8 directions from the given king position. TC: O(n) per query, SC: O(q) for the set."
+    },
+    {
+      "q": "Given only queens (no king), find all pairs where one queen can directly attack another with no blocking queen between them.",
+      "a": "Sort queens along each of the 8 directions (by row, column, and both diagonals). In each sorted order, adjacent queens can attack each other. TC: O(q log q), SC: O(q)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> queensAttacktheKing(vector<vector<int>>& queens, vector<int>& king) {\n        bool board[8][8] = {false};\n        for (auto& q : queens) {\n            board[q[0]][q[1]] = true;\n        }\n        \n        vector<vector<int>> result;\n        int dx[] = {-1, -1, -1, 0, 0, 1, 1, 1};\n        int dy[] = {-1, 0, 1, -1, 1, -1, 0, 1};\n        \n        int kx = king[0], ky = king[1];\n        for (int d = 0; d < 8; d++) {\n            int x = kx + dx[d], y = ky + dy[d];\n            while (x >= 0 && x < 8 && y >= 0 && y < 8) {\n                if (board[x][y]) {\n                    result.push_back({x, y});\n                    break;\n                }\n                x += dx[d];\n                y += dy[d];\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

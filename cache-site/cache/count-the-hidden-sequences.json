@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-hidden-sequences",
+  "title": "Count the Hidden Sequences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long prefix, minPrefix, maxPrefix: three scalars → O(1)\n- no containers, no recursion\n- not counted: input vector, returned int",
+  "approach": "Fix hidden[0] = x. Then hidden[i] = x + prefix[i], where prefix[i] is the cumulative sum of differences[0..i-1] and prefix[0] = 0. For all elements to lie in [lower, upper], x must satisfy lower - prefix[i] ≤ x ≤ upper - prefix[i] for every i. The tightest bounds come from the minimum and maximum prefix sums, giving a valid window of size (upper - lower + 1) - (maxPrefix - minPrefix). If this is negative, no sequence exists.",
+  "hints": [
+    "If you fix the first element of the hidden sequence, every other element is determined. What single quantity - computed purely from the differences array - limits how many starting values fit inside [lower, upper]?",
+    "Track the running prefix sum of differences while maintaining its minimum and maximum. For Example 1, prefix sums are 0, 1, −2, 2 - min = −2, max = 2, range = 4. The answer is (upper − lower + 1) − range = 6 − 4 = 2.",
+    "```\nprefix = 0, minP = 0, maxP = 0\nfor each d in differences:\n    prefix += d\n    minP = min(minP, prefix)\n    maxP = max(maxP, prefix)\nrange = maxP - minP\nreturn max(0, (upper - lower + 1) - range)\n```",
+    "**Overflow** - prefix sums can reach 10^5 × 10^5 = 10^10, exceeding 2^31 − 1.\n`Input: differences = [100000] × 100000, lower = -100000, upper = 100000` → `Expected: 0`\n⚠️ Bug: using `int` for the running prefix sum → signed overflow, undefined behavior, likely a wrong positive answer\n\n**Missing initial zero** - the offset 0 for hidden[0] must be included in the min/max.\n`Input: differences = [5], lower = 1, upper = 10` → `Expected: 5`\n⚠️ Bug: initializing minPrefix = INT_MAX, maxPrefix = INT_MIN and only updating inside the loop → misses prefix[0] = 0, range = 0, returns 10\n\n**No valid answer** - the spread of the sequence exceeds the window [lower, upper].\n`Input: differences = [4,-7,2], lower = 3, upper = 6` → `Expected: 0`\n⚠️ Bug: returning `(upper - lower + 1) - range` without clamping to 0 → returns −3\n\n**All negative differences** - prefix sums are all ≤ 0, so 0 is the maximum.\n`Input: differences = [-3,-4], lower = 1, upper = 10` → `Expected: 3`\n⚠️ Bug: initializing maxPrefix to differences[0] instead of 0 → maxP = −3 instead of 0, range = 4 instead of 7, returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if each position i in the hidden sequence has its own range [lower_i, upper_i] instead of a global [lower, upper]?",
+      "a": "For each position i, the constraint becomes lower_i − prefix[i] ≤ x ≤ upper_i − prefix[i]. Track the running maximum of (lower_i − prefix[i]) and minimum of (upper_i − prefix[i]) in one pass, then intersect. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you must also return one valid hidden sequence (or report none exists)?",
+      "a": "Compute x_min = lower − minPrefix as the smallest valid starting value. The sequence is [x_min, x_min + prefix[1], …, x_min + prefix[n]]. If x_min > upper − maxPrefix, no sequence exists. TC: O(n), SC: O(n) for the output."
+    },
+    {
+      "q": "What if differences arrives as a stream of unknown length and you must answer count queries after each new element?",
+      "a": "Maintain prefix, minPrefix, and maxPrefix incrementally. After each new difference d, update all three and recompute max(0, (upper − lower + 1) − (maxPrefix − minPrefix)). TC: O(1) per query, SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfArrays(vector<int>& differences, int lower, int upper) {\n        long long prefix = 0;\n        long long minPrefix = 0;\n        long long maxPrefix = 0;\n        \n        for (int d : differences) {\n            prefix += d;\n            minPrefix = min(minPrefix, prefix);\n            maxPrefix = max(maxPrefix, prefix);\n        }\n        \n        long long range = maxPrefix - minPrefix;\n        long long ans = (long long)(upper - lower + 1) - range;\n        \n        return ans > 0 ? (int)ans : 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

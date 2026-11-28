@@ -1,0 +1,40 @@
+{
+  "slug": "minimize-xor",
+  "title": "Minimize XOR",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Bit Manipulation",
+  "tc": "O(log V)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int k, c, x, toClear/toSet, i: scalar variables → O(1)\n- no containers, no recursion, no dynamic allocation",
+  "approach": "To minimize x XOR num1, we want x to match num1's bit pattern as closely as possible. Let k = popcount(num2) (required set bits in x) and c = popcount(num1). If c == k, x = num1 gives XOR 0. If c > k, we must clear (c−k) of num1's set bits; clearing the lowest set bits minimizes the XOR contribution (each cleared bit i adds 2^i to the XOR). If c < k, we must set (k−c) additional bits; setting the lowest unset bits minimizes the XOR contribution. This greedy works because lower bit positions always contribute less to the XOR value.",
+  "hints": [
+    "For each bit position, under what condition does x XOR num1 produce a 0 there? The integer x must contain exactly as many set bits as num2.",
+    "Greedy bit manipulation. In Example 2, num1 = 1 (0001) has 1 set bit but needs 2; the lowest unset bit is position 1, so set it to get x = 3 (0011), giving XOR = 2.",
+    "```\nk = popcount(num2)\nc = popcount(num1)\nx = num1\nif c > k: clear the (c - k) lowest set bits of x\nelse if c < k: set the (k - c) lowest unset bits of x\nreturn x\n```",
+    "**Equal popcounts** - num1 already has the target number of set bits.\n`Input: num1 = 3, num2 = 5` → `Expected: 3`\n⚠️ Bug: building x starting from num2 instead of num1 → returns 5 (x = 5, XOR = 6 instead of 0)\n\n**Need to clear bits** - num1 has more set bits than the target.\n`Input: num1 = 7, num2 = 2` → `Expected: 4`\n⚠️ Bug: clearing the most significant set bits first → returns 1 (clears bits 2 and 1, x = 1, XOR = 6)\n\n**Need to set bits** - num1 has fewer set bits than the target.\n`Input: num1 = 9, num2 = 7` → `Expected: 11`\n⚠️ Bug: setting the most significant unset bit instead of the least significant → returns 13 (sets bit 2, x = 13, XOR = 4)\n\n**Lowest bit position matters** - the least significant unset bit is the one to set.\n`Input: num1 = 4, num2 = 3` → `Expected: 5`\n⚠️ Bug: starting the bit scan at index 1 instead of 0 → returns 6 (sets bit 1, x = 6, XOR = 2)"
+  ],
+  "followUps": [
+    {
+      "q": "What if num1 and num2 can be up to 10^18?",
+      "a": "Use long long and __builtin_popcountll. The algorithm is identical since it only depends on popcounts and bit positions. TC remains O(1), SC O(1)."
+    },
+    {
+      "q": "What if you must minimize (x XOR num1) + (x XOR num2) simultaneously?",
+      "a": "Process bits from most significant to least significant. At each position, decide whether setting the bit reduces the total XOR by matching num1, num2, both, or neither, while respecting the remaining set-bit budget. TC: O(64), SC: O(1)."
+    },
+    {
+      "q": "What if num2 arrives as a stream of bits and you cannot store the full number?",
+      "a": "Only the popcount of num2 is needed, so count set bits as they arrive in O(1) space. Once the stream ends, apply the same greedy bit-matching algorithm on num1. TC: O(stream length + 32), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimizeXor(int num1, int num2) {\n        int k = __builtin_popcount(num2);\n        int c = __builtin_popcount(num1);\n        int x = num1;\n        if (c > k) {\n            int toClear = c - k;\n            for (int i = 0; i < 32 && toClear > 0; i++) {\n                if (x & (1 << i)) {\n                    x &= ~(1 << i);\n                    toClear--;\n                }\n            }\n        } else if (c < k) {\n            int toSet = k - c;\n            for (int i = 0; i < 32 && toSet > 0; i++) {\n                if (!(x & (1 << i))) {\n                    x |= (1 << i);\n                    toSet--;\n                }\n            }\n        }\n        return x;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

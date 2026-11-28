@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-difference-in-sums-after-removal-of-elements",
+  "title": "Minimum Difference in Sums After Removal of Elements",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix-Suffix with Heaps",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> leftMin: 3n entries → O(n)\n- vector<long long> rightMax: 3n entries → O(n)\n- priority_queue maxHeap: up to n entries → O(n)\n- priority_queue minHeap: up to n entries → O(n)\n- recursion depth: none\n- not counted: input nums, returned scalar",
+  "approach": "To minimize sum_first − sum_second, we want the first n kept elements to have the smallest possible sum and the last n kept elements to have the largest possible sum. There is a split index i (from n−1 to 2n−1) such that the first part picks n elements from nums[0..i] and the second part picks n from nums[i+1..3n−1]. We precompute leftMin[i] = sum of the n smallest elements in nums[0..i] via a size-n max-heap, and rightMax[j] = sum of the n largest in nums[j..3n−1] via a size-n min-heap. The answer is min over valid i of leftMin[i] − rightMax[i+1].",
+  "hints": [
+    "The difference is sum_first − sum_second. What opposing properties should the first n kept elements and the last n kept elements each have to push this difference as low as possible? With n ≤ 10^5, trying all C(3n, n) removal choices is impossible.",
+    "Use a max-heap of size n to track the n smallest elements from the left and a min-heap of size n for the n largest from the right. For nums = [7,9,5,8,1,3] with n=2, scanning left up to index 2, the max-heap holds {5,7}, sum 12.",
+    "```\nleftMin[i] = sum of n smallest in nums[0..i], for i in [n-1, 2n-1]\n    maintain max-heap of size n; replace top when a smaller value arrives\nrightMax[j] = sum of n largest in nums[j..3n-1], for j in [n, 2n]\n    maintain min-heap of size n; replace top when a larger value arrives\nanswer = min over i in [n-1, 2n-1] of (leftMin[i] - rightMax[i+1])\n```",
+    "**Smallest input (n=1)** - only three elements; the split must use exactly one element per side.\n`Input: [3,1,2]` → `Expected: -1`\n⚠️ Bug: starting the leftMin loop at i=n instead of i=n-1, leaving leftMin[n-1] as 0 → returns -2.\n\n**Overflow** - n=10^5 with all values 10^5 gives element sums of 10^5 × 10^5 = 10^10, exceeding 2^31−1.\n`Input: [100000 repeated 3·10^5 times]` → `Expected: 0`\n⚠️ Bug: declaring the running sum as int → 10^10 wraps around, returns a garbage value.\n\n**Boundary first index** - the unique optimum is at i=n−1, the earliest valid split.\n`Input: [3,4,5,6,1,2]` → `Expected: -4`\n⚠️ Bug: loop `for i = n; i <= 2*n-1` skipping i=n-1 → misses the optimum, returns -1.\n\n**Boundary last index** - the unique optimum is at i=2n−1, the latest valid split.\n`Input: [100,100,1,2,3,4]` → `Expected: -4`\n⚠️ Bug: loop `for i = n-1; i < 2*n-1` with exclusive upper bound → misses i=2n-1, returns 94."
+  ],
+  "followUps": [
+    {
+      "q": "What if elements can be negative?",
+      "a": "The heap comparisons and sums handle negatives unchanged, so the same algorithm works directly. The answer may be more negative. Time stays O(n log n), space O(n)."
+    },
+    {
+      "q": "What if memory is limited to O(n) total and you cannot store both leftMin and rightMax arrays of size 3n?",
+      "a": "Compute and store only rightMax, then recompute leftMin on the fly in a second left-to-right pass while immediately evaluating leftMin[i] − rightMax[i+1]. This halves the auxiliary arrays. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if the removed n elements must form a contiguous block instead of any subsequence?",
+      "a": "The removal becomes a sliding window of size n; for each window position the remaining array is a prefix segment plus a suffix segment. Use prefix sums to get each part's sum in O(1). Time O(n), space O(n) for prefix sums."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minimumDifference(vector<int>& nums) {\n        int m = nums.size();\n        int n = m / 3;\n\n        vector<long long> leftMin(m, 0);\n        priority_queue<int> maxHeap;\n        long long sum = 0;\n        for (int i = 0; i < n; i++) {\n            maxHeap.push(nums[i]);\n            sum += nums[i];\n        }\n        leftMin[n - 1] = sum;\n        for (int i = n; i < 2 * n; i++) {\n            if (nums[i] < maxHeap.top()) {\n                sum -= maxHeap.top();\n                maxHeap.pop();\n                maxHeap.push(nums[i]);\n                sum += nums[i];\n            }\n            leftMin[i] = sum;\n        }\n\n        vector<long long> rightMax(m, 0);\n        priority_queue<int, vector<int>, greater<int>> minHeap;\n        sum = 0;\n        for (int i = 2 * n; i < 3 * n; i++) {\n            minHeap.push(nums[i]);\n            sum += nums[i];\n        }\n        rightMax[2 * n] = sum;\n        for (int i = 2 * n - 1; i >= n; i--) {\n            if (nums[i] > minHeap.top()) {\n                sum -= minHeap.top();\n                minHeap.pop();\n                minHeap.push(nums[i]);\n                sum += nums[i];\n            }\n            rightMax[i] = sum;\n        }\n\n        long long ans = LLONG_MAX;\n        for (int i = n - 1; i <= 2 * n - 1; i++) {\n            ans = min(ans, leftMin[i] - rightMax[i + 1]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

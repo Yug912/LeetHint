@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-days-to-eat-n-oranges",
+  "title": "Minimum Number of Days to Eat N Oranges",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Memoized Recursion (Top-Down DP)",
+  "tc": "O(log² n)",
+  "sc": "O(log² n)",
+  "spaceBreakdown": "- unordered_map<int,int> memo: up to O(log² n) entries (≈620 for n=2·10⁹)\n- recursion call-stack depth: O(log n) worst case (always dividing by 2)\n- not counted: input n, returned int",
+  "approach": "The key insight is that eating one orange at a time is only useful to reach a number divisible by 2 or 3. Instead of simulating each day, we jump directly: to use the \"divide by k\" action, we first spend (n % k) days eating singles, then one day to divide. This gives the recurrence f(n) = 1 + min(n%2 + f(n/2), n%3 + f(n/3)), with base case f(n) = n for n ≤ 1. Since each recursive call divides n by 2 or 3, the distinct states form the set {n / (2^a · 3^b)}, which has O(log² n) elements. Memoizing with a hash map makes this efficient even for n up to 2·10⁹.",
+  "hints": [
+    "When n is not divisible by 2 or 3, how many single-orange days must pass before a division becomes possible? The constraint n ≤ 2·10⁹ rules out simulating each day individually.",
+    "Memoized recursion with a hash map. For n = 10: f(10) = 1 + min(0 + f(5), 1 + f(3)) = 1 + min(4, 3) = 4.",
+    "```\nf(n):\n    if n <= 1: return n\n    if n in memo: return memo[n]\n    result = 1 + min(n%2 + f(n/2), n%3 + f(n/3))\n    memo[n] = result\n    return result\n```",
+    "**Smallest input** - n = 1, only \"eat one\" applies.\n`Input: 1` → `Expected: 1`\n⚠️ Bug: base case `if (n == 0) return 0` without handling n ≤ 1 → returns 2\n\n**Remainder cost** - n = 5, not divisible by 2 or 3.\n`Input: 5` → `Expected: 4`\n⚠️ Bug: using `1 + min(f(n/2), f(n/3))` without `n%2`/`n%3` terms → returns 2\n\n**Greedy fails** - n = 10, always dividing when possible is suboptimal.\n`Input: 10` → `Expected: 4`\n⚠️ Bug: greedy that always divides when divisible → returns 5\n\n**Ignoring /3 path** - n = 9, dividing by 3 is strictly better.\n`Input: 9` → `Expected: 3`\n⚠️ Bug: only trying the /2 path → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can also eat n/5 oranges when n is divisible by 5?",
+      "a": "Add a third term: f(n) = 1 + min(n%2 + f(n/2), n%3 + f(n/3), n%5 + f(n/5)). The distinct states become {n / (2^a · 3^b · 5^c)}, giving O(log³ n) states. TC: O(log³ n), SC: O(log³ n)."
+    },
+    {
+      "q": "What if n can be up to 10^18?",
+      "a": "Switch n to long long. The number of distinct states is O(log² n) ≈ 60² = 3600, still very manageable with a hash map. TC: O(log² n), SC: O(log² n)."
+    },
+    {
+      "q": "What if eating one orange costs c days instead of 1?",
+      "a": "The recurrence becomes f(n) = 1 + min(c·(n%2) + f(n/2), c·(n%3) + f(n/3)). The \"1\" is the division day; c·(n%k) is the cost of eating singles to reach divisibility. TC: O(log² n), SC: O(log² n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    unordered_map<int, int> memo;\n    int helper(int n) {\n        if (n <= 1) return n;\n        auto it = memo.find(n);\n        if (it != memo.end()) return it->second;\n        int res = 1 + min((n % 2) + helper(n / 2), (n % 3) + helper(n / 3));\n        memo[n] = res;\n        return res;\n    }\npublic:\n    int minDays(int n) {\n        return helper(n);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

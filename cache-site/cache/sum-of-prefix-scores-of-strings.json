@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-prefix-scores-of-strings",
+  "title": "Sum of Prefix Scores of Strings",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Trie",
+  "tc": "O(S)",
+  "sc": "O(S)",
+  "spaceBreakdown": "- Trie nodes: up to S nodes (one per character in the worst case of no shared prefixes), each holding 26 pointers + 1 int → O(S)\n- answer vector: O(n) - returned output, not counted\n- recursion depth: none (iterative)\n- not counted: input words, returned vector",
+  "approach": "Build a trie where each node stores a count of how many words pass through it. Insert all words, incrementing the count at each node along the path. Then for each word, traverse its path in the trie and sum all node counts - each node's count equals the number of words having that prefix, so the sum is the answer.",
+  "hints": [
+    "What do the prefix-score computations of two words that share the same first letter have in common for that first prefix? The total number of characters across all words can reach 10^6.",
+    "Use a Trie. Insert every word, incrementing a counter at each node visited. In Example 1, after inserting all four words, the node for prefix \"a\" has count 2 and the node for \"ab\" also has count 2.",
+    "```\ninsert all words into trie, incrementing count at each node\nfor each word:\n    traverse trie following its characters\n    sum all node counts along the path\n    store sum as answer\nreturn answers\n```",
+    "**Single character** - only one word of length 1\n`Input: words = [\"a\"]` → `Expected: [1]`\n⚠️ Bug: incrementing count at the parent before descending instead of at the child after descending → returns [0]\n\n**All identical** - every word is the same string\n`Input: words = [\"ab\",\"ab\",\"ab\"]` → `Expected: [6,6,6]`\n⚠️ Bug: incrementing count only when creating a new node, not when revisiting an existing one → returns [2,2,2]\n\n**Prefix chain** - each word is a prefix of the next\n`Input: words = [\"a\",\"ab\",\"abc\"]` → `Expected: [3,5,6]`\n⚠️ Bug: storing count only at word-ending nodes instead of at every node along the path → returns [1,1,1]"
+  ],
+  "followUps": [
+    {
+      "q": "What if words can be added dynamically and prefix-score queries arrive online?",
+      "a": "Keep the trie in memory permanently. Each insertion is O(L) and each query is O(L), both handled by traversing the existing trie without rebuilding. Space remains O(S) where S is the total characters inserted so far."
+    },
+    {
+      "q": "What if you also need to support deleting words from the collection?",
+      "a": "Add a decrement operation: traverse the word's path and decrement each node's count. If a node's count reaches zero, you can optionally remove it. Time complexity stays O(L) per deletion."
+    },
+    {
+      "q": "What if the alphabet is full Unicode instead of 26 lowercase letters?",
+      "a": "Replace the fixed array of 26 children with an unordered_map<char, TrieNode*>. Time becomes O(L) expected per operation with higher constant factors, and space stays O(S) but with map overhead per node."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    struct TrieNode {\n        TrieNode* children[26] = {};\n        int count = 0;\n    };\n    \n    TrieNode* root;\n    \n    void insert(const string& word) {\n        TrieNode* node = root;\n        for (char c : word) {\n            int idx = c - 'a';\n            if (!node->children[idx]) {\n                node->children[idx] = new TrieNode();\n            }\n            node = node->children[idx];\n            node->count++;\n        }\n    }\n    \n    int getScore(const string& word) {\n        TrieNode* node = root;\n        int score = 0;\n        for (char c : word) {\n            int idx = c - 'a';\n            node = node->children[idx];\n            score += node->count;\n        }\n        return score;\n    }\n    \npublic:\n    vector<int> sumPrefixScores(vector<string>& words) {\n        root = new TrieNode();\n        for (const string& word : words) {\n            insert(word);\n        }\n        vector<int> answer;\n        answer.reserve(words.size());\n        for (const string& word : words) {\n            answer.push_back(getScore(word));\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

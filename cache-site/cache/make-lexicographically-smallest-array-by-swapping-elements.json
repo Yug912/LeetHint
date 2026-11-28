@@ -1,0 +1,40 @@
+{
+  "slug": "make-lexicographically-smallest-array-by-swapping-elements",
+  "title": "Make Lexicographically Smallest Array by Swapping Elements",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting + Connected Components via Consecutive Gaps",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> sortedNums: n entries → O(n)\n- vector<int> values (temporary, worst case one group): up to n entries → O(n)\n- vector<int> indices (temporary, worst case one group): up to n entries → O(n)\n- sort() stack: O(log n)\n- not counted: input nums, returned result",
+  "approach": "Two elements can be swapped if their value difference is ≤ limit. By transitivity, any chain of swappable values forms a connected component whose members can be freely rearranged among their original positions. After sorting the array by value, these components become contiguous runs separated by gaps > limit. For each run, we collect the values (already sorted) and their original indices, sort the indices, and assign the smallest value to the smallest index - yielding the lexicographically smallest result.",
+  "hints": [
+    "If value a can swap with b, and b can swap with c, what does that tell you about where a, b, and c can ultimately be placed relative to each other? The constraint n ≤ 10^5 rules out checking every pair of indices directly.",
+    "Sort the (value, original index) pairs, then split into contiguous groups where consecutive sorted values differ by at most `limit`. For nums = [1,5,3,9,8] with limit 2, sorted values [1,3,5,8,9] give groups {1,3,5} and {8,9}.",
+    "```\nsort (value, index) pairs by value\ni = 0\nwhile i < n:\n    j = i\n    while j < n and (j == i or sorted[j].val - sorted[j-1].val <= limit):\n        collect sorted[j].val and sorted[j].index\n        j++\n    sort collected indices\n    assign collected values (already ascending) to sorted indices\n    i = j\nreturn result\n```",
+    "**Gap equals limit exactly** - adjacent sorted values differ by exactly `limit`, so they belong to the same group.\n`Input: nums = [1,5,3,9,8], limit = 2` → `Expected: [1,3,5,8,9]`\n⚠️ Bug: using `<` instead of `<=` in the gap check → returns `[1,5,3,8,9]`\n\n**Single element** - n = 1, no swaps are possible.\n`Input: nums = [5], limit = 1` → `Expected: [5]`\n⚠️ Bug: returning an empty vector when the loop body is skipped → returns `[]`\n\n**No valid swaps** - every consecutive gap in the sorted array exceeds `limit`.\n`Input: nums = [1,7,28,19,10], limit = 3` → `Expected: [1,7,28,19,10]`\n⚠️ Bug: ignoring the gap condition and treating all elements as one group → returns `[1,7,10,19,28]`\n\n**Unsorted indices within a group** - indices must be sorted so the smallest value lands at the smallest position.\n`Input: nums = [1,7,6,18,2,1], limit = 3` → `Expected: [1,6,7,18,1,2]`\n⚠️ Bug: assigning values to indices in collection order without sorting indices → returns `[1,7,6,18,2,1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also minimize the total number of swaps used?",
+      "a": "Within each group, the minimum swaps to reach the target permutation equals (group size − number of cycles) in the index mapping. Trace each cycle by following original index → sorted position. TC stays O(n log n), SC stays O(n)."
+    },
+    {
+      "q": "What if the array is too large to fit in memory and arrives as a stream?",
+      "a": "Use external merge sort on (value, index) pairs, then scan the sorted stream to identify groups by gaps and build the result. The grouping logic is identical but operates on a buffered stream. TC: O(n log n), SC: O(B) where B is the chunk/buffer size."
+    },
+    {
+      "q": "What if the swap condition is \"nums[i] and nums[j] share a common divisor greater than 1\" instead of a value difference?",
+      "a": "Transitivity still holds through shared factors. Use DSU where each value is unioned with all its prime factors. Two values in the same factor-component can be freely rearranged. TC: O(n · √max_val · α(n)), SC: O(n + max_val)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> lexicographicallySmallestArray(vector<int>& nums, int limit) {\n        int n = nums.size();\n        vector<pair<int,int>> sortedNums(n);\n        for (int i = 0; i < n; i++) {\n            sortedNums[i] = {nums[i], i};\n        }\n        sort(sortedNums.begin(), sortedNums.end());\n        \n        vector<int> result(n);\n        int i = 0;\n        while (i < n) {\n            vector<int> values;\n            vector<int> indices;\n            int j = i;\n            while (j < n && (j == i || sortedNums[j].first - sortedNums[j-1].first <= limit)) {\n                values.push_back(sortedNums[j].first);\n                indices.push_back(sortedNums[j].second);\n                j++;\n            }\n            sort(indices.begin(), indices.end());\n            for (int k = 0; k < (int)values.size(); k++) {\n                result[indices[k]] = values[k];\n            }\n            i = j;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

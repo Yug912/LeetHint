@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-punishment-number-of-an-integer",
+  "title": "Find the Punishment Number of an Integer",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Backtracking",
+  "tc": "O(n · 2^d)",
+  "sc": "O(d)",
+  "spaceBreakdown": "- string s (per i): up to 7 chars → O(1)\n- recursion depth: up to 7 → O(1)\n- not counted: input n, returned int",
+  "approach": "For each i in [1, n], compute sq = i*i, convert to a decimal string, and use backtracking to try every way of splitting it into contiguous pieces. At each position, extend the current piece by one digit, add its value to a running sum, and recurse on the rest; prune when the running sum exceeds i. If any partition sums exactly to i, add sq to the answer. Since i*i ≤ 10^6 has at most 7 digits, there are at most 2^6 = 64 partitions per i, so this is easily fast enough.",
+  "hints": [
+    "Since n ≤ 1000, the value i*i is at most 10^6 - a decimal string of at most 7 digits. For such a short string, how many distinct ways of cutting it into contiguous pieces could there be in total?",
+    "Use recursion/backtracking: at each position choose where the current piece ends, add its value, and recurse on the remainder. Example: for i=36, sq=1296, the cut \"1\" + \"29\" + \"6\" sums to 36, so 1296 counts.",
+    "```\nfunction can(s, idx, target, current):\n    if idx == len(s): return current == target\n    if current > target: return false\n    num = 0\n    for i from idx to len(s)-1:\n        num = num*10 + digit(s[i])\n        if can(s, i+1, target, current+num): return true\n    return false\n\nans = 0\nfor i in 1..n:\n    if can(str(i*i), 0, i, 0): ans += i*i\nreturn ans\n```",
+    "**Smallest input** - n=1, only i=1 with sq=1, partitioned as the single piece \"1\".\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: requiring at least two pieces in every partition → returns 0.\n\n**Zero-valued piece needed** - i=10 needs the partition \"10\" + \"0\", where the second piece is 0.\n`Input: n = 10` → `Expected: 182`\n⚠️ Bug: skipping pieces whose substring value is 0 → returns 82.\n\n**Multi-digit middle piece** - i=36 needs \"1\" + \"29\" + \"6\"; the middle piece has two digits.\n`Input: n = 37` → `Expected: 1478`\n⚠️ Bug: only ever taking single-digit pieces → \"1\"+\"2\"+\"9\"+\"6\" = 18 ≠ 36, misses i=36, returns 182.\n\n**Whole string as one piece** - i=1 (sq=\"1\") and i=10 (sq=\"100\" can be the single piece \"100\"=100, but that exceeds 10; the valid cut uses two pieces).\n`Input: n = 9` → `Expected: 82`\n⚠️ Bug: never trying the full string as a single piece → misses i=1, returns 81."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^6 and you must answer many queries fast?",
+      "a": "Precompute once which i in [1, 10^6] are \"punishment\" numbers using the same backtracking, store a prefix sum of i*i, then answer each query in O(1). Precomputation is O(N · 2^d) with d ≤ 13 now, still feasible."
+    },
+    {
+      "q": "What if a partition must use exactly k contiguous pieces?",
+      "a": "Add a remaining-pieces counter to the recursion: prune when the leftover digits cannot fill the remaining pieces, and only accept when current == target AND pieces used == k. Complexity becomes O(n · 2^d) with a tighter pruning."
+    },
+    {
+      "q": "What if i*i is given in a base other than 10?",
+      "a": "Replace the digit extraction `num = num*10 + digit` with `num = num*base + digit`; the backtracking structure is unchanged. The number of partitions is still 2^(d-1) where d is the digit count in that base."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canPartition(const string& s, int idx, int target, int current) {\n        if (idx == (int)s.size()) return current == target;\n        if (current > target) return false;\n        int num = 0;\n        for (int i = idx; i < (int)s.size(); i++) {\n            num = num * 10 + (s[i] - '0');\n            if (canPartition(s, i + 1, target, current + num)) return true;\n        }\n        return false;\n    }\n\n    int punishmentNumber(int n) {\n        int sum = 0;\n        for (int i = 1; i <= n; i++) {\n            int sq = i * i;\n            string s = to_string(sq);\n            if (canPartition(s, 0, i, 0)) sum += sq;\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-nodes-with-the-highest-score",
+  "title": "Count Nodes With the Highest Score",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Tree DP (post-order subtree sizes)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> children: n vectors, n−1 total entries → O(n)\n- vector<int> size: n entries → O(n)\n- vector<int> order: n entries → O(n)\n- recursion depth: none (iterative BFS) → O(1)\n- not counted: input parents, returned int",
+  "approach": "Build a children adjacency list from the parent array. Compute subtree sizes bottom-up using BFS order reversed (iterative, avoiding recursion stack overflow on skewed trees). For each node, its score is the product of its children's subtree sizes and the \"rest\" of the tree (n − subtree_size), skipping the rest factor when it is zero (i.e., for the root). Track the maximum score and how many nodes achieve it. Use `long long` for scores since the product of three subtree sizes can reach ~3.7×10¹³.",
+  "hints": [
+    "When a node is removed, the remaining pieces are its children's subtrees and everything else. With n nodes total, how does the size of \"everything else\" relate to the number of nodes in the removed node's own subtree?",
+    "Use DFS or BFS bottom-up to compute each node's subtree size. For node 2 in Example 1, its subtree size is 3; removing it leaves pieces of sizes 1, 1, and 5−3=2, giving score 1×1×2=2.",
+    "```\nbuild children list from parents\ncompute subtree sizes bottom-up (reverse BFS order)\nfor each node u:\n    score = 1\n    for each child v of u: score *= size[v]\n    rest = n - size[u]\n    if rest > 0: score *= rest\n    update max score and count\nreturn count\n```",
+    "**Root removal** - removing node 0 leaves no parent-side subtree, so the \"rest\" factor is 0\n`Input: parents = [-1,0]` → `Expected: 2`\n⚠️ Bug: always multiplying by (n − size[u]) without checking for 0 → root score becomes 0, returns 1\n\n**Skewed tree** - a chain of n nodes creates O(n) recursion depth\n`Input: parents = [-1,0,1,2,3]` → `Expected: 3`\n⚠️ Bug: recursive DFS → stack overflow on n = 10⁵, returns runtime error\n\n**Score initialization** - a leaf node has no children, so its score comes only from the \"rest\" factor\n`Input: parents = [-1,0,0]` → `Expected: 2`\n⚠️ Bug: initializing score to 0 instead of 1 → all scores become 0, returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you also need to return the actual node indices with the highest score?",
+      "a": "Maintain a vector of node indices alongside the max score. When a new max is found, clear the vector and add the node; when tied, append. TC stays O(n); SC becomes O(n) for the output vector."
+    },
+    {
+      "q": "What if the tree can be modified (add/remove edges) between queries?",
+      "a": "Use a link-cut tree to maintain subtree sizes dynamically. Each link or cut updates sizes along the path to the root in O(log n). Recompute scores only for affected nodes. TC: O(log n) per update."
+    },
+    {
+      "q": "What if n is up to 10⁹ but the tree is a complete binary tree given implicitly (node i has children 2i+1 and 2i+2)?",
+      "a": "Compute subtree sizes using the closed-form size of a complete binary subtree (2^h − 1). Evaluate scores for O(log n) candidate nodes near the boundary without materializing all nodes. TC: O(log n), SC: O(log n) for the recursion stack."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countHighestScoreNodes(vector<int>& parents) {\n        int n = parents.size();\n        vector<vector<int>> children(n);\n        for (int i = 1; i < n; i++) {\n            children[parents[i]].push_back(i);\n        }\n\n        vector<int> size(n, 1);\n\n        vector<int> order;\n        order.reserve(n);\n        order.push_back(0);\n        for (int i = 0; i < n; i++) {\n            int u = order[i];\n            for (int v : children[u]) {\n                order.push_back(v);\n            }\n        }\n\n        for (int i = n - 1; i >= 0; i--) {\n            int u = order[i];\n            for (int v : children[u]) {\n                size[u] += size[v];\n            }\n        }\n\n        long long maxScore = 0;\n        int count = 0;\n\n        for (int u = 0; u < n; u++) {\n            long long score = 1;\n            for (int v : children[u]) {\n                score *= size[v];\n            }\n            int rest = n - size[u];\n            if (rest > 0) score *= rest;\n\n            if (score > maxScore) {\n                maxScore = score;\n                count = 1;\n            } else if (score == maxScore) {\n                count++;\n            }\n        }\n\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

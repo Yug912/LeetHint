@@ -1,0 +1,40 @@
+{
+  "slug": "valid-arrangement-of-pairs",
+  "title": "Valid Arrangement of Pairs",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Eulerian Path (Hierholzer's Algorithm)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> adj: up to n edges total → O(n)\n- unordered_map<int, int> outDeg: up to 2n entries → O(n)\n- unordered_map<int, int> inDeg: up to 2n entries → O(n)\n- vector<int> path: up to n+1 nodes → O(n)\n- vector<int> stk (manual stack): up to n+1 entries → O(n)\n- not counted: input pairs, returned result vector",
+  "approach": "Model each pair as a directed edge (start→end) in a graph. A valid arrangement is an Eulerian path - a trail visiting every edge exactly once. Use Hierholzer's algorithm: find the start node (where out-degree exceeds in-degree by 1, or any node with edges for a circuit), then iteratively follow edges until stuck, backtracking to build the path in reverse. Hash maps for adjacency and degree tracking give O(n) average time without coordinate compression.",
+  "hints": [
+    "If you write out every number in the order the pairs are traversed, what kind of route through the numbers does this describe? With up to 10^5 pairs, checking every ordering is infeasible.",
+    "This is an Eulerian path on a directed graph where each pair is an edge. Use Hierholzer's algorithm with a hash map for adjacency. In Example 1, node 11 has out-degree 1 and in-degree 0, so the path starts there.",
+    "```\nbuild adjacency list and degree counts using hash maps\nfind start: node with outDeg - inDeg == 1, else any node with edges\npush start onto stack\nwhile stack not empty:\n    u = stack top\n    if u has unused outgoing edge to v:\n        remove edge, push v\n    else:\n        add u to path, pop stack\nreverse path\noutput consecutive node pairs as result\n```",
+    "**Long chain** - 10^5 pairs forming a single path 0→1→2→...→100000.\n`Input: [[0,1],[1,2],...,[99999,100000]]` → `Expected: [[0,1],[1,2],...,[99999,100000]]`\n⚠️ Bug: recursive Hierholzer's with call depth 10^5 → stack overflow, segfault\n\n**Large node values** - node values up to 10^9.\n`Input: [[1000000000,0],[0,1]]` → `Expected: [[1000000000,0],[0,1]]`\n⚠️ Bug: using `vector<vector<int>> adj(1000000001)` indexed by node value → allocates ~10^9 vectors, MLE\n\n**Eulerian circuit** - all nodes have balanced in/out degree.\n`Input: [[1,2],[2,1]]` → `Expected: [[1,2],[2,1]]`\n⚠️ Bug: returning empty when no node has outDeg-inDeg==1 → returns `[]` instead of falling back to any node with edges\n\n**Multiple outgoing edges** - start node has multiple choices, only some lead to valid paths.\n`Input: [[1,2],[1,3],[3,1]]` → `Expected: [[1,3],[3,1],[1,2]]`\n⚠️ Bug: greedy edge selection without Hierholzer's backtracking, picking edges in input order → picks [1,2] first, reaches dead end at node 2, returns `[[1,2]]` (1 of 3 pairs)"
+  ],
+  "followUps": [
+    {
+      "q": "What if a valid arrangement might not exist?",
+      "a": "Before running Hierholzer's, verify Eulerian path conditions: at most one node with outDeg−inDeg==1, at most one with inDeg−outDeg==1, all others balanced, and all edges in one connected component. This adds O(n) time for a union-find connectivity check."
+    },
+    {
+      "q": "What if you need the lexicographically smallest valid arrangement?",
+      "a": "Sort each adjacency list in descending order so pop_back always yields the smallest destination. Sorting all lists costs O(n log n) total, changing the time complexity from O(n) to O(n log n)."
+    },
+    {
+      "q": "What if pairs arrive as a stream and you can only store O(V) data in memory?",
+      "a": "First pass computes degrees and finds the start node, writing edges to disk. Second pass loads each node's adjacency list on demand during Hierholzer's. Time remains O(n) with higher constant factor from I/O; memory drops to O(V) for degree maps plus the current node's edge list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> validArrangement(vector<vector<int>>& pairs) {\n        int n = pairs.size();\n        unordered_map<int, vector<int>> adj;\n        unordered_map<int, int> outDeg, inDeg;\n        adj.reserve(n * 2);\n        outDeg.reserve(n * 2);\n        inDeg.reserve(n * 2);\n\n        for (auto& p : pairs) {\n            adj[p[0]].push_back(p[1]);\n            outDeg[p[0]]++;\n            inDeg[p[1]]++;\n        }\n\n        int start = pairs[0][0];\n        for (auto& [node, od] : outDeg) {\n            if (od - inDeg[node] == 1) {\n                start = node;\n                break;\n            }\n        }\n\n        vector<int> path;\n        path.reserve(n + 1);\n        vector<int> stk;\n        stk.reserve(n + 1);\n        stk.push_back(start);\n\n        while (!stk.empty()) {\n            int u = stk.back();\n            auto it = adj.find(u);\n            if (it != adj.end() && !it->second.empty()) {\n                int v = it->second.back();\n                it->second.pop_back();\n                stk.push_back(v);\n            } else {\n                path.push_back(u);\n                stk.pop_back();\n            }\n        }\n\n        reverse(path.begin(), path.end());\n\n        vector<vector<int>> result;\n        result.reserve(n);\n        for (int i = 0; i + 1 < (int)path.size(); i++) {\n            result.push_back({path[i], path[i + 1]});\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

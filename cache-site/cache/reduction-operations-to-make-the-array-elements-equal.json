@@ -1,0 +1,40 @@
+{
+  "slug": "reduction-operations-to-make-the-array-elements-equal",
+  "title": "Reduction Operations to Make the Array Elements Equal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Counting Sort / Frequency Array",
+  "tc": "O(n + V)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- vector<int> freq: V+1 entries → O(V)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "The key insight is that each element must be reduced through every distinct value between itself and the minimum, so the total operations equal the sum over all elements of (number of distinct values strictly smaller than that element). Since nums[i] ≤ 5·10⁴, we use a frequency array (counting sort) instead of a comparison-based sort. We scan values from maxVal down to 1, maintaining a running suffix count of elements seen. For each distinct value that isn't the minimum (i.e., suffix < n), we add the suffix count to the answer-this represents all elements at or above that value being reduced one level down.",
+  "hints": [
+    "Each element must be reduced through every distinct value between itself and the minimum. What information about the array would let you compute the total without simulating each operation? The constraint nums[i] ≤ 5·10⁴ bounds the value range.",
+    "Build a frequency array indexed by value (size max(nums)+1). For [1,1,2,2,3], freq = [0,2,2,1]; scanning downward from 3, the suffix counts are 1, 3, 5-add 1+3=4, skipping the minimum where suffix equals n.",
+    "```\nbuild freq array of size maxVal + 1\nsuffix = 0, answer = 0\nfor v from maxVal down to 1:\n    suffix += freq[v]\n    if freq[v] > 0 and suffix < n:\n        answer += suffix\nreturn answer\n```",
+    "**Single element** - n=1, the array is already uniform\n`Input: nums = [7]` → `Expected: 0`\n⚠️ Bug: adding suffix whenever freq[v]>0 without checking suffix < n → returns 1\n\n**All equal** - every element shares the same value\n`Input: nums = [3,3,3,3]` → `Expected: 0`\n⚠️ Bug: adding suffix for every value with freq[v]>0, ignoring the suffix==n check → returns 4\n\n**Gaps in values** - distinct values are non-consecutive\n`Input: nums = [1,1,5,5]` → `Expected: 2`\n⚠️ Bug: breaking the loop when freq[v]=0 instead of continuing the scan → returns 0\n\n**Two distinct values with different counts** - tests suffix vs per-value count\n`Input: nums = [1,2,2,5]` → `Expected: 4`\n⚠️ Bug: adding freq[v] instead of the running suffix count → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^9?",
+      "a": "A frequency array of size 10^9 is infeasible. Sort the array in O(n log n) time instead, then scan once accumulating suffix counts per distinct value. The core logic is identical-only the counting mechanism changes. TC: O(n log n), SC: O(1) if sorting in place."
+    },
+    {
+      "q": "What if you must also return the final equal value?",
+      "a": "The final value is always the minimum element in the array, since elements can only be reduced. The algorithm already identifies it as the value where the suffix count first equals n. No extra computation is needed."
+    },
+    {
+      "q": "What if the array arrives as a stream and you can only revisit elements once?",
+      "a": "Maintain the frequency array online as elements arrive-each insertion is O(1). After the stream ends, run the same downward scan. Time remains O(n + V) and space remains O(V), identical to the batch version."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int reductionOperations(vector<int>& nums) {\n        int n = nums.size();\n        int maxVal = 0;\n        for (int x : nums) maxVal = max(maxVal, x);\n        \n        vector<int> freq(maxVal + 1, 0);\n        for (int x : nums) freq[x]++;\n        \n        long long suffix = 0;\n        long long answer = 0;\n        for (int v = maxVal; v >= 1; v--) {\n            suffix += freq[v];\n            if (freq[v] > 0 && suffix < n) {\n                answer += suffix;\n            }\n        }\n        return (int)answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

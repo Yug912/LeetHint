@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-swaps-to-arrange-a-binary-grid",
+  "title": "Minimum Swaps to Arrange a Binary Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Simulation",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> maxRight(n): stores rightmost-1 column for each row → O(n)\n- no recursion, no other containers\n- not counted: input grid, return value",
+  "approach": "For row i to be valid at position i, every cell to the right of the diagonal (columns j > i) must be zero, so the rightmost 1 in that row must be at column ≤ i. We compute `maxRight[i]` = rightmost column containing a 1 in row i (or -1 if none). Then greedily, for each target position i from top to bottom, find the nearest row at or below position i whose `maxRight ≤ i`, bubble it up to position i with adjacent swaps, and update the `maxRight` array to reflect the new ordering. If no valid row exists for any position, return -1. This greedy is optimal because filling stricter constraints (smaller i) first with the nearest valid row minimizes total displacement.",
+  "hints": [
+    "For a row placed at index i, which columns must contain only zeros? The grid is n × n with n ≤ 200.",
+    "Greedy with adjacent-swap simulation: for each target row i from top to bottom, find the nearest row below whose rightmost 1 is at column ≤ i, then bubble it up. In Example 1, row 2 (rightmost 1 at column 0) is bubbled up to position 0 in 2 swaps.",
+    "```\nmaxRight[i] = rightmost column with a 1 in row i, or -1\nfor i = 0 to n-1:\n    find first j >= i with maxRight[j] <= i\n    if none: return -1\n    bubble maxRight[j] up to position i, counting each adjacent swap\nreturn total swaps\n```",
+    "**Single element with a 1** - n=1, the only cell is on the diagonal, nothing above it\n`Input: [[1]]` → `Expected: 0`\n⚠️ Bug: using `maxRight[j] < i` instead of `<=` → returns -1\n\n**All rows identical** - no row can satisfy the constraint for position 0\n`Input: [[0,1,1,0],[0,1,1,0],[0,1,1,0],[0,1,1,0]]` → `Expected: -1`\n⚠️ Bug: not checking `found == -1` and returning 0 → returns 0\n\n**Row must travel from bottom** - a valid row is far from its target position\n`Input: [[0,0,1],[0,0,0],[1,0,0]]` → `Expected: 2`\n⚠️ Bug: not updating maxRight array after swaps → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 10^5, how would you optimize?",
+      "a": "Use a segment tree over positions to find the first row with maxRight ≤ i in O(log n) per query, and a Fenwick tree to track which rows have been used. This reduces total time from O(n²) to O(n log n)."
+    },
+    {
+      "q": "What if you also need all cells below the main diagonal to be zeros?",
+      "a": "Then only diagonal cells may contain 1s. Each row i must have its rightmost 1 at exactly column i (or no 1s at all). Row swaps cannot fix rows with 1s in wrong columns, so return 0 if already valid or -1 otherwise."
+    },
+    {
+      "q": "What if you could swap any two rows in one step instead of only adjacent rows?",
+      "a": "The greedy row selection still identifies a valid target permutation. The minimum number of arbitrary swaps to achieve it is n minus the number of cycles in the permutation, computable in O(n) after selection."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSwaps(vector<vector<int>>& grid) {\n        int n = grid.size();\n        vector<int> maxRight(n, -1);\n        \n        for (int i = 0; i < n; i++) {\n            for (int j = n - 1; j >= 0; j--) {\n                if (grid[i][j] == 1) {\n                    maxRight[i] = j;\n                    break;\n                }\n            }\n        }\n        \n        int swaps = 0;\n        for (int i = 0; i < n; i++) {\n            int found = -1;\n            for (int j = i; j < n; j++) {\n                if (maxRight[j] <= i) {\n                    found = j;\n                    break;\n                }\n            }\n            if (found == -1) return -1;\n            \n            for (int j = found; j > i; j--) {\n                swap(maxRight[j], maxRight[j - 1]);\n                swaps++;\n            }\n        }\n        \n        return swaps;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-good-triplets-in-an-array",
+  "title": "Count Good Triplets in an Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Fenwick Tree (Binary Indexed Tree)",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> pos1: n entries → O(n)\n- vector<int> bit: n+1 entries → O(n)\n- vector<long long> left, right: n entries each → O(n)\n- recursion depth: none\n- not counted: input nums1/nums2, returned long long",
+  "approach": "For each value y treated as the middle element of a triplet, the number of good triplets with y in the middle equals (count of x appearing before y in both arrays) × (count of z appearing after y in both arrays). To compute \"before y in both,\" iterate nums2 in order (guaranteeing \"before in nums2\") and use a Fenwick tree over nums1-positions to count how many already-seen values have pos1 < pos1_y. Symmetrically iterate in reverse for the \"after\" counts. Sum left[y]·right[y] over all y.",
+  "hints": [
+    "If you fix the middle value y of a triplet, what two independent quantities about x (before y) and z (after y) would you need to multiply? The constraint n ≤ 10^5 rules out checking every pair of values for each y.",
+    "Use a Fenwick tree (BIT) over nums1-positions. Process nums2 left to right: when you reach value y, every value already inserted came before y in nums2, so querying the BIT for positions < pos1_y gives the count of x before y in both arrays. For nums2 = [0,1,2,3] with pos1 of 0 being 1, after inserting nothing, left[0] = 0.",
+    "```\npos1[v] = index of v in nums1\nfor i in 0..n-1:           # forward pass\n    y = nums2[i]\n    left[y] = BIT.query(pos1[y] - 1)\n    BIT.update(pos1[y], +1)\nreset BIT\nfor i in n-1..0:          # backward pass\n    y = nums2[i]\n    right[y] = (n-1-i) - BIT.query(pos1[y])\n    BIT.update(pos1[y], +1)\nanswer = sum(left[y] * right[y] for all y)\n```",
+    "**Minimum input** - n = 3, the smallest allowed size with exactly one possible triplet.\n`nums1 = [0,1,2], nums2 = [0,1,2]` → `Expected: 1`\n⚠️ Bug: using `query(pos1[y])` instead of `query(pos1[y]-1)` in the left pass → left[1] becomes 2 instead of 1, answer becomes 2.\n\n**Overflow** - n = 10^5, left[y] and right[y] can each reach ~5·10^4, product ~2.5·10^9, summed over n values ~2.5·10^14.\n`nums1 = [0,1,...,99999], nums2 = [0,1,...,99999]` → `Expected: C(100000,3) = 166661666670000`\n⚠️ Bug: storing left/right or the answer in `int` → overflow wraps to a negative or wrong value.\n\n**Reverse-sorted match** - both arrays identical but reversed, so the single triplet is good.\n`nums1 = [2,1,0], nums2 = [2,1,0]` → `Expected: 1`\n⚠️ Bug: computing right[y] as `BIT.query(n-1) - BIT.query(pos1[y])` without tracking inserted count → includes values not yet inserted, gives right[1] = 0 instead of 1, answer becomes 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums1 and nums2 are not permutations (values can repeat)?",
+      "a": "The Fenwick tree approach breaks because pos1 becomes ambiguous. You would need to match occurrences by value and handle multiplicities, likely counting pairs of matching positions and using a 2D counting structure, raising complexity to O(n log² n)."
+    },
+    {
+      "q": "What if a third array nums3 is added and a triplet must be increasing in all three?",
+      "a": "Extend the middle-element idea: for each y, you need left[y] = count before y in all three arrays and right[y] = count after y in all three. Process in nums2 order with a 2D BIT over (pos1, pos3) coordinates, giving O(n log² n) time and O(n log n) space."
+    },
+    {
+      "q": "What if the arrays arrive as a stream and you must answer after each insertion?",
+      "a": "Maintain a dynamic Fenwick tree supporting point updates and range queries online. Each new element triggers an update and two queries, giving O(log n) per operation and O(n) total space, but you must recompute affected left/right counts incrementally."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long goodTriplets(vector<int>& nums1, vector<int>& nums2) {\n        int n = nums1.size();\n        vector<int> pos1(n);\n        for (int i = 0; i < n; i++) pos1[nums1[i]] = i;\n\n        vector<int> bit(n + 1, 0);\n        auto update = [&](int i) {\n            for (i++; i <= n; i += i & (-i)) bit[i]++;\n        };\n        auto query = [&](int i) -> int {\n            int s = 0;\n            for (i++; i > 0; i -= i & (-i)) s += bit[i];\n            return s;\n        };\n\n        vector<long long> left(n), right(n);\n\n        for (int i = 0; i < n; i++) {\n            int y = nums2[i];\n            int p = pos1[y];\n            left[y] = query(p - 1);\n            update(p);\n        }\n\n        fill(bit.begin(), bit.end(), 0);\n\n        for (int i = n - 1; i >= 0; i--) {\n            int y = nums2[i];\n            int p = pos1[y];\n            int total = n - 1 - i;\n            right[y] = total - query(p);\n            update(p);\n        }\n\n        long long ans = 0;\n        for (int y = 0; y < n; y++) {\n            ans += left[y] * right[y];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "longest-increasing-subsequence-ii",
+  "title": "Longest Increasing Subsequence II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Segment Tree DP (Range-Max Query + Point Update)",
+  "tc": "O(n log V)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- vector<int> tree: 4·100004 ints → O(V), V = 10^5\n- recursion call-stack depth: O(log V) ≈ 17\n- not counted: input nums, returned int",
+  "approach": "Use a segment tree indexed by value (1 to 10^5). For each element x, the longest valid subsequence ending at x equals 1 + (the maximum length ending at any value in [x−k, x−1]). Query that range, then point-update position x with the max of its current value and best+1. Processing left to right guarantees the tree always reflects the best lengths using only elements seen so far, which is exactly what \"subsequence\" (order-preserving) requires.",
+  "hints": [
+    "For a new element x, which previously seen values could legally be the immediately preceding element in the subsequence? Both nums[i] and k are at most 10^5.",
+    "Use a segment tree over the value range [1, 10^5] storing the longest valid subsequence ending at each value. For x=4 with k=3 in example 1, query the max in [1, 3] (=0), then update position 4 to 1.",
+    "```\nfor each x in nums:\n    l = max(1, x - k)\n    r = x - 1\n    best = range_max(l, r)        # 0 if l > r\n    point_update(x, best + 1)     # take max with existing\n    ans = max(ans, best + 1)\nreturn ans\n```",
+    "**All equal values** - strictly increasing forbids equal adjacent elements.\n`Input: nums=[5,5,5,5], k=2` → `Expected: 1`\n⚠️ Bug: querying [x-k, x] (including x itself) instead of [x-k, x-1] → returns 4\n\n**Single element** - minimum input size.\n`Input: nums=[1], k=5` → `Expected: 1`\n⚠️ Bug: initializing ans=0 and only updating it when best>0 → returns 0\n\n**Order matters** - a subsequence must preserve original order.\n`Input: nums=[3,1,2], k=5` → `Expected: 2`\n⚠️ Bug: sorting nums before processing → returns 3\n\n**k=1 consecutive chain** - smallest k, each step must be exactly +1.\n`Input: nums=[1,2,3,4], k=1` → `Expected: 4`\n⚠️ Bug: querying [x-k+1, x-1] (off-by-one, excluding x-k) → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^9?",
+      "a": "Coordinate-compress every value that appears in nums. For the range query [x-k, x-1], binary-search the compressed coordinate of x-k to find the left boundary. The segment tree then has size O(n). TC becomes O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if nums arrives as a streaming input of unknown length?",
+      "a": "The segment tree approach is already online - each element is processed independently in O(log V) with no lookahead. Keep the tree persistent across calls. TC O(n log V) total, SC O(V) (or O(n) with compression)."
+    },
+    {
+      "q": "What if you must also return one actual longest subsequence, not just its length?",
+      "a": "Store, alongside each point update, the predecessor value and the index in nums that achieved best+1. After processing, backtrack from the value/index with the maximum length. TC O(n log V), SC O(n) for the predecessor arrays."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int N;\n    vector<int> tree;\n\n    void update(int node, int lo, int hi, int pos, int val) {\n        if (lo == hi) {\n            tree[node] = max(tree[node], val);\n            return;\n        }\n        int mid = (lo + hi) / 2;\n        if (pos <= mid) update(2 * node, lo, mid, pos, val);\n        else update(2 * node + 1, mid + 1, hi, pos, val);\n        tree[node] = max(tree[2 * node], tree[2 * node + 1]);\n    }\n\n    int query(int node, int lo, int hi, int l, int r) {\n        if (r < lo || hi < l) return 0;\n        if (l <= lo && hi <= r) return tree[node];\n        int mid = (lo + hi) / 2;\n        return max(query(2 * node, lo, mid, l, r),\n                   query(2 * node + 1, mid + 1, hi, l, r));\n    }\n\npublic:\n    int lengthOfLIS(vector<int>& nums, int k) {\n        N = 100000;\n        tree.assign(4 * N + 4, 0);\n        int ans = 0;\n        for (int x : nums) {\n            int l = max(1, x - k);\n            int r = x - 1;\n            int best = 0;\n            if (l <= r) best = query(1, 1, N, l, r);\n            update(1, 1, N, x, best + 1);\n            ans = max(ans, best + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

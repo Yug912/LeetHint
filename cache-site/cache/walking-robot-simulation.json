@@ -1,0 +1,36 @@
+{
+  "slug": "walking-robot-simulation",
+  "title": "Walking Robot Simulation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation with Hash Set",
+  "tc": "O(n + m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- unordered_set<long long> obs: up to m entries → O(m)\n- recursion depth: none\n- not counted: input commands/obstacles, returned int",
+  "approach": "Simulate the robot step-by-step. Store obstacles in a hash set (encoded as a single long long key) for O(1) lookup. For each forward command k (≤9), step one unit at a time, checking if the next cell is an obstacle; if so, stop early. Track the maximum x²+y² along the way. Turning is handled with a direction index 0..3 (N,E,S,W). The obstacle-at-origin special case is handled naturally since we only check obstacles when moving INTO a cell, never the current cell.",
+  "hints": [
+    "With up to 10^4 obstacles and up to 9×10^4 one-unit movement steps, what determines whether checking every obstacle at every step is too slow?\nEach move command moves at most 9 units, one at a time.",
+    "Store obstacle coordinates in a hash set (encoded as a single `long long` key `x*1000000 + y`) for O(1) lookup. In Example 2, when moving east from (0,4), the robot checks (1,4) - not in the set - then checks (2,4) - found - and stops at (1,4).",
+    "```\nencode obstacles into a set\ndir=0, x=0, y=0, best=0\nfor cmd in commands:\n  if cmd == -2: dir = (dir+3) % 4\n  elif cmd == -1: dir = (dir+1) % 4\n  else: repeat cmd times:\n    nx, ny = x+dx[dir], y+dy[dir]\n    if (nx,ny) in set: break\n    x, y = nx, ny; best = max(best, x²+y²)\nreturn best\n```",
+    "**Obstacle at origin** - Robot starts on an obstacle but must move freely until it tries to return.\n`Input: commands = [6,-1,-1,6], obstacles = [[0,0]]` → `Expected: 36`\n⚠️ Bug: checking if the starting position (0,0) is an obstacle before any move → robot never moves, returns 0\n\n**Obstacle one step ahead** - Obstacle is immediately in the robot's path.\n`Input: commands = [5], obstacles = [[0,1]]` → `Expected: 0`\n⚠️ Bug: updating position before checking the next cell → robot reaches (0,1), returns 1\n\n**Only turn commands** - Robot never leaves the origin.\n`Input: commands = [-1,-2,-1], obstacles = []` → `Expected: 0`\n⚠️ Bug: initializing maxDist to 1 instead of 0 → returns 1\n\n**Obstacle at negative coordinate** - Robot moves south and hits an obstacle at negative y.\n`Input: commands = [-1,-1,4], obstacles = [[0,-2]]` → `Expected: 1`\n⚠️ Bug: encoding obstacle key as unsigned int, so (0,-2) maps to a large positive key → obstacle not found, robot reaches (0,-4), returns 16"
+  ],
+  "followUps": [
+    {
+      "q": "What if move commands can be up to 10^9 units instead of 1-9?",
+      "a": "Stepping one unit at a time becomes too slow. For each move, use a sorted map of obstacles along the current axis (e.g., `map<int, set<int>>` keyed by the fixed coordinate) to binary-search for the nearest blocking obstacle in O(log m). TC changes to O(n log m), SC stays O(m)."
+    },
+    {
+      "q": "What if obstacles can be dynamically added or removed between commands?",
+      "a": "Replace the static hash set with a sorted"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int robotSim(vector<int>& commands, vector<vector<int>>& obstacles) {\n        unordered_set<long long> obs;\n        obs.reserve(obstacles.size() * 2);\n        for (auto& o : obstacles) {\n            long long key = ((long long)(o[0] + 100000)) * 300000LL + (o[1] + 100000);\n            obs.insert(key);\n        }\n        int dx[4] = {0, 1, 0, -1};\n        int dy[4] = {1, 0, -1, 0};\n        int x = 0, y = 0, dir = 0;\n        long long ans = 0;\n        for (int c : commands) {\n            if (c == -2) {\n                dir = (dir + 3) % 4;\n            } else if (c == -1) {\n                dir = (dir + 1) % 4;\n            } else {\n                for (int i = 0; i < c; i++) {\n                    int nx = x + dx[dir];\n                    int ny = y + dy[dir];\n                    long long key = ((long long)(nx + 100000)) * 300000LL + (ny + 100000);\n                    if (obs.count(key)) break;\n                    x = nx;\n                    y = ny;\n                    long long d = (long long)x * x + (long long)y * y;\n                    if (d > ans) ans = d;\n                }\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

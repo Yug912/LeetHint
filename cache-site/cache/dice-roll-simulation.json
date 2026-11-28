@@ -1,0 +1,40 @@
+{
+  "slug": "dice-roll-simulation",
+  "title": "Dice Roll Simulation",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Rolling Arrays",
+  "tc": "O(n·k)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long dp[6][16]: fixed 96 entries → O(1)\n- long long ndp[6][16]: fixed 96 entries → O(1)\n- scalar variables (total, same, ans, loop counters): O(1)\n- recursion depth: none\n- not counted: input rollMax, returned int",
+  "approach": "Use dynamic programming where the state is (last face rolled, current run length of that face). From state (f, c) we either roll f again (if c < rollMax[f], moving to (f, c+1)) or roll a different face j (moving to (j, 1)). To avoid iterating all 6 faces for the \"different face\" transition, compute the total sum of all states once per step, then subtract the sum of states ending in face j to get the count of sequences that switch to j. This gives O(n) time with O(1) space using two rolling 6×16 tables.",
+  "hints": [
+    "After several rolls, what is the smallest piece of recent history that tells you whether rolling a particular face next is allowed? Each rollMax[i] is at most 15.",
+    "Dynamic programming with state dp[face][run] = number of valid sequences ending with `face` appearing `run` consecutive times. For n=2, rollMax=[1,1,2,2,2,3]: after roll 1 each face has dp[f][1]=1; rolling a different face gives dp[f][1]=5, rolling the same face gives dp[2][2]=1, etc.",
+    "```\ninit dp[face][1] = 1 for each face\nrepeat n-1 times:\n    total = sum of all dp[face][run]\n    for each face j:\n        same = sum of dp[j][run] over all run\n        ndp[j][1] = (total - same) mod M\n        for run = 2 to rollMax[j]:\n            ndp[j][run] = dp[j][run-1]\n    dp = ndp\nreturn sum of all dp[face][run]\n```",
+    "**Smallest input** - n=1, every face is valid exactly once.\n`Input: n = 1, rollMax = [1,1,1,1,1,1]` → `Expected: 6`\n⚠️ Bug: starting the main loop at step=0 instead of step=1 → performs one extra transition, returns 30\n\n**Off-by-one in run extension** - rollMax=2 allows exactly two consecutive rolls, not one.\n`Input: n = 3, rollMax = [2,2,2,2,2,2]` → `Expected: 210`\n⚠️ Bug: using `c < rollMax[j]` instead of `c <= rollMax[j]` in the extension loop → blocks runs of length 2, returns 150\n\n**Per-face limits** - each face has its own rollMax value.\n`Input: n = 2, rollMax = [1,1,2,2,2,3]` → `Expected: 34`\n⚠️ Bug: using rollMax[0] for all faces → also blocks (3,3),(4,4),(5,5),(6,6), returns 30"
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^9, how would you solve this?",
+      "a": "Build a 90×90 transition matrix (6 faces × 15 run lengths) and use matrix exponentiation to skip n steps in O(90^3 log n) time, O(90^2) space. The matrix encodes the same transitions: extending a run or switching faces."
+    },
+    {
+      "q": "If the die has k faces instead of 6, how does the complexity change?",
+      "a": "The state space becomes k × maxRoll, so each step costs O(k × maxRoll) to compute totals and O(k^2 × maxRoll) if you iterate all other faces. Using the total-minus-same trick keeps it at O(k × maxRoll) per step, O(n × k × maxRoll) total."
+    },
+    {
+      "q": "If rolls arrive one at a time in a stream and you must report the count after each roll, what changes?",
+      "a": "Maintain the dp[face][run] table persistently and apply one transition step per incoming roll. Each update costs O(k × maxRoll) time and O(k × maxRoll) space, with no need to reprocess previous rolls."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int dieSimulator(int n, vector<int>& rollMax) {\n        const long long MOD = 1000000007;\n        long long dp[6][16] = {0};\n        for (int i = 0; i < 6; i++) dp[i][1] = 1;\n        \n        for (int step = 1; step < n; step++) {\n            long long ndp[6][16] = {0};\n            long long total = 0;\n            for (int f = 0; f < 6; f++)\n                for (int c = 1; c <= rollMax[f]; c++)\n                    total = (total + dp[f][c]) % MOD;\n            for (int j = 0; j < 6; j++) {\n                long long same = 0;\n                for (int c = 1; c <= rollMax[j]; c++)\n                    same = (same + dp[j][c]) % MOD;\n                ndp[j][1] = (total - same + MOD) % MOD;\n                for (int c = 2; c <= rollMax[j]; c++)\n                    ndp[j][c] = dp[j][c - 1];\n            }\n            for (int f = 0; f < 6; f++)\n                for (int c = 0; c < 16; c++)\n                    dp[f][c] = ndp[f][c];\n        }\n        \n        long long ans = 0;\n        for (int f = 0; f < 6; f++)\n            for (int c = 1; c <= rollMax[f]; c++)\n                ans = (ans + dp[f][c]) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

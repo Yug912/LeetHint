@@ -1,0 +1,39 @@
+{
+  "slug": "design-a-number-container-system",
+  "title": "Design a Number Container System",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Table + Ordered Set",
+  "tc": "O(q log q)",
+  "sc": "O(q)",
+  "spaceBreakdown": "- unordered_map<int,int> idxToNum: up to q entries → O(q)\n- unordered_map<int, set<int>> numToIdx: up to q total indices across all sets → O(q)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Maintain two maps: `idxToNum` (index → current number) and `numToIdx` (number → sorted set of indices). On `change`, if the index already holds a number, remove the index from that old number's set, then update both maps. On `find`, return the smallest element from the number's set (its `begin()`), or -1 if the set doesn't exist or is empty. The sorted set guarantees O(1) access to the minimum index while supporting O(log n) insertions and deletions.",
+  "hints": [
+    "When `change(1, 20)` replaces the number at index 1, what must happen to the collection of indices associated with the old number 10? Indices and numbers can be up to 10⁹, but at most 10⁵ calls are made in total.",
+    "Use an `unordered_map<int, set<int>>` mapping each number to a sorted set of its indices, plus an `unordered_map<int, int>` mapping each index to its current number. After `change(2,10)`, `change(1,10)`, `change(3,10)`, the set for 10 holds {1,2,3}, so `find(10)` returns 1.",
+    "```\nchange(index, number):\n    if index in idxToNum:\n        remove index from numToIdx[idxToNum[index]]\n    idxToNum[index] = number\n    insert index into numToIdx[number]\n\nfind(number):\n    if number in numToIdx and numToIdx[number] not empty:\n        return first element of numToIdx[number]\n    return -1\n```",
+    "**Find before any change** - No number has been inserted yet\n`find(10)` → `Expected: -1`\n⚠️ Bug: using `numToIdx[number].begin()` with operator[] (auto-creates empty set) then dereferencing → UB/crash\n\n**Replace removes last index** - Index's number is changed, old number now has zero indices\n`change(1,10); change(1,20); find(10)` → `Expected: -1`\n⚠️ Bug: not erasing index from old number's set on replace → returns 1\n\n**All indices of a number replaced** - Multiple indices held a number, all replaced\n`change(1,10); change(2,10); change(1,20); change(2,20); find(10)` → `Expected: -1`\n⚠️ Bug: checking only `numToIdx.count(number) > 0` without checking set emptiness → dereferences begin() on empty set, UB"
+  ],
+  "followUps": [
+    {
+      "q": "What if `find` must return the k-th smallest index for a number instead of the smallest?",
+      "a": "Replace each set with a Fenwick tree over coordinate-compressed indices. Each `change` updates two Fenwick trees (decrement old number, increment new), and `find` binary-searches the prefix sum for the k-th element. Time becomes O(log² q) per operation, space O(q)."
+    },
+    {
+      "q": "What if we add a `remove(index)` operation that clears an index without assigning a new number?",
+      "a": "Erase the index from both maps: remove it from its number's set in `numToIdx`, then delete the entry from `idxToNum`. The set for the old number shrinks by one, and `find` still returns the smallest remaining index or -1. Time stays O(log q) per operation."
+    },
+    {
+      "q": "What if memory is tight and we cannot afford a sorted set per number?",
+      "a": "Use a min-heap per number with lazy deletion: push indices into heaps on `change`, and on `find`, pop stale entries (where `idxToNum[index] != number`) until the top is valid. Space is O(q) total with no per-number set overhead, but `find` becomes O(k log q) amortized where k is the number of stale entries cleared."
+    }
+  ],
+  "code": {
+    "cpp": "class NumberContainers {\n    unordered_map<int, int> idxToNum;\n    unordered_map<int, set<int>> numToIdx;\npublic:\n    NumberContainers() {\n        \n    }\n    \n    void change(int index, int number) {\n        auto it = idxToNum.find(index);\n        if (it != idxToNum.end()) {\n            numToIdx[it->second].erase(index);\n        }\n        idxToNum[index] = number;\n        numToIdx[number].insert(index);\n    }\n    \n    int find(int number) {\n        auto it = numToIdx.find(number);\n        if (it == numToIdx.end() || it->second.empty()) return -1;\n        return *it->second.begin();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

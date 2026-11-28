@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-height-by-stacking-cuboids",
+  "title": "Maximum Height by Stacking Cuboids ",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Weighted Longest Increasing Subsequence (3D)",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n entries → O(n)\n- sort(): introsort stack O(log n) → dominated by dp\n- input cuboids modified in place → O(1), not counted",
+  "approach": "Sort each cuboid's three dimensions ascending so the largest becomes the height. This canonical orientation is lossless: cuboid A can sit on cuboid B in *some* rotation iff sorted-A ≤ sorted-B componentwise (proof: if min/mid/max of A exceed those of B, no rotation can fit). Then sort the cuboids lexicographically and run a weighted-LIS DP where dp[i] = max height of a stack whose bottom cuboid is i, transitioning from any j<i with cuboid_j ≤ cuboid_i componentwise.",
+  "hints": [
+    "When checking if one cuboid can rest on another, you'd normally try all rotation pairs - what single per-cuboid preparation removes that search entirely? (n ≤ 100, each dimension ≤ 100.)",
+    "Sort each cuboid's three dimensions ascending, then sort the cuboids, then run weighted-LIS DP. For [[50,45,20],[95,37,53],[45,23,12]], sorting each gives [20,45,50],[37,53,95],[12,23,45]; sorting cuboids gives [12,23,45],[20,45,50],[37,53,95].",
+    "```\nsort each cuboid's 3 dims ascending\nsort all cuboids ascending\nfor i in 0..n:\n    dp[i] = height[i]            # i at bottom, alone\n    for j in 0..i:\n        if cuboid[j] <= cuboid[i] componentwise:\n            dp[i] = max(dp[i], dp[j] + height[i])\nreturn max(dp)\n```",
+    "**Single cuboid** - n=1, the answer is just its largest dimension.\n`Input: [[3,1,2]]` → `Expected: 3`\n⚠️ Bug: initializing `ans=0` and only updating it inside the j-loop (which never runs for n=1) → returns 0.\n\n**All identical cuboids** - every cuboid stacks on every other, ties everywhere.\n`Input: [[5,5,5],[5,5,5],[5,5,5]]` → `Expected: 15`\n⚠️ Bug: using strict `<` instead of `<=` in the componentwise check → returns 5.\n\n**Non-stackable pair** - neither cuboid fits on the other.\n`Input: [[38,25,45],[76,35,3]]` → `Expected: 76`\n⚠️ Bug: always adding `dp[j]` to `dp[i]` without the componentwise guard → returns 121.\n\n**Reverse-sorted input** - cuboids given largest-first.\n`Input: [[9,9,9],[5,5,5],[1,1,1]]` → `Expected: 15`\n⚠️ Bug: skipping the sort of the cuboids array (relying on input order with j<i) → returns 9."
+  ],
+  "followUps": [
+    {
+      "q": "What if rotations are not allowed - each cuboid's dimensions are fixed as given?",
+      "a": "Drop the per-cuboid sort; sort cuboids by (width, length, height) and run the same componentwise DP. TC stays O(n²), SC O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^5 (dimensions still ≤ 100)?",
+      "a": "Replace the O(n²) DP with a 3D Fenwick tree keyed by (w,l,h) for prefix-max queries; process cuboids in sorted order, query max over w'≤w,l'≤l,h'≤h, then update. TC O(n log³100), SC O(100³)."
+    },
+    {
+      "q": "What if you must return the actual sequence of cuboids chosen, not just the height?",
+      "a": "Store parent[i] = argmax j during the DP, then walk from the i with maximum dp[i] back via parents. TC O(n²), SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxHeight(vector<vector<int>>& cuboids) {\n        int n = cuboids.size();\n        for (auto& c : cuboids) sort(c.begin(), c.end());\n        sort(cuboids.begin(), cuboids.end());\n        vector<int> dp(n);\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            dp[i] = cuboids[i][2];\n            for (int j = 0; j < i; j++) {\n                if (cuboids[j][0] <= cuboids[i][0] &&\n                    cuboids[j][1] <= cuboids[i][1] &&\n                    cuboids[j][2] <= cuboids[i][2]) {\n                    dp[i] = max(dp[i], dp[j] + cuboids[i][2]);\n                }\n            }\n            ans = max(ans, dp[i]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

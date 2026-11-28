@@ -1,0 +1,40 @@
+{
+  "slug": "apply-operations-to-an-array",
+  "title": "Apply Operations to an Array",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers / Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- nums: modified in place, not counted\n- write pointer j: single int → O(1)\n- loop index i: single int → O(1)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "Simulate the n-1 operations in a single left-to-right pass, modifying the array in place. Then use a write pointer to compact all non-zero values to the front, filling the remaining positions with zeros. This is correct because each operation only depends on the current state of two adjacent elements, and the final zero-shift is a stable compaction that preserves the relative order of non-zero values.",
+  "hints": [
+    "After the operations finish, what property do all the \"real\" values share, and where do they need to end up relative to each other and to the zeros?",
+    "Use a write pointer (two-pointer compaction). For `nums = [1,2,2,1,1,0]`, after operations it becomes `[1,4,0,2,0,0]`; a write index collects non-zeros into `[1,4,2,_,_,_]` then pads the tail with zeros.",
+    "```\nfor i in 0 .. n-2:\n    if nums[i] == nums[i+1]:\n        nums[i] = nums[i] * 2\n        nums[i+1] = 0\nj = 0\nfor i in 0 .. n-1:\n    if nums[i] != 0:\n        nums[j] = nums[i]\n        j = j + 1\nfill nums[j .. n-1] with 0\nreturn nums\n```",
+    "**Smallest input** - only two elements, one operation possible.\n`Input: nums = [0,1]` → `Expected: [1,0]`\n⚠️ Bug: skipping the zero-shift step entirely → returns `[0,1]`\n\n**Adjacent equal zeros** - operation fires on two zeros, doubling zero leaves it zero.\n`Input: nums = [0,0]` → `Expected: [0,0]`\n⚠️ Bug: guarding the operation with `if (nums[i] != 0 && nums[i] == nums[i+1])` → returns `[0,0]` (correct here, but breaks `[1,1,0]` → would give `[1,1,0]` instead of `[2,0,0]`→`[2,0,0]`)\n\n**All elements equal** - every pair triggers, cascading zeros.\n`Input: nums = [2,2,2]` → `Expected: [4,2,0]`\n⚠️ Bug: forgetting to set `nums[i+1] = 0` after doubling → returns `[4,2,2]`\n\n**Last pair equal** - operation touches the final index.\n`Input: nums = [1,1]` → `Expected: [2,0]`\n⚠️ Bug: looping `i < n` instead of `i < n-1` → out-of-bounds read on `nums[i+1]`\n\n**Trailing zeros not refilled** - compaction leaves stale values behind.\n`Input: nums = [1,2,2,1,1,0]` → `Expected: [1,4,2,0,0,0]`\n⚠️ Bug: compacting non-zeros without overwriting the tail with zeros → returns `[1,4,2,2,1,0]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if each element could be doubled multiple times in one pass (chain reactions, where a doubled value can match its new right neighbor)?",
+      "a": "After doubling `nums[i]`, re-check it against `nums[i+1]` before advancing, using a while loop. This keeps the same O(n) amortized time because each index is consumed at most twice, and space stays O(1)."
+    },
+    {
+      "q": "What if the array is too large to hold in memory and arrives as a stream?",
+      "a": "Process the stream with a small buffer of two adjacent elements, emitting each finalized non-zero value to the output and counting zeros to append at the end. Time stays O(n), space drops to O(1) auxiliary with no full array stored."
+    },
+    {
+      "q": "What if values can be up to 10^9 and an element may be doubled many times in a chain reaction?",
+      "a": "Use `long long` for the doubled value to avoid overflow, since 10^9 doubled even a few times exceeds 2^31 - 1. Time remains O(n) amortized, space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> applyOperations(vector<int>& nums) {\n        int n = nums.size();\n        for (int i = 0; i < n - 1; i++) {\n            if (nums[i] == nums[i + 1]) {\n                nums[i] *= 2;\n                nums[i + 1] = 0;\n            }\n        }\n        int j = 0;\n        for (int i = 0; i < n; i++) {\n            if (nums[i] != 0) {\n                nums[j++] = nums[i];\n            }\n        }\n        while (j < n) {\n            nums[j++] = 0;\n        }\n        return nums;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

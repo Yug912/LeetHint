@@ -1,0 +1,40 @@
+{
+  "slug": "process-tasks-using-servers",
+  "title": "Process Tasks Using Servers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two-Heap Event Simulation",
+  "tc": "O((n + m) log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- avail heap: up to n entries → O(n)\n- busy heap: up to n entries → O(n)\n- ans vector: m entries - returned output, not counted\n- scalar variables (time, j): O(1)",
+  "approach": "Maintain two min-heaps: one for available servers ordered by (weight, index), and one for busy servers ordered by (free_time, weight, index). Process tasks in order (FIFO queue guarantees this). For each task j, advance the simulation time to at least j, free all servers whose free_time ≤ current time, and if none are available, jump time to the next server's free_time. Assign the task to the best available server and push it to the busy heap with free_time = time + tasks[j]. Using `long long` for time is essential since a single server processing 2×10^5 tasks of length 2×10^5 reaches ~4×10^10.",
+  "hints": [
+    "Tasks are always assigned in insertion order (the queue is FIFO). Given that, can you process tasks one at a time, and for each task, what two groups of servers must you distinguish between?",
+    "Use two min-heaps: one for available servers keyed by (weight, index), one for busy servers keyed by (free_time, weight, index). In Example 1, task 0 pops server 2 from the available heap and pushes (1, 2, 2) into the busy heap.",
+    "```\nfor each task j:\n    time = max(time, j)\n    move all busy servers with free_time <= time to available\n    if available is empty:\n        time = min free_time in busy\n        move all busy servers with free_time <= time to available\n    best = pop available\n    ans[j] = best.index\n    push (time + tasks[j], best.weight, best.index) to busy\n```",
+    "**Overflow** - n=1, m=2×10^5, all tasks = 2×10^5; last free_time ≈ (2×10^5−1)×2×10^5 ≈ 4×10^10.\n⚠️ Bug: storing free_time as `int` → wraps negative, servers freed prematurely.\n\n**Tie-breaking by index** - all servers have equal weight, so the smallest index must win.\n`servers = [5,5,5], tasks = [1]` → `[0]`\n⚠️ Bug: ordering available heap by weight only → returns 1 instead of 0.\n\n**No free server** - all servers busy; must advance time to the next free_time.\n`servers = [1,1], tasks = [5,5,1]` → `[0,1,0]`\n⚠️ Bug: not handling empty avail (skipping the time-advance block) → task 2 has no server to pop, crash.\n\n**Multiple servers free simultaneously** - must free all before assigning.\n`servers = [2,1], tasks = [2,2,1,1]` → `[1,0,1,1]`\n⚠️ Bug: using `if` instead of `while` when freeing busy servers → frees only one at time 3, returns [1,0,1,0]."
+  ],
+  "followUps": [
+    {
+      "q": "What if tasks could be assigned out of order, prioritized by shortest processing time?",
+      "a": "Replace the FIFO task loop with a priority queue of pending tasks ordered by processing time. When a server frees up, pop the shortest task. Time complexity becomes O((n + m) log(n + m)) since both heaps and the task queue contribute log factors."
+    },
+    {
+      "q": "What if each server has a speed factor, so processing time = ceil(task_time / server_speed)?",
+      "a": "Store server_speed alongside weight in the available heap and compute free_time = time + ceil(tasks[j] / speed) when assigning. The two-heap structure is unchanged; only the free_time formula differs. Time complexity stays O((n + m) log n)."
+    },
+    {
+      "q": "What if tasks arrive in a stream with unknown total count?",
+      "a": "Switch to an event-driven simulation: maintain the same two heaps and process events (task arrival at time t, server free at time t) in chronological order. Space remains O(n) for the heaps plus O(pending tasks) for the queue."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> assignTasks(vector<int>& servers, vector<int>& tasks) {\n        int n = servers.size();\n        int m = tasks.size();\n\n        priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> avail;\n        priority_queue<tuple<long long,int,int>, vector<tuple<long long,int,int>>, greater<tuple<long long,int,int>>> busy;\n\n        for (int i = 0; i < n; i++) {\n            avail.push({servers[i], i});\n        }\n\n        vector<int> ans(m);\n        long long time = 0;\n\n        for (int j = 0; j < m; j++) {\n            time = max(time, (long long)j);\n\n            while (!busy.empty() && get<0>(busy.top()) <= time) {\n                avail.push({get<1>(busy.top()), get<2>(busy.top())});\n                busy.pop();\n            }\n\n            if (avail.empty()) {\n                time = get<0>(busy.top());\n                while (!busy.empty() && get<0>(busy.top()) <= time) {\n                    avail.push({get<1>(busy.top()), get<2>(busy.top())});\n                    busy.pop();\n                }\n            }\n\n            auto best = avail.top();\n            avail.pop();\n            ans[j] = best.second;\n            busy.push({time + tasks[j], best.first, best.second});\n        }\n\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

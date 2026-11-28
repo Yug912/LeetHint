@@ -1,0 +1,40 @@
+{
+  "slug": "count-collisions-on-a-road",
+  "title": "Count Collisions on a Road",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int ans: single integer → O(1)\n- int r_count: single integer → O(1)\n- bool has_s: single boolean → O(1)\n- not counted: input string",
+  "approach": "Process cars left to right, tracking how many 'R' cars are currently moving right (`r_count`) and whether a stationary car exists to the left (`has_s`). When 'S' arrives, all pending 'R' cars collide with it (+1 each). When 'L' arrives with pending 'R' cars, the rightmost 'R' collides head-on (+2) and the remaining 'R's hit the resulting stationary car (+1 each), totaling `r_count + 1`; if no 'R' but a stationary car exists, 'L' hits it (+1). Leading 'L's and trailing 'R's escape with zero contribution.",
+  "hints": [
+    "After any collision, what state do the involved cars end up in? The string can be up to 10^5 characters, so checking every pair is too slow.",
+    "Scan left to right tracking two values: count of consecutive 'R' cars moving right, and whether a stationary car exists to the left. For \"RLRSLL\": after 'R'→r=1; after 'L'→ans=2, r=0, has_s=true.",
+    "```\nr_count = 0, has_s = false, ans = 0\nfor each car d:\n    if d == 'R': r_count++\n    if d == 'S': ans += r_count, r_count = 0, has_s = true\n    if d == 'L':\n        if r_count > 0: ans += r_count + 1, r_count = 0, has_s = true\n        elif has_s: ans += 1\n```",
+    "**L after S** - a moving-left car hits a stationary car to its left\n`Input: \"SL\"` → `Expected: 1`\n⚠️ Bug: omitting the `elif has_s` branch for 'L' when r_count==0 → returns 0 instead of 1\n\n**Chain reaction** - multiple R cars pile up before an L arrives\n`Input: \"RRRL\"` → `Expected: 4`\n⚠️ Bug: using `ans += 2` instead of `ans += r_count + 1` for 'L' with r_count>0 → returns 2 instead of 4\n\n**All R's** - every car moves right and escapes off the end\n`Input: \"RRRR\"` → `Expected: 0`\n⚠️ Bug: adding r_count to ans at end of loop as cleanup → returns 4 instead of 0\n\n**Leading L's** - L cars at the start have nothing to their left\n`Input: \"LLRS\"` → `Expected: 1`\n⚠️ Bug: initializing has_s to true → returns 3 instead of 1\n\n**R then S then L** - S must set has_s so a later L can find it\n`Input: \"RSL\"` → `Expected: 2`\n⚠️ Bug: not setting has_s=true when 'S' is processed → returns 1 instead of 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if each car has a different positive integer speed?",
+      "a": "The single-pass approach breaks because faster cars can catch slower same-direction cars ahead. We must compute the earliest collision time among all adjacent pairs, process collisions in time order using a priority queue, and re-check neighbors after each merge. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if the road is circular (car n−1 is immediately to the right of car 0)?",
+      "a": "Trailing 'R' cars can wrap around and collide with leading 'L' cars. First strip leading 'L's and trailing 'R's that escape (only if no wrap-around collision is possible), then run the same linear pass on the remaining middle segment. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if we must output the final position of every car after all collisions?",
+      "a": "Instead of just counting, store cluster boundaries: each collision merges two clusters at a shared position. Track each cluster's leftmost and rightmost original index and its final stop position. Output the stop position for every original index. TC: O(n), SC: O(n) for the output array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countCollisions(string directions) {\n        int ans = 0;\n        int r_count = 0;\n        bool has_s = false;\n        for (char d : directions) {\n            if (d == 'R') {\n                r_count++;\n            } else if (d == 'S') {\n                ans += r_count;\n                r_count = 0;\n                has_s = true;\n            } else {\n                if (r_count > 0) {\n                    ans += r_count + 1;\n                    r_count = 0;\n                    has_s = true;\n                } else if (has_s) {\n                    ans += 1;\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "swap-for-longest-repeated-character-substring",
+  "title": "Swap For Longest Repeated Character Substring",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `total_c`, `left`, `non_c_count`, `window_len`, `ans`: constant space → O(1)\n- not counted: input string",
+  "approach": "For each of the 26 lowercase letters, use a sliding window to find the longest substring that contains at most one character different from the target letter. If the window has zero different characters, we can potentially extend it by 1 by swapping an adjacent character with a target letter from outside the window, giving a length of `min(total_count, window_len + 1)`. If the window has one different character, we can swap it with a target letter from outside, giving a length of `min(total_count, window_len)`. The maximum over all letters and windows is the answer.",
+  "hints": [
+    "If you fix the character that will form the longest repeated substring, how many non-matching characters can a valid window contain before you run out of swaps?",
+    "Use a sliding window for each of the 26 letters. For \"aaabaaa\" and target 'a', the window \"aaabaaa\" has one non-'a' and length 7, but only 6 'a's exist in total, so the answer for this window is 6.",
+    "```\nfor each char c in 'a'..'z':\n  count total_c\n  left = 0, non_c = 0\n  for right in 0..n-1:\n    if text[right] != c: non_c++\n    while non_c > 1:\n      if text[left] != c: non_c--\n      left++\n    len = right - left + 1\n    if non_c == 0: ans = max(ans, min(total_c, len + 1))\n    else: ans = max(ans, min(total_c, len))\n```",
+    "**Single character** - The string has length 1.\n`Input: text = \"a\"` → `Expected: 1`\n⚠️ Bug: Returning `window_len + 1` without `min(total_c, ...)` when `non_c == 0` → returns 2.\n\n**All same characters** - The string consists of only one repeated character.\n`Input: text = \"aaaaa\"` → `Expected: 5`\n⚠️ Bug: Using `min(total_c, window_len)` instead of `min(total_c, window_len + 1)` when `non_c == 0` → returns 4.\n\n**Two blocks separated by one char** - Two blocks of the target character are separated by exactly one different character.\n`Input: text = \"aaabaaa\"` → `Expected: 6`\n⚠️ Bug: Forgetting to check `total_c` and just returning `window_len` when `non_c == 1` → returns 7.\n\n**Not enough characters to fill** - The window has one non-matching character, but there are not enough target characters in the whole string to fill it.\n`Input: text = \"aabaa\"` → `Expected: 4`\n⚠️ Bug: Returning `window_len` when `non_c == 1` without `min(total_c, ...)` → returns 5."
+  ],
+  "followUps": [
+    {
+      "q": "What if you are allowed at most k swaps instead of 1?",
+      "a": "The sliding window generalizes: maintain a window with at most k non-matching characters. If the window has j non-matching characters, the achievable length is `min(total_c, window_len + k - j)`. Time complexity remains O(26 * n) and space O(1)."
+    },
+    {
+      "q": "What if the string only contains digits '0'-'9' instead of lowercase letters?",
+      "a": "The algorithm remains exactly the same, just iterating over 10 characters instead of 26. The time complexity improves to O(10 * n) = O(n) and space remains O(1)."
+    },
+    {
+      "q": "What if the input is a streaming string of unknown length, and you must answer queries of the current maximum length?",
+      "a": "Maintain run-length encoded blocks for each character. For a query, the answer is the maximum of `block_len + 1` (if `total_c > block_len`) or `block1_len + block2_len` (if two blocks are separated by one different character and `total_c > block1_len + block2_len`). This requires O(n) space to store the blocks and O(1) time per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxRepOpt1(string text) {\n        int n = text.size();\n        int ans = 0;\n        for (char c = 'a'; c <= 'z'; ++c) {\n            int total_c = 0;\n            for (int i = 0; i < n; ++i) {\n                if (text[i] == c) total_c++;\n            }\n            \n            int left = 0;\n            int non_c_count = 0;\n            for (int right = 0; right < n; ++right) {\n                if (text[right] != c) {\n                    non_c_count++;\n                }\n                while (non_c_count > 1) {\n                    if (text[left] != c) {\n                        non_c_count--;\n                    }\n                    left++;\n                }\n                int window_len = right - left + 1;\n                if (non_c_count == 0) {\n                    ans = max(ans, min(total_c, window_len + 1));\n                } else {\n                    ans = max(ans, min(total_c, window_len));\n                }\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

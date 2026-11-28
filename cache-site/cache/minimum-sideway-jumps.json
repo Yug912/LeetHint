@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-sideway-jumps",
+  "title": "Minimum Sideway Jumps",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming (State Reduction)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- dp1, dp2, dp3: three int variables → O(1)\n- loop index i: O(1)\n- not counted: input vector obstacles",
+  "approach": "Track three values - the minimum side jumps to reach the current point on each of the three lanes. At each point, first perform side jumps: any lane without an obstacle at this point can be reached from the cheapest lane for +1 jump. Then apply the forward move: any lane with an obstacle at the *next* point becomes unreachable (set to infinity). This works because side jumps at the same point are transitive - the cheapest lane dominates as the source for all others. After processing all points, the answer is the minimum of the three values.",
+  "hints": [
+    "At any point along the road, the frog is on exactly one of three lanes. What is the single quantity per lane you need to carry forward to decide the cheapest way to reach the next point?",
+    "Track three integers - the minimum side jumps to reach the current point on each lane. At each point, first allow side jumps (any clear lane can be reached from the cheapest lane + 1), then block lanes with an obstacle at the next point. For `obstacles = [0,1,2,3,0]`, starting at `(INF, 0, INF)`, after point 0's side jumps we get `(1, 0, 1)`, then the obstacle at point 1 blocks lane 1.",
+    "```\ndp = [INF, 0, INF]\nfor each point i from 0 to n-1:\n    m = min(dp[1], dp[2], dp[3])\n    for each lane L in {1,2,3}:\n        if obstacles[i] != L:\n            dp[L] = min(dp[L], m + 1)\n    for each lane L in {1,2,3}:\n        if obstacles[i+1] == L:\n            dp[L] = INF\nreturn min(dp[1], dp[2], dp[3])\n```",
+    "**Obstacle on starting lane at point 1** - frog must side-jump at point 0 before moving forward\n`Input: obstacles = [0,2,0]` → `Expected: 1`\n⚠️ Bug: applying forward move before side jumps at each point (skipping side jumps at point 0) → returns 1000000000\n\n**No obstacles at all** - frog stays on lane 2 the entire way\n`Input: obstacles = [0,0,0,0,0]` → `Expected: 0`\n⚠️ Bug: initializing dp2 to INF instead of 0 → returns 1\n\n**Obstacle on lane 2 at every intermediate point** - one side jump at point 0 suffices\n`Input: obstacles = [0,2,2,2,0]` → `Expected: 1`\n⚠️ Bug: starting the loop at i=1 instead of i=0 (no side jumps at point 0) → returns 1000000000\n\n**Zigzag obstacles on lanes 1, 2, 3** - two side jumps required\n`Input: obstacles = [0,2,1,3,0]` → `Expected: 2`\n⚠️ Bug: not skipping the obstacle lane as a side-jump destination (updating dp[L] even when obstacles[i]==L) → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the road had k lanes instead of 3?",
+      "a": "The same approach generalizes: maintain a dp array of size k, compute the global minimum, and update each clear lane to min(dp[L], min+1). Time becomes O(n·k) and space O(k), which is fine for small k but degrades if k grows with n."
+    },
+    {
+      "q": "What if obstacles could appear on two lanes at the same point?",
+      "a": "The algorithm still works unchanged - multiple lanes get set to INF during the forward-move step, and side jumps only update lanes that are clear. The only risk is if all three lanes are blocked at one point, making the problem infeasible; you would return -1 when min(dp) is INF."
+    },
+    {
+      "q": "What if the input arrives as a stream and memory is limited to O(1)?",
+      "a": "Since we only keep three integers and process one point at a time, the solution already works in a streaming fashion - read obstacles[i] and obstacles[i+1], update dp, discard. No changes needed; space stays O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSideJumps(vector<int>& obstacles) {\n        const int INF = 1e9;\n        int dp1 = INF, dp2 = 0, dp3 = INF;\n        int sz = obstacles.size();\n        for (int i = 0; i + 1 < sz; i++) {\n            int o = obstacles[i];\n            int oNext = obstacles[i + 1];\n            int m = min({dp1, dp2, dp3});\n            if (o != 1) dp1 = min(dp1, m + 1);\n            if (o != 2) dp2 = min(dp2, m + 1);\n            if (o != 3) dp3 = min(dp3, m + 1);\n            if (oNext == 1) dp1 = INF;\n            else if (oNext == 2) dp2 = INF;\n            else if (oNext == 3) dp3 = INF;\n        }\n        return min({dp1, dp2, dp3});\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

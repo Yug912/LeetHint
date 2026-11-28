@@ -1,0 +1,40 @@
+{
+  "slug": "find-minimum-time-to-finish-all-jobs",
+  "title": "Find Minimum Time to Finish All Jobs",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(k · 3^n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<int> sum: 2^n entries → O(2^n)\n- vector<int> dp: 2^n entries → O(2^n)\n- vector<int> ndp: 2^n entries (one at a time, reused) → O(2^n)\n- recursion depth: none (iterative)\n- not counted: input jobs, returned int",
+  "approach": "With n ≤ 12 jobs, we can represent any subset of jobs as a bitmask (at most 2^12 = 4096 masks). We use bitmask DP: dp[mask] = the minimum possible maximum working time achievable using the workers processed so far for exactly the jobs in mask. We pre-fill dp for the first worker (dp[mask] = sum of jobs in mask), then for each additional worker we try every way to split mask into a part given to the new worker (sub) and a part handled by the previous workers (mask ^ sub), taking max(sum[sub], dp[mask ^ sub]) and minimizing over all submasks. The answer is dp[full_mask] after processing all k workers.",
+  "hints": [
+    "With at most 12 jobs, how many distinct subsets of jobs exist? If you fix which subset one worker handles, what is left to decide for the remaining workers?",
+    "Bitmask DP: let dp[mask] be the minimum achievable maximum working time for the jobs in mask using the workers considered so far. For jobs = [3,2,3], k = 3, after the first worker dp[0b111] = 8; after adding a worker, dp[0b111] = min over submasks sub of max(dp[0b111 ^ sub], sum[sub]) = 3.",
+    "```\nprecompute sum[mask] for every mask\ndp[mask] = sum[mask]          # first worker takes everything\nfor each additional worker:\n    for each mask from 1 to full:\n        ndp[mask] = min over submasks sub of mask:\n                       max(dp[mask ^ sub], sum[sub])\n    dp = ndp\nreturn dp[full]\n```",
+    "**Single job, single worker** - the worker loop never executes; the answer is just the one job's time.\n`Input: jobs=[5], k=1` → `Expected: 5`\n⚠️ Bug: not pre-filling dp[mask] = sum[mask] for the first worker, leaving dp[1] = INT_MAX → returns 2147483647\n\n**All equal jobs, k = n** - each worker gets exactly one job; the answer equals the job value.\n`Input: jobs=[7,7,7,7], k=4` → `Expected: 7`\n⚠️ Bug: not setting ndp[0] = 0 inside the worker loop, so single-bit masks inherit INT_MAX → returns 2147483647\n\n**Three equal jobs, two workers** - one worker must take two jobs, so the answer is 2.\n`Input: jobs=[1,1,1], k=2` → `Expected: 2`\n⚠️ Bug: updating dp in-place instead of using a separate ndp array - dp[0b011] gets overwritten to 1 (2 workers, 2 jobs) before it is read for dp[0b111] → returns 1\n\n**k = 1, all jobs to one worker** - the worker loop should run zero times.\n`Input: jobs=[1,2,4,7,8], k=1` → `Expected: 22`\n⚠️ Bug: running the worker loop k times instead of k−1 (not accounting for the pre-filled first worker) → returns 11"
+  ],
+  "followUps": [
+    {
+      "q": "What if jobs can be split across workers (each job's time divided arbitrarily)?",
+      "a": "Then the answer is simply ceil(total_sum / k), since we can distribute work perfectly evenly. No DP needed; compute the sum and divide. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if k can be up to 10^5 (much larger than n)?",
+      "a": "When k ≥ n, the answer is just max(jobs) - assign each job to a separate worker. For k < n, the same bitmask DP applies since n ≤ 12 still bounds 3^n. Add an early return: if k ≥ n, return max(jobs). TC O(k + n + min(k,n)·3^n), SC O(2^n)."
+    },
+    {
+      "q": "What if jobs arrive in a stream and you must assign each immediately (online, no future knowledge)?",
+      "a": "A greedy approach - assign each incoming job to the worker with the smallest current load - gives a 2-approximation. The bitmask DP no longer applies because you cannot see future jobs. TC O(n log k) with a min-heap, SC O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumTimeRequired(vector<int>& jobs, int k) {\n        int n = jobs.size();\n        int full = (1 << n) - 1;\n        vector<int> sum(1 << n, 0);\n        for (int mask = 1; mask <= full; mask++) {\n            int low = mask & (-mask);\n            int idx = __builtin_ctz(low);\n            sum[mask] = sum[mask ^ low] + jobs[idx];\n        }\n        vector<int> dp(1 << n, INT_MAX);\n        dp[0] = 0;\n        for (int mask = 1; mask <= full; mask++) {\n            dp[mask] = sum[mask];\n        }\n        for (int w = 1; w < k; w++) {\n            vector<int> ndp(1 << n, INT_MAX);\n            ndp[0] = 0;\n            for (int mask = 1; mask <= full; mask++) {\n                int best = INT_MAX;\n                for (int sub = mask; sub > 0; sub = (sub - 1) & mask) {\n                    int prev = mask ^ sub;\n                    int val = dp[prev];\n                    if (sum[sub] > val) val = sum[sub];\n                    if (val < best) best = val;\n                }\n                ndp[mask] = best;\n            }\n            dp = ndp;\n        }\n        return dp[full];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

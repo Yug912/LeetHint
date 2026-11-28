@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-substrings-with-only-1s",
+  "title": "Number of Substrings With Only 1s",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Run-Length Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long ans: single variable → O(1)\n- int n, i: single variables → O(1)\n- long long cnt: single variable → O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input string s (passed by value, LeetCode convention)",
+  "approach": "Scan the string once, identifying maximal runs of consecutive '1's. For each run of length n, the number of all-1s substrings it contributes is n*(n+1)/2 (choosing a start and end within the run). Sum these contributions modulo 10^9+7. Using long long for the intermediate product avoids overflow since n can reach 10^5, making n*(n+1) ≈ 10^10 which exceeds 32-bit int range.",
+  "hints": [
+    "Every all-1s substring fits entirely inside one maximal block of consecutive 1s. What single property of such a block determines how many all-1s substrings it contributes?",
+    "Linear scan with run-length counting. For \"0110111\": the scan finds a run of 2 ones (\"11\") contributing 2×3/2 = 3 substrings, then a run of 3 ones (\"111\") contributing 3×4/2 = 6, total 9.",
+    "```\nans = 0, i = 0\nwhile i < len(s):\n    if s[i] == '1':\n        cnt = 0\n        while i < len(s) and s[i] == '1':\n            cnt += 1\n            i += 1\n        ans += cnt * (cnt + 1) / 2\n    else:\n        i += 1\nreturn ans mod (10^9 + 7)\n```",
+    "**All zeros** - no 1s exist in the string\n`Input: s = \"000\"` → `Expected: 0`\n⚠️ Bug: initializing ans to 1 instead of 0 → returns 1\n\n**Single character** - smallest valid input with one group of length 1\n`Input: s = \"1\"` → `Expected: 1`\n⚠️ Bug: using cnt*(cnt-1)/2 instead of cnt*(cnt+1)/2 → returns 0\n\n**Alternating bits** - multiple groups of length 1 separated by zeros\n`Input: s = \"10101\"` → `Expected: 3`\n⚠️ Bug: breaking the outer loop after the first group instead of continuing → returns 1\n\n**Large run overflow** - a single run of 10^5 ones\n`Input: s = \"111...1\" (10^5 ones)` → `Expected: 1000049972`\n⚠️ Bug: declaring cnt as int, so cnt*(cnt+1) = 10^5 × 100001 = 10^10 overflows 32-bit int → returns 705082704"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string arrives as a stream too large to store in memory?",
+      "a": "Process characters one at a time, maintaining a running count of consecutive 1's. When a '0' arrives, add the current group's contribution and reset the count. This uses O(1) space instead of O(n) for storing the string. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if we need to count substrings with at most k zeros instead of only 1's?",
+      "a": "Use a sliding window with two pointers. Maintain a count of zeros in the current window; for each right endpoint, shrink from the left while zeros exceed k. The number of valid substrings ending at right is (right - left + 1). TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if we need to support flipping individual bits and querying the count after each flip?",
+      "a": "Store all run lengths in a balanced BST keyed by start index. On a flip, split or merge adjacent runs and update the total contribution incrementally by subtracting old group contributions and adding new ones. Each update is O(log n). TC: O(n + q log n) for q queries, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSub(string s) {\n        const int MOD = 1000000007;\n        long long ans = 0;\n        int n = s.size();\n        int i = 0;\n        while (i < n) {\n            if (s[i] == '1') {\n                long long cnt = 0;\n                while (i < n && s[i] == '1') {\n                    cnt++;\n                    i++;\n                }\n                ans = (ans + cnt * (cnt + 1) / 2) % MOD;\n            } else {\n                i++;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

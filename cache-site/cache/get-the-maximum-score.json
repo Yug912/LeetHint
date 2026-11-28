@@ -1,0 +1,40 @@
+{
+  "slug": "get-the-maximum-score",
+  "title": "Get the Maximum Score",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers with Segment Sums",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long sum1, sum2, total: O(1) scalars\n- int i, j, n, m: O(1) scalars\n- no containers, no recursion",
+  "approach": "The common values between the two arrays act as \"switching points\" that partition both arrays into segments. Between two consecutive common values, you must traverse one array's segment entirely. At each common value, you add it once and choose the better segment sum from either side. Use two pointers to walk both sorted arrays simultaneously: accumulate segment sums in `sum1` and `sum2`; when pointers meet at a common value, add `max(sum1, sum2) + common_value` to the total and reset both sums. After the loop, add `max(sum1, sum2)` for the trailing segments. Use `long long` throughout since sums can reach 10^12.",
+  "hints": [
+    "The values that appear in both arrays split each array into independent stretches. Between two consecutive shared values, you are locked into one array. What single number should you compare to decide which stretch to take?",
+    "Two pointers walk both sorted arrays in parallel, accumulating per-array segment sums. At each shared value, add `max(sum1, sum2) + shared_value` to the answer and reset both sums. In Example 1, at shared value 4: `max(2, 0) + 4 = 6`.",
+    "```\ni = j = 0, sum1 = sum2 = total = 0\nwhile i < n and j < m:\n    if a[i] < b[j]:  sum1 += a[i];  i++\n    elif a[i] > b[j]:  sum2 += b[j];  j++\n    else:\n        total += max(sum1, sum2) + a[i]\n        sum1 = sum2 = 0;  i++;  j++\ndrain remaining elements into sum1 or sum2\ntotal += max(sum1, sum2)\nreturn total % MOD\n```",
+    "**Smallest input** - both arrays are a single equal element\n`Input: nums1 = [5], nums2 = [5]` → `Expected: 5`\n⚠️ Bug: adding only `max(sum1, sum2)` at common points without adding the common value itself → returns 0\n\n**Overflow** - 10^5 elements × 10^7 max value = 10^12, exceeding 2^31-1 ≈ 2.1×10^9\n`Input: nums1 = [1,2,...,100000], nums2 = [10000000]` → `Expected: 1000049972`\n⚠️ Bug: using `int` for sum1/sum2/total → overflow wraps around, returns a garbage value\n\n**No common elements** - arrays share no values, so the loop never hits the `else` branch\n`Input: nums1 = [1,2,3,4,5], nums2 = [6,7,8,9,10]` → `Expected: 40`\n⚠️ Bug: omitting the final `total += max(sum1, sum2)` after the loop → returns 0\n\n**Tie at common point** - both segment sums are equal at a shared value\n`Input: nums1 = [1,2,5], nums2 = [3,5]` → `Expected: 8`\n⚠️ Bug: adding `sum1 + sum2 + common` instead of `max(sum1, sum2) + common` → returns 11"
+  ],
+  "followUps": [
+    {
+      "q": "What if each array can contain duplicate values within itself?",
+      "a": "The segment-sum idea still holds, but the two-pointer walk must skip consecutive duplicates within a single array so each value is counted once per segment. At shared values, still take `max(sum1, sum2) + common`. TC remains O(n + m), SC O(1)."
+    },
+    {
+      "q": "What if there are k sorted arrays instead of 2?",
+      "a": "Use k pointers and k running sums. Advance the pointer pointing to the smallest current value, accumulating into that array's sum. When two or more pointers align on a common value, add `max` of all active sums plus the common value, reset those sums, and advance all matching pointers. TC: O(k × N) where N is total elements across all arrays. SC: O(k)."
+    },
+    {
+      "q": "What if the arrays are not sorted?",
+      "a": "Sort both arrays first in O(n log n + m log m), then apply the same two-pointer approach. Alternatively, collect all values with their array memberships into a map, iterate in sorted key order, and accumulate segment sums per array. TC: O(n log n + m log m), SC: O(n + m) for the map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSum(vector<int>& nums1, vector<int>& nums2) {\n        const int MOD = 1000000007;\n        int i = 0, j = 0;\n        int n = nums1.size(), m = nums2.size();\n        long long sum1 = 0, sum2 = 0;\n        long long total = 0;\n        while (i < n && j < m) {\n            if (nums1[i] < nums2[j]) {\n                sum1 += nums1[i];\n                i++;\n            } else if (nums1[i] > nums2[j]) {\n                sum2 += nums2[j];\n                j++;\n            } else {\n                total += max(sum1, sum2) + nums1[i];\n                sum1 = 0;\n                sum2 = 0;\n                i++;\n                j++;\n            }\n        }\n        while (i < n) {\n            sum1 += nums1[i];\n            i++;\n        }\n        while (j < m) {\n            sum2 += nums2[j];\n            j++;\n        }\n        total += max(sum1, sum2);\n        return total % MOD;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

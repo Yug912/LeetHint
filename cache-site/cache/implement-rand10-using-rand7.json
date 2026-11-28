@@ -1,0 +1,39 @@
+{
+  "slug": "implement-rand10-using-rand7",
+  "title": "Implement Rand10() Using Rand7()",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Rejection Sampling",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int a, b, idx: three scalar local variables → O(1)\n- recursion depth: none (iterative while-loop)\n- no containers/arrays/strings allocated",
+  "approach": "Two calls to rand7() produce 49 equally likely outcomes, indexed 0-48 via idx = (a-1)*7 + (b-1). Since 49 is not divisible by 10, we keep only the first 40 outcomes (idx < 40) and reject the remaining 9, retrying until accepted. Each accepted value maps uniformly to [1, 10] via idx % 10 + 1, giving exactly 4 preimages per output. This is rejection sampling.",
+  "hints": [
+    "Two calls to rand7() give 49 equally likely outcomes. How does 49 relate to 10 in terms of fair division?",
+    "Rejection sampling. Call rand7() twice, form idx = (a-1)*7 + (b-1) in [0, 48]; if idx < 40 return idx % 10 + 1, otherwise retry.",
+    "```\nloop:\n    a = rand7()\n    b = rand7()\n    idx = (a-1) * 7 + (b-1)    # range 0..48\n    if idx < 40:\n        return idx % 10 + 1\n```",
+    "**No rejection** - using all 49 outcomes without discarding any\n`Input: n = 100000` → `Expected: ~10000 of each value 1-10`\n⚠️ Bug: returning idx % 10 + 1 for idx in [0, 48] without rejection → values 1-9 each get probability 5/49 ≈ 10.2%, value 10 gets 4/49 ≈ 8.2%\n\n**Single call** - one rand7() call cannot cover all 10 values\n`Input: n = 1` → `Expected: [any integer in [1, 10]]`\n⚠️ Bug: returning rand7() % 10 + 1 → only produces values 1-7, never 8, 9, or 10\n\n**Wrong threshold** - accepting a count not divisible by 10\n`Input: n = 100000` → `Expected: ~10000 of each value 1-10`\n⚠️ Bug: accepting idx < 45 (45 values) and returning idx % 10 + 1 → values 1-5 get 5 preimages each, values 6-10 get 4 preimages each, giving P(1-5) = 5/45 ≈ 11.1% and P(6-10) = 4/45 ≈ 8.9%"
+  ],
+  "followUps": [
+    {
+      "q": "What is the expected number of rand7() calls per rand10(), and can you reduce it?",
+      "a": "The simple method uses 2 calls with acceptance probability 40/49, giving 2 × 49/40 = 2.45 expected calls. You can reduce this by reusing the 9 rejected outcomes: treat them as a base-7 digit, call rand7() once more to get 63 outcomes, keep 60, and so on. This brings the expected cost down to about 2.19 calls."
+    },
+    {
+      "q": "Implement rand13() using rand7() - what changes?",
+      "a": "Two calls give 49 outcomes; 49 is not divisible by 13 but 39 is (39 = 3 × 13). Keep idx < 39, return idx % 13 + 1, reject the other 10. Expected calls: 2 × 49/39 ≈ 2.51. The same rejection sampling pattern applies; only the threshold and modulus change."
+    },
+    {
+      "q": "If you must generate 10^5 values in a stream with minimal rand7() calls, how would you batch?",
+      "a": "Cache the rejected entropy from each call. When idx ≥ 40, the leftover value idx − 40 (0-8) combined with one more rand7() call yields 63 outcomes; keep 60 and return idx % 10 + 1. This amortizes the rejected samples and achieves ~2.19 calls per output with O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "int rand7();\n\nclass Solution {\npublic:\n    int rand10() {\n        while (true) {\n            int a = rand7();\n            int b = rand7();\n            int idx = (a - 1) * 7 + (b - 1);\n            if (idx < 40) {\n                return idx % 10 + 1;\n            }\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

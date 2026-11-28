@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-tastiness-of-candy-basket",
+  "title": "Maximum Tastiness of Candy Basket",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log n + n log P)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() on price (in-place): introsort recursion stack O(log n)\n- can() helper: O(1) local variables (count, last, loop index)\n- not counted: input vector price, return value",
+  "approach": "Sort the prices, then binary search on the answer (the tastiness value x). For each candidate x, greedily check whether k candies can be selected so that every consecutive chosen pair differs by at least x: pick the smallest price, then always pick the next price that is ≥ x away from the last picked. If the greedy selects ≥ k candies, x is feasible. Monotonicity holds: if x is feasible, any x′ < x is also feasible, so binary search finds the maximum feasible x.",
+  "hints": [
+    "If a basket with tastiness x is achievable, what can you say about whether tastiness x−1 is also achievable? The constraint price.length ≤ 10^5 rules out checking every k-subset.",
+    "Binary search on the answer. For Example 1 sorted [1,2,5,8,13,21] with k=3, testing x=8: pick 1, then 13 (diff 12≥8), then 21 (diff 8≥8) → 3 candies, feasible.",
+    "```\nsort prices\nlo = 0, hi = max - min\nwhile lo < hi:\n    mid = lo + (hi - lo + 1) / 2\n    count = 1, last = price[0]\n    for i in 1..n-1:\n        if price[i] - last >= mid:\n            count++, last = price[i]\n    if count >= k: lo = mid\n    else: hi = mid - 1\nreturn lo\n```",
+    "**All equal values** - every price is identical so no positive gap exists\n`Input: price = [7,7,7,7], k = 2` → `Expected: 0`\n⚠️ Bug: initialising hi = price.back() instead of price.back() - price.front() → returns 0 here by luck, but on [1,1,5] k=2 returns 4 instead of 4 (ok) - on [3,3,3] k=2 hi=3, wastes iterations but still returns 0; real break: hi = INT_MAX causes overflow in mid.\n\n**Strict inequality in greedy** - using `>` instead of `>=` rejects valid pairs\n`Input: price = [1,3,1], k = 2` → `Expected: 2`\n⚠️ Bug: checking `price[i] - last > x` instead of `>= x` → can(2) fails (needs diff >2, finds none), binary search returns 1 instead of 2.\n\n**Wrong binary search mid** - using lower mid in an upper-bound search\n`Input: price = [1,3,1], k = 2` → `Expected: 2`\n⚠️ Bug: `mid = (lo + hi) / 2` with `lo = mid` → infinite loop when lo=1, hi=2 (mid keeps computing 1).\n\n**k equals n** - must pick every candy, tastiness is the global min gap\n`Input: price = [1,2,10], k = 3` → `Expected: 1`\n⚠️ Bug: greedy that stops early at count==k but skips checking remaining gaps → still returns 1 here, but a version returning the last gap (10−2=8) instead of the min gap returns 8.\n\n**Large price spread** - price[i] up to 10^9, differences up to 10^9 fit in int but mid computation can overflow\n`Input: price = [1,1000000000], k = 2` → `Expected: 999999999`\n⚠️ Bug: `mid = (lo + hi) / 2` with lo=0, hi=999999999 → no overflow, but `mid = lo + (hi + lo + 1) / 2` reorders to overflow at 2×10^9."
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual basket (the k chosen prices) that achieves the maximum tastiness, not just the value.",
+      "a": "Run the same binary search to find the optimal x. Then re-run the greedy check at x, storing each chosen price into a result vector. Time stays O(n log n + n log P), space becomes O(k) for the output basket."
+    },
+    {
+      "q": "Prices can be negative and k can be as large as n. How does the solution change?",
+      "a": "Sorting still works with negatives; the greedy and binary search are unchanged because only differences matter. The search range becomes [0, max−min] where max and min can be negative, but hi = max−min is still non-negative. Complexity is identical."
+    },
+    {
+      "q": "Prices arrive in an online stream and you must answer \"maximum tastiness for k\" queries interleaved with insertions.",
+      "a": "Maintain a sorted structure (e.g., a balanced BST or Fenwick tree over coordinate-compressed values). For each query, binary search on x and walk the BST with lower_bound to count selectable candies in O(k log n) per check. Total per query is O(log P · k log n); space is O(n) for the sorted structure."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumTastiness(vector<int>& price, int k) {\n        sort(price.begin(), price.end());\n        int lo = 0;\n        int hi = price.back() - price.front();\n        while (lo < hi) {\n            int mid = lo + (hi - lo + 1) / 2;\n            if (canPick(price, k, mid)) {\n                lo = mid;\n            } else {\n                hi = mid - 1;\n            }\n        }\n        return lo;\n    }\nprivate:\n    bool canPick(vector<int>& price, int k, int x) {\n        int count = 1;\n        int last = price[0];\n        for (int i = 1; i < (int)price.size(); i++) {\n            if (price[i] - last >= x) {\n                count++;\n                last = price[i];\n                if (count >= k) return true;\n            }\n        }\n        return count >= k;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

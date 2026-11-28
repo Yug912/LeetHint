@@ -1,0 +1,40 @@
+{
+  "slug": "difference-between-ones-and-zeros-in-row-and-column",
+  "title": "Difference Between Ones and Zeros in Row and Column",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Precomputation (Row/Column Aggregation)",
+  "tc": "O(m * n)",
+  "sc": "O(m + n)",
+  "spaceBreakdown": "- vector<int> rowOnes: m entries → O(m)\n- vector<int> colOnes: n entries → O(n)\n- recursion depth: none\n- not counted: input grid, returned diff",
+  "approach": "The formula diff[i][j] = onesRow_i + onesCol_j − zerosRow_i − zerosCol_j can be simplified using zerosRow_i = n − onesRow_i and zerosCol_j = m − onesCol_j, giving diff[i][j] = 2·onesRow_i + 2·onesCol_j − n − m. Precompute the ones-count for every row and every column once, then evaluate each cell in O(1). This avoids recomputing row/column statistics n or m times.",
+  "hints": [
+    "For a fixed row i, how many cells of the answer matrix reuse the value onesRow_i? The constraint m·n ≤ 10^5 makes recomputing that count per cell wasteful.",
+    "Precompute two arrays: rowOnes[i] = sum of row i, colOnes[j] = sum of column j. Since zerosRow_i = n − rowOnes[i], the formula becomes diff[i][j] = 2·rowOnes[i] + 2·colOnes[j] − n − m. For grid = [[0,1,1],[1,0,1],[0,0,1]]: rowOnes=[2,2,1], colOnes=[1,1,3], so diff[0][2] = 2·2 + 2·3 − 3 − 3 = 4.",
+    "```\ncompute rowOnes[i] for each row\ncompute colOnes[j] for each column\nfor each cell (i, j):\n    diff[i][j] = 2 * rowOnes[i] + 2 * colOnes[j] - n - m\nreturn diff\n```",
+    "**Single cell zero** - smallest valid input, m = n = 1\n`Input: [[0]]` → `Expected: [[-2]]`\n⚠️ Bug: omitting the `- n - m` term (writing `diff = 2*rowOnes[i] + 2*colOnes[j]`) → returns `[[0]]`\n\n**Single cell one** - smallest input containing a 1\n`Input: [[1]]` → `Expected: [[2]]`\n⚠️ Bug: writing `diff = rowOnes[i] + colOnes[j] - n - m` (forgetting the factor 2 from zerosRow = n − onesRow) → returns `[[0]]`\n\n**Non-uniform columns** - columns have different ones counts\n`Input: [[0,1,1],[1,0,1],[0,0,1]]` → `Expected: [[0,0,4],[0,0,4],[-2,-2,2]]`\n⚠️ Bug: indexing `colOnes[i]` instead of `colOnes[j]` in the diff formula → returns `[[0,0,0],[0,0,0],[2,2,2]]`\n\n**All ones** - maximum ones density, zeros counts are zero\n`Input: [[1,1,1],[1,1,1]]` → `Expected: [[5,5,5],[5,5,5]]`\n⚠️ Bug: initialising colOnes with size m instead of n, then writing out of bounds on a non-square matrix → undefined behavior / wrong counts"
+  ],
+  "followUps": [
+    {
+      "q": "The matrix arrives as a stream of (row, col, value) triples and cannot fit in memory. How do you compute diff?",
+      "a": "Make two passes over the stream. First pass accumulates rowOnes and colOnes. Second pass replays the stream and emits diff[i][j] = 2·rowOnes[i] + 2·colOnes[j] − n − m for each triple. TC O(m·n), SC O(m + n)."
+    },
+    {
+      "q": "Suppose grid values are in {−1, 1} instead of {0, 1}. How does the solution change?",
+      "a": "onesRow_i = (sumRow_i + n)/2 and zerosRow_i = (n − sumRow_i)/2, so the constants cancel and diff[i][j] = 2·sumRow_i + 2·sumCol_j. Precompute row and column sums of the {−1,1} values. TC O(m·n), SC O(m + n)."
+    },
+    {
+      "q": "You must answer diff[i][j] for q queried cells without materializing the whole diff matrix. How?",
+      "a": "Precompute rowOnes and colOnes once in O(m·n). Each query is O(1): 2·rowOnes[i] + 2·colOnes[j] − n − m. TC O(m·n + q), SC O(m + n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> onesMinusZeros(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        vector<int> rowOnes(m, 0), colOnes(n, 0);\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                rowOnes[i] += grid[i][j];\n                colOnes[j] += grid[i][j];\n            }\n        }\n        vector<vector<int>> diff(m, vector<int>(n));\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                diff[i][j] = 2 * rowOnes[i] + 2 * colOnes[j] - n - m;\n            }\n        }\n        return diff;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

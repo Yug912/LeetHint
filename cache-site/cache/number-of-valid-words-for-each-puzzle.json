@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-valid-words-for-each-puzzle",
+  "title": "Number of Valid Words for Each Puzzle",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask Submask Enumeration",
+  "tc": "O(W·L_w + P·64)",
+  "sc": "O(W)",
+  "spaceBreakdown": "- unordered_map<int,int> cnt: up to W distinct word masks → O(W)\n- vector<int> res: P entries (returned output, not counted)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "Represent each word and each puzzle as a 26-bit mask of its letters. Build a hash map counting how many words share each mask. For each puzzle, the valid word masks are exactly the sub-masks of the puzzle's mask that also contain the puzzle's first letter. Since a puzzle has only 7 distinct letters, it has at most 2^7 = 128 sub-masks; enumerating only those that include the first letter gives 2^6 = 64 lookups per puzzle. Summing the counts from the map yields the answer.",
+  "hints": [
+    "A puzzle has exactly 7 distinct letters, so any valid word can use at most those 7. Given a fixed puzzle, how many distinct letter-sets could a valid word possibly have?",
+    "Use a 26-bit mask per string and a hash map from word-mask → count. For puzzle \"aboveyz\" (mask with bits a,b,o,v,e,y,z), enumerate only the sub-masks that keep bit 'a' set and sum their counts from the map.",
+    "```\ncnt = map from word-mask to frequency\nfor each word w:\n    mask = OR of bits of its letters\n    cnt[mask] += 1\n\nfor each puzzle p:\n    pmask = OR of bits of p's letters\n    first = bit of p[0]\n    ans = 0\n    sub = pmask\n    loop:\n        if sub & first: ans += cnt[sub]   # cnt[sub] is 0 if absent\n        if sub == 0: break\n        sub = (sub - 1) & pmask\n    append ans to result\n```",
+    "**Single-letter word** - word is one letter repeated, which is a valid subset of the puzzle.\n`Input: words = [\"aaaa\"], puzzles = [\"abcdefg\"]` → `Expected: [1]`\n⚠️ Bug: rejecting words whose length is less than some threshold → returns `[0]`\n\n**First letter absent** - no word contains the puzzle's first letter.\n`Input: words = [\"bb\"], puzzles = [\"abcdefg\"]` → `Expected: [0]`\n⚠️ Bug: skipping the `sub & first` check → returns `[1]`\n\n**Duplicate words** - the same word appears multiple times and must each be counted.\n`Input: words = [\"aa\",\"aa\",\"aa\"], puzzles = [\"abcdefg\"]` → `Expected: [3]`\n⚠️ Bug: storing word masks in a set instead of a count map → returns `[1]`\n\n**Word with extra letter** - word has a letter not present in the puzzle.\n`Input: words = [\"ah\"], puzzles = [\"abcdefg\"]` → `Expected: [0]`\n⚠️ Bug: only checking that the first letter is in the word, not that the word is a sub-mask → returns `[1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if puzzles could contain repeated letters?",
+      "a": "The bitmask still collapses duplicates, so the same code works unchanged; the only semantic effect is that \"first letter\" is just puzzles[i][0], which is already what we use. Complexity is identical."
+    },
+    {
+      "q": "What if a word is valid only when it contains ALL letters of the puzzle (superset instead of sub-mask)?",
+      "a": "Reverse the direction: store puzzle masks in the map, then for each word enumerate its super-masks. Since word masks can have up to 26 bits, this becomes O(W·2^(26−|word|)) which is too slow in general; you would switch to SOS DP over the 2^26 mask space, giving O(26·2^26) precomputation and O(1) per word."
+    },
+    {
+      "q": "What if words arrive in a streaming fashion and you cannot store them all?",
+      "a": "You cannot pre-build the count map, so instead process puzzles first: store each puzzle's mask and first-letter bit, then for each incoming word mask increment a counter and, in parallel, add its contribution to every puzzle whose mask is a super-mask of the word and whose first bit is in the word. That is O(W·P) worst case, so you would need to bound puzzle count or batch puzzles by their mask."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findNumOfValidWords(vector<string>& words, vector<string>& puzzles) {\n        unordered_map<int,int> cnt;\n        cnt.reserve(words.size() * 2);\n        for (const string& w : words) {\n            int m = 0;\n            for (char c : w) m |= 1 << (c - 'a');\n            cnt[m]++;\n        }\n        vector<int> res;\n        res.reserve(puzzles.size());\n        for (const string& p : puzzles) {\n            int pmask = 0;\n            for (char c : p) pmask |= 1 << (c - 'a');\n            int first = 1 << (p[0] - 'a');\n            int total = 0;\n            int sub = pmask;\n            while (true) {\n                if (sub & first) {\n                    auto it = cnt.find(sub);\n                    if (it != cnt.end()) total += it->second;\n                }\n                if (sub == 0) break;\n                sub = (sub - 1) & pmask;\n            }\n            res.push_back(total);\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

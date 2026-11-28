@@ -1,0 +1,40 @@
+{
+  "slug": "find-resultant-array-after-removing-anagrams",
+  "title": "Find Resultant Array After Removing Anagrams",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Counting / Single Pass",
+  "tc": "O(n * L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int lastFreq[26]: fixed 26 ints → O(1)\n- int freq[26]: fixed 26 ints → O(1)\n- not counted: input vector<string>& words, returned vector<string> result",
+  "approach": "The key insight is that consecutive anagrams form contiguous groups, and only the first word of each group survives. We process words left-to-right, keeping a word if its character-frequency signature differs from the last kept word's signature. Instead of sorting each word (O(L log L)), we use a fixed 26-element frequency array: O(L) to build, O(1) to compare. This gives O(n·L) time and O(1) auxiliary space.",
+  "hints": [
+    "In Example 1, \"baba\", \"bbaa\", and the second \"cd\" are all removed. What relationship does each removed word share with the nearest surviving word before it?",
+    "Use a 26-element integer frequency array to represent each word's letter counts. For \"abba\" the array has a=2, b=2; \"baba\" produces the same array so it's removed, while \"cd\" produces a different array and is kept.",
+    "```\nresult = [words[0]]\nlastFreq = countLetters(words[0])\nfor i from 1 to n-1:\n    freq = countLetters(words[i])\n    if freq != lastFreq:\n        result.append(words[i])\n        lastFreq = freq\nreturn result\n```",
+    "**Single word** - n=1, no adjacent pair to compare\n`Input: words = [\"a\"]` → `Expected: [\"a\"]`\n⚠️ Bug: loop starting from i=1 without pushing words[0] first → returns `[]`\n\n**Non-identical anagrams** - same letters, different string\n`Input: words = [\"abba\",\"baba\"]` → `Expected: [\"abba\"]`\n⚠️ Bug: using `words[i] == words[i-1]` (string equality) instead of frequency comparison → returns `[\"abba\",\"baba\"]`\n\n**Multiple anagram groups** - groups separated by non-anagrams\n`Input: words = [\"ab\",\"ba\",\"cd\",\"dc\"]` → `Expected: [\"ab\",\"cd\"]`\n⚠️ Bug: not updating lastFreq after keeping \"cd\" → \"dc\" compared against \"ab\"'s frequency, found different, kept → returns `[\"ab\",\"cd\",\"dc\"]`\n\n**All identical words** - every adjacent pair is an anagram\n`Input: words = [\"cd\",\"cd\",\"cd\"]` → `Expected: [\"cd\"]`\n⚠️ Bug: removing only one word per scan without looping until stable → after one pass returns `[\"cd\",\"cd\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if words[i] is removed when it is an anagram of ANY word currently in the array, not just the previous one?",
+      "a": "Keep a hash set of frequency signatures (encode the 26-element array as a string or tuple). For each word, compute its signature; if already in the set, skip it; otherwise keep it and insert the signature. TC: O(n·L), SC: O(n) for the hash set."
+    },
+    {
+      "q": "What if words.length ≤ 10^6 and words[i].length ≤ 10^6?",
+      "a": "The frequency array approach still works unchanged. Building each frequency array is O(L), comparison is O(1). Total TC: O(n·L). The 26-element arrays keep auxiliary SC at O(1); the only concern is the output vector growing to O(n·L) total characters."
+    },
+    {
+      "q": "What if words arrive as a stream and you can only store one word's worth of data at a time?",
+      "a": "The solution already streams naturally. Store only the last kept word's 26-int frequency array. For each incoming word, compute its frequency, compare, and either emit it (updating the stored array) or discard it. No need to buffer the input. TC: O(n·L), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> removeAnagrams(vector<string>& words) {\n        vector<string> result;\n        int lastFreq[26] = {};\n        int n = words.size();\n        for (int idx = 0; idx < n; idx++) {\n            const string& w = words[idx];\n            int freq[26] = {};\n            for (char c : w) freq[c - 'a']++;\n            bool same = false;\n            if (idx > 0) {\n                same = true;\n                for (int i = 0; i < 26; i++) {\n                    if (freq[i] != lastFreq[i]) { same = false; break; }\n                }\n            }\n            if (!same) {\n                result.push_back(w);\n                for (int i = 0; i < 26; i++) lastFreq[i] = freq[i];\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

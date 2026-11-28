@@ -1,0 +1,40 @@
+{
+  "slug": "camelcase-matching",
+  "title": "Camelcase Matching",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two Pointers",
+  "tc": "O(N × L)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<bool> ans: output, not counted\n- int j, m, i in match(): O(1)\n- recursion depth: none\n- not counted: input queries, input pattern, returned vector",
+  "approach": "The key insight is that uppercase letters in the query cannot be \"inserted\" - they must match pattern characters in order - while lowercase letters can either match the next pattern character or be treated as insertions. Using two pointers (one over the query, one over the pattern), we greedily match: if characters are equal, advance both; if the query char is lowercase, skip it as an insertion; if it's uppercase and doesn't match, fail immediately. After scanning, the pattern must be fully consumed.",
+  "hints": [
+    "Which characters in a query can be freely inserted at any position, and which ones cannot be skipped? The problem states you may insert lowercase English letters into the pattern.",
+    "Use two pointers: i over the query, j over the pattern. For \"FooBar\" vs \"FB\": F==F advances both, then 'o','o' are lowercase insertions (advance only i), then B==B advances both, 'a','r' are insertions - match succeeds.",
+    "```\nj = 0\nfor each char c in query:\n    if j < len(pattern) and c == pattern[j]:\n        j = j + 1\n    else if c is uppercase:\n        return false\nreturn j == len(pattern)\n```",
+    "**Pattern longer than query** - pattern has unmatched characters after the query ends\n`queries=[\"Fo\"], pattern=\"FoBa\"` → `Expected: [false]`\n⚠️ Bug: omitting the final `j == len(pattern)` check → returns `[true]`\n\n**Extra uppercase in query** - uppercase letter not matching the next pattern character\n`queries=[\"FCB\"], pattern=\"FB\"` → `Expected: [false]`\n⚠️ Bug: skipping uppercase letters the same way as lowercase ones → returns `[true]`\n\n**All-lowercase query, uppercase pattern** - no uppercase letters to anchor the match\n`queries=[\"foobar\"], pattern=\"FB\"` → `Expected: [false]`\n⚠️ Bug: returning true whenever the loop finishes without early exit → returns `[true]`\n\n**Single character, exact match** - minimal valid input\n`queries=[\"F\"], pattern=\"F\"` → `Expected: [true]`\n⚠️ Bug: loop bound `i < q.size() - 1` (off by one, skips the only character) → j stays 0 → returns `[false]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also return the actual inserted substrings for each matching query?",
+      "a": "During the two-pointer scan, accumulate characters between consecutive pattern matches into separate strings. Store these insertion groups alongside each boolean result. TC stays O(N × L); SC becomes O(L) per query for the insertion output."
+    },
+    {
+      "q": "What if the pattern can contain '*' wildcards matching any sequence of characters (including uppercase)?",
+      "a": "This becomes wildcard matching with the uppercase constraint. Use DP: dp[i][j] = whether query[0..i] matches pattern[0..j], with transitions for '*', exact char match, and lowercase insertion. TC: O(N × L_q × L_p) per query; SC: O(L_q × L_p), reducible to O(L_p) with a rolling array."
+    },
+    {
+      "q": "What if you have 10^5 queries and 10^5 patterns and must report all matching (query, pattern) pairs?",
+      "a": "Build a trie of all queries. For each pattern, DFS the trie: match pattern chars in order, and at each node also explore lowercase children as insertions. Record pattern IDs at leaf nodes. TC: O(P × L_p × 26^L) worst case but heavily pruned in practice; SC: O(total query chars) for the trie."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<bool> camelMatch(vector<string>& queries, string pattern) {\n        vector<bool> ans;\n        ans.reserve(queries.size());\n        for (const string& q : queries) {\n            ans.push_back(match(q, pattern));\n        }\n        return ans;\n    }\nprivate:\n    bool match(const string& q, const string& p) {\n        int j = 0;\n        int m = (int)p.size();\n        for (int i = 0; i < (int)q.size(); i++) {\n            if (j < m && q[i] == p[j]) {\n                j++;\n            } else if (q[i] >= 'A' && q[i] <= 'Z') {\n                return false;\n            }\n        }\n        return j == m;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

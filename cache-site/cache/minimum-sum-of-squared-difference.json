@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-sum-of-squared-difference",
+  "title": "Minimum Sum of Squared Difference",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Bucket Counting",
+  "tc": "O(n + V)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- vector<int> freq(100001): frequency array over difference values 0..100000 → O(V)\n- no recursion, no other containers\n- not counted: input arrays nums1, nums2",
+  "approach": "The key insight is that k1 and k2 are interchangeable: adding 1 to nums1[i] has the same effect on the difference as subtracting 1 from nums2[i]. So the total budget is K = k1 + k2, and each operation reduces one |diff[i]| by 1. To minimize the sum of squares, we greedily reduce the largest differences first. We use a frequency array over difference values (0 to 10^5) and process from the largest difference downward, moving counts from level d to level d-1 until the budget is exhausted.",
+  "hints": [
+    "Adding 1 to nums1[i] and subtracting 1 from nums2[i] both change (nums1[i] - nums2[i]) by the same amount. Given k1 and k2 can each be up to 10^9, what single quantity determines your total modification power?",
+    "Use a frequency array (bucket counting) over the absolute differences. In Example 2, diffs are [4,4,4,3] with budget K=2: reduce two 4s to 3s, yielding freq[4]=1, freq[3]=3, answer = 1·16 + 3·9 = 43.",
+    "```\ndiffs[i] = |nums1[i] - nums2[i]|\nK = k1 + k2\nfreq[d] = count of diffs equal to d\nfor d from maxDiff down to 1:\n    take = min(K, freq[d])\n    freq[d] -= take\n    freq[d-1] += take\n    K -= take\nreturn sum over d of freq[d] * d * d\n```",
+    "**Large squared difference** - diff² exceeds int range\n`Input: nums1 = [100000], nums2 = [0], k1 = 0, k2 = 0` → `Expected: 10000000000`\n⚠️ Bug: accumulating answer in `int` → 100000² = 10^10 overflows int, returns 1410065408\n\n**Budget exceeds total** - K larger than sum of all diffs\n`Input: nums1 = [3], nums2 = [1], k1 = 5, k2 = 5` → `Expected: 0`\n⚠️ Bug: using a max-heap without checking if top diff is 0 before reducing → reduces 0 to -1, squared diff becomes 1, returns 1\n\n**All differences equal** - uniform diffs, partial budget\n`Input: nums1 = [5, 5, 5], nums2 = [1, 1, 1], k1 = 2, k2 = 0` → `Expected: 34`\n⚠️ Bug: not adding reduced count to freq[d-1] (only decrementing freq[d]) → freq[4]=1, freq[3]=0, returns 16\n\n**Tied differences** - multiple elements at same level, budget covers one full level\n`Input: nums1 = [4, 4, 4], nums2 = [1, 1, 1], k1 = 3, k2 = 0` → `Expected: 12`\n⚠️ Bug: reducing one element at a time to completion instead of by level → one diff goes 3→0, others stay 3, returns 18"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums1[i] and nums2[i] can be up to 10^9?",
+      "a": "The frequency array needs O(V) = O(10^9) space, which is infeasible. Sort the differences and use binary search to find the threshold level where the budget runs out, then compute the answer in O(n log n) time and O(n) space."
+    },
+    {
+      "q": "What if the cost function is |diff| instead of diff²?",
+      "a": "The greedy simplifies: any non-zero difference reduced by 1 saves exactly 1. The answer is max(0, sum of all diffs - K). No frequency array needed - O(n) time, O(1) space."
+    },
+    {
+      "q": "What if you must use exactly K operations (not at most K)?",
+      "a": "Excess operations after all diffs reach 0 must be wasted on zero-diff pairs by increasing then decreasing them (2 ops each, net zero change). If remaining K is odd, one diff goes 0→1, adding 1 to the answer. Still O(n + V) with the same bucket approach."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minSumSquareDiff(vector<int>& nums1, vector<int>& nums2, int k1, int k2) {\n        int n = nums1.size();\n        long long K = (long long)k1 + k2;\n        \n        int maxDiff = 0;\n        vector<int> freq(100001, 0);\n        for (int i = 0; i < n; i++) {\n            int d = abs(nums1[i] - nums2[i]);\n            freq[d]++;\n            maxDiff = max(maxDiff, d);\n        }\n        \n        for (int d = maxDiff; d > 0 && K > 0; d--) {\n            if (freq[d] == 0) continue;\n            long long take = min(K, (long long)freq[d]);\n            freq[d] -= (int)take;\n            freq[d - 1] += (int)take;\n            K -= take;\n        }\n        \n        long long ans = 0;\n        for (int d = 0; d <= maxDiff; d++) {\n            ans += (long long)freq[d] * (long long)d * d;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

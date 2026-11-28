@@ -1,0 +1,40 @@
+{
+  "slug": "closest-subsequence-sum",
+  "title": "Closest Subsequence Sum",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Meet in the Middle",
+  "tc": "O(n · 2^(n/2))",
+  "sc": "O(2^(n/2))",
+  "spaceBreakdown": "- vector<long long> left: up to 2^(n/2) entries → O(2^(n/2))\n- vector<long long> right: up to 2^(n/2) entries → O(2^(n/2))\n- sort(): introsort uses O(log(2^(n/2))) = O(n/2) stack → O(n)\n- no recursion, no heap, no other containers\n- not counted: input vector, returned int",
+  "approach": "With n ≤ 40, brute-force 2^40 is infeasible, but 2^20 ≈ 10^6 is manageable. Split the array into two halves, generate all 2^(n/2) subset sums for each half, sort one list, then for each sum x in the other list, binary search for the value closest to (goal − x) in the sorted list. The minimum absolute difference across all pairs is the answer. The empty subsequence (sum 0) is naturally included since each half's sum list starts with 0.",
+  "hints": [
+    "The constraint n ≤ 40 means 2^40 ≈ 10^12 subsequences - far too many. What natural way could you split the array so each part generates only about 2^20 sums?",
+    "Meet in the Middle: split nums into two halves, generate all subset sums for each, sort one list, then for each sum x in the other, binary search for the value closest to goal − x. For nums = [5,-7,3,5], goal = 6: left sums {−7,−2,0,5}, right sums {0,3,5,8}; for x = 8, target = −2 is found in left, giving sum 6 and diff 0.",
+    "```\nsplit nums at index n/2\nleftSums = all subset sums of first half (start with {0})\nrightSums = all subset sums of second half (start with {0})\nsort leftSums\nans = infinity\nfor x in rightSums:\n    target = goal - x\n    use lower_bound on leftSums to find closest to target\n    check both the found element and its predecessor\n    update ans with abs(closest - target)\nreturn ans\n```",
+    "**Single element** - only two subsequences exist: empty (sum 0) and the element itself.\n`Input: nums = [5], goal = -3` → `Expected: 3`\n⚠️ Bug: starting subset sums list as empty instead of {0} → returns 8\n\n**Predecessor closer** - the value just below the target can be closer than the one at or above.\n`Input: nums = [1,5,10], goal = 7` → `Expected: 1`\n⚠️ Bug: only checking the lower_bound result without checking its predecessor → for right sum x=5, target=2, lower_bound returns end(), skips, misses sum 6 with diff 1 → returns 3\n\n**Target below all values** - lower_bound returns begin(), no predecessor exists.\n`Input: nums = [5,10,15], goal = -20` → `Expected: 20`\n⚠️ Bug: decrementing iterator without checking it != begin() → undefined behavior, crash\n\n**Ties** - two different subsequences give the same absolute difference.\n`Input: nums = [2,4], goal = 3` → `Expected: 1`\n⚠️ Bug: returning the subsequence sum instead of abs(sum - goal) → returns 2 or 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also return the subsequence that achieves the minimum difference?",
+      "a": "Store a bitmask alongside each subset sum indicating which elements from that half were included. When the optimal pair (x from left, y from right) is found, combine their bitmasks to reconstruct the full subsequence. TC unchanged, SC unchanged (bitmasks fit in 32-bit integers per half of size ≤ 20)."
+    },
+    {
+      "q": "What if n ≤ 50?",
+      "a": "Each half has 25 elements, generating 2^25 ≈ 3.3×10^7 sums. The sort and binary search steps become O(25 × 2^25) ≈ 8×10^8, which is borderline but feasible with careful implementation and compiler optimizations. TC: O(n · 2^(n/2)), SC: O(2^(n/2))."
+    },
+    {
+      "q": "What if all elements are non-negative and you want to avoid the explicit sort?",
+      "a": "Generate subset sums by processing elements in increasing order; each new element's contributions can be merged into the existing sorted list in O(current size) using a two-pointer merge step. This replaces the O(S log S) sort with O(S · n/2) merge steps where S = 2^(n/2). TC: O(n · 2^(n/2)), SC: O(2^(n/2))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minAbsDifference(vector<int>& nums, int goal) {\n        int n = nums.size();\n        int half = n / 2;\n        \n        vector<long long> left;\n        left.push_back(0);\n        for (int i = 0; i < half; i++) {\n            int sz = left.size();\n            for (int j = 0; j < sz; j++) {\n                left.push_back(left[j] + nums[i]);\n            }\n        }\n        \n        vector<long long> right;\n        right.push_back(0);\n        for (int i = half; i < n; i++) {\n            int sz = right.size();\n            for (int j = 0; j < sz; j++) {\n                right.push_back(right[j] + nums[i]);\n            }\n        }\n        \n        sort(left.begin(), left.end());\n        \n        long long ans = 1000000000000LL;\n        for (long long x : right) {\n            long long target = (long long)goal - x;\n            auto it = lower_bound(left.begin(), left.end(), target);\n            if (it != left.end()) {\n                long long diff = *it - target;\n                if (diff < 0) diff = -diff;\n                if (diff < ans) ans = diff;\n            }\n            if (it != left.begin()) {\n                --it;\n                long long diff = *it - target;\n                if (diff < 0) diff = -diff;\n                if (diff < ans) ans = diff;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

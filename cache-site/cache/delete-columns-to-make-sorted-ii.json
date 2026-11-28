@@ -1,0 +1,40 @@
+{
+  "slug": "delete-columns-to-make-sorted-ii",
+  "title": "Delete Columns to Make Sorted II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy",
+  "tc": "O(n * m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> locked: up to n-1 booleans → O(n)\n- recursion depth: none\n- not counted: input vector<string>& strs, returned int",
+  "approach": "Process columns left to right greedily. For each column, check if keeping it would violate lexicographic order for any pair of adjacent rows that aren't already \"locked\" (determined to be in order by a previous column). If no violation, keep the column and lock any pair where the current characters strictly differ (strs[i][col] < strs[i+1][col]). If a violation exists, delete the column. This is optimal because a column that violates order can never be \"fixed\" by future columns-deleting it is always at least as good as keeping it, and keeping a safe column never hurts since it only adds information that can lock more pairs.",
+  "hints": [
+    "When scanning columns left to right, what determines whether a pair of adjacent rows is already guaranteed to stay in order regardless of what future columns contain?",
+    "Greedy column-by-column scan with a boolean array marking which adjacent row pairs are already \"locked\" (decided). For [\"ca\",\"bb\",\"ac\"], column 0 has c>b so it's deleted; column 1 has a≤b≤c so it's kept.",
+    "```\nlocked = [false] * (n-1)\nfor each column col:\n    if any unlocked pair i has strs[i][col] > strs[i+1][col]:\n        delete col, answer++\n    else:\n        keep col\n        for each unlocked pair i:\n            if strs[i][col] < strs[i+1][col]:\n                locked[i] = true\n```",
+    "**Single row** - n=1 means no adjacent pairs exist\n`Input: strs = [\"abc\"]` → `Expected: 0`\n⚠️ Bug: looping `for (int i = 0; i < n; i++)` instead of `i < n - 1` → accesses strs[1] out of bounds\n\n**All identical strings** - every character in every column is the same across all rows\n`Input: strs = [\"aa\",\"aa\"]` → `Expected: 0`\n⚠️ Bug: using `strs[i][col] >= strs[i+1][col]` instead of `>` to decide deletion → deletes column 0, returns 1\n\n**Equal chars don't determine order** - equal characters in a kept column must not lock the pair\n`Input: strs = [\"ba\",\"bb\",\"ba\"]` → `Expected: 1`\n⚠️ Bug: locking pairs when characters are equal (not just strictly less) → keeps column 1, returns 0\n\n**Already sorted** - input is already in lexicographic order\n`Input: strs = [\"xc\",\"yb\",\"za\"]` → `Expected: 0`\n⚠️ Bug: returning 0 after checking only the first column without tracking locked pairs → for input [\"ba\",\"bb\",\"ba\"] returns 0 instead of 1"
+  ],
+  "followUps": [
+    {
+      "q": "If n and m are both up to 10^5, how would you optimize?",
+      "a": "The worst case is O(n*m) when all strings are identical (no pair ever locks). Add an early exit: once all n-1 pairs are locked, skip remaining columns. For random strings, most pairs lock within O(1) columns, giving near O(n) average time. The worst case remains O(n*m) but is unavoidable since we must read every character."
+    },
+    {
+      "q": "What if the final array must be strictly increasing (strs[0] < strs[1] < ... < strs[n-1])?",
+      "a": "Use the same greedy framework, but a pair is locked only when strs[i][col] < strs[i+1][col] (strict). If two adjacent strings are identical, they can never be locked, so if any such pair remains unlocked after all columns, return -1. Time and space complexity remain O(n*m) and O(n)."
+    },
+    {
+      "q": "If columns arrive one at a time as a stream and must be kept or deleted immediately, is the greedy decision still optimal?",
+      "a": "Yes. The decision for column k depends only on the current locked status and the characters in column k-no future column can change whether column k is safe to keep. If keeping column k would violate order for any unlocked pair, deleting it is always optimal since future columns cannot fix that violation. Time and space complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDeletionSize(vector<string>& strs) {\n        int n = strs.size();\n        int m = strs[0].size();\n        vector<bool> locked(n - 1, false);\n        int answer = 0;\n        for (int col = 0; col < m; col++) {\n            bool canKeep = true;\n            for (int i = 0; i < n - 1; i++) {\n                if (!locked[i] && strs[i][col] > strs[i + 1][col]) {\n                    canKeep = false;\n                    break;\n                }\n            }\n            if (canKeep) {\n                for (int i = 0; i < n - 1; i++) {\n                    if (!locked[i] && strs[i][col] < strs[i + 1][col]) {\n                        locked[i] = true;\n                    }\n                }\n            } else {\n                answer++;\n            }\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

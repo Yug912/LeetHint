@@ -1,0 +1,40 @@
+{
+  "slug": "average-waiting-time",
+  "title": "Average Waiting Time",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation with Running State",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long cur, total: two scalars → O(1)\n- int n, loop index i: scalars → O(1)\n- not counted: input vector<vector<int>>& customers, returned double",
+  "approach": "Simulate the chef's timeline with a single variable tracking when the chef becomes free. For each customer, the chef starts at max(current_free_time, arrival_time), finishes at start + preparation_time, and the customer's wait is finish - arrival. Accumulate total wait and divide by n. Using long long is essential because the total waiting time can reach ~5×10^13 (10^5 customers × up to 10^9 wait each), far exceeding int range.",
+  "hints": [
+    "If you knew the exact moment the chef finishes all previous orders, what single number about the chef would let you compute the next customer's waiting time? The arrival times are sorted in non-decreasing order, so you never need to look back at earlier customers.",
+    "Track one variable: the time the chef becomes free. For customer [2,5] in Example 1, the chef is free at time 3, so the customer starts at max(3, 2) = 3, finishes at 8, and waits 8 − 2 = 6.",
+    "```\ncur_free = 0\ntotal_wait = 0\nfor each (arrival, time) in customers:\n    start = max(cur_free, arrival)\n    finish = start + time\n    total_wait += finish - arrival\n    cur_free = finish\nreturn total_wait / count\n```",
+    "**Single customer** - only one customer, chef starts immediately\n`Input: [[1,5]]` → `Expected: 5.00000`\n⚠️ Bug: returning `total / n` with integer division (both int) → returns `5` (OK here, but fails on non-integer averages like Example 2)\n\n**Overflow** - 10^5 customers all arriving at time 1 with time 10^4; total wait = 10^4 × (1+2+…+10^5) ≈ 5×10^13\n`Input: [[1,10000],[1,10000],… (10^5 entries)]` → `Expected: 5000050000.00000`\n⚠️ Bug: using `int` for total_wait → overflows past 2^31−1 ≈ 2.1×10^9, returns a garbage negative value\n\n**Chef idle between customers** - customers arrive far apart so the chef is free before each arrival\n`Input: [[1,1],[100,1]]` → `Expected: 1.00000`\n⚠️ Bug: using `start = cur_free` without `max(cur_free, arrival)` → second customer starts at 2, finishes at 3, wait = 3 − 100 = −97, average = −48.0\n\n**All same arrival time** - multiple customers arrive simultaneously, queue forms\n`Input: [[5,2],[5,4]]` → `Expected: 4.00000`\n⚠️ Bug: initializing `cur_free = customers[0][0]` then processing from index 0 → first customer starts at 5 (correct), but if you skip index 0 or double-apply, you get wrong totals"
+  ],
+  "followUps": [
+    {
+      "q": "If the chef could serve customers in any order (not the given order), what order minimizes average waiting time?",
+      "a": "Sort customers by preparation time (shortest job first). This is the classic SJF scheduling rule: shorter jobs queued behind longer ones add less to everyone else's wait. TC: O(n log n), SC: O(1) if sorting in place."
+    },
+    {
+      "q": "If there are k identical chefs available, how would you compute the average waiting time?",
+      "a": "Use a min-heap of size k tracking each chef's next-free time. For each customer (in arrival order), pop the earliest-free chef, start at max(free_time, arrival), push back the new finish time. TC: O(n log k), SC: O(k)."
+    },
+    {
+      "q": "If customers arrive in an unbounded stream and you must report the running average after each customer, how do you avoid storing all of them?",
+      "a": "Keep a running sum of waiting times and a count. After each customer, output sum / count. Both update in O(1) per customer with O(1) space, but note the sum still needs long long to avoid overflow."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    double averageWaitingTime(vector<vector<int>>& customers) {\n        long long curFree = 0;\n        long long totalWait = 0;\n        int n = customers.size();\n        for (int i = 0; i < n; i++) {\n            long long arrival = customers[i][0];\n            long long time = customers[i][1];\n            long long start = max(curFree, arrival);\n            long long finish = start + time;\n            totalWait += finish - arrival;\n            curFree = finish;\n        }\n        return (double)totalWait / n;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

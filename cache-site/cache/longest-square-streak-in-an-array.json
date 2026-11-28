@@ -1,0 +1,40 @@
+{
+  "slug": "longest-square-streak-in-an-array",
+  "title": "Longest Square Streak in an Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Set + Memoized DFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_set<int> s: up to n entries → O(n)\n- unordered_map<int,int> memo: up to n entries → O(n)\n- recursion depth: at most 5 (chain length cap) → O(1)\n- not counted: input vector, returned int",
+  "approach": "Put every number in a hash set. For each value, walk upward by repeatedly squaring while the next value exists in the set; the chain length from a value is 1 + (chain length of its square). Because nums[i] ≤ 10^5, squaring escapes the range within at most 5 steps (2→4→16→256→65536→overflow), so each lookup chain is O(1) and the whole pass is O(n). Memoize per-value results so each number is computed once. Return the best length if ≥ 2, else -1.",
+  "hints": [
+    "With nums[i] ≤ 10^5, how long can a chain a, a², a⁴, a⁸, ... possibly stay inside the allowed value range before squaring pushes it out?",
+    "Use a hash set of all values, then for each value walk upward by squaring while the next value is present. In [4,3,6,16,8,2], starting at 2 finds 2→4→16, length 3.",
+    "```\nput all nums into set S\nbest = 0\nfunction len(x):\n    if x not in S: return 0\n    if x memoized: return memo[x]\n    memo[x] = 1 + len(x*x)\n    return memo[x]\nfor each x in nums:\n    best = max(best, len(x))\nreturn best if best >= 2 else -1\n```",
+    "**Smallest input** - only two elements that do form a streak.\n`Input: nums = [2,4]` → `Expected: 2`\n⚠️ Bug: requiring streak length ≥ 3 → returns -1\n\n**Duplicates** - same value appears many times but its square is absent.\n`Input: nums = [2,2,2,2]` → `Expected: -1`\n⚠️ Bug: counting duplicates as chain length (using a multiset count) → returns 4\n\n**Overflow on squaring** - largest value 10^5 squared is 10^10, exceeding int range.\n`Input: nums = [100000, 99999]` → `Expected: -1`\n⚠️ Bug: computing `x*x` in int → undefined behavior / wrong comparison result\n\n**No valid streak** - no element's square is present.\n`Input: nums = [2,3,5,6,7]` → `Expected: -1`\n⚠️ Bug: returning best (which is 1) instead of -1 when best < 2 → returns 1\n\n**All equal** - single distinct value, no square present.\n`Input: nums = [5,5,5]` → `Expected: -1`\n⚠️ Bug: not deduplicating and treating repeats as progression → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] could be up to 10^9 - how does the approach change?",
+      "a": "The hash-set walk still works, but chains are even shorter (2→4→16→256→65536→... still escapes 10^9 within ~5 steps). Use long long for squaring to avoid overflow. Time stays O(n), space O(n)."
+    },
+    {
+      "q": "What if values can be 0 or 1, where squaring does not grow?",
+      "a": "0²=0 and 1²=1 create self-loops; guard the recursion so a value is not counted twice by checking the memo before recursing, or special-case 0 and 1 to return length 1. Without this guard the recursion loops forever."
+    },
+    {
+      "q": "What if the array arrives as an unbounded stream and you can only keep O(√M) memory where M is the max value seen?",
+      "a": "Keep only values ≤ √M in a set, since only those can be the start of a length-≥2 streak. For each incoming value x, if x is a perfect square and √x is in the set, extend that streak; otherwise insert x if x ≤ √M. Time O(n) amortized, space O(√M)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestSquareStreak(vector<int>& nums) {\n        unordered_set<int> s(nums.begin(), nums.end());\n        unordered_map<int,int> memo;\n        int best = 0;\n        for (int x : nums) {\n            best = max(best, dfs(x, s, memo));\n        }\n        return best >= 2 ? best : -1;\n    }\nprivate:\n    int dfs(long long x, unordered_set<int>& s, unordered_map<int,int>& memo) {\n        if (x > 100000) return 0;\n        int key = (int)x;\n        auto it = memo.find(key);\n        if (it != memo.end()) return it->second;\n        long long sq = x * x;\n        int res = 1;\n        if (sq <= 100000 && s.count((int)sq)) {\n            res = 1 + dfs(sq, s, memo);\n        }\n        memo[key] = res;\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-unguarded-cells-in-the-grid",
+  "title": "Count Unguarded Cells in the Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Line-Sweep on Grid",
+  "tc": "O(m·n)",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- vector<vector<int>> grid: m·n entries → O(m·n)\n- obs vector (per row/column, reused): at most max(m,n) entries → O(max(m,n)) ⊆ O(m·n)\n- not counted: input guards/walls, returned int",
+  "approach": "Since m·n ≤ 10^5, we can afford a full grid. The key insight: a guard's horizontal vision in a row is bounded by the nearest wall/guard to its left and right, and similarly for vertical vision in a column. So instead of walking from every guard (which can blow up when one row is very long with many guards), sweep each row once: collect its obstacles sorted by column, and for each guard mark the empty cells up to the next obstacle on each side. Repeat per column. Each cell is touched a constant number of times.",
+  "hints": [
+    "In a single row, what determines exactly how far left and right a guard can see? The constraint m·n ≤ 10^5 means the whole grid fits in memory.",
+    "Use a 2D grid marking guards/walls, then sweep each row (and each column) collecting obstacles in sorted order; for each guard, mark empty cells until the next obstacle. In Example 1, row 1 has a guard at col 1 and a wall at col 4, so cols 2-3 get marked.",
+    "```\ngrid[r][c] = 0 empty, 1 guard, 2 wall\nfor each row r:\n    obs = sorted (col, type) of guards+walls in row r\n    for each guard at index i:\n        mark cells right until obs[i+1].col or n\n        mark cells left  until obs[i-1].col or -1\nrepeat for each column c\ncount cells still == 0\n```",
+    "**Single row** - m = 1, n = 10^5, one guard at col 0, no walls.\n`Input: m=1, n=100000, guards=[[0,0]], walls=[]` → `Expected: 0`\n⚠️ Bug: walking from each guard without bounding by next obstacle, while recomputing per guard, returns correct value but TLEs on the largest case.\n\n**Guard between two walls** - guard boxed in on all four sides.\n`Input: m=3, n=3, guards=[[1,1]], walls=[[0,1],[1,0],[2,1],[1,2]]` → `Expected: 4`\n⚠️ Bug: marking the guard's own cell as guarded (overwriting type 1 with 3) then counting type 0 returns 5 instead of 4.\n\n**Adjacent guard and wall** - guard at col 0, wall at col 1 in same row.\n`Input: m=1, n=3, guards=[[0,0]], walls=[[0,1]]` → `Expected: 1`\n⚠️ Bug: using `<=` instead of `<` when stopping at the next obstacle marks the wall cell as guarded, then the wall is miscounted as unguarded, returning 2.\n\n**Two guards in one row, no wall between** - left guard's rightward vision stops at the right guard.\n`Input: m=1, n=4, guards=[[0,0],[0,3]], walls=[]` → `Expected: 0`\n⚠️ Bug: not stopping at another guard (treating only walls as blockers) lets the left guard overwrite the right guard's cell, returning 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if walls could be destroyed (each wall has a removal cost) and you want to minimize cost to guard every empty cell?",
+      "a": "This becomes a set-cover / hitting-set variant: each guard covers intervals in its row and column, and removing a wall merges two intervals. With small wall counts it is NP-hard in general, but if walls are few you can try bitmask DP over walls; otherwise greedy by coverage gain is a heuristic. Complexity rises to exponential in the number of walls."
+    },
+    {
+      "q": "What if the grid is huge (m, n up to 10^9) but guards+walls ≤ 10^5?",
+      "a": "Drop the full grid; store obstacle coordinates in hash maps keyed by row and by column, sort each row's and column's obstacle list, and mark guarded ranges as intervals. Counting unguarded cells becomes total cells minus occupied minus guarded-interval lengths. Time O((G+W) log(G+W)), space O(G+W)."
+    },
+    {
+      "q": "What if guards can also see diagonally (8 directions)?",
+      "a": "Add four more sweeps along the two diagonal directions. For each diagonal (r−c constant, and r+c constant), collect obstacles sorted by position and apply the same mark-until-next-obstacle logic. Time stays O(m·n) since each cell is still touched a constant number of times; space unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countUnguarded(int m, int n, vector<vector<int>>& guards, vector<vector<int>>& walls) {\n        vector<vector<int>> grid(m, vector<int>(n, 0)); // 0 empty, 1 guard, 2 wall, 3 guarded\n        for (auto& g : guards) grid[g[0]][g[1]] = 1;\n        for (auto& w : walls) grid[w[0]][w[1]] = 2;\n\n        // Row sweep\n        for (int r = 0; r < m; r++) {\n            vector<pair<int,int>> obs; // (col, type)\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c] == 1 || grid[r][c] == 2) obs.push_back({c, grid[r][c]});\n            }\n            int k = (int)obs.size();\n            for (int i = 0; i < k; i++) {\n                if (obs[i].second != 1) continue; // not a guard\n                int cc = obs[i].first;\n                int rightLimit = (i + 1 < k) ? obs[i+1].first : n;\n                for (int c = cc + 1; c < rightLimit; c++) {\n                    if (grid[r][c] == 0) grid[r][c] = 3;\n                }\n                int leftLimit = (i - 1 >= 0) ? obs[i-1].first : -1;\n                for (int c = cc - 1; c > leftLimit; c--) {\n                    if (grid[r][c] == 0) grid[r][c] = 3;\n                }\n            }\n        }\n\n        // Column sweep\n        for (int c = 0; c < n; c++) {\n            vector<pair<int,int>> obs; // (row, type)\n            for (int r = 0; r < m; r++) {\n                if (grid[r][c] == 1 || grid[r][c] == 2) obs.push_back({r, grid[r][c]});\n            }\n            int k = (int)obs.size();\n            for (int i = 0; i < k; i++) {\n                if (obs[i].second != 1) continue;\n                int rr = obs[i].first;\n                int downLimit = (i + 1 < k) ? obs[i+1].first : m;\n                for (int r = rr + 1; r < downLimit; r++) {\n                    if (grid[r][c] == 0) grid[r][c] = 3;\n                }\n                int upLimit = (i - 1 >= 0) ? obs[i-1].first : -1;\n                for (int r = rr - 1; r > upLimit; r--) {\n                    if (grid[r][c] == 0) grid[r][c] = 3;\n                }\n            }\n        }\n\n        int ans = 0;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if (grid[r][c] == 0) ans++;\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

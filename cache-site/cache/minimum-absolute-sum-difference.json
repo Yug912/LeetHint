@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-absolute-sum-difference",
+  "title": "Minimum Absolute Sum Difference",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Sorted Array",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> sorted: copy of nums1, up to n elements → O(n)\n- sort() introsort stack: O(log n)\n- no recursion, no other containers\n- not counted: input vectors nums1/nums2, returned int",
+  "approach": "For each index i, the current contribution is |nums1[i] - nums2[i]|. Replacing nums1[i] with the value in nums1 closest to nums2[i] gives the best possible gain at that index. Sort a copy of nums1, then for each i use binary search (lower_bound) to find the closest value to nums2[i], checking both the found element and its predecessor. Track the maximum gain across all indices. The answer is (total sum of diffs − max gain) mod 10^9+7, since we apply at most one replacement and want the best one.",
+  "hints": [
+    "For each index i, you currently pay |nums1[i] − nums2[i]|. If you could swap in any value from nums1, which single value would minimize that term for a given nums2[i], and what property of the full collection of nums1 values lets you find it without checking all n candidates?",
+    "Sort a copy of nums1, then for each i use binary search (lower_bound) to find the value closest to nums2[i], checking both the found element and its predecessor. Example: nums2[1]=3 in sorted [1,5,7] → lower_bound gives 5 (|5−3|=2), predecessor 1 gives |1−3|=2, so best new diff is 2 vs original |7−3|=4, gain 2.",
+    "```\nsorted = sort(copy of nums1)\ntotal = sum of |nums1[i] - nums2[i]| for all i\nmaxGain = 0\nfor each i:\n    diff = |nums1[i] - nums2[i]|\n    it = lower_bound(sorted, nums2[i])\n    best = min(diff, |*it - nums2[i]| if it exists, |*(it-1) - nums2[i]| if predecessor exists)\n    maxGain = max(maxGain, diff - best)\nreturn (total - maxGain) mod 1e9+7\n```",
+    "**Single element** - n=1, no other element to replace with\n`Input: nums1=[1], nums2=[5]` → `Expected: 4`\n⚠️ Bug: initializing best to INT_MAX and only checking `it != end()` (skipping predecessor when lower_bound returns end()) → best stays INT_MAX, gain = 4 − INT_MAX underflows, maxGain corrupted\n\n**Predecessor is closest** - nums2[i] falls between two sorted values, the lower one is closer\n`Input: nums1=[1,10], nums2=[4,4]` → `Expected: 6`\n⚠️ Bug: only checking the lower_bound result, not the predecessor → at i=1 best=6 instead of 3, gain=0 instead of 3, returns 9\n\n**Overflow** - total can reach 10^5 × 10^5 = 10^10, exceeding 32-bit int\n`Input: nums1=[100000]*100000, nums2=[1]*100000` → `Expected: 999899937`\n⚠️ Bug: using int for total → 9,999,900,000 overflows 32-bit signed int, wraps to 1,409,965,408, returns 409965401\n\n**All equal values** - every nums1 entry is identical, no replacement improves any term\n`Input: nums1=[5,5,5], nums2=[1,2,3]` → `Expected: 9`\n⚠️ Bug: forcing at least one replacement by initializing maxGain=1 → returns 8 instead of 9"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can replace up to k elements instead of just one?",
+      "a": "Compute the gain for each index independently (same closest-value search). Sort gains in descending order and sum the top k positive gains. Answer = (total − sum of top k gains) mod 1e9+7. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if nums1 and nums2 arrive as a stream, one pair at a time, and you must answer after each pair?",
+      "a": "Maintain a sorted structure (e.g., a balanced BST or sorted vector with online insertion) of all nums1 values seen so far. For each incoming pair, compute diff and binary-search the closest value. Track total and maxGain incrementally. TC: O(n log n) amortized, SC: O(n)."
+    },
+    {
+      "q": "What if you can replace one element in nums2 instead of nums1?",
+      "a": "Swap the roles: sort a copy of nums2, then for each i find the value in nums2 closest to nums1[i]. The gain at index i is |nums1[i] − nums2[i]| − |nums1[i] − closest|. Same algorithm, same complexity. TC: O(n log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minAbsoluteSumDiff(vector<int>& nums1, vector<int>& nums2) {\n        const int MOD = 1000000007;\n        int n = nums1.size();\n        vector<int> sorted(nums1);\n        sort(sorted.begin(), sorted.end());\n        \n        long long total = 0;\n        int maxGain = 0;\n        for (int i = 0; i < n; i++) {\n            int diff = abs(nums1[i] - nums2[i]);\n            total += diff;\n            auto it = lower_bound(sorted.begin(), sorted.end(), nums2[i]);\n            int best = diff;\n            if (it != sorted.end()) best = min(best, abs(*it - nums2[i]));\n            if (it != sorted.begin()) {\n                --it;\n                best = min(best, abs(*it - nums2[i]));\n            }\n            int gain = diff - best;\n            if (gain > maxGain) maxGain = gain;\n        }\n        long long ans = (total - maxGain) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

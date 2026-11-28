@@ -1,0 +1,40 @@
+{
+  "slug": "total-appeal-of-a-string",
+  "title": "Total Appeal of A String",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Contribution Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int last[26]: fixed 26 entries → O(1)\n- long long ans, running: two scalars → O(1)\n- no recursion, no dynamic allocation",
+  "approach": "Instead of enumerating all O(n²) substrings, we process the string left to right and maintain the total appeal of all substrings ending at the current index. For each character c, the number of substrings ending at position i that contain c equals (last occurrence of c at or before i) + 1. When we move to position i and s[i] = c, only c's contribution changes: it goes from (prev_last[c] + 1) to (i + 1), a delta of i − prev_last[c]. We accumulate this delta into a running total and add it to the answer at each step.",
+  "hints": [
+    "If you group all substrings by their ending index, what determines whether a particular character appears in a substring ending at position i? The constraint n ≤ 10^5 rules out enumerating all O(n²) substrings.",
+    "Maintain last[26] storing the last index where each character appeared (−1 if unseen). At each position i, the running appeal of substrings ending at i increases by i − last[s[i]]. In \"abbca\" at i=4, s[i]='a' and last['a']=0, so running increases by 4−0=4 (from 8 to 12).",
+    "```\nlast[26] ← -1\nrunning ← 0, ans ← 0\nfor i from 0 to n-1:\n    c ← s[i]\n    running ← running + (i - last[c])\n    ans ← ans + running\n    last[c] ← i\nreturn ans\n```",
+    "**Smallest input** - n=1, only one substring of appeal 1.\n`Input: s = \"a\"` → `Expected: 1`\n⚠️ Bug: initializing last[] to 0 instead of −1 → delta = 0−0 = 0, returns 0.\n\n**All identical characters** - every substring has appeal 1, so the answer equals the substring count n(n+1)/2.\n`Input: s = \"aaaa\"` → `Expected: 10`\n⚠️ Bug: initializing last[] to 0 instead of −1 → first delta is 0 instead of 1, running becomes 0,1,2,3, returns 6.\n\n**Character repeated 3+ times** - a character appearing at positions 0, 2, 4 tests that last[] is updated after each use.\n`Input: s = \"ababa\"` → `Expected: 25`\n⚠️ Bug: forgetting `last[c] = i` after computing delta → at i=4 uses stale last['a']=0, delta becomes 4 instead of 2, returns 27.\n\n**Overflow (all same, n=10⁵)** - answer is n(n+1)/2 = 100000×100001/2 = 5000050000, which exceeds 2³¹−1 = 2147483647.\n`Input: s = \"aaa...a\" (100000 times)` → `Expected: 5000050000`\n⚠️ Bug: declaring `int ans` instead of `long long` → 5000050000 wraps to 705082704 in two's complement, returns 705082704."
+  ],
+  "followUps": [
+    {
+      "q": "What if the string could contain any Unicode character instead of just lowercase English letters?",
+      "a": "Replace the fixed last[26] array with an unordered_map<char,int>. The algorithm is identical - look up and update the map per character. Time stays O(n) amortized; space becomes O(min(n, alphabet size))."
+    },
+    {
+      "q": "What if you needed the total appeal of all subsequences (not substrings) of s?",
+      "a": "For each character c with frequency freq[c], the number of subsequences containing c is 2ⁿ − 2^(n−freq[c]). Sum this over all distinct characters. Count frequencies in one pass, then compute the sum with modular exponentiation. Time O(n + σ log n) where σ is the alphabet size; space O(σ)."
+    },
+    {
+      "q": "What if the string arrives as a streaming input of unknown length and you must report the running total after each character?",
+      "a": "The algorithm already processes one character at a time and maintains a running total. After each new character, output the current ans. Time O(1) per character amortized; space O(alphabet) for the last[] map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long appealSum(string s) {\n        long long ans = 0, running = 0;\n        int last[26];\n        for (int i = 0; i < 26; i++) last[i] = -1;\n        for (int i = 0; i < (int)s.size(); i++) {\n            int c = s[i] - 'a';\n            running += i - last[c];\n            ans += running;\n            last[c] = i;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

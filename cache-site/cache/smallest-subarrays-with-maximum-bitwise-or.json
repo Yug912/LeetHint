@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-subarrays-with-maximum-bitwise-or",
+  "title": "Smallest Subarrays With Maximum Bitwise OR",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bit Manipulation (Reverse Pass)",
+  "tc": "O(n log V)",
+  "sc": "O(log V)",
+  "spaceBreakdown": "- vector<int> nearest: 31 entries → O(1)\n- vector<int> answer: n entries → O(n) - returned output, not counted\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "The maximum bitwise OR starting at index i is simply the OR of the entire suffix nums[i..n−1] (OR only adds bits). To achieve this maximum with the shortest subarray, for each bit set in the suffix OR we only need to reach the nearest element to the right that has that bit set. We process the array right-to-left, maintaining for each of the 31 bit positions the nearest index where that bit is set. The answer for index i is the maximum over all tracked bits of (nearest_index − i + 1), defaulting to 1.",
+  "hints": [
+    "Starting at index i, what determines how far right you must extend the subarray to reach the maximum possible OR? The constraint n ≤ 10^5 rules out checking every subarray endpoint for each start.",
+    "Track, for each of the 31 bit positions, the nearest index to the right where that bit is set. Process the array right-to-left, updating these positions. For nums = [1,0,2,1,3] at i=1 (value 0), bit 0's nearest is index 3 and bit 1's nearest is index 2, so the answer is max(3,2) − 1 + 1 = 3.",
+    "```\nnearest[0..30] = -1\nfor i from n-1 down to 0:\n    for each bit b set in nums[i]:\n        nearest[b] = i\n    best = 1\n    for b from 0 to 30:\n        if nearest[b] != -1:\n            best = max(best, nearest[b] - i + 1)\n    answer[i] = best\n```",
+    "**All zeros** - no bit is ever set in any element.\n`Input: nums = [0,0,0]` → `Expected: [1,1,1]`\n⚠️ Bug: initializing `best` to 0 instead of 1 → returns `[0,0,0]`\n\n**Single element** - n = 1, the answer must be 1.\n`Input: nums = [7]` → `Expected: [1]`\n⚠️ Bug: loop condition `i > 0` instead of `i >= 0` → index 0 never processed, returns `[0]`\n\n**High bit only** - a value whose only set bit is bit 29 (2^29 = 536870912).\n`Input: nums = [0, 536870912]` → `Expected: [2, 1]`\n⚠️ Bug: iterating bits only up to 28 (`b < 29`) → bit 29 never tracked, at i=0 best stays 1, returns `[1, 1]`\n\n**Zero followed by nonzero** - the zero contributes no bits, so the answer must extend further.\n`Input: nums = [0, 5]` → `Expected: [2, 1]`\n⚠️ Bug: special-casing `nums[i] == 0` with `answer[i] = 1; continue;` → at i=0 returns 1 instead of 2, output `[1, 1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10^18 (64-bit integers)?",
+      "a": "Increase the bit count from 31 to 64. The algorithm is identical in structure; each index processes 64 bits instead of 31. TC remains O(n) with a constant factor of 64, SC remains O(1)."
+    },
+    {
+      "q": "What if you need the minimum-length subarray anywhere in the array (not per starting index) whose OR equals the maximum OR over the entire array?",
+      "a": "First compute the total OR of the array in O(n). Then use a sliding window with per-bit counts to find the minimum window achieving that OR. TC: O(n * 64), SC: O(1)."
+    },
+    {
+      "q": "What if the array arrives as a left-to-right stream and you cannot buffer more than O(1) elements?",
+      "a": "The right-to-left pass requires future elements. You must first store the entire array in O(n) space, then process backwards. Without O(n) storage, process in fixed-size blocks from right to left, requiring O(block_size) space but multiple passes over the data."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> smallestSubarrays(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> answer(n);\n        vector<int> nearest(31, -1);\n        for (int i = n - 1; i >= 0; i--) {\n            for (int b = 0; b < 31; b++) {\n                if (nums[i] & (1 << b)) {\n                    nearest[b] = i;\n                }\n            }\n            int best = 1;\n            for (int b = 0; b < 31; b++) {\n                if (nearest[b] != -1) {\n                    best = max(best, nearest[b] - i + 1);\n                }\n            }\n            answer[i] = best;\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

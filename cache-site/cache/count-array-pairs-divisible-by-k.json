@@ -1,0 +1,40 @@
+{
+  "slug": "count-array-pairs-divisible-by-k",
+  "title": "Count Array Pairs Divisible by K",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "GCD Counting with Divisor Enumeration",
+  "tc": "O(√k + n·(log k + d(k)))",
+  "sc": "O(d(k))",
+  "spaceBreakdown": "- vector<int> divs: up to d(k) ≈ 128 entries → O(d(k))\n- unordered_map<int,int> cnt: up to d(k) entries (every key divides k) → O(d(k))\n- recursion depth: none\n- not counted: input nums, returned long long",
+  "approach": "The key insight is that `nums[i]*nums[j] % k == 0` iff `gcd(nums[i],k) * gcd(nums[j],k) % k == 0`. Since each `gcd(nums[i],k)` divides `k`, there are at most `d(k)` distinct values (≤128 for k≤10⁵). For each element, compute `g = gcd(nums[i],k)` and `need = k/g`; we need to count previous elements whose gcd-value is a multiple of `need`. Precompute all divisors of `k`, store gcd-value counts in a hash map, and for each element sum counts over divisors that are multiples of `need`, then insert the current gcd.",
+  "hints": [
+    "Two numbers can be large, but their product's divisibility by k depends on a much smaller quantity derived from each number and k alone - what is it?\nn ≤ 10⁵ rules out checking all O(n²) pairs.",
+    "Use a hash map keyed by `gcd(value, k)`, storing how many times each gcd has appeared so far. For nums[0]=1, k=2: gcd(1,2)=1, need = k/gcd = 2; count previous entries whose key is a multiple of 2 (none yet → add 0), then record gcd=1.",
+    "```\ndivs = all divisors of k\ncnt = empty map, ans = 0\nfor x in nums:\n    g = gcd(x, k)\n    need = k / g\n    for d in divs:\n        if d % need == 0:\n            ans += cnt[d]\n    cnt[g] += 1\nreturn ans\n```",
+    "**Single element** - n=1, no pairs exist.\n`Input: nums=[5], k=3` → `Expected: 0`\n⚠️ Bug: initializing ans to 1 instead of 0 → returns 1\n\n**k equals 1** - every product is divisible by 1, so all pairs count.\n`Input: nums=[1,2,3], k=1` → `Expected: 3`\n⚠️ Bug: skipping the inner loop when need=1 → returns 0\n\n**All coprime to k** - no element shares a prime factor with k.\n`Input: nums=[1,2,3], k=7` → `Expected: 0`\n⚠️ Bug: counting cnt[g] (same gcd) instead of multiples of need → returns 3\n\n**Duplicates all equal to k** - every pair's product is k², divisible by k.\n`Input: nums=[6,6,6], k=6` → `Expected: 3`\n⚠️ Bug: only checking cnt[need] instead of all divisors that are multiples of need → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10⁹?",
+      "a": "The same approach works. The number of divisors of k ≤ 10⁹ is at most ~1344, and computing divisors takes O(√k) ≈ 31623 steps. TC: O(√k + n·d(k)), SC: O(d(k))."
+    },
+    {
+      "q": "What if the array arrives as a stream and you must report the running pair count after each element?",
+      "a": "The algorithm is already online - process each element as it arrives, query the map for matching gcds, then insert. Each step is O(d(k)). TC: O(n·d(k)) total, SC: O(d(k))."
+    },
+    {
+      "q": "What if you must count triples (i,j,l) with i<j<l such that nums[i]·nums[j]·nums[l] is divisible by k?",
+      "a": "Extend the same idea: store a map from gcd(g_a·g_b, k) to pair-count. For each new element with gcd g, sum pair-counts over stored keys that are multiples of k/g, then update the pair-map by combining g with every existing single-element gcd. Both query and update are O(d(k)) per element. TC: O(n·d(k)), SC: O(d(k))."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int gcd(int a, int b) {\n        while (b) {\n            int t = b;\n            b = a % b;\n            a = t;\n        }\n        return a;\n    }\npublic:\n    long long countPairs(vector<int>& nums, int k) {\n        vector<int> divs;\n        for (int d = 1; d * d <= k; d++) {\n            if (k % d == 0) {\n                divs.push_back(d);\n                if (d != k / d) divs.push_back(k / d);\n            }\n        }\n        unordered_map<int, int> cnt;\n        long long ans = 0;\n        for (int x : nums) {\n            int g = gcd(x, k);\n            int need = k / g;\n            for (int d : divs) {\n                if (d % need == 0) {\n                    ans += cnt[d];\n                }\n            }\n            cnt[g]++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

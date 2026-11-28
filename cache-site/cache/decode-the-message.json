@@ -1,0 +1,40 @@
+{
+  "slug": "decode-the-message",
+  "title": "Decode the Message",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Direct Lookup Table",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- char map[26]: fixed 26 entries → O(1)\n- string result: up to m characters → O(m), but this is the returned output (not counted per LeetCode convention)\n- no recursion, no other containers",
+  "approach": "Build a substitution table by scanning `key` left to right: the first time a letter appears, assign it the next unused alphabet letter starting from 'a'. Skip spaces in the key. Then decode `message` by replacing each letter via the table and leaving spaces unchanged. A fixed 26-element array suffices since the alphabet is exactly 26 lowercase letters.",
+  "hints": [
+    "When scanning the key from left to right, what do you need to remember about letters you've already encountered? The key contains every letter at least once (constraint: 26 ≤ key.length ≤ 2000).",
+    "Use a fixed-size array of 26 entries to record, for each letter, which alphabet letter it maps to. Scanning \"the quick...\" the first letter 't' maps to 'a', the next new letter 'h' maps to 'b', and so on.",
+    "```\nmapping = array[26] of zeros\nnext = 'a'\nfor c in key:\n    if c is not space and mapping[c] is 0:\n        mapping[c] = next, next = next + 1\nfor c in message:\n    if c is space: append ' ' to result\n    else: append mapping[c] to result\nreturn result\n```",
+    "**Key with spaces** - spaces appear between words in the key\n`key = \"a b c d e f g h i j k l m n o p q r s t u v w x y z\", message = \"b\"` → `Expected: \"b\"`\n⚠️ Bug: not skipping spaces in key, computing `map[' ' - 'a']` → undefined behavior (out-of-bounds access at index -65)\n\n**Duplicate letters in key** - same letter appears multiple times\n`key = \"abacdefghijklmnopqrstuvwxyz\", message = \"a\"` → `Expected: \"a\"`\n⚠️ Bug: overwriting the mapping on every occurrence instead of only the first → returns `\"c\"` (second 'a' overwrites map[0] with the third assigned letter)\n\n**Message with consecutive spaces** - message contains multiple spaces in a row\n`key = \"the quick brown fox jumps over the lazy dog\", message = \"a  b\"` → `Expected: \"v  i\"`\n⚠️ Bug: not checking for space in message before indexing the mapping → out-of-bounds access on `' '`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the key is streamed and too large to fit in memory?",
+      "a": "Process the key in a single pass, maintaining the 26-element array. Once all 26 letters are mapped, stop reading the key. Space stays O(1); time stays O(n) in the worst case where the last needed letter is at the end."
+    },
+    {
+      "q": "What if the message must also be decoded in a streaming fashion?",
+      "a": "The full key must be processed first to build the complete mapping before any message character can be decoded. Once the mapping is ready, decode the message stream character by character with O(1) space per character."
+    },
+    {
+      "q": "What if the alphabet is full Unicode (over 1 million code points) instead of 26 lowercase letters?",
+      "a": "A fixed array of 1M+ entries is wasteful. Use a hash map instead, giving O(k) space where k is the number of distinct characters in the key, with O(1) average lookup time per message character."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string decodeMessage(string key, string message) {\n        char map[26] = {};\n        char current = 'a';\n        for (char c : key) {\n            if (c != ' ' && map[c - 'a'] == 0) {\n                map[c - 'a'] = current++;\n            }\n        }\n        string result;\n        for (char c : message) {\n            if (c == ' ') {\n                result += ' ';\n            } else {\n                result += map[c - 'a'];\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

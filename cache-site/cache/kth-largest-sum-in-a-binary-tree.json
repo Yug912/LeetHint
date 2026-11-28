@@ -1,0 +1,40 @@
+{
+  "slug": "kth-largest-sum-in-a-binary-tree",
+  "title": "Kth Largest Sum in a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Level-Order Traversal + Selection",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> sums: up to n entries (skewed tree has n levels) → O(n)\n- queue<TreeNode*> q: up to n/2 nodes in the widest level (balanced tree) → O(n)\n- nth_element: C++ introsort-style partitioning uses O(log n) stack → O(log n)\n- not counted: input tree, returned scalar",
+  "approach": "Compute each level's sum with a level-order traversal (BFS), collecting one `long long` per level. If the number of levels is less than `k`, return -1. Otherwise use `std::nth_element` with `greater<long long>()` to partition the sums so the kth largest lands at index `k-1`, then return it. BFS is O(n) since each node is visited once, and `nth_element` is O(L) average where L ≤ n is the number of levels, giving O(n) total.",
+  "hints": [
+    "Before you can name the kth best level, what single number must you know about every level, and how many such numbers can exist in a tree with n nodes?",
+    "Use level-order traversal (BFS) to compute each level's sum, then `std::nth_element` with a greater comparator to place the kth largest at index k-1. For Example 1, sums = [5,17,13,10]; with k=2, `nth_element` lands 13 at index 1.",
+    "```\nsums = []\nqueue = [root]\nwhile queue not empty:\n    levelSum = 0\n    repeat size(queue) times:\n        node = queue.pop_front()\n        levelSum += node.val\n        push node.left, node.right if non-null\n    sums.append(levelSum)\nif len(sums) < k: return -1\nnth_element(sums, k-1, descending)\nreturn sums[k-1]\n```",
+    "**Overflow** - A level can hold up to 10^5 nodes each valued up to 10^6, so a level sum reaches 10^11, exceeding 2^31 - 1.\n`Input: root = [1000000, 1000000, ... (10^5 nodes on one level)], k = 1` → `Expected: 100000000000`\n⚠️ Bug: declaring `levelSum` as `int` → returns a wrapped negative value such as 1215752192.\n\n**Skewed tree** - Each node has only a left child, producing n levels with one node each.\n`Input: root = [5,4,null,3,null,2], k = 2` → `Expected: 4`\n⚠️ Bug: assuming a balanced tree and pre-allocating a small fixed-size sums array → out-of-bounds write or wrong answer.\n\n**Fewer than k levels** - The tree has fewer levels than k.\n`Input: root = [1,2,null,3], k = 5` → `Expected: -1`\n⚠️ Bug: calling `nth_element` before checking `sums.size() < k` → undefined behavior / crash.\n\n**Ties** - Multiple levels share the same sum, and the kth largest counts duplicates.\n`Input: root = [3,1,2], k = 2` → `Expected: 3`\n⚠️ Bug: deduplicating sums before selecting → returns -1 or skips the legitimate duplicate."
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be as large as 10^9, far exceeding n?",
+      "a": "The algorithm is unchanged - after BFS, if `sums.size() < k` return -1, otherwise `nth_element` as before. Time stays O(n) and space O(n), since k only affects the comparison, not the traversal."
+    },
+    {
+      "q": "What if nodes arrive one at a time as a stream and you must answer the kth largest level sum after each insertion?",
+      "a": "Maintain a `map<depth, long long>` of running per-level sums and a `multiset<long long, greater<>>` mirroring those sums; on each insertion update one entry in both structures. Insertion is O(log n); answering the kth largest is O(log n) by advancing an iterator from `begin()` k-1 times, or O(1) with an order-statistics tree."
+    },
+    {
+      "q": "What if auxiliary memory is limited to O(h), where h is the tree height?",
+      "a": "Replace BFS with DFS, accumulating each level's sum into an array indexed by depth (size = number of levels = h), then run `nth_element` on that array. This avoids the BFS queue's O(w) width cost; total space is O(h) for the sums array plus O(h) recursion stack, which is O(log n) for a balanced tree and O(n) for a skewed one."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long kthLargestLevelSum(TreeNode* root, int k) {\n        vector<long long> sums;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int sz = q.size();\n            long long levelSum = 0;\n            for (int i = 0; i < sz; i++) {\n                TreeNode* node = q.front();\n                q.pop();\n                levelSum += node->val;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            sums.push_back(levelSum);\n        }\n        if ((int)sums.size() < k) return -1;\n        nth_element(sums.begin(), sums.begin() + (k - 1), sums.end(), greater<long long>());\n        return sums[k - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

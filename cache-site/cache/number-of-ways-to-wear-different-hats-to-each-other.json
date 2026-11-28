@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-ways-to-wear-different-hats-to-each-other",
+  "title": "Number of Ways to Wear Different Hats to Each Other",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(40 · 2^n · n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- hatToPeople: 41 vectors, at most 400 total entries → O(n·40)\n- dp: 2^n longs → O(2^n)\n- ndp: 2^n longs → O(2^n)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Since n ≤ 10, we can represent the set of people who already have hats as a bitmask (2^10 = 1024 states). We iterate over hats 1-40 in order; for each hat, we either skip it or give it to one person who prefers it and hasn't been assigned yet. Using a copy of the DP array per hat prevents assigning the same hat twice. The answer is dp[full_mask] after processing all 40 hats.",
+  "hints": [
+    "With n ≤ 10 people but up to 40 hat types, which of the two dimensions is small enough to enumerate every subset of?",
+    "Bitmask DP over hats: dp[mask] = ways to assign hats to people in mask. Process hats 1-40 in order; for hat 3 in Example 1 (preferred by person 0), extend dp[∅] by giving hat 3 to person 0 → dp[{0}].",
+    "```\ndp[0] = 1\nfor h in 1..40:\n    ndp = copy(dp)\n    for each mask:\n        for each person p preferring h, not in mask:\n            ndp[mask | (1<<p)] += dp[mask]\n    dp = ndp\nreturn dp[full_mask]\n```",
+    "**No valid assignment** - two people both want only the same single hat.\n`Input: hats = [[1],[1]]` → `Expected: 0`\n⚠️ Bug: updating dp in place without a copy → same hat assigned to both people → returns 2\n\n**Single person, multiple hats** - one person with three hat choices.\n`Input: hats = [[1,2,3]]` → `Expected: 3`\n⚠️ Bug: initializing dp[full]=1 instead of dp[0]=1 → returns 1\n\n**Full permutation** - n people, n hats, everyone prefers all n hats.\n`Input: hats = [[1,2,3],[1,2,3],[1,2,3]]` → `Expected: 6`\n⚠️ Bug: not checking if person p is already in mask → assigns multiple hats to same person → returns 27\n\n**Hat numbers far from 1** - preferred hats use high labels only.\n`Input: hats = [[40],[39]]` → `Expected: 1`\n⚠️ Bug: iterating hats only from 1 to n (=2) instead of 1 to 40 → never processes hats 39 or 40 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if hat types go up to 10^5 instead of 40?",
+      "a": "Group hats by their preference subset (at most 2^n groups). For each group with c hats preferred by subset S, batch-process: for each mask, for each subset T of unassigned people in S, add dp[mask]·P(c,|T|) to dp[mask∪T]. TC: O(3^n · 2^n), SC: O(2^n)."
+    },
+    {
+      "q": "What if n can be up to 20?",
+      "a": "2^20 ≈ 10^6 states; with 40 hats and n=20 inner loop, TC ≈ O(40·10^6·20) = O(8·10^8), borderline but feasible with pruning of zero states and bit tricks. SC grows to O(2^20) ≈ 8 MB."
+    },
+    {
+      "q": "What if we must output one valid assignment instead of the count?",
+      "a": "Store a predecessor pointer for each (hat, mask) transition: which person received the hat. Backtrack from dp[full] by always picking the first nonzero predecessor. TC unchanged; SC: O(40·2^n) for the predecessor table."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberWays(vector<vector<int>>& hats) {\n        const int MOD = 1e9 + 7;\n        int n = hats.size();\n        vector<vector<int>> hatToPeople(41);\n        for (int i = 0; i < n; i++) {\n            for (int h : hats[i]) {\n                hatToPeople[h].push_back(i);\n            }\n        }\n        int full = (1 << n) - 1;\n        vector<long long> dp(1 << n, 0);\n        dp[0] = 1;\n        for (int h = 1; h <= 40; h++) {\n            vector<long long> ndp = dp;\n            for (int mask = 0; mask <= full; mask++) {\n                if (dp[mask] == 0) continue;\n                for (int p : hatToPeople[h]) {\n                    if (mask & (1 << p)) continue;\n                    int nmask = mask | (1 << p);\n                    ndp[nmask] = (ndp[nmask] + dp[mask]) % MOD;\n                }\n            }\n            dp = ndp;\n        }\n        return (int)dp[full];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

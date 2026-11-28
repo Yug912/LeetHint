@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-minimum-number-of-fibonacci-numbers-whose-sum-is-k",
+  "title": "Find the Minimum Number of Fibonacci Numbers Whose Sum Is K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy",
+  "tc": "O(log k)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long a, b, c, temp, kk: five scalars → O(1)\n- int count: one scalar → O(1)\n- no containers, no recursion, no precomputed array",
+  "approach": "Greedy works here (equivalent to Zeckendorf's theorem): repeatedly subtract the largest Fibonacci number ≤ the remaining value. To achieve O(1) space, generate Fibonacci numbers forward keeping only the last two values until you pass k, landing on the largest F_n ≤ k with its successor in hand. Then walk backward using F_{n-2} = F_n − F_{n-1} (i.e., new pair (a,b) ← (b−a, a)) whenever the current a exceeds the remaining k, subtract, and count. Each Fibonacci index is visited at most once forward and once backward, so the whole process is logarithmic in k.",
+  "hints": [
+    "Fibonacci numbers grow roughly like powers of 1.618, so with k up to 10^9, how many Fibonacci numbers are even ≤ k? For k = 19 the list is just 1, 1, 2, 3, 5, 8, 13.",
+    "Greedy: repeatedly subtract the largest Fibonacci number ≤ the remaining k. For k = 19: subtract 13 → 6, subtract 5 → 1, subtract 1 → 0; answer 3.",
+    "```\na, b = 1, 1\nwhile b <= k:\n    a, b = b, a + b\ncount = 0\nwhile k > 0:\n    while a > k:\n        a, b = b - a, a      # step one Fibonacci index backward\n    k = k - a\n    count = count + 1\nreturn count\n```",
+    "**Smallest input** - k = 1, the minimum positive value.\n`Input: k = 1` → `Expected: 1`\n⚠️ Bug: initialising `count = 1` instead of `0` → returns `2`.\n\n**k is itself Fibonacci** - k = 8 equals a Fibonacci number, so one term suffices.\n`Input: k = 8` → `Expected: 1`\n⚠️ Bug: forward loop `while (b < k)` with strict `<` stops at a = 5, missing 8 → returns `2`.\n\n**Multiple backward steps needed** - k = 12 = 8 + 3 + 1 requires walking back two Fibonacci indices after the first subtraction.\n`Input: k = 12` → `Expected: 3`\n⚠️ Bug: using `if (a > k)` instead of `while (a > k)` does only one backward step, leaves a = 5 > 4, then subtracts to get k = −1 → returns `2`.\n\n**Backward condition on wrong variable** - k = 7 = 5 + 2.\n`Input: k = 7` → `Expected: 2`\n⚠️ Bug: writing `while (b > k)` instead of `while (a > k)` steps backward based on the successor, picking 3, 2, 1, 1 → returns `4`."
+  ],
+  "followUps": [
+    {
+      "q": "What if each Fibonacci number may be used at most once?",
+      "a": "The greedy already yields Zeckendorf's representation, whose terms are non-consecutive Fibonacci numbers, so each is used once. The same code and answer apply unchanged. TC O(log k), SC O(1)."
+    },
+    {
+      "q": "What if k can be as large as 10^18?",
+      "a": "Switch the Fibonacci accumulators to `unsigned long long`; only about 87 Fibonacci numbers are ≤ 10^18, so the loop count barely grows. TC O(log k), SC O(1)."
+    },
+    {
+      "q": "What if you must answer up to 10^5 queries of k?",
+      "a": "Precompute the ~45 Fibonacci numbers up to 10^9 once into a small array, then for each query run the same greedy using `upper_bound` to find the largest Fibonacci ≤ k. TC O(Q log 45) = O(Q), SC O(45) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMinFibonacciNumbers(int k) {\n        long long a = 1, b = 1;\n        while (b <= k) {\n            long long c = a + b;\n            a = b;\n            b = c;\n        }\n        // a = largest Fibonacci <= k, b = next Fibonacci > k\n        int count = 0;\n        long long kk = k;\n        while (kk > 0) {\n            while (a > kk) {\n                long long temp = a;\n                a = b - a;   // F_{n-2} = F_n - F_{n-1}\n                b = temp;    // old F_{n-1} becomes new successor\n            }\n            kk -= a;\n            count++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

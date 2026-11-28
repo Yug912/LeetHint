@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-flips-to-convert-binary-matrix-to-zero-matrix",
+  "title": "Minimum Number of Flips to Convert Binary Matrix to Zero Matrix",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Gray Code Enumeration",
+  "tc": "O(2^(m·n))",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- int affect[9]: stores one mask per cell, up to m·n entries → O(m·n)\n- int dr[5], dc[5]: fixed-size direction arrays → O(1)\n- scalar variables (cur, g, flips, best, target, total): O(1)\n- no recursion, no dynamic allocation",
+  "approach": "Flipping is commutative and involutive (flipping a cell twice cancels out), so only the *set* of cells flipped matters-not order or repetition. We enumerate all 2^(m·n) subsets via a Gray code, which changes exactly one cell per step. We maintain a running bitmask `cur` of the current matrix state; each Gray-code step XORs a precomputed `affect[k]` mask (cell k plus its neighbors) into `cur` in O(1). When `cur` equals the target bitmask (original matrix), we record the popcount of the current subset. The minimum over all subsets is the answer, or -1 if none matches.",
+  "hints": [
+    "If a cell is flipped an even number of times, what is its net change? With m·n ≤ 9, what does this imply about the search space?",
+    "Enumerate all 2^(m·n) subsets using a Gray code, which changes one cell per step so the running XOR updates in O(1). For mat = [[0,0],[0,1]], the subset {(1,0),(0,1),(1,1)} yields the zero matrix in 3 flips.",
+    "```\ntarget = bitmask of mat\nprecompute affect[k] = bitmask of cells toggled by flipping cell k\ncur = 0, flips = 0, best = INF\nfor i in 0 .. 2^N - 1:\n    if cur == target: best = min(best, flips)\n    if i < 2^N - 1:\n        bit = ctz(i + 1)\n        flips += (bit newly set in subset ? +1 : -1)\n        cur ^= affect[bit]\nreturn best or -1\n```",
+    "**Already zero** - the empty subset is a valid answer with 0 flips.\n`Input: [[0,0],[0,0]]` → `Expected: 0`\n⚠️ Bug: starting the loop at i=1 instead of i=0 → never checks the empty subset, returns -1.\n\n**No solution** - no subset of flips produces the zero matrix.\n`Input: [[1,0,0],[1,0,0]]` → `Expected: -1`\n⚠️ Bug: returning `best` without checking for the sentinel value → returns 2147483647.\n\n**Single cell** - only one cell, flipping it affects only itself.\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: including diagonal neighbors in the affect mask → affect[0] has extra bits, cur never equals target, returns -1.\n\n**Shared neighbor** - flipping one cell also flips its neighbor, so two adjacent 1s need only one flip.\n`Input: [[1,1]]` → `Expected: 1`\n⚠️ Bug: counting each 1-cell independently and summing → returns 2 instead of 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if m, n ≤ 5 (25 cells)?",
+      "a": "2^25 ≈ 33 million subsets is too slow for brute enumeration. Instead, model each cell's parity constraint as a linear equation over GF(2) and use Gaussian elimination to find the solution space, then minimize the Hamming weight over free variables. Time O((m·n)^3), space O((m·n)^2)."
+    },
+    {
+      "q": "What if flipping a cell also flips its four diagonal neighbors (8 neighbors total)?",
+      "a": "The same Gray-code enumeration works unchanged-only the precomputed `affect[k]` mask includes the extra diagonal cells. Each step still XORs one mask in O(1), so time stays O(2^(m·n)) and space O(m·n)."
+    },
+    {
+      "q": "What if multiple queries arrive on grids of the same dimensions but different contents?",
+      "a": "Precompute the `affect` masks once per dimension. Each query still runs the full Gray-code sweep in O(2^(m·n)) time, but the mask precomputation is amortized away. For larger grids, precompute the GF(2) basis once and solve each query in O((m·n)^2)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minFlips(vector<vector<int>>& mat) {\n        int m = mat.size(), n = mat[0].size();\n        int N = m * n;\n        int target = 0;\n        for (int i = 0; i < m; i++)\n            for (int j = 0; j < n; j++)\n                if (mat[i][j])\n                    target |= (1 << (i * n + j));\n\n        int affect[9];\n        int dr[] = {0, 0, 1, -1, 0};\n        int dc[] = {1, -1, 0, 0, 0};\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                int mask = 0;\n                for (int d = 0; d < 5; d++) {\n                    int ni = i + dr[d], nj = j + dc[d];\n                    if (ni >= 0 && ni < m && nj >= 0 && nj < n)\n                        mask |= (1 << (ni * n + nj));\n                }\n                affect[i * n + j] = mask;\n            }\n        }\n\n        int cur = 0, g = 0, flips = 0, best = -1;\n        int total = 1 << N;\n        for (int i = 0; i < total; i++) {\n            if (cur == target) {\n                if (best == -1 || flips < best)\n                    best = flips;\n            }\n            if (i == total - 1) break;\n            int bit = __builtin_ctz(i + 1);\n            if ((g >> bit) & 1) flips--;\n            else flips++;\n            g ^= (1 << bit);\n            cur ^= affect[bit];\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

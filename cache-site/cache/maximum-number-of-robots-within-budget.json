@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-robots-within-budget",
+  "title": "Maximum Number of Robots Within Budget",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window with Monotonic Deque",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- deque<int> dq: up to n indices (strictly decreasing chargeTimes) → O(n)\n- long long sum, int left/ans: O(1)\n- not counted: input arrays, return value",
+  "approach": "Use a sliding window [left, right] over the robots. Maintain a monotonic deque of indices with decreasing chargeTimes (front = window max) and a running sum of runningCosts. Extend `right` each step; if `maxCharge + k·sum > budget`, shrink `left` until it fits. The cost is monotonic (extending right only increases it, shrinking left only decreases it), so the longest valid window is captured by tracking the max window length seen. Each index enters and leaves the deque once.",
+  "hints": [
+    "For a window of consecutive robots, if extending it rightward pushes the cost past the budget, what must be true of every wider window sharing the same left endpoint? The cost is max(chargeTimes) + k·sum(runningCosts), and n ≤ 5·10^4.",
+    "Sliding window with a monotonic deque storing indices in decreasing chargeTime order. In Example 1, window [0,2] has deque [1,2] (charges 6,1); front gives max 6, sum 6, cost 6+3·6=24≤25.",
+    "```\nleft = 0, sum = 0, ans = 0, deque = empty\nfor right in 0..n-1:\n    while deque not empty and charge[deque.back] <= charge[right]:\n        deque.pop_back\n    deque.push_back(right)\n    sum += running[right]\n    while deque not empty and charge[deque.front] + (right-left+1)*sum > budget:\n        if deque.front == left: deque.pop_front\n        sum -= running[left]\n        left += 1\n    ans = max(ans, right - left + 1)\nreturn ans\n```",
+    "**Single robot over budget** - the only robot's cost already exceeds budget.\n`chargeTimes = [11], runningCosts = [10], budget = 20` → `Expected: 0`\n⚠️ Bug: shrink loop condition `while left < right` (never lets left pass right) → returns 1.\n\n**Stale maximum in deque** - global max sits at index 0; after shrinking past it the true max drops.\n`chargeTimes = [10,1,1,1], runningCosts = [1,1,1,1], budget = 14` → `Expected: 3`\n⚠️ Bug: not popping deque front when `deque.front() == left` → stale max 10 inflates cost, returns 2.\n\n**Exact-budget boundary** - cost equals budget exactly.\n`chargeTimes = [3,6,1], runningCosts = [2,1,3], budget = 24` → `Expected: 3`\n⚠️ Bug: shrink condition `cost >= budget` instead of `cost > budget` → rejects the exact-fit window, returns 2.\n\n**Overflow on k·sum** - with n=5·10^4 and values 10^5, k·sum reaches 5·10^4 × 5·10^9 = 2.5·10^14.\n`chargeTimes = [100000]*50000, runningCosts = [100000]*50000, budget = 10^15` → `Expected: 50000`\n⚠️ Bug: storing `sum` or `k*sum` as `int` → overflow near k≈46340, returns garbage."
+  ],
+  "followUps": [
+    {
+      "q": "What if the chosen robots need not be consecutive (any subset of size k)?",
+      "a": "Sort robots by chargeTime. For each candidate maximum chargeTime (the k-th smallest among chosen), pick the k robots with smallest runningCosts whose chargeTime ≤ that max. Binary search k; TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "What if runningCosts can be negative?",
+      "a": "Shrinking the window can increase k·sum (since k shrinks but sum may be negative), breaking the monotonicity that sliding window relies on. Use divide-and-conquer over the array, merging max-charge and prefix-sum information per half; TC O(n log n), SC O(n)."
+    },
+    {
+      "q": "Robots arrive in a stream; output the best answer after each arrival.",
+      "a": "The sliding window is already online - process each new robot, update deque/sum, shrink if needed, and emit the running max of window length. Per robot: O(1) amortized; TC O(n) total, SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumRobots(vector<int>& chargeTimes, vector<int>& runningCosts, long long budget) {\n        int n = chargeTimes.size();\n        deque<int> dq;\n        long long sum = 0;\n        int left = 0;\n        int ans = 0;\n        for (int right = 0; right < n; right++) {\n            while (!dq.empty() && chargeTimes[dq.back()] <= chargeTimes[right]) {\n                dq.pop_back();\n            }\n            dq.push_back(right);\n            sum += runningCosts[right];\n            while (!dq.empty() &&\n                   (long long)chargeTimes[dq.front()] + (long long)(right - left + 1) * sum > budget) {\n                if (dq.front() == left) dq.pop_front();\n                sum -= runningCosts[left];\n                left++;\n            }\n            ans = max(ans, right - left + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

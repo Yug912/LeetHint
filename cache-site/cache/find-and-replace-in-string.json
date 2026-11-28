@@ -1,0 +1,40 @@
+{
+  "slug": "find-and-replace-in-string",
+  "title": "Find And Replace in String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map + Single Pass",
+  "tc": "O(n + k·L)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- unordered_map<int,int> idxMap: up to k entries → O(k)\n- string result: returned output, not counted\n- no recursion, no other containers",
+  "approach": "Since all replacements are simultaneous and non-overlapping, we can process the original string left to right in a single pass. Use a hash map to look up which operation (if any) applies at each index. At each position, if an operation exists and its source matches the substring at that position, append the target and skip ahead by the source length; otherwise, copy the current character. This works because replacements never overlap, so each position is either the start of exactly one replacement or a plain character.",
+  "hints": [
+    "Since replacements happen simultaneously and don't overlap, how can you decide at each position of the original string whether to copy a character or substitute a replacement - without ever modifying the original string?",
+    "Use a hash map from index to operation number. In Example 1, position 0 maps to operation 0; \"a\" matches s[0:1], so append \"eee\" and skip ahead 1 character.",
+    "```\nmap each index → its operation number\ni = 0\nwhile i < len(s):\n    if i in map and s[i : i+len(source)] == source:\n        append target to result\n        i += len(source)\n    else:\n        append s[i] to result\n        i += 1\nreturn result\n```",
+    "**In-place modification** - replacing in the original string shifts later indices\n`Input: s = \"abcd\", indices = [0, 2], sources = [\"a\", \"cd\"], targets = [\"eee\", \"ffff\"]` → `Expected: \"eeebffff\"`\n⚠️ Bug: modifying s in place after first replacement → s becomes \"eeebcd\", then s[2:4]=\"eb\"≠\"cd\" → returns \"eeebcd\"\n\n**All sources fail** - no source string matches at its index\n`Input: s = \"abcd\", indices = [0, 2], sources = [\"x\", \"y\"], targets = [\"eee\", \"ffff\"]` → `Expected: \"abcd\"`\n⚠️ Bug: appending target without checking source match → returns \"eeebffff\"\n\n**Unsorted indices** - indices array not in ascending order\n`Input: s = \"abcd\", indices = [2, 0], sources = [\"cd\", \"ab\"], targets = [\"ffff\", \"eee\"]` → `Expected: \"eeebffff\"`\n⚠️ Bug: sorting indices array alone without reordering sources and targets → at index 0 checks \"cd\" (wrong source), at index 2 checks \"ab\" (wrong source) → returns \"abcd\"\n\n**Single character** - s has length 1\n`Input: s = \"a\", indices = [0], sources = [\"a\"], targets = [\"b\"]` → `Expected: \"b\"`\n⚠️ Bug: loop condition `i < s.length() - 1` instead of `i < s.length()` → 0 < 0 is false, loop skipped → returns \"\""
+  ],
+  "followUps": [
+    {
+      "q": "What if replacements could overlap - how would you decide which to apply?",
+      "a": "Sort operations by index, then greedily pick the earliest-starting replacement whose source matches and whose range doesn't overlap an already-applied one. Skip any operation whose range overlaps a chosen replacement. TC becomes O(n + k log k) for the sort, SC stays O(k)."
+    },
+    {
+      "q": "What if s.length reaches 10^6 and k reaches 10^5 with source lengths up to 1000?",
+      "a": "The hash-map lookup and single left-to-right pass still work, but each source comparison costs up to 1000 characters. Precompute a rolling hash of s and of each source to compare in O(1) expected time, bringing TC to O(n + k) expected. SC remains O(k)."
+    },
+    {
+      "q": "What if replacements cascade - a target inserted by one operation could be matched by another operation at the same position?",
+      "a": "Run the left-to-right pass repeatedly until no replacement fires in a full pass. Track whether any change occurred to detect termination. Guard against infinite loops (e.g., source \"a\" → target \"a\") by limiting passes or detecting fixed points. TC becomes O(P·(n + k)) where P is the number of passes until convergence."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string findReplaceString(string s, vector<int>& indices, vector<string>& sources, vector<string>& targets) {\n        unordered_map<int, int> idxMap;\n        for (int i = 0; i < (int)indices.size(); i++) {\n            idxMap[indices[i]] = i;\n        }\n        \n        string result;\n        int n = (int)s.length();\n        int i = 0;\n        while (i < n) {\n            auto it = idxMap.find(i);\n            if (it != idxMap.end()) {\n                int opIdx = it->second;\n                const string& src = sources[opIdx];\n                if (s.compare(i, src.length(), src) == 0) {\n                    result += targets[opIdx];\n                    i += (int)src.length();\n                    continue;\n                }\n            }\n            result += s[i];\n            i++;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

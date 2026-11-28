@@ -1,0 +1,40 @@
+{
+  "slug": "prime-subtraction-operation",
+  "title": "Prime Subtraction Operation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Number-Theory Precomputation",
+  "tc": "O(V log log V + n)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- vector<bool> isPrime: V+1 entries → O(V)\n- vector<int> largestPrimeBelow: V+2 entries → O(V)\n- scalar locals (prev, last, loop counters): O(1)\n- not counted: input nums",
+  "approach": "Process left to right. For each `nums[i]`, to leave maximum room for later elements we want its final value as small as possible while still exceeding the previous final value `prev`. That means subtracting the largest prime `p` with `p < nums[i] - prev` (which automatically satisfies `p < nums[i]` since `prev ≥ 0`). Precompute via a sieve the table `largestPrimeBelow[v]` = greatest prime strictly less than `v`, for every `v ≤ 1000`, giving O(1) lookup per element. If no such prime exists, leave `nums[i]` unchanged when it already exceeds `prev`; otherwise the array cannot be made strictly increasing.",
+  "hints": [
+    "Once you fix the final value of `nums[i]`, which elements' choices does it constrain, and in which direction should you decide them?\n`nums[i] ≤ 1000`, so every prime you could ever subtract is bounded by a fixed small constant.",
+    "Sieve of Eratosthenes up to 1000, then build `largestPrimeBelow[v]` = greatest prime strictly less than `v`; scan left to right, subtracting that prime from `nums[i]` whenever the result still exceeds the previous final value.\nExample: `nums[0]=4` → largest prime below 4 is 3 → `4−3=1`.",
+    "```\nsieve primes up to V = 1000\nfor v in 0..V: largestPrimeBelow[v] = greatest prime strictly < v\nprev = 0\nfor x in nums:\n    target = x - prev\n    p = largestPrimeBelow[target] if target >= 0 else 0\n    if p > 0: prev = x - p\n    else if x > prev: prev = x\n    else: return false\nreturn true\n```",
+    "**Single element** - `n = 1` is always strictly increasing.\n`Input: nums = [1]` → `Expected: true`\n⚠️ Bug: returning false whenever no prime can be subtracted from the only element → returns `false`\n\n**Two equal small values** - no prime below 2 exists to reduce either copy.\n`Input: nums = [2,2]` → `Expected: false`\n⚠️ Bug: treating 0 or 1 as a valid prime → returns `true`\n\n**Subtraction needed to enable a later element** - leaving the first element unchanged blocks the second.\n`Input: nums = [5,4]` → `Expected: true`\n⚠️ Bug: greedy that skips reducing `nums[0]` because `5 > 0` already → `prev=5`, then `4 ≤ 5` → returns `false`\n\n**First element must shrink maximally** - only by reducing index 0 can index 1 fit.\n`Input: nums = [3,2]` → `Expected: true`\n⚠️ Bug: never subtracting from index 0 → `prev=3`, then `2 ≤ 3` → returns `false`\n\n**Already strictly increasing** - no operation required.\n`Input: nums = [6,8,11,12]` → `Expected: true`\n⚠️ Bug: forcing a subtraction even when leaving the value works and no valid prime keeps it `> prev` → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "If `n` grows to 10^5 but values stay ≤ 1000, does the approach still hold?",
+      "a": "Yes. The sieve and `largestPrimeBelow` table are bounded by V = 1000 regardless of n. Each element is an O(1) table lookup, so total time is O(V log log V + n) = O(n), space O(V) = O(1000)."
+    },
+    {
+      "q": "What if `nums[i]` can be up to 10^9?",
+      "a": "Sieving to 10^9 is infeasible. Precompute primes up to √(10^9) ≈ 31623 via sieve, then for each `target = x − prev` walk downward from `target − 1` testing primality with those primes. Prime gaps near 10^9 are small (hundreds), so per element ~O(gap · √V / log V). Space O(√V)."
+    },
+    {
+      "q": "Minimize the total number of subtraction operations.",
+      "a": "A reduction only helps by lowering the current value for later elements, so reduce only when a later element forces it. Sweep right-to-left to compute the tightest upper bound each final value must satisfy, then left-to-right subtract only from elements exceeding their bound. Same O(V log log V + n) time, O(V) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool primeSubOperation(vector<int>& nums) {\n        const int V = 1000;\n        // Sieve of Eratosthenes up to V.\n        vector<bool> isPrime(V + 1, true);\n        isPrime[0] = isPrime[1] = false;\n        for (int i = 2; i * i <= V; ++i) {\n            if (isPrime[i]) {\n                for (int j = i * i; j <= V; j += i) isPrime[j] = false;\n            }\n        }\n        // largestPrimeBelow[v] = greatest prime strictly less than v.\n        vector<int> largestPrimeBelow(V + 2, 0);\n        int last = 0;\n        for (int v = 0; v <= V + 1; ++v) {\n            largestPrimeBelow[v] = last;\n            if (v >= 2 && v <= V && isPrime[v]) last = v;\n        }\n\n        int prev = 0;\n        for (int x : nums) {\n            int target = x - prev;\n            int p = 0;\n            if (target >= 0 && target <= V + 1) p = largestPrimeBelow[target];\n            if (p > 0) {\n                prev = x - p;            // subtract largest valid prime\n            } else if (x > prev) {\n                prev = x;                // leave unchanged\n            } else {\n                return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

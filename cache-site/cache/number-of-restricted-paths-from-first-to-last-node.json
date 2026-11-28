@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-restricted-paths-from-first-to-last-node",
+  "title": "Number of Restricted Paths From First to Last Node",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dijkstra + DP on DAG",
+  "tc": "O((V + E) log V)",
+  "sc": "O(V + E)",
+  "spaceBreakdown": "- vector<vector<pair<int,int>>> adj: V+1 lists holding 2E edges total → O(V + E)\n- vector<long long> dist: V+1 entries → O(V)\n- vector<int> nodes: V entries → O(V)\n- vector<long long> dp: V+1 entries → O(V)\n- priority_queue pq: at most V entries → O(V)\n- sort(): introsort stack → O(log V)\n- not counted: input edges, return value",
+  "approach": "Run Dijkstra from node n to compute `distanceToLastNode(x)` for every node. Then observe that the restricted-path condition `dist[z_i] > dist[z_i+1]` turns the graph into a DAG: direct every edge from the higher-distance endpoint to the lower-distance one, discarding ties. Counting paths from 1 to n in this DAG is a standard DP: process nodes in decreasing distance order, and for each node u, push `dp[u]` to every neighbor v with `dist[u] > dist[v]`. The answer is `dp[n]` mod 10^9+7.",
+  "hints": [
+    "The restricted-path rule requires `distanceToLastNode` to strictly decrease at every step. What kind of graph do you get if you only keep transitions that go from a node to another with a strictly smaller distance?",
+    "Run Dijkstra from node n to compute every node's shortest distance, then process nodes in decreasing distance order and accumulate path counts. In Example 1, after Dijkstra the distances are: node 5→0, 3→1, 2→2, 1→4, 4→6; processing 1 first pushes count 1 to nodes 2 and 3.",
+    "```\ndist = dijkstra_from(n)\nsort nodes by dist descending\ndp[1] = 1\nfor u in sorted_nodes:\n    for each neighbor v of u:\n        if dist[u] > dist[v]:\n            dp[v] += dp[u]   (mod 1e9+7)\nreturn dp[n]\n```",
+    "**Single node** - n = 1, the path [1] is trivially restricted\n`Input: n = 1, edges = []` → `Expected: 1`\n⚠️ Bug: not initializing dp[1] = 1 before the loop → returns 0\n\n**Equal-distance edge** - an edge between two nodes at the same distance must be discarded\n`Input: n = 4, edges = [[1,2,1],[1,3,1],[2,4,1],[3,4,1],[2,3,5]]` → `Expected: 2`\n⚠️ Bug: using `dist[u] >= dist[v]` instead of `dist[u] > dist[v]` → counts 1→2→3→4 → returns 3\n\n**Descending order required** - processing in ascending distance order processes children before parents\n`Input: n = 5, edges = [[1,2,3],[1,3,3],[2,3,1],[1,4,2],[5,2,2],[3,5,1],[5,4,10]]` → `Expected: 3`\n⚠️ Bug: sorting nodes by `dist[a] < dist[b]` (ascending) → dp[n] never receives contributions → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph could be disconnected, so some nodes are unreachable from node n?",
+      "a": "Dijkstra leaves unreachable nodes at infinity distance. In the DP those nodes have dp = 0 and never contribute, so the answer is 0 when node 1 is unreachable from n. Time and space complexity are unchanged."
+    },
+    {
+      "q": "What if you must also return one actual restricted path (not just the count)?",
+      "a": "During the DP, store for each node v a parent pointer to one node u that contributed to dp[v] (any u with dist[u] > dist[v] and dp[u] > 0). After the DP, backtrack from n to 1 following parent pointers. Adds O(V) space and O(V) time for backtracking."
+    },
+    {
+      "q": "What if n can be up to 10^6 and edges up to 10^6?",
+      "a": "The algorithm stays O((V+E) log V) with a binary-heap Dijkstra. Use flat arrays instead of vector-of-vectors for the adjacency list to reduce overhead and cache misses. The DP pass is O(V+E). Total space remains O(V+E)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countRestrictedPaths(int n, vector<vector<int>>& edges) {\n        const int MOD = 1e9 + 7;\n        \n        vector<vector<pair<int,int>>> adj(n + 1);\n        for (auto& e : edges) {\n            int u = e[0], v = e[1], w = e[2];\n            adj[u].push_back({v, w});\n            adj[v].push_back({u, w});\n        }\n        \n        vector<long long> dist(n + 1, 1e18);\n        dist[n] = 0;\n        priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<>> pq;\n        pq.push({0, n});\n        while (!pq.empty()) {\n            auto [d, u] = pq.top(); pq.pop();\n            if (d > dist[u]) continue;\n            for (auto& [v, w] : adj[u]) {\n                if (dist[u] + w < dist[v]) {\n                    dist[v] = dist[u] + w;\n                    pq.push({dist[v], v});\n                }\n            }\n        }\n        \n        vector<int> nodes(n);\n        for (int i = 0; i < n; i++) nodes[i] = i + 1;\n        sort(nodes.begin(), nodes.end(), [&](int a, int b) {\n            return dist[a] > dist[b];\n        });\n        \n        vector<long long> dp(n + 1, 0);\n        dp[1] = 1;\n        for (int u : nodes) {\n            if (dp[u] == 0) continue;\n            for (auto& [v, w] : adj[u]) {\n                if (dist[u] > dist[v]) {\n                    dp[v] = (dp[v] + dp[u]) % MOD;\n                }\n            }\n        }\n        \n        return dp[n] % MOD;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

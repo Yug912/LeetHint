@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-length-of-the-longest-common-prefix",
+  "title": "Find the Length of the Longest Common Prefix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Set Lookup",
+  "tc": "O((n + m) · d)",
+  "sc": "O(n · d)",
+  "spaceBreakdown": "- unordered_set<int> prefixes: up to 8·n entries → O(n)\n- recursion depth: none\n- not counted: input vectors, returned int",
+  "approach": "Each integer is at most 10^8, so it has at most 8 digit-prefixes. Insert every prefix of every number in arr1 into a hash set (at most 8·|arr1| entries). For each number in arr2, walk its prefixes from longest to shortest; the first one found in the set gives the longest common prefix for that pair. Track the global maximum length. Correctness follows because the longest match for a given arr2 element is its longest prefix that also appears as some prefix of some arr1 element, and we test prefixes in decreasing length order.",
+  "hints": [
+    "Each integer in the input is at most 10^8. How many distinct prefixes can one such integer have, and what does that imply about the total number of prefixes you'd need to look at across the whole array?",
+    "Use a hash set. Insert every prefix (obtained by repeatedly dividing by 10) of each arr1 element into it. For arr1 = [1,10,100] the set becomes {1, 10, 100}.",
+    "```\nS = empty set\nfor x in arr1:\n    while x > 0:\n        S.insert(x)\n        x = x / 10\nans = 0\nfor x in arr2:\n    while x > 0:\n        if x in S:\n            ans = max(ans, digit_count(x))\n            break\n        x = x / 10\nreturn ans\n```",
+    "**Single-digit match** - both arrays contain only one-digit numbers that match.\n`Input: arr1 = [5], arr2 = [5]` → `Expected: 1`\n⚠️ Bug: generating prefixes with `while (x > 9)` instead of `while (x > 0)` skips single-digit prefixes → returns 0.\n\n**No common prefix** - no arr1 prefix appears in arr2.\n`Input: arr1 = [1,2,3], arr2 = [4,4,4]` → `Expected: 0`\n⚠️ Bug: initializing `ans = 1` instead of `ans = 0` → returns 1.\n\n**Shortest-first break** - checking arr2 prefixes from shortest to longest and breaking on first hit.\n`Input: arr1 = [1,10,100], arr2 = [1000]` → `Expected: 3`\n⚠️ Bug: iterating prefixes from 1 digit upward and breaking on first match finds `1` first → returns 1.\n\n**Duplicate values in arr1** - same number repeated; set must dedupe.\n`Input: arr1 = [100,100,100], arr2 = [1000]` → `Expected: 3`\n⚠️ Bug: using a vector instead of a set and not deduping still works here, but a buggy `count`-based check that returns on first duplicate insertion failure could skip valid prefixes → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if arr1 is too large to fit in memory but arr2 is small?",
+      "a": "Build the prefix set from arr2 instead, then stream arr1 one element at a time, generating its prefixes and checking membership. Time stays O((n+m)·d); space drops to O(m·d)."
+    },
+    {
+      "q": "Return the actual longest common prefix integer, not just its length.",
+      "a": "Track the matching prefix value alongside its length whenever you update the answer. Time and space complexity are unchanged."
+    },
+    {
+      "q": "Numbers can be up to 10^18 (too large for int). How do you adapt?",
+      "a": "Treat each number as a string and insert all its string-prefixes into the hash set, then check string-prefixes of arr2. Time O((n+m)·d) with d ≤ 19; space O(n·d) for the set of strings."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestCommonPrefix(vector<int>& arr1, vector<int>& arr2) {\n        unordered_set<int> prefixes;\n        prefixes.reserve(arr1.size() * 8);\n        for (int x : arr1) {\n            while (x > 0) {\n                prefixes.insert(x);\n                x /= 10;\n            }\n        }\n        int ans = 0;\n        for (int x : arr2) {\n            while (x > 0) {\n                if (prefixes.count(x)) {\n                    int len = 0;\n                    int t = x;\n                    while (t > 0) {\n                        ++len;\n                        t /= 10;\n                    }\n                    if (len > ans) ans = len;\n                    break;\n                }\n                x /= 10;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
