@@ -1,0 +1,39 @@
+{
+  "slug": "simple-bank-system",
+  "title": "Simple Bank System",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation with Array",
+  "tc": "O(1)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> bal: n entries → O(n)\n- int n: O(1)\n- recursion: none\n- not counted: input vector passed to constructor",
+  "approach": "Store the balance array as a member `vector<long long>`. Each operation first validates that the account number(s) are in `[1, n]` (1-indexed), then checks that the source account has enough money. If both checks pass, update the balance(s) in place. Account `i` maps to index `i - 1` in the array. Using `long long` throughout avoids overflow since balances and amounts can reach 10^12 and deposits can push a balance up to 2×10^12.",
+  "hints": [
+    "For each transaction, what two independent conditions must both hold before any money leaves an account?",
+    "Store balances in a 0-indexed `vector<long long>`; account `i` maps to index `i-1`. For `withdraw(3, 10)` with balance `[10,100,20,50,30]`: verify `1 ≤ 3 ≤ 5` and `balance[2]=20 ≥ 10`, then set `balance[2]=10`.",
+    "```\nstore balance array, n = size\n\ntransfer(a1, a2, money):\n    if a1 or a2 outside [1, n]: return false\n    if balance[a1-1] < money: return false\n    balance[a1-1] -= money\n    balance[a2-1] += money\n    return true\n\nwithdraw(a, money):\n    if a outside [1, n]: return false\n    if balance[a-1] < money: return false\n    balance[a-1] -= money\n    return true\n\ndeposit(a, money):\n    if a outside [1, n]: return false\n    balance[a-1] += money\n    return true\n```",
+    "**Account out of range** - account number exceeds n\n`Input: Bank([10,100,20,50,30]).withdraw(10, 50)` → `Expected: false`\n⚠️ Bug: indexing `balance[account-1]` before the range check → out-of-bounds access / crash\n\n**Large values overflow** - balance and money near 10^12\n`Input: Bank([1000000000000]).deposit(1, 1000000000000)` → `Expected: true`\n⚠️ Bug: storing balances as `int` → 2×10^12 exceeds INT_MAX (≈2.1×10^9), balance wraps to a negative value\n\n**Balance exactly equals withdrawal** - boundary where balance == money\n`Input: Bank([20]).withdraw(1, 20)` → `Expected: true`\n⚠️ Bug: rejecting when `balance <= money` instead of `balance < money` → returns false on exact match\n\n**Zero amount transaction** - money = 0 is valid per constraints\n`Input: Bank([10,100]).transfer(1, 2, 0)` → `Expected: true`\n⚠️ Bug: checking `money > 0` as a validity condition → returns false for a zero-amount transfer"
+  ],
+  "followUps": [
+    {
+      "q": "What if the bank needs to support concurrent transactions safely?",
+      "a": "Add a mutex around each operation. Since each operation touches at most two accounts, per-account locks could reduce contention versus a single global lock. Time complexity stays O(1) per operation with added synchronization overhead."
+    },
+    {
+      "q": "What if there are up to 10^9 accounts but only 10^4 are ever accessed?",
+      "a": "Replace the vector with a hash map that lazily initializes balances for accessed accounts. Time complexity is O(1) average per operation; space drops to O(k) where k is the number of distinct accounts touched."
+    },
+    {
+      "q": "What if you must support batch transactions atomically (all succeed or all fail)?",
+      "a": "First validate every transaction in the batch without modifying state, then apply all updates only if every check passed. For a batch of size b, time is O(b) per batch; space remains O(n) with O(1) extra temporary storage."
+    }
+  ],
+  "code": {
+    "cpp": "class Bank {\n    vector<long long> bal;\n    int n;\npublic:\n    Bank(vector<long long>& balance) {\n        bal = balance;\n        n = (int)bal.size();\n    }\n    \n    bool transfer(int account1, int account2, long long money) {\n        if (account1 < 1 || account1 > n || account2 < 1 || account2 > n) return false;\n        if (bal[account1 - 1] < money) return false;\n        bal[account1 - 1] -= money;\n        bal[account2 - 1] += money;\n        return true;\n    }\n    \n    bool deposit(int account, long long money) {\n        if (account < 1 || account > n) return false;\n        bal[account - 1] += money;\n        return true;\n    }\n    \n    bool withdraw(int account, long long money) {\n        if (account < 1 || account > n) return false;\n        if (bal[account - 1] < money) return false;\n        bal[account - 1] -= money;\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

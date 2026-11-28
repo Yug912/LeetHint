@@ -1,0 +1,40 @@
+{
+  "slug": "binary-subarrays-with-sum",
+  "title": "Binary Subarrays With Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window (Two Pointers)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables left, sum, count, right: constant → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input vector nums",
+  "approach": "Since every element is 0 or 1 (non-negative), a subarray's sum never decreases as it extends rightward. We count subarrays with sum exactly `goal` as `atMost(goal) − atMost(goal−1)`, where `atMost(k)` counts subarrays with sum ≤ k using a two-pointer sliding window. For each right endpoint, we shrink the window from the left until the sum ≤ k, then add `right − left + 1` (the number of valid subarrays ending at `right`). This is correct because every subarray with sum exactly `goal` is included in `atMost(goal)` but excluded from `atMost(goal−1)`.",
+  "hints": [
+    "Since every element is 0 or 1, what can you say about how a subarray's sum changes as you extend it to the right - can it ever decrease? The array length is at most 3 × 10^4.",
+    "Use a two-pointer sliding window. Define `atMost(k)` = count of subarrays with sum ≤ k; the answer is `atMost(goal) − atMost(goal−1)`. In `atMost(2)` on `[1,0,1,0,1]`, when right reaches index 4 the window sum becomes 3 > 2, so left advances from 0 to 1 (sum drops to 2), and we add 4−1+1 = 4 subarrays ending at index 4.",
+    "```\natMost(nums, goal):\n  if goal < 0: return 0\n  left = sum = count = 0\n  for right in 0..n-1:\n    sum += nums[right]\n    while sum > goal: sum -= nums[left++]\n    count += right - left + 1\n  return count\nreturn atMost(goal) - atMost(goal-1)\n```",
+    "**Negative goal from subtraction** - goal = 0 makes goal−1 = −1, which must be guarded.\n`Input: nums = [0,0,0,0,0], goal = 0` → `Expected: 15`\n⚠️ Bug: Omitting `if (goal < 0) return 0;` in atMost → while loop never terminates on all-zeros with goal = −1 (subtracting 0 never reduces sum), left runs out of bounds → crash\n\n**Single element** - only one subarray exists, so the window count formula must include both endpoints.\n`Input: nums = [1], goal = 1` → `Expected: 1`\n⚠️ Bug: Using `count += right - left` instead of `count += right - left + 1` → returns 0\n\n**All ones, goal equals length** - only the full array has sum equal to goal.\n`Input: nums = [1,1,1], goal = 3` → `Expected: 1`\n⚠️ Bug: Using `while (sum >= goal)` instead of `while (sum > goal)` in atMost → atMost(3) returns 5 and atMost(2) returns 3, giving 2 instead of 1\n\n**Single zero, goal = 0** - the guard must use strict less-than so goal = 0 is still processed.\n`Input: nums = [0], goal = 0` → `Expected: 1`\n⚠️ Bug: Using `if (goal <= 0) return 0;` instead of `if (goal < 0) return 0;` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums can contain −1, 0, or 1 instead of just 0 or 1?",
+      "a": "The sliding window breaks because extending a subarray can now decrease its sum, so the monotonicity assumption fails. Use a prefix-sum hash map: for each running prefix sum `curr`, add the count of previous prefix sums equal to `curr − goal`. This is O(n) time and O(n) space."
+    },
+    {
+      "q": "What if you need to count subarrays with sum in a range [low, high]?",
+      "a": "Apply the same decomposition: the answer is `atMost(high) − atMost(low − 1)`. Each `atMost` call is an independent O(n) sliding-window pass, so the total is O(n) time and O(1) space - unchanged."
+    },
+    {
+      "q": "What if you must return all the subarrays themselves (their start/end indices), not just the count?",
+      "a": "The count can be Θ(n²) in the worst case (e.g., all zeros with goal = 0 gives n(n+1)/2 subarrays), so any solution that lists them all is Ω(n²) in time and output size. You can still use the sliding window to enumerate efficiently: for each right endpoint, output every (left, right) pair in the valid window."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSubarraysWithSum(vector<int>& nums, int goal) {\n        return atMost(nums, goal) - atMost(nums, goal - 1);\n    }\nprivate:\n    int atMost(vector<int>& nums, int goal) {\n        if (goal < 0) return 0;\n        int left = 0, sum = 0, count = 0;\n        for (int right = 0; right < (int)nums.size(); right++) {\n            sum += nums[right];\n            while (sum > goal) {\n                sum -= nums[left];\n                left++;\n            }\n            count += right - left + 1;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

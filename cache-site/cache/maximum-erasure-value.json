@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-erasure-value",
+  "title": "Maximum Erasure Value",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(min(n, V))",
+  "spaceBreakdown": "- unordered_set<int> seen: up to min(n, V) entries where V = max(nums[i]) = 10^4 → O(min(n, V))\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Maintain a sliding window [left, right] where all elements are unique, tracked by a hash set. When nums[right] is already in the window, shrink from the left until the duplicate is removed, subtracting each removed element from the running sum. After each expansion, update the maximum sum. This explores every maximal unique subarray in O(n) time since each element is inserted and erased at most once.",
+  "hints": [
+    "For a subarray ending at each position with all distinct elements, how far left can its boundary reach before a duplicate appears? The array can have up to 10^5 elements, so checking every subarray individually is too slow.",
+    "Use a sliding window with a hash set. For nums = [4,2,4,5,6], when the second 4 is encountered, shrink from the left until the first 4 is removed, keeping the window unique while tracking the running sum.",
+    "```\nleft = 0, sum = 0, maxSum = 0\nseen = empty set\nfor right from 0 to n-1:\n    while nums[right] in seen:\n        remove nums[left] from seen\n        sum -= nums[left]\n        left += 1\n    add nums[right] to seen\n    sum += nums[right]\n    maxSum = max(maxSum, sum)\nreturn maxSum\n```",
+    "**Single element** - smallest valid input with one element\n`Input: nums = [7]` → `Expected: 7`\n⚠️ Bug: starting the right pointer at 1 instead of 0 → returns 0\n\n**Duplicate not at left boundary** - the repeated value sits deeper in the window\n`Input: nums = [1,2,3,2]` → `Expected: 6`\n⚠️ Bug: using `if` instead of `while` for duplicate removal → returns 7\n\n**All equal values** - window never grows beyond one element\n`Input: nums = [5,5,5,5]` → `Expected: 5`\n⚠️ Bug: erasing from the set but not subtracting from sum → returns 20\n\n**Best subarray at the end** - the maximum is reached only on the final element\n`Input: nums = [1,1,1,2,3,4]` → `Expected: 9`\n⚠️ Bug: updating maxSum before adding nums[right] to sum → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums can contain negative numbers?",
+      "a": "Shrinking the window can increase the sum by dropping negatives, so the two-pointer approach no longer captures all candidates. For each right endpoint you'd need the minimum prefix sum within the valid left range, turning it into a range-minimum-query problem. TC: O(n) with a monotonic deque, SC: O(n)."
+    },
+    {
+      "q": "What if the array arrives as a streaming input too large to store?",
+      "a": "Process elements one at a time through the same sliding window - the only state needed is the hash set, the current sum, and the two pointers. TC: O(n) amortized, SC: O(min(n, V)) for the set."
+    },
+    {
+      "q": "What if you must return the subarray itself, not just the sum?",
+      "a": "Track the left and right indices of the best window alongside maxSum, recording them whenever maxSum updates. Return nums[bestLeft..bestRight]. TC: O(n), SC: O(k) for the output subarray where k is its length."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumUniqueSubarray(vector<int>& nums) {\n        unordered_set<int> seen;\n        int left = 0, sum = 0, maxSum = 0;\n        for (int right = 0; right < (int)nums.size(); right++) {\n            while (seen.count(nums[right])) {\n                seen.erase(nums[left]);\n                sum -= nums[left];\n                left++;\n            }\n            seen.insert(nums[right]);\n            sum += nums[right];\n            maxSum = max(maxSum, sum);\n        }\n        return maxSum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

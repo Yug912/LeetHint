@@ -1,0 +1,40 @@
+{
+  "slug": "lexicographical-numbers",
+  "title": "Lexicographical Numbers",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Iterative Tree Traversal (DFS)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> res(n): n entries - returned output, not counted\n- int cur: single integer → O(1)\n- no recursion, no other containers",
+  "approach": "The lexicographical ordering of 1..n corresponds to a pre-order traversal of an implicit 10-ary tree where each node's children are node×10, node×10+1, …, node×10+9 (pruned to ≤ n). Instead of recursion, we simulate this iteratively: from the current number, either go deeper (multiply by 10) or, if that exceeds n, increment - but when the current number ends in 9 or incrementing would exceed n, backtrack by dividing by 10 first. Each of the n steps does O(1) amortized work because every division undoes a prior multiplication.",
+  "hints": [
+    "For n = 13 the output is [1, 10, 11, 12, 13, 2, 3, 4, 5, 6, 7, 8, 9]. What relationship does each number have with the one immediately before it? The constraint n ≤ 5 × 10⁴ rules out generating all values and then sorting.",
+    "Iterative pre-order DFS on an implicit 10-ary tree (each node's children are node×10 … node×10+9). From cur = 1 with n = 13: 1 → 10 (append a digit), 10 → 11 (increment), 13 → 2 (divide by 10 until you can increment without exceeding n or landing on a trailing 9).",
+    "```\ncur = 1\nfor i in 1..n:\n    output cur\n    if cur * 10 <= n:\n        cur = cur * 10\n    else:\n        while cur % 10 == 9 or cur + 1 > n:\n            cur = cur / 10\n        cur = cur + 1\n```",
+    "**Smallest input** - only one number in the range\n`Input: n = 1` → `Expected: [1]`\n⚠️ Bug: loop condition `i <= n` (off-by-one) → returns [1, 2]\n\n**Power-of-10 boundary** - appending a digit lands exactly on n\n`Input: n = 10` → `Expected: [1, 10, 2, 3, 4, 5, 6, 7, 8, 9]`\n⚠️ Bug: using `cur * 10 < n` instead of `<= n` → returns [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\n\n**Trailing 9** - numbers ending in 9 are the last child at their depth and require backtracking\n`Input: n = 99` → `Expected: [1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 2, 20, ...]`\n⚠️ Bug: omitting `cur % 10 == 9` from the while condition → after 19 returns 20 instead of 2"
+  ],
+  "followUps": [
+    {
+      "q": "Given n and k (1 ≤ k ≤ n), return only the k-th number in lexicographical order without generating all n numbers.",
+      "a": "Use the same tree structure but count how many numbers share each prefix (a subtree-size computation in O(log n)). At each node, either descend into a child or skip an entire subtree by advancing the prefix, subtracting the skipped count from k. This yields O(log² n) time and O(1) space. (This is LeetCode 440.)"
+    },
+    {
+      "q": "n can be as large as 10⁹ - produce numbers one at a time via an iterator.",
+      "a": "The same iterative step (append a digit, or backtrack-and-increment) produces each next number in O(1) amortized time with O(1) state (just the current integer). No precomputation or storage is needed, so it works for arbitrarily large n."
+    },
+    {
+      "q": "Return the numbers in reverse lexicographical order (largest first) in O(n) time and O(1) extra space.",
+      "a": "Mirror the traversal: start at the rightmost leaf (follow the deepest valid ×10+9 path), and at each step either move to the previous sibling's deepest descendant or backtrack upward by dividing by 10. The logic is the exact reverse of the forward step, preserving O(n) time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> lexicalOrder(int n) {\n        vector<int> res(n);\n        int cur = 1;\n        for (int i = 0; i < n; i++) {\n            res[i] = cur;\n            if (cur * 10 <= n) {\n                cur *= 10;\n            } else {\n                while (cur % 10 == 9 || cur + 1 > n) {\n                    cur /= 10;\n                }\n                cur++;\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-vowels-permutation",
+  "title": "Count Vowels Permutation",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Matrix Exponentiation",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- Matrix M, res, and temporary matrix C in multiply(): fixed 5x5 size → O(1)\n- recursion depth: none\n- not counted: input, returned scalar",
+  "approach": "The vowel transition rules can be modeled as a directed graph, which is naturally represented by a 5x5 adjacency matrix $M$ where $M[i][j] = 1$ if vowel $i$ can be followed by vowel $j$. The number of valid strings of length $n$ is the sum of all entries in $M^{n-1}$, since the initial state vector of length 1 is $[1, 1, 1, 1, 1]$. By using binary exponentiation to compute $M^{n-1}$, we achieve $O(\\log n)$ time complexity while using only $O(1)$ auxiliary space.",
+  "hints": [
+    "If you map the allowed vowel transitions as a directed graph, how does the number of paths of length $n-1$ relate to the total number of valid strings of length $n$?\nThe constraints allow $n$ up to $2 \\cdot 10^4$.",
+    "Use matrix exponentiation to compute the $n-1$ power of the 5x5 transition matrix.\nFor $n=2$, the transition matrix $M$ has 1s at valid transitions (e.g., $M[0][1]=1$ for 'a' to 'e'), and the sum of all elements in $M^1$ is 10.",
+    "```\nfunction multiply(A, B):\n    C = 5x5 zero matrix\n    for i = 0 to 4:\n        for k = 0 to 4:\n            for j = 0 to 4:\n                C[i][j] = (C[i][j] + A[i][k] * B[k][j]) % MOD\n    return C\n\nres = Identity matrix\nM = transition matrix\np = n - 1\nwhile p > 0:\n    if p is odd: res = multiply(res, M)\n    M = multiply(M, M)\n    p = p / 2\nreturn sum of all elements in res\n```",
+    "**Smallest input** - $n = 1$ means $n-1 = 0$, so the matrix power is the identity matrix.\n`Input: n = 1` → `Expected: 5`\n⚠️ Bug: Initializing the result matrix to all zeros instead of the identity matrix → returns `0`.\n\n**Off-by-one in exponent** - Using $M^n$ instead of $M^{n-1}$.\n`Input: n = 1` → `Expected: 5`\n⚠️ Bug: Computing $M^n$ instead of $M^{n-1}$ → returns `10` (the sum of elements in $M^1$).\n\n**Wrong sum** - Returning the trace (sum of diagonal) instead of the sum of all elements.\n`Input: n = 2` → `Expected: 10`\n⚠️ Bug: Returning the sum of the diagonal elements of the result matrix → returns `0`."
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet size was $k$ vowels instead of 5, with arbitrary transition rules?",
+      "a": "The matrix exponentiation approach naturally scales to a $k \\times k$ matrix. The time complexity becomes $O(k^3 \\log n)$ and space complexity becomes $O(k^2)$, which is optimal for dense transition graphs."
+    },
+    {
+      "q": "How would you handle multiple queries of different $n$ values efficiently?",
+      "a": "Precompute and store the powers of the matrix $M^{2^i}$ for all $i$ up to $\\log(\\max n)$. Each query then takes $O(k^3 \\log n)$ time by multiplying the relevant precomputed matrices, without recomputing from scratch."
+    },
+    {
+      "q": "What if the transition rules were time-dependent (e.g., different rules on even and odd days)?",
+      "a": "We can construct a combined transition matrix for a full cycle (e.g., $M_{even} \\times M_{odd}$) and exponentiate this combined matrix to the power of $\\lfloor n/2 \\rfloor$. The time complexity remains $O(\\log n)$, with a constant factor increase for the larger matrix dimensions."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    using Matrix = array<array<long long, 5>, 5>;\n    const long long MOD = 1000000007LL;\n    \n    Matrix multiply(const Matrix& A, const Matrix& B) {\n        Matrix C = {};\n        for (int i = 0; i < 5; ++i) {\n            for (int k = 0; k < 5; ++k) {\n                if (A[i][k] == 0) continue;\n                for (int j = 0; j < 5; ++j) {\n                    C[i][j] = (C[i][j] + A[i][k] * B[k][j]) % MOD;\n                }\n            }\n        }\n        return C;\n    }\npublic:\n    int countVowelPermutation(int n) {\n        Matrix M = {{\n            {0, 1, 0, 0, 0},\n            {1, 0, 1, 0, 0},\n            {1, 1, 0, 1, 1},\n            {0, 0, 1, 0, 1},\n            {1, 0, 0, 0, 0}\n        }};\n        \n        Matrix res = {{\n            {1, 0, 0, 0, 0},\n            {0, 1, 0, 0, 0},\n            {0, 0, 1, 0, 0},\n            {0, 0, 0, 1, 0},\n            {0, 0, 0, 0, 1}\n        }};\n        \n        long long p = n - 1;\n        while (p > 0) {\n            if (p & 1) res = multiply(res, M);\n            M = multiply(M, M);\n            p >>= 1;\n        }\n        \n        long long ans = 0;\n        for (int i = 0; i < 5; ++i) {\n            for (int j = 0; j < 5; ++j) {\n                ans = (ans + res[i][j]) % MOD;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

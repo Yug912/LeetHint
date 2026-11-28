@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-submatrices-that-sum-to-target",
+  "title": "Number of Submatrices That Sum to Target",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum with Hash Map",
+  "tc": "O(rows² × cols)",
+  "sc": "O(cols)",
+  "spaceBreakdown": "- vector<int> colSum: cols entries → O(cols)\n- unordered_map<int,int> seen: up to cols+1 entries → O(cols)\n- recursion depth: none\n- not counted: input matrix, returned int",
+  "approach": "Fix every pair of rows (r1, r2). For each pair, collapse the rows between them into a single 1D array of column sums. Then count subarrays of that 1D array that sum to target using a running prefix sum and a hash map of seen prefix values. This reduces the 2D problem to O(rows²) instances of the classic 1D subarray-sum-to-target problem, each solved in O(cols). Total: O(rows² × cols).",
+  "hints": [
+    "If you fix the top and bottom rows of a submatrix, what simpler problem does counting valid submatrices reduce to? The matrix has at most 100 rows and 100 columns.",
+    "For each row pair (r1, r2), build a 1D column-sum array, then use a hash map of prefix sums to count subarrays equal to target. Example: rows 0-1 of [[1,-1],[-1,1]] collapse to [0,0]; with seen={0:1}, at col 0 prefix=0 so count += seen[0]=1.",
+    "```\nfor r1 in 0..rows-1:\n    colSum = array of zeros, size cols\n    for r2 in r1..rows-1:\n        add matrix[r2][*] into colSum\n        seen = {0: 1}; prefix = 0\n        for c in 0..cols-1:\n            prefix += colSum[c]\n            count += seen[prefix - target]\n            seen[prefix] += 1\n```",
+    "**Single cell** - 1×1 matrix where the only submatrix is the cell itself\n`Input: matrix = [[0]], target = 0` → `Expected: 1`\n⚠️ Bug: forgetting to initialize `seen[0] = 1` before the column loop → returns `0`\n\n**All zeros** - every submatrix sums to 0, so the count is large\n`Input: matrix = [[0,0],[0,0]], target = 0` → `Expected: 9`\n⚠️ Bug: not resetting `colSum` to zeros for each new `r1` → returns `18` (double-counted from stale accumulation)\n\n**Negatives** - prefix sums go negative, so the hash map must accept negative keys\n`Input: matrix = [[1,-1],[-1,1]], target = 0` → `Expected: 5`\n⚠️ Bug: using an array indexed by `prefix` (which can be negative) → undefined behavior, returns garbage"
+  ],
+  "followUps": [
+    {
+      "q": "Count submatrices with sum ≤ target instead of == target?",
+      "a": "For each row pair, instead of a hash map, collect all prefix sums, sort them, and binary-search how many are ≥ (current prefix − target). Per pair: O(cols log cols). Total: O(rows² × cols log cols)."
+    },
+    {
+      "q": "If all matrix values are non-negative, can you reduce per-pair space?",
+      "a": "Yes - prefix sums are monotonic, so replace the hash map with a two-pointer sliding window on the compressed array. Still O(cols) per pair but O(1) extra space instead of O(cols) for the map."
+    },
+    {
+      "q": "If the matrix is 1000×1000, what breaks?",
+      "a": "O(rows² × cols) = 10⁹ is too slow. With non-negative values you can use two pointers per pair (same asymptotic complexity, better constants), but with arbitrary values there is no known exact sub-cubic algorithm - you would need to exploit value-range structure or accept approximation."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSubmatrixSumTarget(vector<vector<int>>& matrix, int target) {\n        int rows = matrix.size();\n        int cols = matrix[0].size();\n        int count = 0;\n        for (int r1 = 0; r1 < rows; r1++) {\n            vector<int> colSum(cols, 0);\n            for (int r2 = r1; r2 < rows; r2++) {\n                for (int c = 0; c < cols; c++) {\n                    colSum[c] += matrix[r2][c];\n                }\n                unordered_map<int, int> seen;\n                seen[0] = 1;\n                int prefix = 0;\n                for (int c = 0; c < cols; c++) {\n                    prefix += colSum[c];\n                    auto it = seen.find(prefix - target);\n                    if (it != seen.end()) count += it->second;\n                    seen[prefix]++;\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

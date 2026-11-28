@@ -1,0 +1,40 @@
+{
+  "slug": "magnetic-force-between-two-balls",
+  "title": "Magnetic Force Between Two Balls",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log n + n log(maxGap))",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- all other variables (lo, hi, mid, count, last, ans): O(1)\n- not counted: input vector (modified in place), returned int",
+  "approach": "Binary search on the answer (the minimum gap). For a candidate gap `d`, greedily scan sorted positions left to right, placing a ball whenever the current basket is at least `d` past the last placed ball. If we can place ≥ `m` balls, `d` is feasible and we try larger; otherwise try smaller. The greedy is optimal because placing each ball as early as possible leaves maximum room for the rest. Sort first so the greedy scan is valid.",
+  "hints": [
+    "If you can place all `m` balls so that every pair is at least distance `d` apart, what does that tell you about achieving distance `d−1`? The positions array has up to 10^5 elements.",
+    "Binary search on the answer. Sort positions; for a candidate gap `d`, scan left to right and place a ball whenever the next basket is at least `d` past the last placed one. Example `[1,2,3,4,7]`, m=3, d=3: place at 1, then 4 (4−1≥3), then 7 (7−4≥3) → 3 balls fit.",
+    "```\nsort positions\nlo = 1, hi = positions[last] - positions[0], ans = 0\nwhile lo <= hi:\n    mid = (lo + hi) / 2\n    count = 1, last = positions[0]\n    for i in 1..n-1:\n        if positions[i] - last >= mid:\n            count += 1, last = positions[i]\n    if count >= m:\n        ans = mid, lo = mid + 1\n    else:\n        hi = mid - 1\nreturn ans\n```",
+    "**Smallest input** - only two baskets and two balls, one valid placement.\n`Input: position = [1,5], m = 2` → `Expected: 4`\n⚠️ Bug: initializing `hi = position[n-1]` instead of `position[n-1] - position[0]` → returns 5\n\n**Unsorted / reverse-sorted input** - positions given in descending order.\n`Input: position = [5,4,3,2,1,1000000000], m = 2` → `Expected: 999999999`\n⚠️ Bug: skipping the sort step → greedy starts at 5, can only reach 1000000000 (gap 999999995), returns 999999995\n\n**All baskets needed, tight spacing** - every basket must be used.\n`Input: position = [1,2,3,4,5], m = 5` → `Expected: 1`\n⚠️ Bug: using `position[i] - last > mid` instead of `>= mid` → for d=1 skips adjacent baskets, count=3 < 5, returns 0\n\n**Two balls at extremes** - answer equals the full range.\n`Input: position = [1,1000000000], m = 2` → `Expected: 999999999`\n⚠️ Bug: using `int` for `hi` but computing `position[n-1] - position[0]` with signed overflow assumptions - here 999999999 fits in int, but initializing `hi = position[n-1]` without subtracting returns 1000000000"
+  ],
+  "followUps": [
+    {
+      "q": "What if the baskets are arranged in a circle (the last basket connects back to the first)?",
+      "a": "The gap between the last and first chosen basket also counts toward the minimum. Binary search on `d` still works, but the greedy check must try each basket as the starting point and verify circular placement, raising TC to O(n² log(maxGap)) or O(n log n log(maxGap)) with two-pointer rotation."
+    },
+    {
+      "q": "What if positions arrive as a stream and you must answer queries online without re-sorting?",
+      "a": "Maintain positions in a balanced BST or sorted dynamic array. Each query binary-searches on `d` and greedily scans the sorted structure. TC per query is O(n log(maxGap)), SC stays O(n) for the sorted store."
+    },
+    {
+      "q": "What if you must also return the actual basket indices that achieve the maximum minimum force?",
+      "a": "After binary search finds the optimal `d`, run the greedy placement one more time with that `d`, recording each chosen index. TC is unchanged; SC becomes O(m) for the output list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxDistance(vector<int>& position, int m) {\n        sort(position.begin(), position.end());\n        int n = position.size();\n        int lo = 1, hi = position[n - 1] - position[0];\n        int ans = 0;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            int count = 1;\n            int last = position[0];\n            for (int i = 1; i < n; i++) {\n                if (position[i] - last >= mid) {\n                    count++;\n                    last = position[i];\n                }\n            }\n            if (count >= m) {\n                ans = mid;\n                lo = mid + 1;\n            } else {\n                hi = mid - 1;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

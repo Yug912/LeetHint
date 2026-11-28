@@ -1,0 +1,40 @@
+{
+  "slug": "frequency-of-the-most-frequent-element",
+  "title": "Frequency of the Most Frequent Element",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort recursion stack: O(log n)\n- sum (long long), left, right, ans: O(1)\n- not counted: input vector (modified in place)",
+  "approach": "Sort the array so that any group of elements raised to a common target forms a contiguous segment ending at that target. Use a sliding window [left, right] where nums[right] is the target value; the cost to raise all elements in the window to nums[right] is `nums[right] × window_size − window_sum`. Expand `right` one step at a time, and whenever the cost exceeds `k`, shrink from `left`. The largest valid window size encountered is the answer.",
+  "hints": [
+    "If you fix the value that several elements should all become, which existing elements are cheapest to raise to it? The array can have up to 10^5 elements.",
+    "Sort the array, then maintain a window whose elements you raise to the right endpoint. For [1,2,4] with k=5, the full window costs (4−1)+(4−2)+(4−4)=5, exactly k, so frequency 3 fits.",
+    "```\nsort array\nleft = 0, sum = 0, ans = 0\nfor right in 0 .. n-1:\n    sum += array[right]\n    while array[right] * (right - left + 1) - sum > k:\n        sum -= array[left]\n        left += 1\n    ans = max(ans, right - left + 1)\nreturn ans\n```",
+    "**Single element** - only one element exists, so the answer is trivially 1.\n`Input: nums = [5], k = 3` → `Expected: 1`\n⚠️ Bug: initializing `ans = 0` and only updating it inside the while-loop's else branch → returns 0\n\n**Overflow** - window product can reach 10^5 × 10^5 = 10^10, exceeding 2^31−1.\n`Input: nums = [100000,100000,...(100000 times)], k = 100000` → `Expected: 100000`\n⚠️ Bug: computing `nums[right] * (right - left + 1)` as `int` → 10^10 overflows, returns garbage\n\n**All equal elements** - cost is always 0, so the whole array is one group.\n`Input: nums = [7,7,7,7], k = 1` → `Expected: 4`\n⚠️ Bug: tracking `ans = max(ans, right - left)` instead of `right - left + 1` → returns 3\n\n**k exactly fits** - the budget is consumed precisely, so the boundary check matters.\n`Input: nums = [1,2,4], k = 5` → `Expected: 3`\n⚠️ Bug: using `>=` instead of `>` in the shrink condition → shrinks when cost equals k, returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can both increment and decrement elements (make all chosen elements equal to any value)?",
+      "a": "This becomes the classic \"minimum moves to equalize\" problem: sort, pick the median of the chosen group, and sum absolute differences. For maximizing frequency with a budget, the sliding window still applies but the target is the median of the window, not the right endpoint. O(n log n) time, O(1) space."
+    },
+    {
+      "q": "What if k can be as large as 10^9?",
+      "a": "The algorithm is unchanged; just ensure every multiplication and sum uses `long long`. The product `nums[right] × window_size` reaches at most 10^5 × 10^5 = 10^10, which fits in `long long`. O(n log n) time, O(log n) space."
+    },
+    {
+      "q": "What if nums arrives as a stream and you cannot store all elements, but values are bounded by 10^5?",
+      "a": "Maintain a frequency array of size 10^5+1 and run the sliding window over value-space instead of index-space. Each new element updates one bucket; the window slides over the value range. O(V) space where V = max value, O(V) time per query, suitable for bounded-value streaming."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxFrequency(vector<int>& nums, int k) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        long long sum = 0;\n        int left = 0, ans = 0;\n        for (int right = 0; right < n; right++) {\n            sum += nums[right];\n            while ((long long)nums[right] * (right - left + 1) - sum > k) {\n                sum -= nums[left];\n                left++;\n            }\n            ans = max(ans, right - left + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

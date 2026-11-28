@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-path-visiting-all-nodes",
+  "title": "Shortest Path Visiting All Nodes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS + Bitmask State",
+  "tc": "O(n² × 2^n)",
+  "sc": "O(n × 2^n)",
+  "spaceBreakdown": "- vector<vector<bool>> visited: n × 2^n entries → O(n × 2^n)\n- queue<pair<int,int>> q: up to n × 2^n states → O(n × 2^n)\n- not counted: input graph",
+  "approach": "With n ≤ 12, the set of visited nodes fits in a 12-bit integer. We run BFS over states (current node, visited-mask), seeding the queue with all n starting positions since we may begin at any node. The first time we dequeue a state whose mask has all n bits set, the current BFS distance is the answer. The state space is n × 2^n ≤ 49,152, and each state expands into at most n neighbors, so the search is fast and complete.",
+  "hints": [
+    "With n ≤ 12, how many distinct \"sets of nodes visited so far\" could you possibly need to distinguish while exploring paths?",
+    "BFS over states (current node, bitmask of visited nodes). In Example 1, starting at node 1 gives mask 0b0010; moving to node 0 yields state (node 0, mask 0b0011).",
+    "```\npush (i, 1<<i) for every node i, mark visited\ndist = 0\nwhile queue not empty:\n    for each state at this level:\n        pop (node, mask)\n        if mask == (1<<n)-1: return dist\n        for each neighbor of node:\n            new_mask = mask | (1 << neighbor)\n            if (neighbor, new_mask) not visited:\n                mark visited, push (neighbor, new_mask)\n    dist += 1\n```",
+    "**Single node** - n = 1, no edges, no neighbors to expand.\n`Input: graph = [[]]` → `Expected: 0`\n⚠️ Bug: checking mask == full only when pushing neighbors (node 0 has none) → returns -1\n\n**Star graph** - center node must be revisited to reach every leaf.\n`Input: graph = [[1,2,3],[0],[0],[0]]` → `Expected: 4`\n⚠️ Bug: tracking visited[node] instead of visited[node][mask] → returns -1\n\n**Star graph, single start** - optimal path starts at a leaf, not the center.\n`Input: graph = [[1,2,3],[0],[0],[0]]` → `Expected: 4`\n⚠️ Bug: seeding BFS from only node 0 → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 20?",
+      "a": "The state space grows to 20 × 2²⁰ ≈ 20 million, which is still feasible for BFS but memory-tight. Switch to A* with a heuristic like the size of the minimum spanning tree of unvisited nodes to prune aggressively. Time becomes O(n × 2^n × log(n × 2^n)) with the priority queue."
+    },
+    {
+      "q": "What if edges have positive weights?",
+      "a": "Replace BFS with Dijkstra: use a priority queue ordered by accumulated distance, and relax edges the same way over (node, mask) states. The state space is unchanged at O(n × 2^n), but time becomes O(n × 2^n × log(n × 2^n)) due to the heap."
+    },
+    {
+      "q": "What if you must return the actual path instead of just its length?",
+      "a": "Store a predecessor pointer (prev_node, prev_mask) for each visited state during BFS. When the goal state is dequeued, backtrack through predecessors to reconstruct the node sequence. Space increases by O(n × 2^n) for the parent array; time is unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int shortestPathLength(vector<vector<int>>& graph) {\n        int n = graph.size();\n        int full = (1 << n) - 1;\n        vector<vector<bool>> visited(n, vector<bool>(1 << n, false));\n        queue<pair<int,int>> q;\n        for (int i = 0; i < n; i++) {\n            q.push({i, 1 << i});\n            visited[i][1 << i] = true;\n        }\n        int dist = 0;\n        while (!q.empty()) {\n            int sz = q.size();\n            for (int k = 0; k < sz; k++) {\n                auto [node, mask] = q.front();\n                q.pop();\n                if (mask == full) return dist;\n                for (int nb : graph[node]) {\n                    int nmask = mask | (1 << nb);\n                    if (!visited[nb][nmask]) {\n                        visited[nb][nmask] = true;\n                        q.push({nb, nmask});\n                    }\n                }\n            }\n            dist++;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

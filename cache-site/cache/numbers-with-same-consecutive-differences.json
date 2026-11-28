@@ -1,0 +1,40 @@
+{
+  "slug": "numbers-with-same-consecutive-differences",
+  "title": "Numbers With Same Consecutive Differences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DFS / Backtracking on Digit Tree",
+  "tc": "O(2^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- recursion call stack: depth up to n → O(n)\n- not counted: returned vector<int> result (up to 9·2^(n-1) entries)",
+  "approach": "Once the first digit (1-9) is chosen, each subsequent digit is constrained to at most two values: current+k or current−k, provided the result stays in [0,9]. This forms a tree of depth n with branching factor ≤2, so we DFS from each starting digit, appending valid next digits until the number reaches length n. When k=0 both branches coincide, so we skip the duplicate.",
+  "hints": [
+    "Once you fix the first digit, how many candidates exist for the next digit? The constraint n ≤ 9 means each number has at most 9 digits.",
+    "Depth-first search from each starting digit 1-9. With n=3, k=7: start at 1, the next digit is 1+7=8 (giving 18), then 8−7=1 (giving 181).",
+    "```\nfor d in 1..9:\n    dfs(d, 1)\n\ndfs(num, len):\n    if len == n:\n        results.append(num)\n        return\n    last = num % 10\n    for next in {last + k, last - k}:\n        if 0 <= next <= 9 and next not duplicate:\n            dfs(num * 10 + next, len + 1)\n```",
+    "**k=0 duplicates** - both branches yield the same next digit\n`Input: n=2, k=0` → `Expected: [11,22,33,44,55,66,77,88,99]`\n⚠️ Bug: exploring both last+k and last-k without checking they differ → returns [11,11,22,22,33,33,44,44,55,55,66,66,77,77,88,88,99,99]\n\n**Leading zero** - first digit 0 creates numbers shorter than n\n`Input: n=3, k=7` → `Expected: [181,292,707,818,929]`\n⚠️ Bug: starting the first-digit loop from 0 → returns [70,181,292,707,818,929] (70 is 2 digits, not 3)\n\n**k=9 boundary** - only digits 0 and 9 differ by 9\n`Input: n=2, k=9` → `Expected: [90]`\n⚠️ Bug: not checking last+k ≤ 9 before recursing → returns [20,31,42,53,64,75,86,97,108,90]"
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 100, how would you handle the overflow?",
+      "a": "Return numbers as strings instead of integers. Replace `num * 10 + next` with string concatenation in the DFS. TC stays O(2^n), SC becomes O(n) per string in the output."
+    },
+    {
+      "q": "Return only the count of valid numbers instead of the full list.",
+      "a": "Use DP: dp[i][d] = count of valid length-i sequences ending in digit d. Transition: dp[i+1][d±k] += dp[i][d]. TC O(n·10), SC O(10) with a rolling array."
+    },
+    {
+      "q": "Return the numbers sorted in ascending order.",
+      "a": "Sort the result vector after generation: O(r log r) where r ≤ 9·2^(n-1). Alternatively, always explore the smaller next digit first in the DFS to produce sorted output for free."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> numsSameConsecDiff(int n, int k) {\n        vector<int> result;\n        for (int d = 1; d <= 9; d++) {\n            dfs(d, 1, n, k, result);\n        }\n        return result;\n    }\nprivate:\n    void dfs(int num, int len, int n, int k, vector<int>& result) {\n        if (len == n) {\n            result.push_back(num);\n            return;\n        }\n        int last = num % 10;\n        int hi = last + k;\n        if (hi <= 9) {\n            dfs(num * 10 + hi, len + 1, n, k, result);\n        }\n        int lo = last - k;\n        if (lo >= 0 && lo != hi) {\n            dfs(num * 10 + lo, len + 1, n, k, result);\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

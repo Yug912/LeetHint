@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-repeating-substring",
+  "title": "Maximum Repeating Substring",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with Consecutive Match Counting",
+  "tc": "O(n^2)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables n, m, ans, i, j, k: constant → O(1)\n- no containers, no recursion, no extra strings allocated\n- not counted: input strings sequence, word",
+  "approach": "For each starting index `i` in `sequence`, walk forward in steps of `word.size()`, counting how many consecutive copies of `word` match before a mismatch or the end. The answer is the maximum such count over all starting positions. This directly tests every possible repetition site without building or searching growing concatenated strings, giving O(n·m) work per start and O(n²) total worst case, with O(1) extra space.",
+  "hints": [
+    "For a fixed starting index in `sequence`, what determines how many back-to-back copies of `word` fit before a mismatch occurs? The constraints allow `sequence.length ≤ 100`.",
+    "Linear scan: for each starting index, count consecutive `word` matches stepping forward by `word.size()`. In `\"ababc\"` with `word = \"ab\"`, starting at index 0: `\"ab\"` matches (k=1), next `\"ab\"` matches (k=2), then `\"c\"` breaks → k=2.",
+    "```\nans = 0\nfor i in 0 .. n-1:\n    k = 0\n    j = i\n    while j+m <= n and sequence[j..j+m-1] == word:\n        k = k + 1\n        j = j + m\n    ans = max(ans, k)\nreturn ans\n```",
+    "**Single-character match** - sequence and word both length 1 and equal.\n`sequence = \"a\", word = \"a\"` → `Expected: 1`\n⚠️ Bug: using `j + m < n` (strict) as the loop bound instead of `j + m <= n` → returns 0.\n\n**Word longer than sequence** - word cannot fit anywhere.\n`sequence = \"a\", word = \"ab\"` → `Expected: 0`\n⚠️ Bug: reading `sequence[j+m-1]` before checking `j+m <= n` → out-of-bounds access.\n\n**All same characters** - maximum repetition across the whole string.\n`sequence = \"aaaa\", word = \"a\"` → `Expected: 4`\n⚠️ Bug: advancing `j` by 1 instead of `m` after each match → infinite loop.\n\n**Match at non-zero offset** - word appears but not at index 0.\n`sequence = \"ababc\", word = \"ba\"` → `Expected: 1`\n⚠️ Bug: only testing starting indices that are multiples of `m` → misses index 1, returns 0.\n\n**Word absent** - no match anywhere in sequence.\n`sequence = \"ababc\", word = \"ac\"` → `Expected: 0`\n⚠️ Bug: initializing `ans` to 1 instead of 0 → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "If `sequence.length` were up to 10^6, how would you adapt?",
+      "a": "Use KMP (or Z-algorithm) to find all start positions of `word` in O(n+m), then scan those positions to find the longest chain where consecutive starts differ by exactly m. Time O(n+m), space O(n) for the position list."
+    },
+    {
+      "q": "What if multiple candidate words are given and you want the max k across all of them?",
+      "a": "Run the same per-start scan independently for each candidate. With c candidates of length m, time is O(c·n·m); for many candidates, build an Aho-Corasick automaton over all words to find matches in one pass, then chain per word. Space becomes O(total pattern length) for the automaton."
+    },
+    {
+      "q": "If `sequence` arrives as a stream and you must report the current max k after each character?",
+      "a": "Keep a sliding window of the last m characters to test whether a new `word` match just completed at the current position; extend or reset the active run length accordingly and update the global max. Time O(m) per character (O(1) amortized with KMP failure links), space O(m) for the window."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxRepeating(string sequence, string word) {\n        int n = sequence.size();\n        int m = word.size();\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            int k = 0;\n            int j = i;\n            while (j + m <= n && sequence.compare(j, m, word) == 0) {\n                k++;\n                j += m;\n            }\n            if (k > ans) ans = k;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

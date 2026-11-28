@@ -1,0 +1,40 @@
+{
+  "slug": "vowel-spellchecker",
+  "title": "Vowel Spellchecker",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Table Lookup",
+  "tc": "O((n+m)·L)",
+  "sc": "O(n·L)",
+  "spaceBreakdown": "- unordered_set<string> exact: up to n entries → O(n)\n- unordered_map<string,string> capMap: up to n entries → O(n)\n- unordered_map<string,string> vowelMap: up to n entries → O(n)\n- Temporary strings (low, dv): max 7 chars each → O(1)\n- recursion depth: none\n- not counted: input wordlist, input queries, returned vector",
+  "approach": "Build three lookup structures from the wordlist: an exact-match set, a hash map from each word's lowercase form to the first wordlist entry with that form, and a hash map from each word's vowel-normalized form (vowels replaced by a placeholder) to the first wordlist entry with that pattern. For each query, check these three structures in precedence order (exact, case-insensitive, vowel-insensitive) and return the first match found, or empty string if none. This works because the maps store only the first occurrence, satisfying the \"first match\" rule, and the three-level check enforces the precedence.",
+  "hints": [
+    "If the same lowercase form appears multiple times in the wordlist (e.g., \"KiTe\" and \"kite\"), which one should be returned for a case-insensitive match? The wordlist can have up to 5000 entries, each at most 7 characters.",
+    "Use three hash maps: an exact-match set, a map from lowercase form to first matching word, and a map from vowel-normalized form (vowels → '*') to first matching word. For query \"Kite\" with wordlist [\"KiTe\",\"kite\"], lowercase \"kite\" maps to \"KiTe\" (first entry with that form).",
+    "```\nexact = set(wordlist)\ncap = map: lowercase(w) -> first w in wordlist\nvowel = map: devowel(lowercase(w)) -> first w in wordlist\nfor q in queries:\n    if q in exact: answer = q\n    elif lowercase(q) in cap: answer = cap[lowercase(q)]\n    elif devowel(lowercase(q)) in vowel: answer = vowel[devowel(lowercase(q))]\n    else: answer = \"\"\n```",
+    "**Exact match precedence** - query exactly matches a word that also has case-insensitive matches\n`wordlist = [\"KiTe\",\"kite\"], queries = [\"kite\"]` → `Expected: [\"kite\"]`\n⚠️ Bug: checking case-insensitive map before exact set → returns \"KiTe\"\n\n**Capitalization before vowel errors** - query's lowercase form exists in wordlist, but an earlier word shares the same vowel pattern\n`wordlist = [\"ebc\",\"abc\"], queries = [\"ABC\"]` → `Expected: [\"abc\"]`\n⚠️ Bug: skipping capitalization check, going straight to vowel map → returns \"ebc\"\n\n**First occurrence for vowel errors** - multiple words share a vowel pattern\n`wordlist = [\"KiTe\",\"kete\"], queries = [\"koto\"]` → `Expected: [\"KiTe\"]`\n⚠️ Bug: overwriting vowelMap with later entries → returns \"kete\"\n\n**Case-insensitive vowel matching** - query differs from wordlist entry in both case and vowels\n`wordlist = [\"YellOw\"], queries = [\"yollow\"]` → `Expected: [\"YellOw\"]`\n⚠️ Bug: applying devowel without first lowercasing both strings → returns \"\""
+  ],
+  "followUps": [
+    {
+      "q": "If the spellchecker should also handle single consonant substitutions (not just vowels), how would you extend the approach?",
+      "a": "For each word, generate all patterns where one consonant position is replaced by a wildcard, and store each in an additional hash map. This increases the map size by a factor of L (word length). TC becomes O((n + m) * L) and SC becomes O(n * L)."
+    },
+    {
+      "q": "If you must return the top-k most likely corrections per query instead of one, how would you adapt?",
+      "a": "Store all words matching each normalized form in a list, ordered by their position in the wordlist. For each query, collect matches from all three levels and return the first k. SC increases to O(n) for the lists (each word appears in at most 3 maps)."
+    },
+    {
+      "q": "If you can only use O(1) auxiliary space (beyond inputs and output), how would you answer queries?",
+      "a": "For each query, scan the wordlist linearly, tracking the first exact match, first case-insensitive match, and first vowel-insensitive match. Return the highest-precedence match found. TC becomes O(m * n * L) but SC is O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> spellchecker(vector<string>& wordlist, vector<string>& queries) {\n        unordered_set<string> exact(wordlist.begin(), wordlist.end());\n        unordered_map<string, string> capMap;\n        unordered_map<string, string> vowelMap;\n        \n        for (const string& w : wordlist) {\n            string low = toLower(w);\n            if (capMap.find(low) == capMap.end()) {\n                capMap[low] = w;\n            }\n            string dv = devowel(low);\n            if (vowelMap.find(dv) == vowelMap.end()) {\n                vowelMap[dv] = w;\n            }\n        }\n        \n        vector<string> result;\n        result.reserve(queries.size());\n        for (const string& q : queries) {\n            if (exact.count(q)) {\n                result.push_back(q);\n                continue;\n            }\n            string low = toLower(q);\n            auto it = capMap.find(low);\n            if (it != capMap.end()) {\n                result.push_back(it->second);\n                continue;\n            }\n            string dv = devowel(low);\n            auto it2 = vowelMap.find(dv);\n            if (it2 != vowelMap.end()) {\n                result.push_back(it2->second);\n            } else {\n                result.push_back(\"\");\n            }\n        }\n        return result;\n    }\nprivate:\n    string toLower(const string& s) {\n        string r = s;\n        for (char& c : r) {\n            if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';\n        }\n        return r;\n    }\n    string devowel(const string& s) {\n        string r = s;\n        for (char& c : r) {\n            if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {\n                c = '*';\n            }\n        }\n        return r;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "subrectangle-queries",
+  "title": "Subrectangle Queries",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Brute-Force Materialization",
+  "tc": "O(rows × cols)",
+  "sc": "O(rows × cols)",
+  "spaceBreakdown": "- vector<vector<int>> mat: copy of input, up to 100×100 = 10^4 ints → O(rows × cols)\n- recursion depth: none\n- not counted: input rectangle, returned int",
+  "approach": "Store a copy of the input matrix. On `updateSubrectangle`, brute-force overwrite every cell in the requested subrectangle with `newValue`. On `getValue`, simply index into the matrix in O(1). With at most 500 operations and a 100×100 grid, the worst-case total work is 500 × 10^4 = 5×10^6 cell writes, well within limits. Correctness follows because each update fully materializes the new state, so reads always see the latest values.",
+  "hints": [
+    "With only 500 total operations and a grid no larger than 100×100, what is the simplest way to make `getValue` return instantly while keeping the data structure trivial?",
+    "Keep a 2D `vector<vector<int>>` as the live matrix. On `updateSubrectangle(0,0,3,2,5)` from Example 1, loop `i` from 0..3 and `j` from 0..2, setting each `mat[i][j] = 5`.",
+    "```\nupdateSubrectangle(r1,c1,r2,c2,val):\n    for i in r1..r2:\n        for j in c1..c2:\n            mat[i][j] = val\n\ngetValue(r,c):\n    return mat[r][c]\n```",
+    "**Single cell** - subrectangle is one cell, e.g. `updateSubrectangle(1,1,1,1,7)`.\n`Input: getValue(1,1) after update` → `Expected: 7`\n⚠️ Bug: using `<` instead of `<=` in the loop bounds → skips the cell, returns the old value.\n\n**Full-grid overwrite** - update covers the entire 100×100 matrix.\n`Input: updateSubrectangle(0,0,99,99,1000000000); getValue(99,99)` → `Expected: 1000000000`\n⚠️ Bug: storing `newValue` in an `int` is fine, but using `short` would overflow; values reach 10^9.\n\n**Overlapping updates** - two updates intersect, second must win.\n`Input: update(0,0,2,2,5); update(1,1,2,2,9); getValue(2,2)` → `Expected: 9`\n⚠️ Bug: appending updates to a list and returning the first match instead of the last → returns 5.\n\n**Boundary indices** - update/read at row 0 / col 0 / last row / last col.\n`Input: getValue(0,0) on [[1,2],[3,4]]` → `Expected: 1`\n⚠️ Bug: 1-based indexing by mistake → returns out-of-range or wrong cell."
+  ],
+  "followUps": [
+    {
+      "q": "What if there are up to 10^5 operations but updates are rare and reads are frequent?",
+      "a": "Switch to lazy updates: store a list of (row1,col1,row2,col2,newValue) records. `getValue` scans the list in reverse and returns the first record covering (row,col), or falls back to the original matrix. Update becomes O(1), getValue becomes O(U) where U is the number of updates."
+    },
+    {
+      "q": "What if updates can also query the sum of a subrectangle in O(1)?",
+      "a": "Use a 2D Binary Indexed Tree (Fenwick tree) over the matrix. Point updates and 2D prefix-sum queries both run in O(log rows × log cols). A range update + range query variant requires a second BIT for the linear coefficient."
+    },
+    {
+      "q": "What if the matrix is too large to fit in memory (e.g. 10^9 × 10^9) but updates are sparse?",
+      "a": "Store only updated cells in a hash map keyed by (row,col) → value, plus the original default. `updateSubrectangle` would still be expensive, so instead store rectangular update records and resolve `getValue` by scanning records in reverse, giving O(1) update and O(U) read with O(U) memory."
+    }
+  ],
+  "code": {
+    "cpp": "class SubrectangleQueries {\n    vector<vector<int>> mat;\npublic:\n    SubrectangleQueries(vector<vector<int>>& rectangle) {\n        mat = rectangle;\n    }\n    \n    void updateSubrectangle(int row1, int col1, int row2, int col2, int newValue) {\n        for (int i = row1; i <= row2; ++i) {\n            for (int j = col1; j <= col2; ++j) {\n                mat[i][j] = newValue;\n            }\n        }\n    }\n    \n    int getValue(int row, int col) {\n        return mat[row][col];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

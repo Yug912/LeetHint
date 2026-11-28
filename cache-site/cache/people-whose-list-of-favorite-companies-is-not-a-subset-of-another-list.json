@@ -1,0 +1,40 @@
+{
+  "slug": "people-whose-list-of-favorite-companies-is-not-a-subset-of-another-list",
+  "title": "People Whose List of Favorite Companies Is Not a Subset of Another List",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sorting + Two Pointers",
+  "tc": "O(n^2 * m + n * m log m)",
+  "sc": "O(log m)",
+  "spaceBreakdown": "- sort() stack space: up to O(log m) where m is the max list size (<= 500)\n- not counted: input, returned vector",
+  "approach": "Sort each person's list of favorite companies alphabetically. Then, for each person, check if their list is a subset of any other person's list using the standard library's `std::includes` function. Since all lists are distinct, a list can only be a subset of another if it is strictly smaller, so we only compare against larger lists. If no larger list contains it, the person's index is added to the result.",
+  "hints": [
+    "If you sort each list of favorite companies alphabetically, what standard library function can check if one sorted list is entirely contained within another in linear time?",
+    "Use `std::sort` on each list, then `std::includes` to check if list `i` is a subset of list `j`. For example, after sorting, `[\"facebook\", \"google\"]` is easily checked as a subset of `[\"facebook\", \"google\", \"leetcode\"]`.",
+    "```\nsort each list in favoriteCompanies\nfor i from 0 to n-1:\n    is_subset = false\n    for j from 0 to n-1:\n        if size of list i >= size of list j: continue\n        if includes(list j, list i):\n            is_subset = true\n            break\n    if not is_subset:\n        add i to result\nreturn result\n```",
+    "**Smallest input** - Only one person in the input.\n`Input: [[\"a\"]]` → `Expected: [0]`\n⚠️ Bug: Returning empty if `favoriteCompanies.size() == 1` → returns `[]`\n\n**Self-comparison** - Comparing a list against itself.\n`Input: [[\"a\",\"b\"],[\"c\",\"d\"]]` → `Expected: [0,1]`\n⚠️ Bug: Using `size(i) <= size(j)` without an `if (i == j) continue;` check → returns `[]` because `includes` finds each list is a subset of itself.\n\n**Unsorted lists** - Lists are given in arbitrary order.\n`Input: [[\"b\",\"a\"],[\"a\",\"b\",\"c\"]]` → `Expected: [0]`\n⚠️ Bug: Not sorting the lists before calling `std::includes` → returns `[0, 1]` because `std::includes` requires sorted ranges and will fail to find `[\"b\",\"a\"]` in `[\"a\",\"b\",\"c\"]`.\n\n**Subset of multiple** - A list is a subset of more than one other list.\n`Input: [[\"a\",\"b\",\"c\"],[\"a\",\"b\",\"d\"],[\"a\",\"b\"]]` → `Expected: [0,1]`\n⚠️ Bug: Using `size(i) > size(j)` to skip checks instead of `<` → returns `[0, 1, 2]` because it skips checking the smaller list against the larger lists."
+  ],
+  "followUps": [
+    {
+      "q": "What if the number of lists is 10^5 and each list has up to 10 companies?",
+      "a": "The O(n^2 * m) approach would be too slow. We could map companies to integers and represent each list as a bitset. Then we can check if `(A & B) == A` in O(m / 64) time. To avoid O(n^2) comparisons, we could group lists by size and only check smaller lists against larger ones, or use an inverted index to find candidate supersets."
+    },
+    {
+      "q": "What if company names are very long (e.g., 10^5 characters each)?",
+      "a": "Sorting and comparing long strings would be expensive. We should hash each company name to a 64-bit integer first, then sort and compare the hashes. This reduces the comparison cost to O(1) per string."
+    },
+    {
+      "q": "What if the lists are not distinct?",
+      "a": "If lists can be identical, then a list could be a subset of another list of the same size. We would need to change the size check from `size(i) < size(j)` to `size(i) <= size(j)` and explicitly skip `i == j`. If there are duplicate lists, we would need to decide if a list is a subset of its duplicate (which it is), so only one of the duplicates would be included in the result."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> peopleIndexes(vector<vector<string>>& favoriteCompanies) {\n        int n = favoriteCompanies.size();\n        for (int i = 0; i < n; ++i) {\n            sort(favoriteCompanies[i].begin(), favoriteCompanies[i].end());\n        }\n        \n        vector<int> result;\n        for (int i = 0; i < n; ++i) {\n            bool isSubset = false;\n            for (int j = 0; j < n; ++j) {\n                if (favoriteCompanies[i].size() >= favoriteCompanies[j].size()) continue;\n                \n                if (includes(favoriteCompanies[j].begin(), favoriteCompanies[j].end(),\n                             favoriteCompanies[i].begin(), favoriteCompanies[i].end())) {\n                    isSubset = true;\n                    break;\n                }\n            }\n            if (!isSubset) {\n                result.push_back(i);\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

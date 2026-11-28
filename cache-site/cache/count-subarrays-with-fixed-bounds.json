@@ -1,0 +1,40 @@
+{
+  "slug": "count-subarrays-with-fixed-bounds",
+  "title": "Count Subarrays With Fixed Bounds",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables left, minPos, maxPos, r, start: constant count → O(1)\n- long long ans: single scalar → O(1)\n- no containers, no recursion, no call stack\n- not counted: input vector nums",
+  "approach": "For each right endpoint `r`, count how many valid left endpoints exist. A subarray ending at `r` is valid iff it contains no element outside `[minK, maxK]`, contains at least one `minK`, and contains at least one `maxK`. Track three positions as we scan left to right: `left` (most recent out-of-range index), `minPos` (most recent index where `nums[i] == minK`), and `maxPos` (most recent index where `nums[i] == maxK`). For each `r`, the valid left endpoints are indices in `(left, min(minPos, maxPos)]`, giving `max(0, min(minPos, maxPos) - left)` subarrays ending at `r`. Sum over all `r`.",
+  "hints": [
+    "For each index considered as the right end of a subarray, what recent positions in the prefix determine how many valid left ends exist? The array can have up to 10^5 elements, so checking every subarray individually is too slow.",
+    "Use a sliding window tracking three positions: most recent out-of-range element, most recent `minK`, and most recent `maxK`. For `nums=[1,3,5,2,7,5]` with `minK=1, maxK=5`, at `r=2` (value 5): `minPos=0`, `maxPos=2`, `left=-1`, so `min(0,2)-(-1)=1` valid subarray ends here.",
+    "```\nleft = -1, minPos = -1, maxPos = -1, ans = 0\nfor r in 0..n-1:\n    if nums[r] < minK or nums[r] > maxK:\n        left = r\n    if nums[r] == minK: minPos = r\n    if nums[r] == maxK: maxPos = r\n    start = min(minPos, maxPos)\n    if start > left:\n        ans += start - left\nreturn ans\n```",
+    "**Overflow** - all 10^5 elements equal minK=maxK, answer is n*(n+1)/2 ≈ 5×10^9\n`Input: nums = [1,1,...,1] (10^5 ones), minK = 1, maxK = 1` → `Expected: 5000050000`\n⚠️ Bug: using `int` for `ans` → returns 705082704 (5000050000 mod 2^32)\n\n**minK equals maxK** - single-element subarrays must count\n`Input: nums = [1,2,1], minK = 1, maxK = 1` → `Expected: 3`\n⚠️ Bug: requiring `minPos != maxPos` before adding → returns 0\n\n**Out-of-bounds element resets window** - subarrays must not cross an invalid element\n`Input: nums = [1,5,0,1,5], minK = 1, maxK = 5` → `Expected: 2`\n⚠️ Bug: not updating `left` when `nums[r]` is out of range → returns 8 (counts subarrays containing the 0)\n\n**No valid subarray** - minK or maxK never appears in array\n`Input: nums = [2,3,4], minK = 1, maxK = 5` → `Expected: 0`\n⚠️ Bug: initializing `left = 0` instead of `left = -1` → returns 0 here but misses subarrays starting at index 0 in other inputs (e.g. `nums=[1,5]` returns 0 instead of 1)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array arrives as a stream too large to fit in memory?",
+      "a": "The solution already processes elements left-to-right using only three integer positions and a running sum, so it works unchanged on a stream. Each element is read once, updates the three positions, and contributes to the answer. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you must count subarrays where every element is in [minK, maxK] (range containment, not requiring minK and maxK to appear)?",
+      "a": "Find each maximal contiguous segment of in-range elements; for a segment of length L, add L*(L+1)/2. This drops the minPos/maxPos tracking entirely. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if there are q queries, each with a different (minK, maxK) pair?",
+      "a": "For each query run the same O(n) scan independently, giving O(q·n). To speed up, precompute for each index the next and previous positions of each distinct value using sorted index lists, then binary-search the relevant boundaries per query. TC: O((n + q) log n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, int minK, int maxK) {\n        long long ans = 0;\n        int left = -1, minPos = -1, maxPos = -1;\n        for (int r = 0; r < (int)nums.size(); r++) {\n            if (nums[r] < minK || nums[r] > maxK) {\n                left = r;\n            }\n            if (nums[r] == minK) minPos = r;\n            if (nums[r] == maxK) maxPos = r;\n            int start = min(minPos, maxPos);\n            if (start > left) {\n                ans += start - left;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

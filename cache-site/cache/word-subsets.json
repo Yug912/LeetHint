@@ -1,0 +1,40 @@
+{
+  "slug": "word-subsets",
+  "title": "Word Subsets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Counting",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int maxFreq[26]: fixed 26 ints → O(1)\n- int freq[26] (inside loops, reused): fixed 26 ints → O(1)\n- vector<string> result: returned output, not counted\n- recursion depth: none",
+  "approach": "The key insight is that instead of checking each word in words1 against every word in words2, we can merge all of words2 into a single \"maximum requirement\" array: for each of the 26 letters, store the maximum count of that letter across all words in words2. A word from words1 is universal if and only if its per-letter count meets or exceeds this merged requirement for every letter. This reduces the check from O(|words1| × |words2|) to a single pass over each array.",
+  "hints": [
+    "For any single letter, which count of that letter among all the words in words2 is the one that a candidate from words1 must satisfy?",
+    "Use a fixed-size integer array of 26 entries (one per letter). Merge words2 into one array by taking, per letter, the maximum count across all words2 entries. For words2 = [\"e\",\"o\"], the merged array requires e≥1 and o≥1; \"facebook\" has e=1, o=2, so it passes.",
+    "```\nmaxFreq = array of 26 zeros\nfor each word b in words2:\n    freq = count of each letter in b\n    for each letter i: maxFreq[i] = max(maxFreq[i], freq[i])\n\nfor each word a in words1:\n    freq = count of each letter in a\n    if freq[i] >= maxFreq[i] for all i in 0..25:\n        add a to result\nreturn result\n```",
+    "**Duplicate requirements in words2** - same letter appears in multiple words2 entries\n`Input: words1 = [\"a\"], words2 = [\"a\",\"a\"]` → `Expected: [\"a\"]`\n⚠️ Bug: summing per-letter counts across words2 instead of taking max → maxFreq['a']=2, \"a\" has a=1 < 2 → returns `[]`\n\n**No universal words** - no word in words1 satisfies words2\n`Input: words1 = [\"a\"], words2 = [\"b\"]` → `Expected: []`\n⚠️ Bug: checking only letters present in the word from words1 against maxFreq → 'b' not in \"a\", check skipped → returns `[\"a\"]`\n\n**Exact match multiplicity** - word has exactly the required count of a letter\n`Input: words1 = [\"aaaa\",\"aaa\"], words2 = [\"aaaa\"]` → `Expected: [\"aaaa\"]`\n⚠️ Bug: using `>` instead of `>=` in the frequency comparison → \"aaaa\" has a=4, maxFreq[a]=4, 4 > 4 is false → returns `[]`\n\n**All words universal** - every word in words1 passes\n`Input: words1 = [\"ab\",\"ba\"], words2 = [\"a\"]` → `Expected: [\"ab\",\"ba\"]`\n⚠️ Bug: returning after finding the first universal word instead of collecting all → returns `[\"ab\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet were Unicode with up to 10^5 distinct characters instead of 26 lowercase letters?",
+      "a": "Replace the fixed-size array with a hash map for the merged requirements. The merge step still takes per-character maximums across words2. Each word in words1 is checked against the merged map. Time stays O(n + m + L) where L is total characters; space becomes O(distinct characters in words2) for the merged map."
+    },
+    {
+      "q": "What if words1 arrives as a stream too large to store in memory?",
+      "a": "Precompute the merged max-frequency array from words2 once (O(1) space for 26 ints). Process each word from words1 as it arrives: compute its frequency, check against the merged array, and output immediately if universal. Space is O(1) beyond the merged array; time is unchanged."
+    },
+    {
+      "q": "What if words2 can be updated dynamically between batches of queries on words1?",
+      "a": "Maintain the merged max-frequency array incrementally. Adding a word to words2 updates each letter's max in O(26) time. Removing a word requires recomputing the affected letters' maxima from all remaining words2 entries, costing O(26·m) per removal. For frequent removals, a max-heap per letter tracking (count, word_index) supports O(26·log m) updates."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> wordSubsets(vector<string>& words1, vector<string>& words2) {\n        int maxFreq[26] = {0};\n        \n        for (const string& b : words2) {\n            int freq[26] = {0};\n            for (char c : b) {\n                freq[c - 'a']++;\n            }\n            for (int i = 0; i < 26; i++) {\n                if (freq[i] > maxFreq[i]) {\n                    maxFreq[i] = freq[i];\n                }\n            }\n        }\n        \n        vector<string> result;\n        \n        for (const string& a : words1) {\n            int freq[26] = {0};\n            for (char c : a) {\n                freq[c - 'a']++;\n            }\n            bool universal = true;\n            for (int i = 0; i < 26; i++) {\n                if (freq[i] < maxFreq[i]) {\n                    universal = false;\n                    break;\n                }\n            }\n            if (universal) {\n                result.push_back(a);\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

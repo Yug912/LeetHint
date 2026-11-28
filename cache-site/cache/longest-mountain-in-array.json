@@ -1,0 +1,40 @@
+{
+  "slug": "longest-mountain-in-array",
+  "title": "Longest Mountain in Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "One-Pass State Tracking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int counters (n, ans, i, up, down): constant → O(1)\n- no containers, no recursion → O(1)\n- not counted: input vector arr",
+  "approach": "Scan left to right tracking consecutive rising steps (`up`) and falling steps (`down`). When a rise is followed by a fall, the segment from the start of the rise through the end of the fall forms a mountain of length `up + down + 1`; update the answer whenever both `up > 0` and `down > 0`. Reset `up`/`down` to 0 whenever the sequence breaks (flat step or direction change without a valid peak), and skip over equal neighbors. This visits each element once and uses only a few counters.",
+  "hints": [
+    "As you scan left to right, each adjacent pair is either rising, falling, or flat. What ordered sequence of these three states must appear for a subarray to be a mountain?",
+    "Use a single pass with two counters `up` and `down`. In `[2,1,4,7,3,2,5]`, starting at index 2 you rise `1→4→7` (up=2) then fall `7→3→2` (down=2), giving length 2+2+1=5.",
+    "```\ni = 1\nwhile i < n:\n    up = 0, down = 0\n    while i < n and arr[i] > arr[i-1]: i++, up++\n    while i < n and arr[i] < arr[i-1]: i++, down++\n    if up > 0 and down > 0: ans = max(ans, up + down + 1)\n    while i < n and arr[i] == arr[i-1]: i++\n```",
+    "**All equal** - every adjacent pair is flat, so no peak exists.\n`Input: arr = [2,2,2]` → `Expected: 0`\n⚠️ Bug: not skipping equal pairs causes `i` to stall and loop forever → TLE\n\n**Strictly increasing only** - rises but never falls, so no mountain completes.\n`Input: arr = [1,2,3,4,5]` → `Expected: 0`\n⚠️ Bug: counting `up + 1` as a mountain when `down == 0` → returns 5\n\n**Peak at the very end of a rise then immediate flat** - the fall is cut off by an equal value.\n`Input: arr = [1,2,3,3,2,1]` → `Expected: 0`\n⚠️ Bug: resetting only `down` (not `up`) on a flat step after a rise → returns 3\n\n**Single element** - no adjacent pairs to compare.\n`Input: arr = [5]` → `Expected: 0`\n⚠️ Bug: starting `i = 0` and reading `arr[i-1]` → out-of-bounds read\n\n**Two valid mountains back to back** - must reset counters between them.\n`Input: arr = [1,2,1,2,1]` → `Expected: 3`\n⚠️ Bug: not resetting `up`/`down` to 0 at the start of each iteration → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "Return the starting index of every mountain of maximum length (not just the length).",
+      "a": "Keep the same scan, but when `up + down + 1` ties the current max, append the start index `i - up - down - 1` to a result list; when it exceeds, clear the list first. Time stays O(n), space O(k) for k answers."
+    },
+    {
+      "q": "The array is given as a streaming sequence of unknown length; report the current best mountain length after each new element.",
+      "a": "Maintain `up`, `down`, and a running state online; on each new element compare it to the previous one and update the counters exactly as in the one-pass version, emitting the max so far. Time O(1) amortized per element, space O(1)."
+    },
+    {
+      "q": "Allow at most one \"flat step\" (equal adjacent values) inside the mountain; find the longest such relaxed mountain.",
+      "a": "Track `up`, `down`, and a `flat` counter; a flat step is allowed only between the rising and falling phases (or skipped), and you reset when a second flat or a direction violation occurs. Time remains O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestMountain(vector<int>& arr) {\n        int n = arr.size();\n        int ans = 0;\n        int i = 1;\n        while (i < n) {\n            int up = 0, down = 0;\n            while (i < n && arr[i] > arr[i - 1]) { ++i; ++up; }\n            while (i < n && arr[i] < arr[i - 1]) { ++i; ++down; }\n            if (up > 0 && down > 0) {\n                ans = max(ans, up + down + 1);\n            }\n            while (i < n && arr[i] == arr[i - 1]) ++i;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

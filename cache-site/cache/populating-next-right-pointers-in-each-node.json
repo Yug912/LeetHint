@@ -1,0 +1,39 @@
+{
+  "slug": "populating-next-right-pointers-in-each-node",
+  "title": "Populating Next Right Pointers in Each Node",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Level-by-Level Traversal via Next Pointers",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- Node* leftmost: single pointer → O(1)\n- Node* cur: single pointer → O(1)\n- no recursion, no containers\n- not counted: input tree, returned root",
+  "approach": "Since the tree is perfect, once one level's `next` pointers are established, they form a linked list that lets us traverse that level without a queue. For each node on the current level, we set its left child's `next` to its right child, and its right child's `next` to its next sibling's left child (reached via the already-set `next` pointer). We descend level by level using the leftmost node until we reach the leaf level. This visits every node exactly once and uses only two pointer variables.",
+  "hints": [
+    "In a perfect binary tree, every internal node has exactly two children. Once the nodes of one level are horizontally linked, what already-existing pointers let you reach every node of the level below without any extra storage?",
+    "Use the current level's `next` pointers as a linked list to wire up the level below. For root 1: set 2→next = 3. Then at level 1, node 2's `next` is 3, so set 5→next = 6 (2's right child → 3's left child).",
+    "```\nleftmost = root\nwhile leftmost.left exists:\n    cur = leftmost\n    while cur is not null:\n        cur.left.next = cur.right\n        if cur.next is not null:\n            cur.right.next = cur.next.left\n        cur = cur.next\n    leftmost = leftmost.left\nreturn root\n```",
+    "**Empty tree** - root is NULL, no nodes to connect.\n`Input: []` → `Expected: []`\n⚠️ Bug: accessing `root->left` without a null check → segfault\n\n**Single node** - root has no children; next must stay NULL.\n`Input: [1]` → `Expected: [1,#]`\n⚠️ Bug: using `while (leftmost)` instead of `while (leftmost->left)` as the level guard → enters loop on the leaf, then `cur->left->next = cur->right` dereferences NULL → segfault\n\n**Two-level tree** - only root and two children; root's next is NULL.\n`Input: [1,2,3]` → `Expected: [1,#,2,3,#]`\n⚠️ Bug: setting `cur->right->next = cur->next->left` without checking `cur->next != null` → on node 1, accesses NULL->left → segfault\n\n**Three-level tree** - cross-parent links required between cousins.\n`Input: [1,2,3,4,5,6,7]` → `Expected: [1,#,2,3,#,4,5,6,7,#]`\n⚠️ Bug: only setting `cur->left->next = cur->right` and skipping the cross-parent link → 5→next stays NULL, output: `[1,#,2,3,#,4,5,#,6,7,#]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree is not perfect (some nodes may have only one child or none)?",
+      "a": "Use a dummy sentinel node to anchor each level's child chain. Traverse the current level via `next` pointers; for each node, append its non-null children to the chain growing from the dummy. Move down via `dummy.next`. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you must disconnect all next pointers (set every next to NULL) instead of connecting them?",
+      "a": "Same level-by-level traversal, but set each node's `next` to NULL before moving to `cur->next`. You must read `cur->next` into a temporary before nulling it. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the tree is too large to fit in memory and nodes arrive level by level from a stream?",
+      "a": "Keep only the current level's linked list (via `next` pointers) and build the next level's chain on the fly using a dummy head. Only two levels' worth of pointers are live at once. TC: O(n), SC: O(width of one level)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    Node* connect(Node* root) {\n        if (!root) return root;\n        Node* leftmost = root;\n        while (leftmost->left) {\n            Node* cur = leftmost;\n            while (cur) {\n                cur->left->next = cur->right;\n                if (cur->next) {\n                    cur->right->next = cur->next->left;\n                }\n                cur = cur->next;\n            }\n            leftmost = leftmost->left;\n        }\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

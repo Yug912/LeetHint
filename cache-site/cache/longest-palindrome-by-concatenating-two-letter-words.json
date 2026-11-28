@@ -1,0 +1,40 @@
+{
+  "slug": "longest-palindrome-by-concatenating-two-letter-words",
+  "title": "Longest Palindrome by Concatenating Two Letter Words",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Counting",
+  "tc": "O(n + 26²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26][26]: 676 ints, constant size → O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "A palindrome mirrors its left and right halves. For a 2-letter word \"ab\" placed on the left, its mirror \"ba\" must appear on the right; each such pair contributes 4 characters. For self-palindrome words like \"aa\", we pair them among themselves (each pair = 4 chars) and can place at most one unpaired instance in the center (+2). We count all words in a 26×26 table indexed by (first, second) letter, then greedily sum mirrored pairs for i<j and palindrome pairs for i==i, tracking whether any palindrome word has an odd count for the center bonus.",
+  "hints": [
+    "For a palindrome built from 2-letter words, what relationship must hold between the word at position i from the left and the word at position i from the right?",
+    "Use a 26×2 count array indexed by (first letter, second letter). In Example 1, count['l']['c']=1 and count['c']['l']=1, so they form one mirrored pair contributing 4 to the length.",
+    "```\ncount all words in a 26×26 table\nans = 0, center = 0\nfor each letter i:\n    ans += (count[i][i] / 2) * 4\n    if count[i][i] is odd: center = 2\nfor each pair i < j:\n    ans += min(count[i][j], count[j][i]) * 4\nreturn ans + center\n```",
+    "**Single non-palindrome** - only one word, and it is not a palindrome\n`Input: [\"ab\"]` → `Expected: 0`\n⚠️ Bug: adding 2 for any unpaired word → returns 2\n\n**Odd palindrome count** - three copies of the same palindrome word\n`Input: [\"aa\",\"aa\",\"aa\"]` → `Expected: 6`\n⚠️ Bug: using only count/2 pairs without center → returns 4\n\n**Double-counted pairs** - one \"ab\" and one \"ba\"\n`Input: [\"ab\",\"ba\"]` → `Expected: 4`\n⚠️ Bug: iterating all (i,j) and (j,i) instead of only i<j → returns 8\n\n**Multiple odd palindromes** - two different palindrome words, each appearing once\n`Input: [\"aa\",\"bb\"]` → `Expected: 2`\n⚠️ Bug: using center += 2 instead of center = 2 → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if words can be of any length up to 20 instead of exactly 2?",
+      "a": "Use a hash map from string to count. For each word, pair it with its reverse (take min of counts, mark both as processed). Words equal to their reverse are handled like the \"aa\" case: pair them among themselves and allow one in the center. TC: O(n·L) where L is max word length. SC: O(n·L) for the hash map."
+    },
+    {
+      "q": "What if each word can be used at most k times instead of once?",
+      "a": "Cap each count at k before pairing. The pairing logic is identical - for each word, pair min(count, k) with min(reverse_count, k). For palindromes, use floor(count/k) pairs and check if any remainder allows a center. TC: O(n + 26²). SC: O(1)."
+    },
+    {
+      "q": "What if you must return the actual longest palindrome string, not just its length?",
+      "a": "Build the left half by iterating through pairs: for each non-palindrome pair, append \"ab\" to the left; for each palindrome pair, append \"aa\". Append the center word if one exists, then append the reversed left half. TC: O(n). SC: O(n) for the output string."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestPalindrome(vector<string>& words) {\n        int cnt[26][26] = {0};\n        for (auto& w : words) {\n            cnt[w[0] - 'a'][w[1] - 'a']++;\n        }\n        \n        int ans = 0;\n        int center = 0;\n        \n        // Self-palindrome words like \"aa\"\n        for (int i = 0; i < 26; i++) {\n            ans += (cnt[i][i] / 2) * 4;\n            if (cnt[i][i] % 2 == 1) center = 2;\n        }\n        \n        // Mirrored pairs: \"ab\" with \"ba\", only count i < j to avoid double counting\n        for (int i = 0; i < 26; i++) {\n            for (int j = i + 1; j < 26; j++) {\n                int pairs = min(cnt[i][j], cnt[j][i]);\n                ans += pairs * 4;\n            }\n        }\n        \n        return ans + center;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

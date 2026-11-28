@@ -1,0 +1,40 @@
+{
+  "slug": "flood-fill",
+  "title": "Flood Fill",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Depth-First Search on Grid",
+  "tc": "O(m × n)",
+  "sc": "O(m × n)",
+  "spaceBreakdown": "- recursion call stack: up to m×n depth in a snake-shaped region → O(m×n)\n- image modified in place: O(1) auxiliary\n- not counted: input image, returned reference",
+  "approach": "The starting pixel and every pixel reachable from it via 4-directional moves that shares the starting pixel's original color form a connected region. We recursively recolor each such pixel, then recurse on its four neighbors. The key guard is checking `image[r][c] != orig` before processing - once a pixel is recolored it no longer matches `orig`, so each cell is visited at most once and recursion terminates. We also short-circuit when `orig == color` to avoid infinite recursion (a pixel would always \"match\" after recoloring).",
+  "hints": [
+    "Starting from (sr, sc), which pixels must end up recolored - what single property must a pixel satisfy to be included, and how is each such pixel related to the starting pixel?",
+    "Use recursive depth-first search: recolor the current pixel, then recurse on its four orthogonal neighbors if they still hold the starting pixel's original color. In Example 1, from (1,1) with original color 1, we recolor (1,1)→2, then spread to (0,1), (1,0), etc.",
+    "```\nfunction fill(r, c):\n    if out of bounds or image[r][c] != orig:\n        return\n    image[r][c] = color\n    fill(r+1, c); fill(r-1, c); fill(r, c+1); fill(r, c-1)\n\nif image[sr][sc] != color:\n    fill(sr, sc)\nreturn image\n```",
+    "**Already target color** - the starting pixel's color equals the new color.\n`Input: image = [[0,0,0],[0,0,0]], sr = 0, sc = 0, color = 0` → `Expected: [[0,0,0],[0,0,0]]`\n⚠️ Bug: omitting the `orig == color` early return → infinite recursion (pixel always matches orig after being \"recolored\" to the same value), stack overflow.\n\n**Single cell** - grid is 1×1.\n`Input: image = [[5]], sr = 0, sc = 0, color = 3` → `Expected: [[3]]`\n⚠️ Bug: bounds check using `r > m || c > n` instead of `r >= m || c >= n` → accesses image[1][0], out-of-bounds read, undefined behavior.\n\n**Wrong comparison target** - checking against new color instead of original color.\n`Input: image = [[1,1],[1,1]], sr = 0, sc = 0, color = 2` → `Expected: [[2,2],[2,2]]`\n⚠️ Bug: guard `image[r][c] != color` instead of `image[r][c] != orig` → starting cell has value 1 ≠ 2, so the function returns immediately; output `[[1,1],[1,1]]`.\n\n**Corner start, partial region** - starting pixel is at a grid corner with a small region.\n`Input: image = [[1,0],[0,0]], sr = 0, sc = 0, color = 2` → `Expected: [[2,0],[0,0]]`\n⚠️ Bug: recursing before setting `image[r][c] = color` → the pixel still has `orig` when neighbors check it, causing it to be revisited in a cycle, stack overflow."
+  ],
+  "followUps": [
+    {
+      "q": "If the grid were 10^4 × 10^4, recursive DFS could overflow the call stack. How would you adapt the solution?",
+      "a": "Replace recursion with an explicit stack (or a queue for BFS) storing (r, c) pairs. The logic is identical - pop a cell, recolor it, push valid same-color neighbors. TC stays O(m×n); SC is O(m×n) for the explicit container but avoids call-stack overflow."
+    },
+    {
+      "q": "What if diagonal neighbors (8-directional) should also be flooded?",
+      "a": "Add four more recursive calls for (r±1, c±1). Every other part of the algorithm stays the same. TC remains O(m×n) since each cell is still visited once; SC unchanged at O(m×n) for the call stack."
+    },
+    {
+      "q": "What if pixels within a tolerance `t` of the starting color should be filled (not just exact matches)?",
+      "a": "Replace the guard `image[r][c] != orig` with `abs(image[r][c] - orig) > t`. Since pixel values are up to 2^16, use `int` arithmetic (no overflow). TC and SC are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> floodFill(vector<vector<int>>& image, int sr, int sc, int color) {\n        int orig = image[sr][sc];\n        if (orig == color) return image;\n        int m = (int)image.size(), n = (int)image[0].size();\n        dfs(image, sr, sc, m, n, orig, color);\n        return image;\n    }\nprivate:\n    void dfs(vector<vector<int>>& image, int r, int c, int m, int n, int orig, int color) {\n        if (r < 0 || r >= m || c < 0 || c >= n || image[r][c] != orig) return;\n        image[r][c] = color;\n        dfs(image, r + 1, c, m, n, orig, color);\n        dfs(image, r - 1, c, m, n, orig, color);\n        dfs(image, r, c + 1, m, n, orig, color);\n        dfs(image, r, c - 1, m, n, orig, color);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "the-k-weakest-rows-in-a-matrix",
+  "title": "The K Weakest Rows in a Matrix",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search + Heap Selection",
+  "tc": "O(m log n + m log k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- priority_queue<pair<int,int>> pq: up to k+1 entries → O(k)\n- vector<int> result: k entries (returned output, not counted)\n- countSoldiers local variables: O(1)\n- not counted: input mat, returned vector",
+  "approach": "Each row is sorted (1's then 0's), so the soldier count is found in O(log n) by binary-searching for the first 0. We then maintain a max-heap of size k keyed by (soldier_count, row_index): the default pair comparison makes the strongest row the heap top, so popping when size exceeds k discards the strongest candidate. After processing all m rows, the heap holds exactly the k weakest; extracting back-to-front into the result array yields weakest-to-strongest order.",
+  "hints": [
+    "Each row places all its 1's before all its 0's. What single number about a row fully determines its rank among all rows?",
+    "Binary search each row for the first 0 to get the soldier count in O(log n), then maintain a max-heap of size k keyed by (count, index). In Example 1, row 2 yields count 1; after all rows the heap holds {(2,3), (2,0), (1,2)}.",
+    "```\nfor i in 0..m-1:\n    count = binary_search_first_zero(row i)\n    push (count, i) onto max_heap\n    if heap_size > k: pop\nfill result[k-1..0] by popping heap\nreturn result\n```",
+    "**All rows identical** - every row has the same soldier count, so index is the only tiebreaker.\n`Input: mat = [[1,1],[1,1]], k = 2` → `Expected: [0,1]`\n⚠️ Bug: using a min-heap (greater comparator) instead of max-heap → returns [1,0]\n\n**k equals m** - the heap never pops, so all rows must be ranked correctly.\n`Input: mat = [[1,0],[0,0]], k = 2` → `Expected: [1,0]`\n⚠️ Bug: filling result front-to-back instead of back-to-front → returns [0,1]\n\n**All-1 row** - a row with no civilians has soldier count equal to n.\n`Input: mat = [[1,1,1],[1,1,0]], k = 1` → `Expected: [1]`\n⚠️ Bug: binary search with hi = n-1 instead of hi = n → row 0 count = 2 instead of 3, returns [0]"
+  ],
+  "followUps": [
+    {
+      "q": "If m is extremely large (e.g., 10^9) and rows arrive as a stream with no known total, how does the approach adapt?",
+      "a": "The max-heap of size k already handles streaming - process each row as it arrives, push (count, index), pop if size > k. Time is O(m log k) and space is O(k), never needing all m rows in memory."
+    },
+    {
+      "q": "If k always equals m (return all rows ranked), is the heap still optimal?",
+      "a": "When k = m the heap never shrinks, so it degenerates to O(m log m), same as sorting. A direct sort of (count, index) pairs is simpler and equally fast: O(m log n + m log m) time, O(m) space."
+    },
+    {
+      "q": "If each row can have soldiers and civilians interleaved (not sorted), how does the approach change?",
+      "a": "Binary search no longer applies since the row isn't sorted. Count soldiers by linear scan in O(n) per row. The max-heap of size k still works for selection. Total time becomes O(m·n + m log k), space O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int countSoldiers(vector<vector<int>>& mat, int row) {\n        int n = mat[0].size();\n        int lo = 0, hi = n;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (mat[row][mid] == 0)\n                hi = mid;\n            else\n                lo = mid + 1;\n        }\n        return lo;\n    }\npublic:\n    vector<int> kWeakestRows(vector<vector<int>>& mat, int k) {\n        int m = mat.size();\n        priority_queue<pair<int,int>> pq;\n        for (int i = 0; i < m; i++) {\n            int cnt = countSoldiers(mat, i);\n            pq.push({cnt, i});\n            if ((int)pq.size() > k)\n                pq.pop();\n        }\n        vector<int> result(k);\n        for (int i = k - 1; i >= 0; i--) {\n            result[i] = pq.top().second;\n            pq.pop();\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

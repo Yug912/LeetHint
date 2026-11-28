@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-to-cut-a-stick",
+  "title": "Minimum Cost to Cut a Stick",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals",
+  "tc": "O(m³)",
+  "sc": "O(m²)",
+  "spaceBreakdown": "- vector<vector<int>> dp: m × m integers where m = cuts.length + 2 ≤ 102 → O(m²)\n- cuts vector (modified in place): O(m) - not counted (input)\n- sort(): O(log m) stack\n- recursion depth: none (iterative)",
+  "approach": "The key insight is that making a cut at position k splits the stick into two independent subproblems: cuts to the left of k and cuts to the right of k don't affect each other. Add 0 and n to the cuts array and sort it to get boundary positions. Use interval DP where dp[i][j] is the minimum cost to perform all cuts between positions[i] and positions[j]. For each interval, try every possible first cut k, giving dp[i][j] = min(dp[i][k] + dp[k][j]) + (positions[j] - positions[i]), where the added term is the cost of the current cut (the full stick length for that interval).",
+  "hints": [
+    "When you make a cut at some position, what happens to the remaining cuts on each side of that cut? The cuts array has at most 100 elements.",
+    "Interval dynamic programming on the sorted cut positions (including 0 and n). For Example 1, positions = [0,1,3,4,5,7]; dp[i][j] = min over k of dp[i][k] + dp[k][j] + (positions[j] − positions[i]).",
+    "```\nadd 0 and n to cuts, sort → positions[0..m-1]\nfor len = 2 to m-1:\n    for i = 0 to m-1-len:\n        j = i + len\n        dp[i][j] = min(dp[i][k] + dp[k][j]) for k in (i, j)\n        dp[i][j] += positions[j] - positions[i]\nreturn dp[0][m-1]\n```",
+    "**Single cut** - only one cut position, the smallest meaningful input\n`Input: n = 2, cuts = [1]` → `Expected: 2`\n⚠️ Bug: not adding 0 and n to the positions array → positions = [1], m = 1, DP loop never executes → returns 0\n\n**Unsorted input** - cuts given in non-monotonic order\n`Input: n = 7, cuts = [5,4,3,1]` → `Expected: 16`\n⚠️ Bug: skipping sort on positions → intervals like [5,4] have negative length → returns incorrect cost\n\n**Adjacent cuts** - cuts at consecutive integer positions\n`Input: n = 4, cuts = [1,2,3]` → `Expected: 8`\n⚠️ Bug: using `cuts[j] - cuts[i]` as cost without adding 0 and n → positions = [1,2,3], dp[0][2] = 0 + 2 = 2 → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to return the actual cutting order that achieves the minimum cost?",
+      "a": "Store the optimal split point k for each dp[i][j] in a separate table during the DP fill. After computing dp[0][m-1], backtrack: the first cut is at positions[opt[0][m-1]], then recursively reconstruct the order for the left and right subintervals. TC remains O(m³), SC remains O(m²)."
+    },
+    {
+      "q": "What if n can be up to 10^9?",
+      "a": "The solution is unchanged. The DP operates on the cuts array (size ≤ 102), not on n. The value n only appears as a boundary position in the sorted positions array. TC remains O(m³), SC remains O(m²)."
+    },
+    {
+      "q": "What if cuts.length can be up to 1000?",
+      "a": "O(m³) ≈ 10^9 operations would TLE. Apply Knuth's optimization: the cost function positions[j] − positions[i] satisfies the quadrangle inequality, so the optimal split point opt[i][j] is monotonic in both i and j. This restricts the inner loop search range, reducing TC to O(m²) with SC O(m²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCost(int n, vector<int>& cuts) {\n        cuts.push_back(0);\n        cuts.push_back(n);\n        sort(cuts.begin(), cuts.end());\n        int m = cuts.size();\n        vector<vector<int>> dp(m, vector<int>(m, 0));\n        \n        for (int len = 2; len < m; len++) {\n            for (int i = 0; i + len < m; i++) {\n                int j = i + len;\n                dp[i][j] = INT_MAX;\n                for (int k = i + 1; k < j; k++) {\n                    dp[i][j] = min(dp[i][j], dp[i][k] + dp[k][j]);\n                }\n                dp[i][j] += cuts[j] - cuts[i];\n            }\n        }\n        \n        return dp[0][m - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

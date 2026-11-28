@@ -1,0 +1,40 @@
+{
+  "slug": "count-common-words-with-one-occurrence",
+  "title": "Count Common Words With One Occurrence",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Counting",
+  "tc": "O((n+m)·L)",
+  "sc": "O((n+m)·L)",
+  "spaceBreakdown": "- unordered_map<string,int> cnt1: up to n entries → O(n)\n- unordered_map<string,int> cnt2: up to m entries → O(m)\n- recursion depth: none\n- not counted: input vectors, returned int",
+  "approach": "Count the frequency of every word in each array using two hash maps. Then iterate over the entries of the first map: a word is counted only if its frequency is exactly 1 in the first map AND exactly 1 in the second map. This is correct because the \"exactly once in each\" condition is fully captured by the two per-word counts, and hash-map lookup is O(1) average.",
+  "hints": [
+    "For each distinct word, what two numbers must you know before you can decide whether to count it? The arrays can each hold up to 1000 words, so re-scanning the other array for every word is wasteful.",
+    "Use two unordered_map<string,int> to store per-word frequencies. For words1 = [\"leetcode\",\"is\",\"amazing\",\"as\",\"is\"], the first map holds {leetcode:1, is:2, amazing:1, as:1}.",
+    "```\nbuild freq1 from words1\nbuild freq2 from words2\nans = 0\nfor each (word, count) in freq1:\n    if count == 1 and freq2[word] == 1:\n        ans = ans + 1\nreturn ans\n```",
+    "**Smallest input** - both arrays have a single identical word.\n`words1 = [\"a\"], words2 = [\"a\"]` → `Expected: 1`\n⚠️ Bug: initializing `ans = 1` instead of `0` → returns `2`\n\n**Duplicate in words2** - word appears once in words1 but twice in words2.\n`words1 = [\"a\"], words2 = [\"a\",\"a\"]` → `Expected: 0`\n⚠️ Bug: checking only `cnt2.count(w)` without `cnt2[w] == 1` → returns `1`\n\n**Duplicate in words1** - word appears twice in words1 but once in words2.\n`words1 = [\"a\",\"a\"], words2 = [\"a\"]` → `Expected: 0`\n⚠️ Bug: checking only `cnt2[w] == 1` without `cnt1[w] == 1` → returns `1`\n\n**All elements equal** - every entry in both arrays is the same word.\n`words1 = [\"a\",\"a\",\"a\"], words2 = [\"a\",\"a\",\"a\"]` → `Expected: 0`\n⚠️ Bug: using `cnt1[w] >= 1` instead of `== 1` → returns `1`\n\n**No common words** - the two arrays are disjoint.\n`words1 = [\"a\"], words2 = [\"b\"]` → `Expected: 0`\n⚠️ Bug: counting any word present in freq1 regardless of freq2 → returns `1`"
+  ],
+  "followUps": [
+    {
+      "q": "What if words1 and words2 arrive as unbounded streams and cannot fit in memory?",
+      "a": "Make two passes: in pass 1 over words1, increment a map and mark words seen more than once; in pass 2 over words2, only keep words whose words1-count is exactly 1 and whose words2-count stays exactly 1. Memory becomes O(distinct words in words1) instead of O(n + m); time stays O(n + m)."
+    },
+    {
+      "q": "What if each word can be up to 10^5 characters long?",
+      "a": "Hashing a single word costs O(L), so total time becomes O(total characters) = O(sum of all word lengths). Use a rolling hash or store string views to avoid copying long strings into the map keys; space is still O(distinct words) for the map entries."
+    },
+    {
+      "q": "Generalize to \"appear exactly k times in each array\" - what changes?",
+      "a": "Replace the `== 1` checks with `== k` in both maps. Time and space complexity are unchanged: O(n + m) time, O(n + m) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countWords(vector<string>& words1, vector<string>& words2) {\n        unordered_map<string, int> cnt1, cnt2;\n        for (const string& w : words1) cnt1[w]++;\n        for (const string& w : words2) cnt2[w]++;\n        int ans = 0;\n        for (const auto& [w, c] : cnt1) {\n            if (c == 1) {\n                auto it = cnt2.find(w);\n                if (it != cnt2.end() && it->second == 1) ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

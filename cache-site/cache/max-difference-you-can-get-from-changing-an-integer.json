@@ -1,0 +1,40 @@
+{
+  "slug": "max-difference-you-can-get-from-changing-an-integer",
+  "title": "Max Difference You Can Get From Changing an Integer",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Digit Replacement",
+  "tc": "O(d)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int digits[10]: fixed-size array for at most 9 digits → O(1)\n- scalar variables (n, temp, maxVal, minVal, targetMax, targetMin, replaceWith): O(1)\n- recursion depth: none\n- not counted: input parameter, returned value",
+  "approach": "To maximize the result, replace the most significant non-9 digit (and all its occurrences) with 9. To minimize, if the leading digit is not 1, replace it (and all its occurrences) with 1; if the leading digit is already 1, find the first digit greater than 1 and replace all its occurrences with 0 (avoiding leading zeros). Digits are extracted arithmetically via modulo and division, avoiding string allocation. The answer is max − min.",
+  "hints": [
+    "Since one operation changes every copy of a single digit at once, which digit's position has the greatest effect on the number's magnitude? The constraint forbidding leading zeros - how does that restrict your choice when trying to shrink the number?",
+    "Arithmetic digit scan (extract digits via `%10` and `/10`). For `num = 555`, the most significant non-9 digit is 5, so replacing all 5s with 9 yields 999 (the maximum).",
+    "```\nextract digits of num into array d[0..n-1]\n# MAX: scan from MSB, find first digit != 9, replace all its copies with 9\n# MIN: if leading digit != 1, replace all its copies with 1\n#      else scan for first digit > 1, replace all its copies with 0\nreturn max_result - min_result\n```",
+    "**Single digit** - only one digit exists; the max scan may find nothing to change.\n`Input: 9` → `Expected: 8`\n⚠️ Bug: initializing `maxVal` to 0 instead of `num` when no non-9 digit is found → returns `0 - 1 = -1`\n\n**Leading digit is 1** - cannot replace the leading 1 with 0; must search deeper for a digit > 1.\n`Input: 12` → `Expected: 82`\n⚠️ Bug: always replacing the leading digit with 0 for min → returns `92 - 2 = 90`\n\n**All same digits (all 1s)** - for min, no digit > 1 exists to replace with 0.\n`Input: 111` → `Expected: 888`\n⚠️ Bug: defaulting to replace 1 with 0 when no digit > 1 is found → returns `999 - 0 = 999`\n\n**All 9s** - the max scan finds no non-9 digit to replace.\n`Input: 999` → `Expected: 888`\n⚠️ Bug: initializing `maxVal` to 0 instead of `num` when no replacement is needed → returns `0 - 111 = -111`"
+  ],
+  "followUps": [
+    {
+      "q": "What if num can have up to 10^5 digits, given as a string?",
+      "a": "Apply the same greedy scan directly on the string characters. Each scan is O(d) where d is the digit count, so O(d) time and O(d) space for the output string (or O(1) extra if modifying in place)."
+    },
+    {
+      "q": "What if you must pick x ≠ y for each operation?",
+      "a": "When all digits are 9, the max operation is forced to use x = y = 9, which is disallowed. You would instead replace the most significant 9 with 8 (or the next best valid pair). Still O(d) per scan, with at most one extra fallback check."
+    },
+    {
+      "q": "What if the operation replaces only the first occurrence of x instead of all occurrences?",
+      "a": "For max, replace the most significant non-9 digit with 9. For min, replace the most significant digit with 1 (or the most significant digit > 1 with 0 if the leading digit is 1). The logic is simpler but the scan structure is identical. O(d) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxDiff(int num) {\n        int digits[10];\n        int n = 0;\n        int temp = num;\n        while (temp > 0) {\n            digits[n++] = temp % 10;\n            temp /= 10;\n        }\n        // digits[0] = least significant, digits[n-1] = most significant\n\n        // Max: replace first non-9 digit (from MSB) with 9\n        int maxVal = num;\n        int targetMax = -1;\n        for (int i = n - 1; i >= 0; i--) {\n            if (digits[i] != 9) {\n                targetMax = digits[i];\n                break;\n            }\n        }\n        if (targetMax != -1) {\n            maxVal = 0;\n            for (int i = n - 1; i >= 0; i--) {\n                int d = (digits[i] == targetMax) ? 9 : digits[i];\n                maxVal = maxVal * 10 + d;\n            }\n        }\n\n        // Min:\n        // If leading digit != 1, replace all its occurrences with 1\n        // If leading digit == 1, find first digit > 1 and replace with 0\n        int minVal = num;\n        int targetMin = -1;\n        int replaceWith = 0;\n        if (digits[n - 1] != 1) {\n            targetMin = digits[n - 1];\n            replaceWith = 1;\n        } else {\n            for (int i = n - 2; i >= 0; i--) {\n                if (digits[i] > 1) {\n                    targetMin = digits[i];\n                    replaceWith = 0;\n                    break;\n                }\n            }\n        }\n        if (targetMin != -1) {\n            minVal = 0;\n            for (int i = n - 1; i >= 0; i--) {\n                int d = (digits[i] == targetMin) ? replaceWith : digits[i];\n                minVal = minVal * 10 + d;\n            }\n        }\n\n        return maxVal - minVal;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

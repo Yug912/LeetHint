@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-swaps-to-make-sequences-increasing",
+  "title": "Minimum Swaps To Make Sequences Increasing",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming (state machine)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables swp, noswp, new_swp, new_noswp, loop index, a1,b1,a2,b2: O(1) total\n- recursion depth: none\n- not counted: input vectors nums1, nums2",
+  "approach": "Use DP with two states per index: `swp` = min swaps to make both sequences strictly increasing up to index i with index i swapped, `noswp` = same but without swapping at i. Transitions consider two valid orderings between consecutive pairs (no-swap→no-swap/swap→swap, and no-swap→swap/swap→no-swap), taking the minimum. Since each state only depends on the previous index, we keep O(1) space. The problem guarantees a solution exists, so at least one transition always applies.",
+  "hints": [
+    "For each position i, what is the smallest piece of information about position i-1 that determines whether both sequences can remain valid through position i? With n ≤ 10^5, trying all 2^n swap combinations is impossible.",
+    "Use dynamic programming with two states per index: keep (min swaps without swapping at i) and swap (min swaps with swapping at i). In Example 1 at i=3: nums1[3]=4 can't follow nums1[2]=5, but 4 > nums2[2]=3 and 7 > nums1[2]=5, so keep[3] = swap[2] and swap[3] = keep[2]+1.",
+    "```\nkeep = 0, swap = 1\nfor i from 1 to n-1:\n    nk = INF, ns = INF\n    if a[i]>a[i-1] and b[i]>b[i-1]: nk=min(nk,keep), ns=min(ns,swap+1)\n    if a[i]>b[i-1] and b[i]>a[i-1]: nk=min(nk,swap), ns=min(ns,keep+1)\n    keep, swap = nk, ns\nreturn min(keep, swap)\n```",
+    "**Smallest input** - n=2, requires exactly one swap to make both sequences increasing\n`nums1=[1,4], nums2=[3,2]` → `Expected: 1`\n⚠️ Bug: initializing `swapped=0` instead of `swapped=1` → returns 0 (treats the first swap as free)\n\n**Both conditions true** - both same-state and cross-state transitions are valid, must take the minimum\n`nums1=[1,3,5], nums2=[2,4,6]` → `Expected: 0`\n⚠️ Bug: only checking the cross-condition (`nums1[i]>nums2[i-1] && nums2[i]>nums1[i-1]`) → returns 1 instead of 0\n\n**Only cross-condition valid** - same-state condition fails, only the cross-condition provides a valid transition\n`nums1=[1,5,4], nums2=[2,3,6]` → `Expected: 1`\n⚠️ Bug: only checking the same-state condition (`nums1[i]>nums1[i-1] && nums2[i]>nums2[i-1]`) → returns INT_MAX (stuck at i=2 with no valid transition)\n\n**Already sorted** - both arrays already strictly increasing, zero swaps needed\n`nums1=[1,2,3,4], nums2=[5,6,7,8]` → `Expected: 0`\n⚠️ Bug: initializing `keep=1` instead of `keep=0` → returns 1 (charges one unnecessary swap)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the sequences need to be non-decreasing (allowing equal consecutive values) instead of strictly increasing?",
+      "a": "Replace every strict comparison `>` with `>=` in both transition conditions. The DP structure, states, and transitions remain identical. Time complexity stays O(n), space O(1)."
+    },
+    {
+      "q": "What if you need to reconstruct the actual swap indices, not just the count?",
+      "a": "Store the binary choice (swap or not) at each index alongside the DP values, then backtrack from the optimal final state. Time stays O(n), space becomes O(n) for the choice array."
+    },
+    {
+      "q": "What if there are 3 arrays and you can cyclically rotate values at each index (nums1[i]→nums2[i]→nums3[i]→nums1[i])?",
+      "a": "The state expands to track which rotation was applied at position i-1 (3 choices). Each state checks compatibility with the previous state's resulting values across all 3 arrays."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSwap(vector<int>& nums1, vector<int>& nums2) {\n        int n = nums1.size();\n        int swp = 1, noswp = 0;\n        for (int i = 1; i < n; i++) {\n            int a1 = nums1[i-1], b1 = nums2[i-1];\n            int a2 = nums1[i],   b2 = nums2[i];\n            int new_swp = n, new_noswp = n;\n            if (a1 < a2 && b1 < b2) {\n                new_noswp = min(new_noswp, noswp);\n                new_swp   = min(new_swp,   swp + 1);\n            }\n            if (b1 < a2 && a1 < b2) {\n                new_noswp = min(new_noswp, swp);\n                new_swp   = min(new_swp,   noswp + 1);\n            }\n            swp = new_swp;\n            noswp = new_noswp;\n        }\n        return min(swp, noswp);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

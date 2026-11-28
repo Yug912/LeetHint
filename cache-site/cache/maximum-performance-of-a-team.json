@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-performance-of-a-team",
+  "title": "Maximum Performance of a Team",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Heap",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> eng: n entries → O(n)\n- priority_queue<int>: up to k+1 entries → O(k) ≤ O(n)\n- sort(): O(log n) stack\n- not counted: input vectors, returned int",
+  "approach": "Sort engineers by efficiency in decreasing order. As we iterate, the current engineer's efficiency is the minimum among all engineers seen so far (since we sorted descending). For each position, we want the top-k speeds from the prefix - maintain a min-heap of speeds and a running sum, evicting the smallest speed whenever the heap exceeds k. The answer is the maximum of (running sum × current efficiency) over all positions. This works because for any candidate minimum efficiency, all eligible teammates (efficiency ≥ that value) have already been processed, and the heap keeps the k fastest among them.",
+  "hints": [
+    "The performance formula multiplies the sum of speeds by the minimum efficiency. If you knew which engineer sets the minimum efficiency in the optimal team, what constraint does that place on every other member?",
+    "Sort engineers by efficiency descending and sweep with a min-heap of speeds. In Example 1, after processing efficiency-9 (speed 1) and efficiency-7 (speed 5), the heap holds {1, 5}, sum = 6, performance = 6 × 7 = 42.",
+    "```\nsort engineers by efficiency descending\nmin-heap pq; sum = 0; ans = 0\nfor each engineer (efficiency e, speed s):\n    sum += s; push s into pq\n    if pq size > k:\n        sum -= pq.top(); pop pq\n    ans = max(ans, sum * e)\nreturn ans mod (10^9 + 7)\n```",
+    "**Overflow** - speed × efficiency reaches 10^5 × 10^8 = 10^13, and with k engineers the product reaches 10^10 × 10^8 = 10^18\n`Input: n=1, speed=[100000], efficiency=[100000000], k=1` → `Expected: 999930007`\n⚠️ Bug: declaring `ans` as `int` → 10^13 overflows 32-bit, returns 133312\n\n**At most k** - the optimal team may use fewer than k members\n`Input: n=2, speed=[100,1], efficiency=[100,1], k=2` → `Expected: 10000`\n⚠️ Bug: updating `ans` only when heap size equals k → returns 101\n\n**Off-by-one in heap** - popping when size equals k instead of when it exceeds k\n`Input: n=3, speed=[1,10,10], efficiency=[3,2,1], k=2` → `Expected: 22`\n⚠️ Bug: using `pq.size() >= k` instead of `> k` → pops one element too early, returns 20"
+  ],
+  "followUps": [
+    {
+      "q": "What if the performance formula used the average efficiency instead of the minimum?",
+      "a": "The sorting trick breaks down because the average depends on which subset you pick, not just a single threshold. You would likely need a different decomposition or a more complex DP, making the problem significantly harder."
+    },
+    {
+      "q": "What if k is not given and you can choose any team size from 1 to n?",
+      "a": "Set k = n and run the same algorithm unchanged. The heap never evicts, and the answer is tracked at every prefix, so the best single-engineer or multi-engineer team is found automatically. TC stays O(n log n), SC stays O(n)."
+    },
+    {
+      "q": "What if you must answer q queries, each with a different k value, on the same set of engineers?",
+      "a": "Pre-sort engineers by efficiency once. For each query, run the same sweep with that k. Total TC is O(n log n + q · n log k_max). To go faster, precompute for each prefix the sorted speed list, then each query becomes a prefix-sum lookup - TC O(n log n + q · n) but SC rises to O(n²) for storing all prefix speed arrays."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxPerformance(int n, vector<int>& speed, vector<int>& efficiency, int k) {\n        vector<pair<int,int>> eng(n);\n        for (int i = 0; i < n; i++)\n            eng[i] = {efficiency[i], speed[i]};\n        sort(eng.begin(), eng.end(), greater<pair<int,int>>());\n        priority_queue<int, vector<int>, greater<int>> pq;\n        long long sum = 0, ans = 0;\n        for (int i = 0; i < n; i++) {\n            sum += eng[i].second;\n            pq.push(eng[i].second);\n            if ((int)pq.size() > k) {\n                sum -= pq.top();\n                pq.pop();\n            }\n            ans = max(ans, sum * eng[i].first);\n        }\n        return ans % 1000000007;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

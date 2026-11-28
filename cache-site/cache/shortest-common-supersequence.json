@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-common-supersequence",
+  "title": "Shortest Common Supersequence ",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming",
+  "tc": "O(n * m)",
+  "sc": "O(n * m)",
+  "spaceBreakdown": "- `vector<vector<int>> dp`: up to (n+1) x (m+1) entries → O(n * m)\n- `string res`: up to n+m characters → O(n + m) (not counted as auxiliary space by LeetCode convention, but allocated)\n- recursion depth: none\n- not counted: input strings, returned string",
+  "approach": "The problem asks for the shortest string that has both `str1` and `str2` as subsequences. The key insight is that the shortest common supersequence (SCS) is formed by merging the two strings while overlapping their Longest Common Subsequence (LCS) exactly once. We first use dynamic programming to compute the length of the LCS for all prefixes of `str1` and `str2`. Then, we backtrack through the DP table from the end of both strings to the beginning, building the result string by taking matching characters once, and taking non-matching characters from the respective strings as we move backward. Finally, we reverse the constructed string to get the correct forward order.",
+  "hints": [
+    "What characters must appear in the final string, and how few times can each shared character appear while preserving the relative order of both original strings?\nThe constraints allow strings up to length 1000.",
+    "Use Dynamic Programming to find the Longest Common Subsequence (LCS) of the two strings.\nFor `str1 = \"abac\"` and `str2 = \"cab\"`, the LCS is `\"ab\"`, which we include once, then merge the remaining characters around it.",
+    "```\ncompute LCS length table dp for str1 and str2\ni = n, j = m\nwhile i > 0 and j > 0:\n    if str1[i-1] == str2[j-1]:\n        append str1[i-1], i--, j--\n    else if dp[i-1][j] > dp[i][j-1]:\n        append str1[i-1], i--\n    else:\n        append str2[j-1], j--\nappend remaining characters of str1 and str2\nreverse the result and return\n```",
+    "**No common characters** - The strings share no characters.\n`Input: str1 = \"abc\", str2 = \"def\"` → `Expected: \"abcdef\"`\n⚠️ Bug: Forgetting to reverse the constructed string at the end → returns `\"fedcba\"`.\n\n**One string is a subsequence of the other** - All characters of one string appear in the other in order.\n`Input: str1 = \"abc\", str2 = \"ahbgdc\"` → `Expected: \"ahbgdc\"`\n⚠️ Bug: Appending non-matching characters from the wrong string during backtracking → returns `\"ahbgdcbc\"`.\n\n**Boundary indices** - Accessing `str1[i]` instead of `str1[i-1]` when `i` is 1-indexed.\n`Input: str1 = \"a\", str2 = \"b\"` → `Expected: \"ab\"`\n⚠️ Bug: Using `str1[i]` instead of `str1[i-1]` in the backtracking loop → accesses out of bounds or wrong characters, potentially returning `\"b\"` or crashing."
+  ],
+  "followUps": [
+    {
+      "q": "What if the strings can be up to 10^5 in length?",
+      "a": "The O(N*M) DP approach would exceed the time limit. We would need to use the Hunt-Szymanski algorithm for LCS, which is faster when the number of matches is small, reducing the time complexity to O((N+M) log N) or similar."
+    },
+    {
+      "q": "What if we only need to return the length of the shortest common supersequence?",
+      "a": "We don't need to build the DP table or reconstruct the string. The length is simply `len(str1) + len(str2) - length_of_LCS(str1, str2)`. We still need to compute the LCS length, which takes O(N*M) time and can be optimized to O(min(N, M)) space."
+    },
+    {
+      "q": "What if there are multiple valid answers and we must return the lexicographically smallest one?",
+      "a": "During the backtracking phase, when `dp[i-1][j] == dp[i][j-1]`, instead of arbitrarily choosing one path, we compare `str1[i-1]` and `str2[j-1]` and pick the smaller character to append. This requires careful tie-breaking to ensure the overall string is lexicographically smallest."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string shortestCommonSupersequence(string str1, string str2) {\n        int n = str1.length();\n        int m = str2.length();\n        vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));\n        \n        for (int i = 1; i <= n; ++i) {\n            for (int j = 1; j <= m; ++j) {\n                if (str1[i - 1] == str2[j - 1]) {\n                    dp[i][j] = dp[i - 1][j - 1] + 1;\n                } else {\n                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1]);\n                }\n            }\n        }\n        \n        string res = \"\";\n        int i = n, j = m;\n        while (i > 0 && j > 0) {\n            if (str1[i - 1] == str2[j - 1]) {\n                res += str1[i - 1];\n                i--;\n                j--;\n            } else if (dp[i - 1][j] > dp[i][j - 1]) {\n                res += str1[i - 1];\n                i--;\n            } else {\n                res += str2[j - 1];\n                j--;\n            }\n        }\n        \n        while (i > 0) {\n            res += str1[i - 1];\n            i--;\n        }\n        \n        while (j > 0) {\n            res += str2[j - 1];\n            j--;\n        }\n        \n        reverse(res.begin(), res.end());\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

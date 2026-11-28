@@ -1,0 +1,40 @@
+{
+  "slug": "last-stone-weight-ii",
+  "title": "Last Stone Weight II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "0/1 Knapsack",
+  "tc": "O(n × S)",
+  "sc": "O(S)",
+  "spaceBreakdown": "- vector<bool> dp(half + 1): up to 1501 entries → O(S)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Smashing stones x and y produces |x − y|, which is equivalent to assigning + and − signs to the original weights. The final stone's weight is the absolute value of a signed sum of all stones. To minimize it, partition stones into two groups with sums as close as possible - a 0/1 knapsack where we find the largest subset sum ≤ total/2. The answer is total − 2 × (that sum).",
+  "hints": [
+    "Each smash replaces two stones with their difference. If you unfold every smash back to the original weights, what arithmetic expression does the final remaining stone equal?\nn ≤ 30 and each stone ≤ 100, so the total weight is at most 3000.",
+    "0/1 knapsack DP: find the largest subset sum ≤ total/2; the answer is total − 2 × (that sum). For [2,7,4,1,8,1], total = 23, half = 11; subset {8,2,1} sums to 11, so answer = 23 − 22 = 1.",
+    "```\ntotal = sum(stones)\nhalf = total / 2\ndp[0] = true\nfor each stone s:\n    for j from half down to s:\n        dp[j] = dp[j] or dp[j - s]\nfor j from half down to 0:\n    if dp[j]:\n        return total - 2 * j\n```",
+    "**Single stone** - No smash is possible; the stone remains.\n`Input: stones = [5]` → `Expected: 5`\n⚠️ Bug: returning `0` as the default when no achievable `j > 0` is found → returns `0`\n\n**Two stones, unequal** - Tests the basic subset-sum logic.\n`Input: stones = [2,7]` → `Expected: 5`\n⚠️ Bug: iterating `j` from `s` up to `half` (unbounded knapsack) → stone 2 reused, `dp[4] = true`, returns `9 - 8 = 1`\n\n**Odd sum, no perfect split** - The two groups cannot be equal.\n`Input: stones = [2,2,2]` → `Expected: 2`\n⚠️ Bug: returning `total - 2 * half` without scanning for the largest achievable `j` → returns `6 - 6 = 0`\n\n**Two equal stones** - Both are destroyed.\n`Input: stones = [10,10]` → `Expected: 0`\n⚠️ Bug: scanning from `j = 0` upward and taking the first true → finds `j = 0`, returns `20 - 0 = 20`"
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual partition (which stones go in each group), not just the minimum weight.",
+      "a": "Store a 2D parent table: `parent[i][j]` records whether stone `i` was included to reach sum `j`. After finding the optimal sum, backtrack from `(n-1, best_j)` to recover the subset. TC unchanged, SC becomes O(n × S) for the full table."
+    },
+    {
+      "q": "What if n ≤ 1000 and each stone ≤ 10^4 (total sum up to 10^7)?",
+      "a": "The O(n × S) boolean DP is too slow at 10^10. Replace `vector<bool>` with `bitset<10000001>`: for each stone `s`, do `dp |= dp << s`. This gives O(n × S / 64) ≈ 1.5 × 10^8 operations. SC becomes O(S / 64) ≈ 1.5 MB."
+    },
+    {
+      "q": "Stones arrive in a stream; after each new stone, report the current minimum possible final weight.",
+      "a": "Maintain a running `bitset` of achievable subset sums and a running total. For each new stone `s`: `dp |= dp << s`, then `total += s`, then scan from `total/2` downward for the largest set bit. Per-stone TC is O(S / 64) for the shift-OR plus O(S / 64) for the scan, where S is the running total. SC is O(S_max / 64)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int lastStoneWeightII(vector<int>& stones) {\n        int total = 0;\n        for (int s : stones) total += s;\n        int half = total / 2;\n        vector<bool> dp(half + 1, false);\n        dp[0] = true;\n        for (int s : stones) {\n            for (int j = half; j >= s; j--) {\n                if (dp[j - s]) dp[j] = true;\n            }\n        }\n        for (int j = half; j >= 0; j--) {\n            if (dp[j]) return total - 2 * j;\n        }\n        return total;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

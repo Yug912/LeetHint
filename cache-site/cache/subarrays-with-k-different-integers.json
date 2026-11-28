@@ -1,0 +1,40 @@
+{
+  "slug": "subarrays-with-k-different-integers",
+  "title": "Subarrays with K Different Integers",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window (At Most K trick)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> cnt (size n+1): frequency array → O(n)\n- no recursion, no other containers\n- not counted: input vector, return value",
+  "approach": "The key insight is that \"exactly K distinct\" = \"at most K distinct\" − \"at most K−1 distinct\". For each right endpoint, we maintain a sliding window [left, right] containing at most K distinct integers using a frequency array. The number of valid subarrays ending at `right` is `right − left + 1` (every left endpoint from `left` to `right` yields a subarray with ≤ K distinct). We run this twice and subtract. This works because the set of subarrays with at most K distinct is a superset of those with at most K−1 distinct, and their difference is exactly those with K distinct.",
+  "hints": [
+    "For a fixed right endpoint, which is simpler to count - subarrays ending there with at most K distinct, or exactly K distinct - and why? With n up to 2×10^4, enumerating all O(n²) subarrays is too slow.",
+    "Use a sliding window with a frequency array. For each right endpoint, maintain the smallest left such that [left, right] has at most K distinct; the count of valid subarrays ending at right is right−left+1. In [1,2,1,2,3] with k=2, at right=3 the window [1,2,1,2] (left=0) contributes 4 subarrays.",
+    "```\nfunction atMostK(nums, k):\n    left = 0, distinct = 0, ans = 0\n    freq = array of zeros\n    for right in 0..n-1:\n        if freq[nums[right]] == 0: distinct++\n        freq[nums[right]]++\n        while distinct > k:\n            freq[nums[left]]--\n            if freq[nums[left]] == 0: distinct--\n            left++\n        ans += right - left + 1\n    return ans\n\nanswer = atMostK(nums, k) - atMostK(nums, k-1)\n```",
+    "**Single element** - n=1, only one subarray exists\n`Input: nums = [1], k = 1` → `Expected: 1`\n⚠️ Bug: using `ans += right - left` instead of `ans += right - left + 1` → returns 0\n\n**All identical elements** - every subarray has exactly 1 distinct integer\n`Input: nums = [5,5,5], k = 1` → `Expected: 6`\n⚠️ Bug: using `while distinct >= k` instead of `while distinct > k` → window always shrinks to empty, returns 0\n\n**k equals distinct count** - only the full array qualifies\n`Input: nums = [1,2,3], k = 3` → `Expected: 1`\n⚠️ Bug: skipping the subtraction and returning atMostK(k) directly → returns 6\n\n**k exceeds distinct count** - no subarray can have k distinct integers\n`Input: nums = [1,1,1], k = 2` → `Expected: 0`\n⚠️ Bug: skipping the subtraction and returning atMostK(k) directly → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums arrives as a streaming input too large to store?",
+      "a": "The sliding window processes elements left-to-right in a single pass, so it works on a stream. However, we need two passes (atMostK(k) and atMostK(k−1)), so either buffer the stream for a second pass or run two concurrent windows with different K values in one pass. TC: O(n), SC: O(n) for the frequency map in the worst case."
+    },
+    {
+      "q": "What if k can be 0?",
+      "a": "atMostK(nums, 0) returns 0 since every non-empty subarray has at least 1 distinct integer, and the `if (k < 0) return 0` guard handles atMostK(nums, −1). So the answer is 0 − 0 = 0, which is correct. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if we need subarrays with at least K distinct integers instead?",
+      "a": "Total subarrays is n*(n+1)/2. Subtract atMostK(k−1) from this total to get the count of subarrays with at least K distinct. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int subarraysWithKDistinct(vector<int>& nums, int k) {\n        return atMostK(nums, k) - atMostK(nums, k - 1);\n    }\nprivate:\n    int atMostK(vector<int>& nums, int k) {\n        if (k < 0) return 0;\n        int n = nums.size();\n        vector<int> cnt(n + 1, 0);\n        int left = 0, distinct = 0, ans = 0;\n        for (int right = 0; right < n; right++) {\n            if (cnt[nums[right]] == 0) distinct++;\n            cnt[nums[right]]++;\n            while (distinct > k) {\n                cnt[nums[left]]--;\n                if (cnt[nums[left]] == 0) distinct--;\n                left++;\n            }\n            ans += right - left + 1;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "slug": "apply-discount-every-n-orders",
+  "title": "Apply Discount Every n Orders",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Map Lookup with Counter",
+  "tc": "O(C × B)",
+  "sc": "O(P)",
+  "spaceBreakdown": "- unordered_map<int,int> priceMap: up to P entries → O(P)\n- int customerCount: O(1)\n- double bill: O(1)\n- not counted: input vectors, returned double",
+  "approach": "Maintain a hash map from product ID to price (built once in the constructor) and an integer customer counter. On each `getBill` call, increment the counter, compute the subtotal by summing `amount[i] * price[product[i]]`, and if the counter is divisible by `n`, multiply by `(100 - discount) / 100.0`. Using `double` throughout avoids both integer-division truncation and overflow when the subtotal (up to 2×10⁸) is multiplied by up to 100.",
+  "hints": [
+    "Between two consecutive customer bills, what information from the system setup and from prior calls must the cashier remember to compute the next bill correctly? Product IDs are unique integers from 1 to 200, and the discount triggers every n-th customer.",
+    "Use a hash map (product ID → price) and an integer counter for customers. In Example 1, the 3rd customer's bill of 1600 is discounted by 50%: 1600 × (100−50)/100 = 800.0.",
+    "```\non getBill(product, amount):\n    increment customer count\n    bill = sum over i of amount[i] * price[product[i]]\n    if customer count is divisible by n:\n        bill = bill * (100 - discount) / 100\n    return bill\n```",
+    "**First customer wrongly discounted** - counter checked before increment, starting at 0\n`Input: Cashier(3,50,[1],[100]); getBill([1],[1])` → `Expected: 100.0`\n⚠️ Bug: post-increment `count++ % n == 0` with count starting at 0 → 0 % 3 == 0 → returns 50.0\n\n**Integer overflow in discount step** - max subtotal × (100−discount) exceeds INT_MAX\n`Input: Cashier(1,50,[1..200],[1000×200]); getBill([1..200],[1000×200])` → `Expected: 100000000.0`\n⚠️ Bug: computing `bill * (100 - discount) / 100` with int → 2×10⁸ × 50 = 10¹⁰ overflows int → garbage value\n\n**Full discount** - discount = 100 means the bill is zero\n`Input: Cashier(1,100,[1],[100]); getBill([1],[1])` → `Expected: 0.0`\n⚠️ Bug: guarding with `if (discount < 100 && count % n == 0)` → skips discount → returns 100.0\n\n**Integer division truncation** - non-integer discounted bill loses cents\n`Input: Cashier(1,50,[1],[99]); getBill([1],[1])` → `Expected: 49.5`\n⚠️ Bug: `bill * (100 - discount) / 100` with int types → 99 × 50 / 100 = 49 → returns 49.0"
+  ],
+  "followUps": [
+    {
+      "q": "What if product prices can change between bills?",
+      "a": "Add an `updatePrice(int productId, int newPrice)` method that updates the hash map entry. Each update is O(1) average; getBill complexity is unchanged. The counter and discount logic remain the same."
+    },
+    {
+      "q": "What if getBill is called up to 10⁹ times?",
+      "a": "The per-call logic is already O(B) with O(1) counter operations, so it scales fine. Use `long long` for the customer counter to avoid overflow at 10⁹. Space stays O(P) for the price map."
+    },
+    {
+      "q": "What if product IDs can be up to 10⁹ instead of 200?",
+      "a": "A direct array is infeasible, but the hash map approach already handles arbitrary IDs. Lookup remains O(1) average. Space is still O(P) for the map entries, independent of the ID range."
+    }
+  ],
+  "code": {
+    "cpp": "class Cashier {\n    int n;\n    int discount;\n    unordered_map<int, int> priceMap;\n    int customerCount;\npublic:\n    Cashier(int n, int discount, vector<int>& products, vector<int>& prices) {\n        this->n = n;\n        this->discount = discount;\n        customerCount = 0;\n        for (int i = 0; i < (int)products.size(); i++) {\n            priceMap[products[i]] = prices[i];\n        }\n    }\n    \n    double getBill(vector<int> product, vector<int> amount) {\n        customerCount++;\n        double bill = 0.0;\n        for (int i = 0; i < (int)product.size(); i++) {\n            bill += (double)amount[i] * priceMap[product[i]];\n        }\n        if (customerCount % n == 0) {\n            bill = bill * (100 - discount) / 100.0;\n        }\n        return bill;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

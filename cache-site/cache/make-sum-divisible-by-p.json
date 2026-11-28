@@ -1,0 +1,40 @@
+{
+  "slug": "make-sum-divisible-by-p",
+  "title": "Make Sum Divisible by P",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum + Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long,int> last: up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Let `total = sum(nums)` and `r = total % p`. If `r == 0`, return 0. Otherwise we must remove a contiguous subarray whose sum is congruent to `r (mod p)`, and we want the shortest one. Using prefix sums, the subarray `[l, r]` has sum `prefix[r+1] - prefix[l]`; we need `prefix[l] % p == (prefix[r+1] % p - r + p) % p`. We scan left to right, keeping a hash map from each prefix-mod value to its most recent index, and for each new prefix we look up the complementary target mod to minimize the subarray length. If the only \"valid\" subarray is the whole array (length n), we return -1.",
+  "hints": [
+    "If the whole array's sum leaves remainder `r` when divided by `p`, what remainder must the removed subarray's sum leave so that the remaining elements sum to a multiple of `p`?",
+    "Use a hash map storing the most recent index at which each prefix-sum-mod-`p` value occurred. For `nums=[3,1,4,2], p=6`, `total%6=4`, so we hunt for the shortest subarray whose sum `% 6 == 4`.",
+    "```\nr = total_sum % p\nif r == 0: return 0\nlast = {0: 0}\nprefix = 0\nfor i in 0..n-1:\n    prefix += nums[i]\n    cur = prefix % p\n    target = (cur - r + p) % p\n    if target in last: ans = min(ans, i+1 - last[target])\n    last[cur] = i+1\nreturn ans if ans < n else -1\n```",
+    "**Whole array is the only match** - removing everything is forbidden.\n`Input: nums=[1], p=2` → `Expected: -1`\n⚠️ Bug: omitting the `ans == n ? -1 : ans` check → returns `1`.\n\n**Already divisible** - no removal needed.\n`Input: nums=[1,2,3], p=3` → `Expected: 0`\n⚠️ Bug: skipping the early `r == 0` return → returns `1` or worse.\n\n**Overflow on total sum** - `10^5 × 10^9 = 10^14` exceeds `int`.\n`Input: nums=[1000000000]×100000, p=1000000000` → `Expected: 0`\n⚠️ Bug: storing `total` as `int` → overflow, wrong remainder, wrong answer.\n\n**Single element, no valid removal** - no subarray shorter than `n` works.\n`Input: nums=[1,1], p=3` → `Expected: -1`\n⚠️ Bug: initialising `ans = INT_MAX` and returning it directly → returns garbage instead of `-1`."
+  ],
+  "followUps": [
+    {
+      "q": "What if you may remove up to `k` disjoint subarrays instead of one?",
+      "a": "Use DP: `dp[i][j]` = minimum total removed length using `j` subarrays among the first `i` elements, transitioning by either skipping `i` or closing a subarray ending at `i`. Time O(nk), space O(nk) or O(k) with a rolling array."
+    },
+    {
+      "q": "What if `nums` arrives as an online stream and you must report the answer after each new element?",
+      "a": "Keep the running prefix mod and the hash map updated incrementally; after each element recompute the best match for the current target mod. Each step is O(1) amortized, total O(n) time and O(n) space."
+    },
+    {
+      "q": "What if `p` can be as large as `10^18`?",
+      "a": "The algorithm is unchanged because it only uses modular arithmetic and hash lookups; store `total` and `prefix` in `long long` (or `__int128` if intermediate sums exceed `9.2×10^18`). Time and space stay O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSubarray(vector<int>& nums, int p) {\n        long long total = 0;\n        for (int x : nums) total += x;\n        long long r = total % p;\n        if (r == 0) return 0;\n\n        int n = nums.size();\n        int ans = n;\n        unordered_map<long long, int> last;\n        last[0] = 0;\n\n        long long prefix = 0;\n        for (int i = 0; i < n; i++) {\n            prefix += nums[i];\n            long long cur = prefix % p;\n            long long target = ((cur - r) % p + p) % p;\n            auto it = last.find(target);\n            if (it != last.end()) {\n                int len = i + 1 - it->second;\n                if (len < ans) ans = len;\n            }\n            last[cur] = i + 1;\n        }\n\n        return ans == n ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

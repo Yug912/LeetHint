@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-digits-of-string-after-convert",
+  "title": "Sum of Digits of String After Convert",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation",
+  "tc": "O(n + k)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int sum, next, val: scalar variables → O(1)\n- no containers, no recursion, no dynamic allocation\n- not counted: input string s",
+  "approach": "The key insight is that summing the digits of the concatenated position string equals summing the digit-sums of each letter's position individually - no need to build a giant string. After the first transform, the value is at most 100 × 10 = 1000, so all subsequent transforms operate on tiny numbers. We compute the initial digit-sum in one pass, then repeat the digit-sum operation k−1 more times using simple integer arithmetic.",
+  "hints": [
+    "The converted integer can have up to 200 digits, but the first transform only needs the sum of those digits. How does the digit-sum of a concatenation like \"262124\" relate to the digit-sums of the individual parts \"26\", \"2\", \"1\", \"24\"?",
+    "Use plain integer arithmetic - no string building. For \"zbax\": z=26→2+6=8, b=2→2, a=1→1, x=24→2+4=6, first sum = 17, then 1+7 = 8.",
+    "```\nsum = 0\nfor each char c in s:\n    val = position of c in alphabet\n    while val > 0:\n        sum += val % 10\n        val /= 10\nrepeat k - 1 times:\n    next = 0\n    while sum > 0:\n        next += sum % 10\n        sum /= 10\n    sum = next\nreturn sum\n```",
+    "**Single character** - smallest valid input, result is a single digit.\n`Input: s = \"a\", k = 1` → `Expected: 1`\n⚠️ Bug: initializing `sum = 1` instead of `0` → returns `2`\n\n**Off-by-one in transform count** - the initial digit-sum IS transform #1, so only k−1 more are needed.\n`Input: s = \"iiii\", k = 1` → `Expected: 36`\n⚠️ Bug: looping `k` times after the initial sum instead of `k - 1` → returns `9`\n\n**Long string overflow** - building the full numeric string and calling `stoi` overflows.\n`Input: s = \"zzzzzzzzzz\", k = 1` → `Expected: 80`\n⚠️ Bug: constructing `\"26262626262626262626\"` and calling `stoi` → undefined behavior (value exceeds 2³¹−1)\n\n**Result stabilizes** - once the value is a single digit, further transforms don't change it.\n`Input: s = \"zbax\", k = 10` → `Expected: 8`\n⚠️ Bug: using `while (sum >= 10)` to stop early but returning `sum` without doing the remaining declared transforms → returns `8` (correct here, but breaks for inputs where k matters before stabilization, e.g. `s = \"iiii\", k = 1` returns `9` instead of `36`)"
+  ],
+  "followUps": [
+    {
+      "q": "What if s.length could be up to 10^5?",
+      "a": "The same approach works unchanged. The initial sum is at most 10^5 × 10 = 10^6, which fits in an int. Time becomes O(n + k), space stays O(1)."
+    },
+    {
+      "q": "What if k could be up to 10^9?",
+      "a": "After at most 3-4 transforms any number under 10^6 collapses to a single digit and stays fixed. Cap k at 4 and return early once the value is a single digit. Time becomes O(n + min(k, 4)), space O(1)."
+    },
+    {
+      "q": "What if the string could contain both uppercase and lowercase letters?",
+      "a": "Convert each character to lowercase first (or map 'A'-'Z' to 1-26 the same way), then proceed identically. Time and space complexity are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int getLucky(string s, int k) {\n        int sum = 0;\n        for (char c : s) {\n            int val = c - 'a' + 1;\n            while (val > 0) {\n                sum += val % 10;\n                val /= 10;\n            }\n        }\n        for (int i = 1; i < k; i++) {\n            int next = 0;\n            while (sum > 0) {\n                next += sum % 10;\n                sum /= 10;\n            }\n            sum = next;\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

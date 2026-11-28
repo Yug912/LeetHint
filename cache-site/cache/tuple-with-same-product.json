@@ -1,0 +1,40 @@
+{
+  "slug": "tuple-with-same-product",
+  "title": "Tuple with Same Product",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Frequency Counting",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- unordered_map<int,int> count: up to C(n,2) ≈ n²/2 entries → O(n²)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "For every unordered pair of distinct elements, compute their product and count how many pairs yield each product using a hash map. If a product P appears f times, any two of those f pairs form a valid tuple (since all elements are distinct, the four elements are automatically different). Each such pair-of-pairs produces 8 ordered tuples (2 orderings within each pair × 2 ways to assign pairs to (a,b) vs (c,d)). The answer is 8 × Σ C(f, 2) over all products.",
+  "hints": [
+    "If you compute a·b for every pair of distinct elements, which of those product values can participate in a valid tuple? All elements in nums are distinct, and 1 ≤ nums.length ≤ 1000.",
+    "Use a hash map to count how many unordered pairs produce each product. For nums = [2,3,4,6], the pairs (2,6) and (3,4) both give product 12, so count[12] = 2.",
+    "```\ncount = empty map\nfor each pair (i, j) with i < j:\n    count[nums[i] * nums[j]] += 1\nans = 0\nfor each (product, freq) in count:\n    if freq >= 2:\n        ans += freq * (freq - 1) / 2 * 8\nreturn ans\n```",
+    "**Diagonal pairs** - counting (i,i) as a valid pair\n`Input: nums = [2,4,8]` → `Expected: 0`\n⚠️ Bug: inner loop starts at `j = i` instead of `j = i+1` → counts (4,4) giving product 16, matching (2,8), returns 8\n\n**Ordered pair double-counting** - counting both (i,j) and (j,i)\n`Input: nums = [2,3,4,6]` → `Expected: 8`\n⚠️ Bug: inner loop runs `j` from 0 instead of `i+1` → count[12] = 4, returns 4*3/2*8 = 48\n\n**Missing tuple multiplier** - forgetting each pair-of-pairs yields 8 ordered tuples\n`Input: nums = [2,3,4,6]` → `Expected: 8`\n⚠️ Bug: `ans += f*(f-1)/2` without `*8` → returns 1\n\n**Integer division before multiplication** - dividing f by 2 before multiplying\n`Input: nums = [1,2,3,4,6,12]` → `Expected: 40`\n⚠️ Bug: `f/2*(f-1)*8` instead of `f*(f-1)/2*8` → for f=3, gets 16 instead of 24, returns 32"
+  ],
+  "followUps": [
+    {
+      "q": "What if elements in nums can repeat?",
+      "a": "Two pairs might share an element at different indices, so you must track index pairs, not value pairs. Store lists of index pairs per product, then when combining two pairs, subtract cases where they share an index. Time stays O(n²) but the constant grows."
+    },
+    {
+      "q": "What if nums.length ≤ 10^5 with values still ≤ 10^4?",
+      "a": "O(n²) pair generation is too slow. Since values are bounded by 10^4, count the frequency of each value first, then iterate over all pairs of distinct values (O(V²) = 10^8) and use combinatorics to account for multiplicities. This trades O(n²) for O(V²)."
+    },
+    {
+      "q": "What if nums arrives as a stream and you must report the running count after each insertion?",
+      "a": "Maintain the product-frequency map incrementally. When element x arrives, for each existing element y, increment count[x·y]; each time a product's frequency rises to f, add (f−1)·8 new tuples. O(n) work per element, O(n²) total, O(n²) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int tupleSameProduct(vector<int>& nums) {\n        unordered_map<int,int> count;\n        int n = nums.size();\n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                count[nums[i] * nums[j]]++;\n            }\n        }\n        long long ans = 0;\n        for (auto& [p, f] : count) {\n            if (f >= 2) {\n                ans += (long long)f * (f - 1) / 2 * 8;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

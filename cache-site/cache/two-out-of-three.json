@@ -1,0 +1,40 @@
+{
+  "slug": "two-out-of-three",
+  "title": "Two Out of Three",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask Frequency Counting",
+  "tc": "O(n1 + n2 + n3 + 100)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int mask[101]: fixed 101 ints → O(1)\n- vector<int> result: returned output, not counted\n- recursion depth: none",
+  "approach": "Since all values are in [1, 100], use a fixed-size array `mask[101]` where `mask[v]` stores a 3-bit flag indicating which of the three arrays contain value `v`. OR-ing the bit for each array is idempotent, so duplicates within one array don't inflate the count. After processing all three arrays, a value qualifies iff its mask has at least two bits set, i.e. `(mask[v] & (mask[v]-1)) != 0`.",
+  "hints": [
+    "Every value across all three arrays lies between 1 and 100. What does this small, fixed range let you do for lookup that an unbounded integer range would not?",
+    "Use a fixed-size array of 101 integers indexed by value, where each entry holds a 3-bit flag of which arrays contain that value. For nums1 = [1,1,3,2], set bit 0 for values 1, 3, and 2.",
+    "```\nmask[1..100] = 0\nfor x in nums1: mask[x] |= 1\nfor x in nums2: mask[x] |= 2\nfor x in nums3: mask[x] |= 4\nfor v in 1..100:\n    if popcount(mask[v]) >= 2:\n        add v to result\nreturn result\n```",
+    "**Duplicates within one array** - same value repeated in a single array must count once, not multiple times\n`Input: nums1 = [1,1,1], nums2 = [2], nums3 = [3]` → `Expected: []`\n⚠️ Bug: concatenating all arrays and keeping values with total frequency >= 2 → returns `[1]`\n\n**Value in all three arrays** - a value present in every array still qualifies\n`Input: nums1 = [5], nums2 = [5], nums3 = [5]` → `Expected: [5]`\n⚠️ Bug: checking popcount == 2 instead of >= 2 → returns `[]`\n\n**No overlap at all** - no value appears in two or more arrays\n`Input: nums1 = [1], nums2 = [2], nums3 = [3]` → `Expected: []`\n⚠️ Bug: returning values with popcount >= 1 → returns `[1,2,3]`\n\n**Minimum input, single shared value** - each array has length 1\n`Input: nums1 = [1], nums2 = [1], nums3 = [2]` → `Expected: [1]`\n⚠️ Bug: skipping the final scan of 1..100 and only checking values seen in nums1 → returns `[1]` (works here) but fails when the shared value is only in nums2 and nums3"
+  ],
+  "followUps": [
+    {
+      "q": "What if the value range were unbounded (up to 10^9) instead of 1..100?",
+      "a": "Replace the fixed array with a hash map from value to its 3-bit mask. Time stays O(n), space becomes O(distinct values) = O(n)."
+    },
+    {
+      "q": "What if there were k arrays instead of 3, and we need values in at least two of them?",
+      "a": "Use the same bitmask idea with k bits (or a count array), OR-ing bit i for array i. Time is O(total elements), space O(distinct values). For large k, store a count per value instead of a bitmask."
+    },
+    {
+      "q": "What if the arrays arrive as a stream and cannot all fit in memory at once?",
+      "a": "Process each array one at a time, updating a hash map value→mask. After each array finishes, you only need the map, not the array itself. Space is O(distinct values seen so far), time O(total elements)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> twoOutOfThree(vector<int>& nums1, vector<int>& nums2, vector<int>& nums3) {\n        int mask[101] = {0};\n        for (int x : nums1) mask[x] |= 1;\n        for (int x : nums2) mask[x] |= 2;\n        for (int x : nums3) mask[x] |= 4;\n        vector<int> result;\n        for (int v = 1; v <= 100; ++v) {\n            if ((mask[v] & (mask[v] - 1)) != 0) {\n                result.push_back(v);\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

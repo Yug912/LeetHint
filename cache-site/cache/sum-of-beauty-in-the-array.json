@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-beauty-in-the-array",
+  "title": "Sum of Beauty in the Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-Place Sign-Bit Marking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- max_left, min_right, beauty, n, i: O(1) auxiliary space\n- recursion depth: none\n- not counted: input `nums` (modified in place), returned `int`",
+  "approach": "Since all elements in `nums` are strictly positive, we can use the sign bit of each element to store whether it satisfies the left condition (all elements to its left are strictly smaller). We do this by negating `nums[i]` during a left-to-right pass if `nums[i]` is strictly greater than the running maximum. Then, during a right-to-left pass, we check if the absolute value of `nums[i]` is strictly less than the running minimum to its right. If both the sign bit (left condition) and the minimum condition (right condition) are met, we add 2 to the beauty. Otherwise, if the immediate neighbors are strictly increasing, we add 1. This avoids allocating extra prefix/suffix arrays, achieving O(1) auxiliary space.",
+  "hints": [
+    "For each index, the first beauty condition requires checking every element to its left and every element to its right. Given that n can be 10^5, how can you know if an element is strictly greater than all elements to its left without re-scanning the left side for every index?",
+    "Use the sign bit of the array elements to mark whether the left-side condition is satisfied. Since all values are positive (1 to 10^5), negating an element marks it as valid for the left condition without losing its original magnitude.",
+    "max_left = nums[0]\nfor i from 1 to n - 2:\n    if nums[i] > max_left:\n        nums[i] = -nums[i]\n    max_left = max(max_left, abs(nums[i]))\n\nmin_right = nums[n - 1]\nfor i from n - 2 down to 1:\n    val = abs(nums[i])\n    if nums[i] < 0 and val < min_right:\n        sum += 2\n    else if abs(nums[i - 1]) < val and val < abs(nums[i + 1]):\n        sum += 1\n    min_right = min(min_right, val)",
+    "**Non-monotonic left side** - An element might be greater than the initial maximum but not greater than a previous peak.\n`Input: nums = [2,5,4,6]` → `Expected: 0`\n⚠️ Bug: Updating `max_left` with `nums[i]` instead of `abs(nums[i])` → returns 2 (incorrectly marks `4` as satisfying the left condition because `max_left` stays `2`).\n\n**Negated right neighbor** - An element's right neighbor might be marked negative from the first pass, breaking direct comparison.\n`Input: nums = [5,1,2,6,7]` → `Expected: 3`\n⚠️ Bug: Using `nums[i + 1]` instead of `abs(nums[i + 1])` in the second condition check → returns 2 (fails to recognize `2 < 6` because `nums[3]` was negated to `-6`).\n\n**All elements equal** - No element is strictly greater than its neighbors.\n`Input: nums = [5,5,5]` → `Expected: 0`\n⚠️ Bug: Using `<=` instead of `<` in the neighbor check `abs(nums[i - 1]) <= val` → returns 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array could contain negative numbers or zeros? How would the solution change?",
+      "a": "The sign-bit marking trick relies on all values being positive. If negatives or zeros are allowed, we would need to use a separate boolean array or an integer array (e.g., 1 for marked, 0 for unmarked) to store the left-condition result, increasing the space complexity to O(n)."
+    },
+    {
+      "q": "What if we wanted to find the beauty of every index, including the first and last?",
+      "a": "The first and last elements cannot satisfy the strict neighbor condition (since they lack a left or right neighbor), so their beauty would always be 0. The algorithm bounds would simply extend to `0` and `n - 1`, but the logic remains unchanged."
+    },
+    {
+      "q": "Could we solve this in a single pass?",
+      "a": "No, because the right-side condition requires knowing the minimum of all elements to the right, which cannot be determined without a right-to-left pass (or maintaining a complex data structure like a segment tree, which"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int sumOfBeauties(vector<int>& nums) {\n        int n = nums.size();\n        int beauty = 0;\n        \n        int max_left = nums[0];\n        for (int i = 1; i < n - 1; ++i) {\n            if (max_left < nums[i]) {\n                nums[i] = -nums[i];\n                max_left = -nums[i];\n            }\n        }\n        \n        int min_right = nums[n - 1];\n        for (int i = n - 2; i >= 1; --i) {\n            if (nums[i] < 0 && -nums[i] < min_right) {\n                beauty += 2;\n            } else if (abs(nums[i - 1]) < abs(nums[i]) && abs(nums[i]) < abs(nums[i + 1])) {\n                beauty += 1;\n            }\n            min_right = min(min_right, abs(nums[i]));\n        }\n        \n        return beauty;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

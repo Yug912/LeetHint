@@ -1,0 +1,40 @@
+{
+  "slug": "most-beautiful-item-for-each-query",
+  "title": "Most Beautiful Item for Each Query",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sorting + Prefix Max + Binary Search",
+  "tc": "O(n log n + m log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort stack: O(log n)\n- items: modified in place → O(1)\n- ans (returned vector): O(m), not counted",
+  "approach": "Sort items by price, then replace each item's beauty with the running maximum beauty seen so far (prefix max). For each query, binary search for the rightmost item with price ≤ query and return its prefix-max beauty, or 0 if none exists. After sorting, all eligible items for any query form a contiguous prefix, and the prefix max gives the maximum beauty in that prefix in O(1).",
+  "hints": [
+    "For a fixed budget, every eligible item shares one property - what is it, and how does the eligible set change as the budget rises? With up to 10^5 items and 10^5 queries, checking every item per query is too slow.",
+    "Sort items by price, compute a running maximum of beauty, then binary-search each query. Example: sorted [[1,2],[2,4],[3,2],[3,5],[5,6]] → running max [2,4,4,5,6]; query 3 finds rightmost price ≤ 3 at index 3 → answer 5.",
+    "```\nsort items by price\nfor i in 1..n-1:\n    items[i].beauty = max(items[i].beauty, items[i-1].beauty)\nfor each query q:\n    binary search rightmost index where price <= q\n    if found: answer = items[index].beauty\n    else: answer = 0\n```",
+    "**All same price** - multiple items share the same price, query equals that price\n`items = [[1,2],[1,2],[1,3],[1,4]], queries = [1]` → `Expected: [4]`\n⚠️ Bug: using `items[mid][0] < q` instead of `<=` in binary search → returns [0]\n\n**Query below all prices** - no eligible item exists\n`items = [[10,1000]], queries = [5]` → `Expected: [0]`\n⚠️ Bug: accessing items[idx] without checking idx == -1 → out-of-bounds access\n\n**No prefix max** - beauty at the found index is not the maximum among eligible items\n`items = [[1,5],[2,3]], queries = [2]` → `Expected: [5]`\n⚠️ Bug: returning items[idx][1] directly without computing a running maximum → returns [3]\n\n**Single item, query too small** - boundary index 0 with no match\n`items = [[5,7]], queries = [4]` → `Expected: [0]`\n⚠️ Bug: initializing idx to 0 instead of -1 → returns [7]"
+  ],
+  "followUps": [
+    {
+      "q": "What if items can be inserted dynamically between queries?",
+      "a": "Replace the sorted array with a balanced BST or segment tree over coordinate-compressed prices, supporting point updates (max beauty at each price) and range-max queries. Each insertion and query costs O(log n). Space becomes O(n) for the tree."
+    },
+    {
+      "q": "What if you must also return the index of the most beautiful eligible item, not just its beauty?",
+      "a": "Store the item index alongside the running maximum during the prefix-max pass - when the max beauty updates, record which item achieved it. Binary search still finds the range; the stored index gives the answer. Time and space complexity are unchanged."
+    },
+    {
+      "q": "What if queries arrive as an unbounded stream with no known count?",
+      "a": "Preprocess once (sort + prefix max) in O(n log n), then answer each streaming query in O(log n) with no per-query allocation. Space stays O(log n) beyond the preprocessed items."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> maximumBeauty(vector<vector<int>>& items, vector<int>& queries) {\n        sort(items.begin(), items.end());\n        int n = items.size();\n        for (int i = 1; i < n; i++) {\n            items[i][1] = max(items[i][1], items[i - 1][1]);\n        }\n        int m = queries.size();\n        vector<int> ans(m);\n        for (int j = 0; j < m; j++) {\n            int q = queries[j];\n            int lo = 0, hi = n - 1, idx = -1;\n            while (lo <= hi) {\n                int mid = lo + (hi - lo) / 2;\n                if (items[mid][0] <= q) {\n                    idx = mid;\n                    lo = mid + 1;\n                } else {\n                    hi = mid - 1;\n                }\n            }\n            ans[j] = (idx == -1) ? 0 : items[idx][1];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "uncrossed-lines",
+  "title": "Uncrossed Lines",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming (LCS, Rolling Array)",
+  "tc": "O(n·m)",
+  "sc": "O(min(n,m))",
+  "spaceBreakdown": "- vector<int> prev: m+1 entries → O(m)\n- vector<int> cur: m+1 entries → O(m)\n- recursion depth: none\n- not counted: input arrays, returned int",
+  "approach": "The problem is equivalent to finding the Longest Common Subsequence (LCS) of nums1 and nums2: a set of non-crossing matching lines corresponds exactly to a common subsequence, since matched indices must be strictly increasing in both arrays. We use the standard LCS recurrence with a rolling two-row array: dp[i][j] = dp[i-1][j-1]+1 if nums1[i-1]==nums2[j-1], else max(dp[i-1][j], dp[i][j-1]). By keeping only the previous and current rows and orienting so the inner array is the shorter dimension, space drops to O(min(n,m)).",
+  "hints": [
+    "If you list every matched pair (i₁, j₁), (i₂, j₂), … in order of their index in nums1, what must be true about the corresponding indices in nums2 for no two lines to cross?",
+    "This is the Longest Common Subsequence problem. Solve it with 2D dynamic programming using a rolling array of two rows, cutting space to O(min(n,m)). For nums1 = [1,4,2], nums2 = [1,2,4]: when nums1[1]=4 matches nums2[2]=4, the cell becomes prev[2] + 1 = 2.",
+    "```\nensure m ≤ n (swap arrays if needed)\nprev, cur = arrays of size m+1, all zeros\nfor i = 1 to n:\n    for j = 1 to m:\n        if nums1[i-1] == nums2[j-1]:\n            cur[j] = prev[j-1] + 1\n        else:\n            cur[j] = max(prev[j], cur[j-1])\n    swap(prev, cur)\nreturn prev[m]\n```",
+    "**Single element match** - both arrays have length 1 with the same value.\n`Input: nums1 = [5], nums2 = [5]` → `Expected: 1`\n⚠️ Bug: returning `cur[m]` instead of `prev[m]` after the final row swap → returns 0\n\n**Repeated value in one array** - a value appears twice in nums2 but once in nums1.\n`Input: nums1 = [1,2], nums2 = [1,1]` → `Expected: 1`\n⚠️ Bug: updating a single 1D array left-to-right without saving the old dp[j-1] → returns 2\n\n**All elements equal** - every element is the same, so the answer is min(n,m).\n`Input: nums1 = [1,1,1], nums2 = [1,1]` → `Expected: 2`\n⚠️ Bug: using `prev[j]` instead of `prev[j-1]` in the match branch → returns 3\n\n**No common value** - the arrays share no elements.\n`Input: nums1 = [1,2,3], nums2 = [4,5,6]` → `Expected: 0`\n⚠️ Bug: initializing the dp base row to 1 instead of 0 → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you also need to return the actual index pairs, not just the count?",
+      "a": "Use Hirschberg's divide-and-conquer algorithm: recursively find the optimal split column using two rolling-array passes, then reconstruct the matching pairs from the splits. Time stays O(n·m) and space stays O(min(n,m)) while still producing the full set of matched indices."
+    },
+    {
+      "q": "What if nums1 is fixed but nums2 arrives as a stream, one element at a time?",
+      "a": "Process column-by-column instead of row-by-row: maintain two columns of length n+1, updating in O(n) per new nums2 element. Total time is O(n·m) and space is O(n); you cannot go below O(n) since the entire column must be retained."
+    },
+    {
+      "q": "What if element values can be up to 10^9 instead of 2000?",
+      "a": "The DP only uses equality comparisons, so value magnitude is irrelevant. The algorithm, time complexity O(n·m), and space O(min(n,m)) are all unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxUncrossedLines(vector<int>& nums1, vector<int>& nums2) {\n        int n = nums1.size(), m = nums2.size();\n        if (n < m) {\n            swap(nums1, nums2);\n            swap(n, m);\n        }\n        vector<int> prev(m + 1, 0), cur(m + 1, 0);\n        for (int i = 1; i <= n; i++) {\n            for (int j = 1; j <= m; j++) {\n                if (nums1[i - 1] == nums2[j - 1]) {\n                    cur[j] = prev[j - 1] + 1;\n                } else {\n                    cur[j] = max(prev[j], cur[j - 1]);\n                }\n            }\n            swap(prev, cur);\n        }\n        return prev[m];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

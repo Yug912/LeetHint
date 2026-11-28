@@ -1,0 +1,40 @@
+{
+  "slug": "stone-game-ii",
+  "title": "Stone Game II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Minimax DP",
+  "tc": "O(n³)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<int> suffix: size n+1 → O(n)\n- vector<vector<int>> dp: (n+1) × (n+2) → O(n²)\n- recursion depth: none (iterative)\n- not counted: input piles",
+  "approach": "The game is zero-sum: total stones are fixed, so maximizing Alice's score equals minimizing Bob's. Define `dp[i][m]` = max stones the current player can collect from `piles[i:]` when the current M is `m`. If the current player takes X piles (1 ≤ X ≤ 2m), they get those stones plus everything left after the opponent plays optimally from position `i+X` with `M = max(m, X)`. Using suffix sums, this simplifies to `dp[i][m] = suffix[i] - min over X of dp[i+X][max(m,X)]`, where taking all remaining piles (when `i+X ≥ n`) gives the opponent 0. We fill the table bottom-up by decreasing `i`.",
+  "hints": [
+    "The total number of stones across all piles never changes. If you know the best the opponent can collect from any remaining position, what does that tell you about your own best outcome from the current position?",
+    "Use dynamic programming on states `(i, m)` where `i` is the starting pile index and `m` is the current M value. For `piles = [2,7,9,4,4]` at `i=0, m=1`: Alice can take X=1 (then Bob faces `i=1, m=1`) or X=2 (Bob faces `i=2, m=2`); she picks whichever leaves Bob with fewer stones.",
+    "```\nsuffix[i] = sum of piles[i..n-1]\nfor i from n-1 down to 0:\n  for m from 1 to n:\n    minOpp = INF\n    for x from 1 to 2*m:\n      ni = i + x\n      if ni >= n: minOpp = 0; break\n      nm = min(max(m, x), n)\n      minOpp = min(minOpp, dp[ni][nm])\n    dp[i][m] = suffix[i] - minOpp\nreturn dp[0][1]\n```",
+    "**Single pile** - only one pile exists; Alice takes it immediately.\n`Input: piles = [5]` → `Expected: 5`\n⚠️ Bug: initializing `minOpp` to 0 instead of `INT_MAX` and skipping the loop when `2*m >= n-i` → returns 0\n\n**Greedy take-max** - always taking the most piles allowed.\n`Input: piles = [2,7,9,4,4]` → `Expected: 10`\n⚠️ Bug: Alice greedily takes X=2 (gets 2+7=9), Bob takes all 3 remaining (9+4+4=17) → returns 9\n\n**Uncapped M index** - `max(m, x)` can exceed `n` when `m` is large.\n`Input: piles = [1,2,3,4,5,100]` → `Expected: 104`\n⚠️ Bug: indexing `dp[ni][nm]` with `nm = max(m,x)` up to `2*n` without capping → out-of-bounds access\n\n**All equal piles** - every pile has the same value, so optimal play splits evenly.\n`Input: piles = [3,3,3,3]` → `Expected: 6`\n⚠️ Bug: using `dp[i][m] = suffix[i] - dp[i+1][m]` (only trying X=1) instead of looping all X → returns 6 only by luck; on `[3,3,3,3,3]` returns 9 instead of 9 (happens to match), but on `[1,1,1,1,1,1]` returns 3 instead of 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if `piles.length` can be up to 10^5?",
+      "a": "The O(n³) table DP is too slow. However, for any position `i`, once `2*m >= n-i` the player takes all remaining piles, so `dp[i][m] = suffix[i]`. This caps the useful `m` range at `ceil((n-i)/2)` per position, but the worst case is still quadratic. A recursive memoized approach that only visits reachable `(i, m)` states helps because the game tree is sparse, yielding roughly O(n log n) reachable states. TC: O(n log n), SC: O(n log n)."
+    },
+    {
+      "q": "What if pile values can be negative?",
+      "a": "Players might prefer taking fewer piles to avoid negative stones. The recurrence `dp[i][m] = suffix[i] - min over X of dp[i+X][max(m,X)]` still holds because suffix sums now include negatives, and the minimax logic is unchanged. The only change is that `minOpp` should not short-circuit to 0 when `ni >= n` - instead the player must still evaluate all X since taking all remaining might be worse than taking fewer. TC: O(n³), SC: O(n²)."
+    },
+    {
+      "q": "What if both players want to maximize the *difference* (Alice's stones minus Bob's) rather than Alice's absolute count?",
+      "a": "Define `dp[i][m]` as the best score difference the current player can achieve. Then `dp[i][m] = max over X of (sum of X piles - dp[i+X][max(m,X)])`, since the opponent's advantage becomes the current player's disadvantage. Alice's difference is `dp[0][1]`, and her stone count is `(total + dp[0][1]) / 2`. TC: O(n³), SC: O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int stoneGameII(vector<int>& piles) {\n        int n = piles.size();\n        vector<int> suffix(n + 1, 0);\n        for (int i = n - 1; i >= 0; i--)\n            suffix[i] = suffix[i + 1] + piles[i];\n\n        // dp[i][m] = max stones the current player collects from piles[i:] with M = m\n        vector<vector<int>> dp(n + 1, vector<int>(n + 2, 0));\n\n        for (int i = n - 1; i >= 0; i--) {\n            for (int m = 1; m <= n; m++) {\n                int minOpp = INT_MAX;\n                for (int x = 1; x <= 2 * m; x++) {\n                    int ni = i + x;\n                    if (ni >= n) {\n                        minOpp = 0;\n                        break;\n                    }\n                    int nm = max(m, x);\n                    if (nm > n) nm = n;\n                    minOpp = min(minOpp, dp[ni][nm]);\n                }\n                dp[i][m] = suffix[i] - minOpp;\n            }\n        }\n        return dp[0][1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

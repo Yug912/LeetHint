@@ -1,0 +1,40 @@
+{
+  "slug": "count-binary-substrings",
+  "title": "Count Binary Substrings",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Run-Length Encoding with Adjacent-Pair Aggregation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int prev, cur, ans, i: scalars → O(1)\n- no containers/arrays allocated\n- not counted: input string s",
+  "approach": "A valid substring must straddle exactly one transition between runs of identical characters: it is \"0...01...1\" or \"1...10...0\" with equal counts. If two adjacent runs have lengths a and b, the number of valid substrings crossing that boundary is min(a,b) (we can take 1+1, 2+2, ..., up to min(a,b)+min(a,b)). So we scan once, track the previous run length and the current run length, and add min(prev, cur) at every transition (plus once more at the end).",
+  "hints": [
+    "Given n ≤ 10^5, checking every substring pair is too slow. In \"000111\", which positions could possibly be the two ends of a valid substring, and what do those ends always sit on?",
+    "Compress the string into run-lengths of consecutive identical characters. For \"00110011\" the runs are [2,2,2,2]; each adjacent pair (a,b) contributes min(a,b) valid substrings.",
+    "```\nprev = 0, cur = 1, ans = 0\nfor i from 1 to n-1:\n    if s[i] == s[i-1]:\n        cur = cur + 1\n    else:\n        ans = ans + min(prev, cur)\n        prev = cur\n        cur = 1\nans = ans + min(prev, cur)\nreturn ans\n```",
+    "**Single character** - only one run exists, so no adjacent pair can form a valid substring.\n`Input: s = \"0\"` → `Expected: 0`\n⚠️ Bug: initializing `prev = 1` instead of `prev = 0` → returns 1\n\n**Two characters, one transition** - exactly one valid substring \"01\".\n`Input: s = \"01\"` → `Expected: 1`\n⚠️ Bug: omitting the final `ans += min(prev, cur)` after the loop → returns 0\n\n**All characters identical** - no transitions, so no valid substrings.\n`Input: s = \"1111\"` → `Expected: 0`\n⚠️ Bug: initializing `prev = 1` instead of `prev = 0` → returns 4\n\n**Fully alternating string** - every adjacent run pair contributes exactly 1.\n`Input: s = \"10101\"` → `Expected: 4`\n⚠️ Bug: resetting `prev = 0` inside the else branch instead of `prev = cur` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the string could contain digits 0-9 and we want substrings with equal counts of two specific digits, still grouped consecutively?",
+      "a": "Apply the same run-based idea per digit pair: for each adjacent run pair of the two target digits, add min(a,b). To handle all digit pairs, iterate over the C(10,2)=45 ordered pairs. TC: O(45n) = O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the string arrives as a stream of unknown length, one character at a time?",
+      "a": "Keep prev and cur run lengths and a running answer; on each new character either extend cur or finalize the previous pair with min(prev, cur) and start a new cur. This is fully online: O(n) time, O(1) space, no need to store the whole string."
+    },
+    {
+      "q": "What if 0s and 1s must be grouped but the count of 0s must be exactly k times the count of 1s (k given)?",
+      "a": "For adjacent runs of lengths a (zeros) and b (ones), valid substrings take j zeros and j/k ones for j = k, 2k, ..., up to min(a, b·k); equivalently count = min(a/k, b) when a is a multiple of k. TC stays O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countBinarySubstrings(string s) {\n        int n = s.size();\n        int ans = 0;\n        int prev = 0, cur = 1;\n        for (int i = 1; i < n; i++) {\n            if (s[i] == s[i - 1]) {\n                cur++;\n            } else {\n                ans += min(prev, cur);\n                prev = cur;\n                cur = 1;\n            }\n        }\n        ans += min(prev, cur);\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

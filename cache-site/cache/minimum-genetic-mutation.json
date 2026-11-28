@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-genetic-mutation",
+  "title": "Minimum Genetic Mutation",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Shortest Path",
+  "tc": "O(N · L · 4)",
+  "sc": "O(N)",
+  "spaceBreakdown": "- unordered_set<string> bankSet: up to N entries → O(N)\n- unordered_set<string> visited: up to N+1 entries → O(N)\n- queue<string> q: up to N+1 entries → O(N)\n- recursion depth: none\n- not counted: input strings, returned int",
+  "approach": "Treat each gene string as a node in an implicit graph; two nodes are adjacent if they differ in exactly one of the 8 positions. Only strings in the bank (plus the start) are valid nodes. Run BFS from `startGene`; the first time we pop `endGene` the level counter is the minimum mutation count. BFS is correct because every edge has unit weight, so the first discovery of `endGene` is along a shortest path.",
+  "hints": [
+    "If you drew one node per gene string and connected two nodes whenever they differ in exactly one of the 8 positions, what classic graph question would \"minimum mutations\" become?\nThe bank has at most 10 entries, so even an exhaustive neighbor scan per node is cheap.",
+    "Breadth-first search on that implicit graph, using a hash set of the bank for O(1) validity checks. From \"AACCGGTT\", one neighbor in the bank is \"AACCGGTA\" (position 7: T→A), so it enters the queue at level 1.",
+    "```\nput startGene in queue, mark visited, steps = 0\nwhile queue not empty:\n    for each node in current level:\n        node = pop\n        if node == endGene: return steps\n        for each position j in 0..7:\n            for each char c in {A,C,G} (skip original):\n                mutate node[j] to c\n                if mutant in bank and not visited:\n                    mark visited, push\n    steps += 1\nreturn -1\n```",
+    "**Start equals end** - startGene and endGene are identical and not in the bank\n`Input: startGene = \"AAAAAAAA\", endGene = \"AAAAAAAA\", bank = []` → `Expected: 0`\n⚠️ Bug: `if (!bankSet.count(endGene)) return -1;` placed before the equality check → returns -1\n\n**End not in bank** - endGene is absent from the bank\n`Input: startGene = \"AACCGGTT\", endGene = \"AACCGGTA\", bank = [\"AACCGGTC\"]` → `Expected: -1`\n⚠️ Bug: inserting endGene into bankSet unconditionally before BFS to \"simplify\" reachability → returns 1\n\n**Disconnected bank** - bank genes exist but none chain from start to end\n`Input: startGene = \"AACCGGTT\", endGene = \"TTTTTTTT\", bank = [\"AACCGGTA\",\"AACCGGTC\"]` → `Expected: -1`\n⚠️ Bug: returning `steps` instead of -1 when the queue empties → returns 2\n\n**Direct single mutation** - endGene is one character from startGene and in the bank\n`Input: startGene = \"AACCGGTT\", endGene = \"AACCGGTA\", bank = [\"AACCGGTA\"]` → `Expected: 1`\n⚠️ Bug: re-evaluating `q.size()` inside the level loop `for (i=0; i<q.size(); i++)` and checking endGene at push time with `return steps` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "If bank.length can be up to 10^5, how does the approach change?",
+      "a": "Keep the same BFS but switch to bidirectional search: expand the smaller frontier from start and end each round, stopping when a node appears in both visited sets. Time stays O(N·L·4) in the worst case but the explored set shrinks dramatically in practice; space remains O(N) for the two visited sets and the bank hash set."
+    },
+    {
+      "q": "If gene length L can be up to 10^5 (with N up to 10^5), generating all 4·L mutations per node is too slow - how do you build edges efficiently?",
+      "a": "Use wildcard hashing: for each bank gene, replace each position with '*' to form L patterns, and group genes sharing a pattern in a hash map. Two genes sharing any pattern differ in exactly one position, so they are neighbors. Building the map is O(N·L) and BFS traversal is O(N·L) total; space is O(N·L) for the map."
+    },
+    {
+      "q": "If the bank is too large to hold in memory and arrives as a stream, how do you still answer the query?",
+      "a": "Run bidirectional BFS but, instead of a preloaded hash set, filter the stream in passes: keep the current frontier, scan the stream once per level to emit only genes at Hamming distance 1 from some frontier node, and feed those into the next level. Time is O(passes · N · L) and space is O(frontier size), independent of total bank size."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minMutation(string startGene, string endGene, vector<string>& bank) {\n        if (startGene == endGene) return 0;\n        unordered_set<string> bankSet(bank.begin(), bank.end());\n        if (!bankSet.count(endGene)) return -1;\n        unordered_set<string> visited;\n        queue<string> q;\n        q.push(startGene);\n        visited.insert(startGene);\n        int steps = 0;\n        const string chars = \"ACGT\";\n        while (!q.empty()) {\n            int sz = q.size();\n            for (int i = 0; i < sz; i++) {\n                string cur = q.front();\n                q.pop();\n                if (cur == endGene) return steps;\n                for (int j = 0; j < 8; j++) {\n                    char orig = cur[j];\n                    for (char c : chars) {\n                        if (c == orig) continue;\n                        cur[j] = c;\n                        if (bankSet.count(cur) && !visited.count(cur)) {\n                            visited.insert(cur);\n                            q.push(cur);\n                        }\n                    }\n                    cur[j] = orig;\n                }\n            }\n            steps++;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

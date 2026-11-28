@@ -1,0 +1,40 @@
+{
+  "slug": "relative-ranks",
+  "title": "Relative Ranks",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sorting with Index Mapping",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> v: n entries → O(n)\n- vector<string> ans: n entries (returned output, not counted)\n- sort(): introsort uses O(log n) stack",
+  "approach": "The rank of each athlete is determined by their position when all scores are sorted in descending order. We create pairs of (score, original index), sort them by score descending, then assign ranks: positions 0, 1, 2 get medal strings, and every other position `i` gets `to_string(i+1)`. We write each rank back into the answer at the athlete's original index. This is correct because all scores are unique, so each athlete has a well-defined placement.",
+  "hints": [
+    "For each athlete, what single quantity - computed from the entire score array - fully determines which rank string they receive?\nAll scores are unique, so no two athletes share a placement.",
+    "Sort an array of (score, original index) pairs by score descending, then the sorted position gives the rank.\nFor score = [10,3,8,9,4], pairs sort to [(10,0),(9,3),(8,2),(4,4),(3,1)], so index 0 → 1st place, index 3 → 2nd place.",
+    "```\ncreate pairs of (score, original_index)\nsort pairs by score descending\nfor i from 0 to n-1:\n    if i == 0: rank = \"Gold Medal\"\n    elif i == 1: rank = \"Silver Medal\"\n    elif i == 2: rank = \"Bronze Medal\"\n    else: rank = str(i + 1)\n    answer[pairs[i].original_index] = rank\nreturn answer\n```",
+    "**Smallest input** - only one athlete, who must receive the gold medal\n`Input: [7]` → `Expected: [\"Gold Medal\"]`\n⚠️ Bug: assigning medals only when `n >= 3` → returns `[\"1\"]`\n\n**Boundary medals/numbers** - exactly four athletes; the 4th is the first to get a numeric rank\n`Input: [4,3,2,1]` → `Expected: [\"Gold Medal\",\"Silver Medal\",\"Bronze Medal\",\"4\"]`\n⚠️ Bug: using `i` instead of `i+1` for the numeric rank → returns `[\"Gold Medal\",\"Silver Medal\",\"Bronze Medal\",\"3\"]`\n\n**Already sorted ascending** - scores rise left to right, so ranks must be assigned right to left\n`Input: [1,2,3,4,5]` → `Expected: [\"5\",\"4\",\"Bronze Medal\",\"Silver Medal\",\"Gold Medal\"]`\n⚠️ Bug: assigning ranks by original index order instead of by sorted position → returns `[\"Gold Medal\",\"Silver Medal\",\"Bronze Medal\",\"4\",\"5\"]`\n\n**Already sorted descending** - scores fall left to right, ranks align with original order\n`Input: [5,4,3,2,1]` → `Expected: [\"Gold Medal\",\"Silver Medal\",\"Bronze Medal\",\"4\",\"5\"]`\n⚠️ Bug: sorting ascending instead of descending → returns `[\"5\",\"4\",\"Bronze Medal\",\"Silver Medal\",\"Gold Medal\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if scores can be tied - athletes with equal scores share the same rank?",
+      "a": "After sorting descending, group consecutive equal scores; all members of a group get the rank equal to the first position in that group (competition ranking). The next group starts at the position after skipping all tied members. TC stays O(n log n), SC stays O(n)."
+    },
+    {
+      "q": "What if n can be up to 10^9 and scores arrive as a stream - you cannot store all of them?",
+      "a": "You cannot sort everything. If you only need the top-3 medals, maintain three running variables for the three highest scores seen so far and their indices; every other athlete's rank is unknown without global sorting. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if scores can be updated and you must re-rank a single athlete after each update?",
+      "a": "Keep athletes in a balanced BST keyed by score (descending). On update, remove the old entry and insert the new one, then the rank is the position (order statistic) of that node. Each update and rank query is O(log n); SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> findRelativeRanks(vector<int>& score) {\n        int n = score.size();\n        vector<pair<int,int>> v;\n        v.reserve(n);\n        for (int i = 0; i < n; i++) {\n            v.push_back({score[i], i});\n        }\n        sort(v.begin(), v.end(), [](const pair<int,int>& a, const pair<int,int>& b){\n            return a.first > b.first;\n        });\n        vector<string> ans(n);\n        for (int i = 0; i < n; i++) {\n            int idx = v[i].second;\n            if (i == 0) ans[idx] = \"Gold Medal\";\n            else if (i == 1) ans[idx] = \"Silver Medal\";\n            else if (i == 2) ans[idx] = \"Bronze Medal\";\n            else ans[idx] = to_string(i + 1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "arranging-coins",
+  "title": "Arranging Coins",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long lo, hi, mid, coins: scalars → O(1)\n- recursion depth: none\n- not counted: input n, returned int",
+  "approach": "The number of coins needed for k complete rows is the triangular sum 1+2+...+k = k(k+1)/2. This quantity is strictly increasing in k, so we can binary search for the largest k with k(k+1)/2 ≤ n. All intermediate products are computed in `long long` to avoid overflow, since k can reach ~65536 and n up to 2^31−1.",
+  "hints": [
+    "The i-th row holds exactly i coins, so k complete rows use 1+2+...+k coins. As k grows, how does that total behave relative to your fixed budget n?",
+    "Use binary search on the answer k over [1, n]. For n = 5, testing k = 3 needs 6 coins > 5, so the answer must lie in the lower half.",
+    "```\nlo, hi = 1, n\nwhile lo <= hi:\n    mid = (lo + hi) / 2\n    coins = mid * (mid + 1) / 2\n    if coins == n: return mid\n    elif coins < n: lo = mid + 1\n    else: hi = mid - 1\nreturn hi\n```",
+    "**Smallest input** - only one coin, exactly one full row.\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: initialising `hi = n - 1` instead of `hi = n` → returns 0.\n\n**Perfect triangular number** - n equals a triangular sum exactly.\n`Input: n = 6` → `Expected: 3`\n⚠️ Bug: returning `hi` even on the `coins == n` branch (i.e., skipping the early return) → returns 3 here but breaks the next case.\n\n**Largest input / overflow** - n = 2^31 − 1; mid*(mid+1) ≈ (2^31)^2 ≈ 4.6×10^18, far past INT_MAX.\n`Input: n = 2147483647` → `Expected: 65535`\n⚠️ Bug: declaring `int coins = mid * (mid + 1) / 2` with `int mid` → signed overflow, undefined behavior / wrong answer.\n\n**Just below a triangular number** - one coin short of completing the next row.\n`Input: n = 2` → `Expected: 1`\n⚠️ Bug: using `lo < hi` with `hi = mid` (no `mid - 1`) → infinite loop or returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "Can you solve this in O(1) time and O(1) space?",
+      "a": "Yes. Solve k(k+1)/2 ≤ n for k: k = floor((√(1+8n) − 1)/2). Use integer square root or `(sqrt(1+8LL*n)-1)/2` carefully, then adjust by ±1 to absorb floating-point error. TC O(1), SC O(1)."
+    },
+    {
+      "q": "What if row i required i² coins instead of i?",
+      "a": "The total becomes k(k+1)(2k+1)/6, still monotonic in k, so binary search still applies - just swap the sum formula and keep `long long` (k is now ~1290 for n = 2^31−1). TC O(log n), SC O(1)."
+    },
+    {
+      "q": "Coins arrive one at a time in a stream; after each coin, report the current number of complete rows.",
+      "a": "Maintain `row` (current row size needed) and `filled` (coins placed in the current row). Increment `filled`; when it reaches `row`, increment the answer and reset `filled` to 0, then `row++`. Each coin is O(1), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int arrangeCoins(int n) {\n        long long lo = 1, hi = n;\n        while (lo <= hi) {\n            long long mid = lo + (hi - lo) / 2;\n            long long coins = mid * (mid + 1) / 2;\n            if (coins == n) {\n                return (int)mid;\n            } else if (coins < n) {\n                lo = mid + 1;\n            } else {\n                hi = mid - 1;\n            }\n        }\n        return (int)hi;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

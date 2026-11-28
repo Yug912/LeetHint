@@ -1,0 +1,40 @@
+{
+  "slug": "next-greater-element-iii",
+  "title": "Next Greater Element III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Next Permutation",
+  "tc": "O(log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- string s: up to 10 characters (digits of n) → O(log n)\n- long long result: single variable → O(1)\n- recursion depth: none\n- not counted: input n, returned int",
+  "approach": "This is the classic \"next permutation\" problem applied to the digits of n. Convert n to a string, find the rightmost index i where a digit is smaller than its right neighbor (the last \"ascent\"), swap it with the smallest digit to its right that is larger than it (found by scanning from the right), then reverse the suffix after i to make it as small as possible. If no ascent exists, the digits are non-increasing and no greater permutation is possible. Finally, check that the result fits in a 32-bit integer.",
+  "hints": [
+    "When comparing n to the next number with the same digits, which digit of n changes first when reading from right to left?",
+    "Convert n to a string and apply the next-permutation algorithm. For n = 12: the rightmost ascent is at index 0 ('1' < '2'); swap s[0] with the rightmost digit larger than it (s[1]='2'), then reverse the suffix after index 0.",
+    "```\ns = digits of n\nfind largest i where s[i] < s[i+1]\nif no such i, return -1\nfind largest j > i where s[j] > s[i]\nswap s[i], s[j]\nreverse s[i+1 .. end]\nif value > INT_MAX, return -1\nreturn value\n```",
+    "**Single digit** - Only one digit exists, so no rearrangement is possible.\n`Input: n = 1` → `Expected: -1`\n⚠️ Bug: omitting the `if (i < 0) return -1;` check → proceeds to `s[j]` with j = 0, then `while (s[j] <= s[i])` reads s[-1], undefined behavior\n\n**All equal digits** - Every digit is identical, so no greater permutation exists.\n`Input: n = 11` → `Expected: -1`\n⚠️ Bug: using `s[i] > s[i+1]` instead of `s[i] >= s[i+1]` → i stays 0 (should be -1), j underflows to -1, swap accesses s[-1]\n\n**Overflow** - The next permutation exceeds the 32-bit integer limit.\n`Input: n = 1999999999` → `Expected: -1`\n⚠️ Bug: casting `stoll(s)` to `int` without overflow check → 9199999999 truncates to 610065407\n\n**Trailing duplicates** - Repeated digits at the end affect which swap partner is correct.\n`Input: n = 122` → `Expected: 212`\n⚠️ Bug: finding the first j > i with `s[j] > s[i]` instead of the last → picks j=1, swaps to \"212\", reverses suffix to \"221\", returns 221"
+  ],
+  "followUps": [
+    {
+      "q": "Find the k-th next greater element with the same digits (k up to 10⁹).",
+      "a": "Apply the next-permutation step k times, each O(d), for O(k·d) total. For very large k, use the factorial number system to compute the k-th lexicographic permutation directly in O(d²), avoiding repeated iteration."
+    },
+    {
+      "q": "n has up to 10⁵ digits, given as a string. Return the result as a string.",
+      "a": "The same in-place algorithm works directly on the input string with no integer conversion. Remove the overflow check since the result is returned as a string. TC: O(d), SC: O(1) extra (in-place on the input)."
+    },
+    {
+      "q": "Find the previous smaller element - the largest number with the same digits that is smaller than n.",
+      "a": "Mirror the algorithm: find the rightmost index i where s[i] > s[i+1], swap with the rightmost digit smaller than s[i], then reverse the suffix after i. TC: O(d), SC: O(d)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int nextGreaterElement(int n) {\n        string s = to_string(n);\n        int len = s.size();\n        int i = len - 2;\n        while (i >= 0 && s[i] >= s[i + 1]) {\n            i--;\n        }\n        if (i < 0) {\n            return -1;\n        }\n        int j = len - 1;\n        while (s[j] <= s[i]) {\n            j--;\n        }\n        swap(s[i], s[j]);\n        reverse(s.begin() + i + 1, s.end());\n        long long result = stoll(s);\n        if (result > INT_MAX) {\n            return -1;\n        }\n        return (int)result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "construct-string-with-repeat-limit",
+  "title": "Construct String With Repeat Limit",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Frequency Array",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[26]: fixed 26 entries → O(1)\n- string result: returned output, not counted\n- result.reserve(s.size()): allocation for output, not counted\n- no recursion, no heap, no other containers",
+  "approach": "Count the frequency of each lowercase letter. Greedily build the result from 'z' down to 'a': take up to `repeatLimit` copies of the largest available letter. If that letter still has remaining copies, place exactly one copy of the next-largest available letter as a separator, then return to the largest letter and repeat. If no separator exists, stop (the remaining copies of the current letter cannot be placed). This is optimal because placing the largest possible character at every position maximizes lexicographic order, and using exactly one separator minimizes the \"cost\" of restarting the largest-character run.",
+  "hints": [
+    "In Example 1's output \"zzcccac\", why does a single 'a' appear between the two groups of 'c's instead of all four 'c's being consecutive?",
+    "Use a frequency array of size 26 and build the answer greedily from 'z' downward. For s = \"cczazcc\", repeatLimit = 3: place \"zz\", then \"ccc\", then one 'a' to break the run, then the last 'c' → \"zzcccac\".",
+    "```\ncount letter frequencies\ni = 25\nwhile i >= 0:\n    if count[i] == 0: decrement i; continue\n    take = min(repeatLimit, count[i])\n    append take copies of letter i\n    count[i] -= take\n    if count[i] > 0:\n        find largest j < i with count[j] > 0\n        if no such j: break\n        append one copy of letter j\n        count[j] -= 1\n```",
+    "**All same character** - No separator exists, so excess copies are dropped.\n`Input: s = \"aaaa\", repeatLimit = 2` → `Expected: \"aa\"`\n⚠️ Bug: not breaking when no separator character exists → returns \"aaaa\" (violates the limit)\n\n**Single character** - Smallest valid input.\n`Input: s = \"z\", repeatLimit = 1` → `Expected: \"z\"`\n⚠️ Bug: loop condition `i > 0` instead of `i >= 0` → returns \"\"\n\n**repeatLimit = 1** - Every character must alternate.\n`Input: s = \"aabb\", repeatLimit = 1` → `Expected: \"baba\"`\n⚠️ Bug: taking `repeatLimit + 1` copies when count exceeds the limit → returns \"bbaa\" (two b's in a row)\n\n**Must resume largest after separator** - After placing a separator, return to the largest letter, not the next one.\n`Input: s = \"zzzaa\", repeatLimit = 2` → `Expected: \"zzaza\"`\n⚠️ Bug: decrementing i after placing the separator → returns \"zza\" (drops the remaining 'z' and 'a')"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet is full Unicode instead of 26 lowercase letters?",
+      "a": "Replace the fixed array with a sorted map from character to count. Iterate entries in descending key order with the same greedy logic. Time becomes O(n log k) where k is the number of distinct characters; space is O(k)."
+    },
+    {
+      "q": "What if s arrives as a stream too large to hold in memory?",
+      "a": "Make one pass to populate the frequency array (O(1) space for 26 letters), then generate the output directly from the array without storing s. Time stays O(n), space O(1) auxiliary."
+    },
+    {
+      "q": "What if you must use every character from s (no leftovers allowed)?",
+      "a": "Run the same greedy; if any count remains nonzero at the end, return an empty string to signal impossibility. The greedy already maximizes usage, so leftover counts mean no valid arrangement exists. Time O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string repeatLimitedString(string s, int repeatLimit) {\n        int count[26] = {0};\n        for (char c : s) count[c - 'a']++;\n        string result;\n        result.reserve(s.size());\n        int i = 25;\n        while (i >= 0) {\n            if (count[i] == 0) {\n                i--;\n                continue;\n            }\n            int take = min(repeatLimit, count[i]);\n            result.append(take, 'a' + i);\n            count[i] -= take;\n            if (count[i] > 0) {\n                int j = i - 1;\n                while (j >= 0 && count[j] == 0) j--;\n                if (j < 0) break;\n                result.append(1, 'a' + j);\n                count[j]--;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

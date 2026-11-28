@@ -1,0 +1,40 @@
+{
+  "slug": "longest-arithmetic-subsequence-of-given-difference",
+  "title": "Longest Arithmetic Subsequence of Given Difference",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Value-Indexed DP",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int dp[40001]: fixed 40001 entries, independent of n → O(1)\n- scalar ans, offset, v, prev, val, idx: O(1)\n- recursion depth: none\n- not counted: input arr, returned int",
+  "approach": "Let dp[v] = length of the longest valid subsequence ending with value v. When scanning arr left to right and seeing value v, the best chain ending at v is 1 + dp[v - difference] (extend the chain whose last element is exactly v - difference), or 1 if no such chain exists. Because both arr[i] and difference are bounded to [-10^4, 10^4], the only lookup index v - difference ever lies in [-2·10^4, 2·10^4], so a fixed-size array of 40001 ints with offset 20000 replaces any hash map. We update dp[v] and the running answer in one pass.",
+  "hints": [
+    "Every arr[i] is bounded to [-10^4, 10^4], and difference is also bounded to [-10^4, 10^4]. As you scan left to right and consider extending a chain that ends at value v, what is the full range of \"previous value\" lookups you might ever need?",
+    "Use a fixed-size integer array indexed by value (with an offset) instead of a hash map. For arr = [1,5,7,8,5,...] with difference = -2: when v = 5, look up array[5 - (-2)] = array[7] which already holds 1, so array[5] becomes 2.",
+    "```\noffset = 20000\ndp = array of size 40001 filled with 0\nans = 0\nfor v in arr:\n    prev = v - difference\n    val = 1 + dp[prev + offset]\n    dp[v + offset] = max(dp[v + offset], val)\n    ans = max(ans, val)\nreturn ans\n```",
+    "**Single element** - n = 1, no extension is possible.\n`Input: arr = [7], difference = 3` → `Expected: 1`\n⚠️ Bug: initializing `ans = 0` and only updating it inside an \"extension found\" branch → returns 0.\n\n**Negative difference** - the previous-term lookup direction flips.\n`Input: arr = [1,5,7,8,5,3,4,2,1], difference = -2` → `Expected: 4`\n⚠️ Bug: computing the previous term as `v + difference` instead of `v - difference` → returns 2.\n\n**All equal, nonzero difference** - equal values never extend each other.\n`Input: arr = [5,5,5], difference = 1` → `Expected: 1`\n⚠️ Bug: extending whenever `arr[i] == arr[i-1]` regardless of difference → returns 3.\n\n**Values at extremes** - the previous-term index can land outside the input value range.\n`Input: arr = [10000], difference = -10000` → `Expected: 1`\n⚠️ Bug: a fixed array covering only [-10^4, 10^4] (offset 10000, size 20001) with no bounds check on the previous index → out-of-bounds access at index 30000."
+  ],
+  "followUps": [
+    {
+      "q": "Find the longest arithmetic subsequence when the difference is not given (any constant difference allowed).",
+      "a": "Use dp[i][d] = length of the longest arithmetic subsequence ending at index i with common difference d. For each pair (j, i) with j < i, set d = arr[i] - arr[j] and update dp[i][d] = dp[j][d] + 1. With values bounded to [-10^4, 10^4], differences lie in [-2·10^4, 2·10^4] and a fixed array per index works. TC O(n^2), SC O(n·range)."
+    },
+    {
+      "q": "Values are unbounded (up to 10^9) but difference is still given.",
+      "a": "The fixed array no longer fits; store dp in an unordered_map<int,int> keyed by value. The recurrence dp[v] = 1 + dp[v - difference] is unchanged. TC O(n) expected, SC O(n)."
+    },
+    {
+      "q": "arr arrives as an online stream; after each element, report the current longest valid subsequence length.",
+      "a": "Process each element exactly as in the fixed-array approach and keep a running maximum that is returned on every query. No reprocessing of past elements is needed. TC O(1) per element/query, SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestSubsequence(vector<int>& arr, int difference) {\n        int dp[40001] = {0};\n        const int offset = 20000;\n        int ans = 0;\n        for (int v : arr) {\n            int prev = v - difference;\n            int val = 1 + dp[prev + offset];\n            int idx = v + offset;\n            if (val > dp[idx]) dp[idx] = val;\n            if (val > ans) ans = val;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

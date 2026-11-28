@@ -1,0 +1,40 @@
+{
+  "slug": "reverse-nodes-in-even-length-groups",
+  "title": "Reverse Nodes in Even Length Groups",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "In-place Linked List Manipulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- ListNode dummy: 1 node → O(1)\n- Pointers A, B, C, D, prev, curr, nxt: constant → O(1)\n- int group, len, i: constant → O(1)\n- recursion depth: none\n- not counted: input list, returned head",
+  "approach": "Walk the list group by group with expected sizes 1, 2, 3, …. For each group, find its actual end by walking up to `group` steps but stopping at the list's end; the actual length may be smaller than `group`. If the actual length is even, detach the group, reverse it, and reconnect: previous tail → new head, new tail → next group's head. Four pointers (A = prev tail, B = group start, C = group end, D = next start) make the reconnection clean. This is correct because each node is touched a constant number of times and groups are processed in order.",
+  "hints": [
+    "The groups have sizes 1, 2, 3, …, but the last group may be shorter than its expected size. How can you discover each group's true length while walking the list only once, without pre-counting all nodes?",
+    "Use four pointers: A (previous group's tail), B (current group's first node), C (current group's last node), D (next group's first node). For [5,2,6,3,…], group 2 has B=2, C=6, D=3; length 2 is even, so reverse B..C and reconnect A→C, B→D.",
+    "```\nA = dummy, group = 1\nwhile A.next exists:\n    B = A.next; C = B; len = 1\n    for i in 1..group-1 while C.next exists:\n        C = C.next; len += 1\n    D = C.next\n    if len is even:\n        reverse B..C\n        A.next = C (new head); B.next = D\n        A = B\n    else:\n        A = C\n    group += 1\n```",
+    "**Last group shorter, parity differs** - the final group has fewer nodes than its expected size, with opposite parity.\n`Input: head = [1,1,0,6,5]` → `Expected: [1,0,1,5,6]`\n⚠️ Bug: deciding reversal by expected group size (3, odd) instead of actual length (2, even) → returns [1,0,1,6,5]\n\n**Single node** - minimum input, one group of length 1.\n`Input: head = [5]` → `Expected: [5]`\n⚠️ Bug: looping while `A` is non-null instead of while `A->next` is non-null → dereferences null and crashes\n\n**All equal values** - every value is 7, so reversals are visually invisible but pointer links must still be correct.\n`Input: head = [7,7,7,7,7,7]` → `Expected: [7,7,7,7,7,7]`\n⚠️ Bug: omitting `B->next = D` after reversal leaves B->next null → returns [7,7,7] (truncated)\n\n**Last group exactly fills expected size** - total length is a triangular number, so the final group is full.\n`Input: head = [1,2,3,4,5,6,7,8,9,10]` → `Expected: [1,3,2,4,5,6,10,9,8,7]`\n⚠️ Bug: off-by-one in the walk loop (`i < group - 1` instead of `i < group`) → group 2 becomes length 1, misaligns every later group → returns [1,2,3,4,5,6,7,8,9,10]"
+  ],
+  "followUps": [
+    {
+      "q": "Reverse groups with odd length instead of even length.",
+      "a": "Flip the parity check from `len % 2 == 0` to `len % 2 == 1`. All pointer manipulation stays identical, so time remains O(n) and space O(1)."
+    },
+    {
+      "q": "Group sizes follow powers of two (1, 2, 4, 8, …) instead of natural numbers.",
+      "a": "Replace `group++` with `group *= 2`. The walk, parity check, and reversal logic are unchanged. Time stays O(n) since each node is still visited a constant number of times; space stays O(1)."
+    },
+    {
+      "q": "The list arrives as a streaming input too large to hold entirely in memory.",
+      "a": "Buffer one group at a time. The largest group has size O(√n) (since 1+2+…+k ≈ n gives k ≈ √(2n)), so the buffer needs O(√n) space to reverse a group. Time remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\npublic:\n    ListNode* reverseEvenLengthGroups(ListNode* head) {\n        if (!head || !head->next) return head;\n        ListNode dummy(0);\n        dummy.next = head;\n        ListNode* A = &dummy;\n        int group = 1;\n        while (A->next) {\n            ListNode* B = A->next;\n            ListNode* C = B;\n            int len = 1;\n            for (int i = 1; i < group && C->next; i++) {\n                C = C->next;\n                len++;\n            }\n            ListNode* D = C->next;\n            if (len % 2 == 0) {\n                C->next = nullptr;\n                ListNode* prev = nullptr;\n                ListNode* curr = B;\n                while (curr) {\n                    ListNode* nxt = curr->next;\n                    curr->next = prev;\n                    prev = curr;\n                    curr = nxt;\n                }\n                A->next = prev;\n                B->next = D;\n                A = B;\n            } else {\n                A = C;\n            }\n            group++;\n        }\n        return dummy.next;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

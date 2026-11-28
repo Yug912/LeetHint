@@ -1,0 +1,40 @@
+{
+  "slug": "bag-of-tokens",
+  "title": "Bag of Tokens",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers with Sorting",
+  "tc": "O(n log n)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort() introsort stack: O(log n)\n- integer variables (i, j, score, maxScore, power): O(1)\n- not counted: input vector (modified in place)",
+  "approach": "Sort the tokens so we can greedily spend the smallest token face-up (minimizing power cost per score) and sacrifice the largest token face-down (maximizing power gained per score lost). Use two pointers: the left pointer plays tokens face-up when affordable, the right pointer plays tokens face-down when we're stuck. Track the maximum score seen at any point, since the final score may be lower than a peak reached mid-process.",
+  "hints": [
+    "When you spend power to gain a score point, which token should you pick to minimize the cost? When you spend a score point to gain power, which token gives you the most power back? The constraints allow tokens.length up to 1000.",
+    "Sort the array and use two pointers (left for face-up, right for face-down). In Example 3, after sorting to [100,200,300,400] with power 200: play 100 face-up (power→100, score→1), then play 400 face-down (power→500, score→0), then play 200 and 300 face-up for a final max score of 2.",
+    "sort tokens\ni = 0, j = n - 1, score = 0, best = 0\nwhile i <= j:\n    if power >= tokens[i]:\n        power -= tokens[i]; score++; best = max(best, score); i++\n    else if score >= 1:\n        power += tokens[j]; score--; j--\n    else:\n        break\nreturn best",
+    "**Empty bag** - no tokens to play at all.\n`Input: tokens = [], power = 50` → `Expected: 0`\n⚠️ Bug: accessing tokens[0] without checking size → undefined behavior / crash\n\n**Single unaffordable token** - power is below the only token's value and score is 0.\n`Input: tokens = [100], power = 50` → `Expected: 0`\n⚠️ Bug: playing face-down when score is 0 → returns -1 or garbage\n\n**Score peaks mid-process** - the best score is reached before the last move, then drops.\n`Input: tokens = [100,200,300,400,500], power = 200` → `Expected: 2`\n⚠️ Bug: returning final `score` instead of `maxScore` → returns 1\n\n**All equal tokens** - every token costs the same, so face-down then face-up cycles net zero score gain.\n`Input: tokens = [50,50,50], power = 50` → `Expected: 1`\n⚠️ Bug: not tracking maxScore across cycles → returns 0 if it only checks at the end of each cycle"
+  ],
+  "followUps": [
+    {
+      "q": "What if tokens can be played multiple times (reusable)?",
+      "a": "Then you'd repeatedly play the smallest token face-up as long as power allows, and never need face-down plays since reusing a small token is always better. Time becomes O(n log n) for finding the minimum, space O(1)."
+    },
+    {
+      "q": "What if each token has a different score value (gain tokens[i].score instead of 1)?",
+      "a": "The greedy still holds: sort by power cost, spend cheapest face-up, sacrifice most expensive face-down. The comparison changes to maximizing net score gain per power trade-off, still O(n log n) time and O(log n) space."
+    },
+    {
+      "q": "What if tokens arrive in a stream and you must decide immediately whether to play each?",
+      "a": "You'd need an online algorithm with a bounded buffer of seen tokens; maintain a min-heap of played face-up tokens and a max-heap of available face-down candidates, swapping when beneficial. Time O(n log k), space O(k) where k is the buffer size."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int bagOfTokensScore(vector<int>& tokens, int power) {\n        sort(tokens.begin(), tokens.end());\n        int i = 0, j = (int)tokens.size() - 1;\n        int score = 0, maxScore = 0;\n        while (i <= j) {\n            if (power >= tokens[i]) {\n                power -= tokens[i];\n                score++;\n                if (score > maxScore) maxScore = score;\n                i++;\n            } else if (score >= 1) {\n                power += tokens[j];\n                score--;\n                j--;\n            } else {\n                break;\n            }\n        }\n        return maxScore;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

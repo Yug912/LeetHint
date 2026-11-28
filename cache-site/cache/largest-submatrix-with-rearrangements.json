@@ -1,0 +1,40 @@
+{
+  "slug": "largest-submatrix-with-rearrangements",
+  "title": "Largest Submatrix With Rearrangements",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sorted Histogram",
+  "tc": "O(m*n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> heights: n entries → O(n)\n- vector<int> order: n entries → O(n)\n- vector<int> next: n entries → O(n)\n- recursion depth: none\n- not counted: input matrix, returned int",
+  "approach": "For each column, track the number of consecutive 1s ending at the current row (its \"height\"). After updating heights for a row, maintain columns sorted by height in non-decreasing order using a stable partition: columns whose height just reset to 0 move to the front, while columns with positive height preserve their relative order (they all incremented by 1, so their relative order is unchanged). For each position i in the sorted order, the largest submatrix with height `heights[order[i]]` spans columns i through n−1, giving area `heights[order[i]] × (n − i)`. The answer is the maximum over all rows and positions. This avoids a full sort each row, achieving O(m×n) total.",
+  "hints": [
+    "If you could rearrange columns freely, what property of each column - measured from the top down to the current row - determines how tall a block of 1s can be? The matrix has at most 10^5 cells, so an O(m·n·log n) sort-per-row may be too slow for the largest cases.",
+    "Maintain consecutive-1 heights per column. Each row, increment surviving columns and reset others to 0, then stable-partition so 0-height columns go front while the rest keep relative order. In Example 1 row 2, heights [2,0,3] reorder to [0,2,3], giving 2×2 = 4.",
+    "```\nfor each row r:\n    for each column c in current order:\n        height[c] = matrix[r][c] ? height[c] + 1 : 0\n    stable-partition: height == 0 columns first, rest keep order\n    for each position i in partitioned order:\n        area = height[col] * (n - i)\n        ans = max(ans, area)\n```",
+    "**Single zero cell** - smallest valid input, answer is 0.\n`Input: [[0]]` → `Expected: 0`\n⚠️ Bug: initialising ans to 1 → returns 1.\n\n**Single row with gaps** - no vertical stacking is possible.\n`Input: [[1,0,1,0,1]]` → `Expected: 3`\n⚠️ Bug: using width (i+1) instead of (n−i) with non-decreasing order → returns 5.\n\n**Checkerboard** - no column has two consecutive 1s after any rearrangement.\n`Input: [[1,0],[0,1]]` → `Expected: 1`\n⚠️ Bug: not resetting height to 0 when matrix[r][c]==0 → returns 2.\n\n**All ones** - the entire matrix is the answer.\n`Input: [[1,1],[1,1]]` → `Expected: 4`\n⚠️ Bug: recomputing heights from scratch each row instead of cumulatively → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if matrix values are 0-9 and you want the largest submatrix where every element is at least k?",
+      "a": "Replace each cell with 1 if its value ≥ k, else 0, then apply the same algorithm unchanged. Time stays O(m*n), space O(n)."
+    },
+    {
+      "q": "What if rows arrive as a stream and you cannot store the full matrix?",
+      "a": "The solution already processes one row at a time and keeps only heights, order, and next arrays (O(n) space). It handles streaming naturally with no modification. Time stays O(m*n), space O(n) regardless of m."
+    },
+    {
+      "q": "What if columns can only be rearranged within contiguous blocks of size k?",
+      "a": "Within each block of k columns, apply the stable partition independently; blocks stay in fixed order. Time becomes O(m*n) per block-group, i.e. O(m*n) total since each column is still touched once per row, but the answer may be smaller because cross-block rearrangement is forbidden."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestSubmatrix(vector<vector<int>>& matrix) {\n        int m = matrix.size();\n        int n = matrix[0].size();\n        vector<int> heights(n, 0);\n        vector<int> order(n);\n        vector<int> next(n);\n        iota(order.begin(), order.end(), 0);\n        int ans = 0;\n        for (int r = 0; r < m; r++) {\n            for (int i = 0; i < n; i++) {\n                int c = order[i];\n                if (matrix[r][c] == 1) heights[c]++;\n                else heights[c] = 0;\n            }\n            int idx = 0;\n            for (int i = 0; i < n; i++) {\n                if (heights[order[i]] == 0) next[idx++] = order[i];\n            }\n            for (int i = 0; i < n; i++) {\n                if (heights[order[i]] > 0) next[idx++] = order[i];\n            }\n            swap(order, next);\n            for (int i = 0; i < n; i++) {\n                int c = order[i];\n                if (heights[c] == 0) continue;\n                int area = heights[c] * (n - i);\n                if (area > ans) ans = area;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "grid-game",
+  "title": "Grid Game",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix/Suffix Sum",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- totalTop, totalBottom, prefixTop, prefixBottom, ans, topSum, bottomSum, robot2: scalar variables → O(1)\n- n: scalar → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input grid, returned value",
+  "approach": "The first robot descends from row 0 to row 1 at exactly one column k, collecting grid[0][0..k] and grid[1][k..n-1]. This leaves two nonzero regions: the top-row suffix grid[0][k+1..n-1] and the bottom-row prefix grid[1][0..k-1]. The second robot can only traverse one of these regions (it either stays on top past column k, or descends before column k), so it collects max(suffixTop, prefixBottom). The first robot minimizes this over all k. We compute row totals once, then sweep k from 0 to n-1 maintaining running prefixes to evaluate each choice in O(1).",
+  "hints": [
+    "The first robot must move down exactly once-at some column k. After it does, which two disjoint regions of the grid still contain nonzero points, and why can the second robot only collect from one of them?",
+    "Use prefix sums. If robot 1 descends at column k, robot 2 collects max(suffix of row 0 from k+1 onward, prefix of row 1 up to k-1). For grid = [[2,5,4],[1,5,1]] at k=1: top suffix = 4, bottom prefix = 1, robot 2 gets max(4,1) = 4.",
+    "```\ntotalTop = sum of row 0\nprefixBottom = 0, prefixTop = 0\nans = infinity\nfor k = 0 to n-1:\n    prefixTop += grid[0][k]\n    topSum = totalTop - prefixTop\n    bottomSum = prefixBottom\n    ans = min(ans, max(topSum, bottomSum))\n    prefixBottom += grid[1][k]\nreturn ans\n```",
+    "**Single column** - n=1, robot 1 takes both cells, nothing remains\n`Input: [[5],[3]]` → `Expected: 0`\n⚠️ Bug: starting the loop at k=1 instead of k=0 → loop body never executes for n=1, returns uninitialized ans\n\n**Overflow** - n=5×10^4, all cells=10^5, row sum = 5×10^9 exceeds 2^31−1\n`Input: [[100000,...×50000],[100000,...×50000]]` → `Expected: 2500000000`\n⚠️ Bug: declaring totalTop as int → 5,000,000,000 overflows signed 32-bit, returns wrapped negative value\n\n**All equal** - symmetric grid where every cell is identical\n`Input: [[1,1,1],[1,1,1]]` → `Expected: 1`\n⚠️ Bug: initializing ans to 0 instead of a large value → min(0, anything) always returns 0\n\n**Boundary: last column** - k=n-1, robot 1 takes the entire top row\n`Input: [[1,2,3],[4,5,6]]` → `Expected: 4`\n⚠️ Bug: computing topSum before adding grid[0][k] to prefixTop → at k=2, topSum=6−3=3 instead of 0, returns 5 instead of 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid has r rows instead of 2?",
+      "a": "Robot 1 descends r−1 times, choosing r−1 columns. The remaining grid splits into up to r regions. Enumerate all column combinations using prefix sums to evaluate robot 2's best response in O(1) per combination. TC: O(n^(r−1)), SC: O(1)."
+    },
+    {
+      "q": "What if columns arrive as a stream, readable twice but storable in O(1) space?",
+      "a": "First pass computes totalTop and totalBottom. Second pass streams columns again, maintaining running prefixTop and prefixBottom to evaluate each descent column k. TC: O(n), SC: O(1). Requires the stream to be replayable."
+    },
+    {
+      "q": "What if robot 2 can also move up (3-directional movement)?",
+      "a": "Robot 2 could zigzag between rows, collecting from both remaining regions. After robot 1's removal, run a DP where dp[r][c] = max points collectible reaching (r,c), transitioning from left and vertically. TC: O(n), SC: O(1) with a rolling array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long gridGame(vector<vector<int>>& grid) {\n        int n = grid[0].size();\n        long long totalTop = 0, totalBottom = 0;\n        for (int i = 0; i < n; i++) {\n            totalTop += grid[0][i];\n            totalBottom += grid[1][i];\n        }\n        long long prefixTop = 0, prefixBottom = 0;\n        long long ans = (long long)4e18;\n        for (int k = 0; k < n; k++) {\n            prefixTop += grid[0][k];\n            long long topSum = totalTop - prefixTop;\n            long long bottomSum = prefixBottom;\n            long long robot2 = max(topSum, bottomSum);\n            ans = min(ans, robot2);\n            prefixBottom += grid[1][k];\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

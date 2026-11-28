@@ -1,0 +1,40 @@
+{
+  "slug": "reformat-phone-number",
+  "title": "Reformat Phone Number",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt, i: scalars → O(1)\n- bool dash, char c: scalars → O(1)\n- string res: returned output, not counted (LeetCode convention)\n- not counted: input string, returned string",
+  "approach": "The block structure is fully determined by the total digit count modulo 3: if `cnt % 3 == 1`, the final four digits split as 2+2; otherwise blocks of 3 are taken with a possible trailing 2-block. So we make two passes over the input: first count digits, then walk again, appending each digit and inserting a dash exactly at computed block-start positions (multiples of 3, plus the special `cnt-2` position when `cnt % 3 == 1`). This avoids materializing a separate digits string, using only a few scalars beyond the returned output.",
+  "hints": [
+    "Once the spaces and dashes are ignored, what single quantity about the remaining digits fixes where every block boundary falls? The input always has at least two digits.",
+    "Two-pass direct iteration: count digits first, then walk the input again, appending each digit and inserting a dash at precomputed block-start positions. For \"123 4-567\" the digit count is 7, so dashes go before positions 3 and 5, giving \"123-45-67\".",
+    "```\ncnt = number of digits in number\nres = \"\"\ni = 0\nfor each char c in number:\n    if c is not a digit: continue\n    if i > 0 and i is a block-start position (rule depends on cnt mod 3):\n        append '-' to res\n    append c to res\n    i = i + 1\nreturn res\n```",
+    "**Smallest input (2 digits)** - no dash is possible.\n`Input: number = \"12\"` → `Expected: \"12\"`\n⚠️ Bug: inserting a dash whenever `i % 3 == 0` without checking `i > 0` → returns \"-12\"\n\n**Exactly 4 digits** - must split as 2+2, never 3+1.\n`Input: number = \"1234\"` → `Expected: \"12-34\"`\n⚠️ Bug: always taking blocks of 3 then a final block → returns \"123-4\"\n\n**Count ≡ 1 mod 3** - last four digits split as 2+2.\n`Input: number = \"1234567\"` → `Expected: \"123-45-67\"`\n⚠️ Bug: using only `i % 3 == 0` as the dash rule, ignoring the `cnt % 3 == 1` case → returns \"123-456-7\"\n\n**Count ≡ 0 mod 3** - no trailing 2-block.\n`Input: number = \"123456\"` → `Expected: \"123-456\"`\n⚠️ Bug: unconditionally appending a final 2-block after the 3-blocks → returns \"123-45-6\""
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve this on a single forward stream with no second pass and no stored input?",
+      "a": "Buffer up to 3 pending digits; once you have 3 and know more digits follow, flush \"XXX-\". On end-of-stream, apply the 2/3/4 rule to whatever remains in the buffer. Memory stays O(1), time O(n)."
+    },
+    {
+      "q": "What if blocks were of length k instead of 3, with the same \"last ≤ k+1 split specially\" rule?",
+      "a": "Replace 3 with k everywhere; the remainder r = cnt mod k decides the tail: if r == 1, borrow one block of k and split the last k+1 into two balanced parts, else keep a trailing r-block. Time remains O(n), space O(1)."
+    },
+    {
+      "q": "What if the input is a 10^9-character stream and you must emit reformatted output incrementally without holding it all?",
+      "a": "Use the streaming buffer above, flushing each complete block as soon as it is determined; only the final 1-4 digits wait for end-of-stream. Output is produced online, memory is O(1) regardless of input size, time is O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string reformatNumber(string number) {\n        int cnt = 0;\n        for (char c : number) {\n            if (c >= '0' && c <= '9') cnt++;\n        }\n        string res;\n        int i = 0;\n        for (char c : number) {\n            if (c < '0' || c > '9') continue;\n            if (i > 0) {\n                bool dash = false;\n                if (cnt % 3 == 1) {\n                    if ((i % 3 == 0 && i < cnt - 2) || i == cnt - 2) dash = true;\n                } else {\n                    if (i % 3 == 0) dash = true;\n                }\n                if (dash) res.push_back('-');\n            }\n            res.push_back(c);\n            i++;\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

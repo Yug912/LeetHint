@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-subarray-with-sum-at-least-k",
+  "title": "Shortest Subarray with Sum at Least K",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Deque",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> P: n+1 entries → O(n)\n- deque<int> dq: up to n+1 indices → O(n)\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "Compute prefix sums P where P[i] = sum of nums[0..i-1]; a subarray nums[i..j-1] has sum P[j]-P[i], so we need the smallest j-i with P[j]-P[i] ≥ k. Maintain a deque of indices with strictly increasing P values: for each j, pop from the front while P[j]-P[front] ≥ k (updating the answer, since those fronts can never yield a shorter subarray for any later j), then pop from the back while P[back] ≥ P[j] (those indices are dominated by j as a future left endpoint), then push j. Each index is pushed and popped at most once, giving linear time.",
+  "hints": [
+    "With n up to 10^5, checking every pair of start and end indices is too slow. What single value, computed once per index, lets you express any subarray's sum as the difference of two such values?",
+    "Use a monotonic deque of indices whose prefix-sum values are strictly increasing. For nums=[2,-1,2], k=3, prefix sums are [0,2,1,3]; at j=3 (P=3), P[3]-P[0]=3≥k gives length 3, and index 0 is then discarded since any later j would only produce a longer subarray from it.",
+    "P[0]=0; for i in 1..n: P[i]=P[i-1]+nums[i-1]\nans = infinity\ndeque = empty\nfor j in 0..n:\n    while deque not empty and P[j]-P[deque.front] >= k:\n        ans = min(ans, j-deque.front)\n        pop front\n    while deque not empty and P[deque.back] >= P[j]:\n        pop back\n    push j to back\nreturn ans if ans <= n else -1",
+    "**Single element** - n=1, the only subarray is the whole array.\n`Input: nums=[5], k=5` → `Expected: 1`\n⚠️ Bug: starting the loop at j=1 without seeding the deque with index 0 → returns -1\n\n**No valid subarray** - prefix sums never differ by k or more.\n`Input: nums=[1,2], k=4` → `Expected: -1`\n⚠️ Bug: initializing ans to 0 instead of n+1 → returns 0\n\n**Overflow** - 10^5 elements of 10^5 give prefix sum 10^10, past 2^31-1.\n`Input: nums=[100000,...,100000] (10^5 times), k=1` → `Expected: 1`\n⚠️ Bug: storing prefix sums in int → overflow produces negative values, returns -1\n\n**Multiple valid answers** - several subarrays qualify, only the shortest counts.\n`Input: nums=[1,2,3], k=3` → `Expected: 1`\n⚠️ Bug: using `if` instead of `while` for the front-pop loop stops after the first valid front, missing index 2 at j=3 → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be zero or negative?",
+      "a": "The same algorithm still works unchanged, since P[j]-P[i]≥k is just easier to satisfy. The answer is often 1 (any single non-negative element qualifies when k≤0). Time and space stay O(n)."
+    },
+    {
+      "q": "Return all shortest subarrays (their start/end indices), not just the length.",
+      "a": "Track a list of (i,j) pairs achieving the current minimum length during the deque scan; clear it when a strictly shorter length appears, append when equal. Time stays O(n); space becomes O(n) in the worst case for the pair list."
+    },
+    {
+      "q": "The array arrives as an online stream with interleaved \"append value\" and \"query\" operations.",
+      "a": "Maintain the prefix sum and monotonic deque incrementally; on each append, run the same front-pop and back-pop steps for the new index. Each index enters and leaves the deque at most once, so amortized O(1) per append and O(1) per query. Space remains O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int shortestSubarray(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> P(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            P[i + 1] = P[i] + nums[i];\n        }\n        deque<int> dq;\n        int ans = n + 1;\n        for (int j = 0; j <= n; j++) {\n            while (!dq.empty() && P[j] - P[dq.front()] >= k) {\n                int i = dq.front();\n                dq.pop_front();\n                if (j - i < ans) ans = j - i;\n            }\n            while (!dq.empty() && P[dq.back()] >= P[j]) {\n                dq.pop_back();\n            }\n            dq.push_back(j);\n        }\n        return ans <= n ? ans : -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

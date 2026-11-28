@@ -1,0 +1,40 @@
+{
+  "slug": "palindrome-partitioning-iv",
+  "title": "Palindrome Partitioning IV",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Manacher's Algorithm + Enumeration",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- string t (transformed string): 2n+1 chars → O(n)\n- vector<int> rad (Manacher radii): 2n+1 ints → O(n)\n- recursion depth: none\n- not counted: input string s, returned bool",
+  "approach": "Use Manacher's algorithm to compute palindrome radii for the transformed string `#s[0]#s[1]#...#s[n-1]#` in O(n) time and O(n) space. A substring `s[l..r]` is a palindrome iff `rad[l+r+1] >= r-l`. Then enumerate the two cut points: outer loop picks the end `i` of the first part (checking `isPal(0,i)`), inner loop picks the end `j` of the second part (checking `isPal(i+1,j)` and `isPal(j+1,n-1)`). Return true on the first valid triple. This is O(n²) time, O(n) space.",
+  "hints": [
+    "For a string of length up to 2000, there are roughly 2 million ways to place two cuts - what property of each of the three resulting pieces must you verify, and can you afford to check it character-by-character every time? The constraints allow s.length up to 2000.",
+    "Use Manacher's algorithm to compute, for every center in the transformed string, the palindrome radius in O(n) time and O(n) space. For s = \"abcbdd\", the transformed string is \"#a#b#c#b#d#d#\"; the radius at center 5 (the 'c') is 3, so s[1..3] = \"bcb\" is a palindrome because 3 ≥ 3−1 = 2.",
+    "```\nbuild t = '#' interleaved with s characters\ncompute Manacher radius array rad[] for t\nisPal(l, r) = rad[l+r+1] >= r-l\nfor i in 0..n-3:\n    if isPal(0, i):\n        for j in i+1..n-2:\n            if isPal(i+1, j) and isPal(j+1, n-1):\n                return true\nreturn false\n```",
+    "**Minimum length (n=3)** - every single character is trivially a palindrome.\n`Input: \"abc\"` → `Expected: true`\n⚠️ Bug: outer loop `i < n-3` instead of `i <= n-3` → loop body never executes, returns false.\n\n**Third part is a single character** - last palindrome is just s[n-1].\n`Input: \"aba\"` → `Expected: true`\n⚠️ Bug: inner loop `j < n-2` instead of `j <= n-2` → skips j=n-2, never checks third part of length 1, returns false.\n\n**Center index off by one** - Manacher radii are indexed by center position in the transformed string.\n`Input: \"abcbdd\"` → `Expected: true`\n⚠️ Bug: isPal uses `rad[l+r]` instead of `rad[l+r+1]` → for \"bcb\" (l=1, r=3), checks rad[4]=0 instead of rad[5]=3, reports not a palindrome, returns false.\n\n**No valid partition** - must exhaust all splits before concluding false.\n`Input: \"bcbddxy\"` → `Expected: false`\n⚠️ Bug: returning true as soon as isPal(0,i) holds for any i, without checking the other two parts → returns true."
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to split into exactly k palindromic substrings instead of 3?",
+      "a": "Use DP: dp[i] = minimum number of palindromic substrings to partition s[0..i], computed as min over all j ≤ i where s[j..i] is a palindrome of dp[j-1]+1. With Manacher's O(1) queries, this is O(n²) time and O(n) space. Return dp[n-1] ≤ k."
+    },
+    {
+      "q": "What if s.length ≤ 10^5?",
+      "a": "The O(n²) cut-pair enumeration is too slow. Collect all valid prefix-palindrome ends and suffix-palindrome starts via Manacher (each O(n) to enumerate). For each prefix end i, check if any suffix start j > i+1 yields a palindromic middle s[i+1..j-1]. Early-exit on first match gives O(n) for easy inputs, but worst case remains O(n²); a palindromic tree (eertree) can reduce this to O(n log n)."
+    },
+    {
+      "q": "What if n is divisible by 3 and all three parts must have equal length?",
+      "a": "The cut points are fixed at n/3 and 2n/3. Run Manacher once (O(n) time, O(n) space), then check three O(1) queries: isPal(0, n/3-1), isPal(n/3, 2n/3-1), isPal(2n/3, n-1). Total O(n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkPartitioning(string s) {\n        int n = s.size();\n        string t(2 * n + 1, '#');\n        for (int i = 0; i < n; i++) t[2 * i + 1] = s[i];\n        int m = t.size();\n        vector<int> rad(m, 0);\n        int c = 0, rgt = 0;\n        for (int i = 0; i < m; i++) {\n            if (i < rgt) {\n                int mir = 2 * c - i;\n                rad[i] = min(rgt - i, rad[mir]);\n            }\n            while (i + rad[i] + 1 < m && i - rad[i] - 1 >= 0 &&\n                   t[i + rad[i] + 1] == t[i - rad[i] - 1]) {\n                rad[i]++;\n            }\n            if (i + rad[i] > rgt) {\n                c = i;\n                rgt = i + rad[i];\n            }\n        }\n        auto isPal = [&](int l, int rr) -> bool {\n            return rad[l + rr + 1] >= rr - l;\n        };\n        for (int i = 0; i <= n - 3; i++) {\n            if (!isPal(0, i)) continue;\n            for (int j = i + 1; j <= n - 2; j++) {\n                if (isPal(i + 1, j) && isPal(j + 1, n - 1)) return true;\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

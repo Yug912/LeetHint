@@ -1,0 +1,40 @@
+{
+  "slug": "jump-game-iii",
+  "title": "Jump Game III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Graph Traversal",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> visited: n entries → O(n)\n- queue<int> q: up to n entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input arr",
+  "approach": "Treat each index as a node in an implicit graph with at most two outgoing edges: `i + arr[i]` and `i - arr[i]`. Starting from `start`, perform BFS: enqueue the start, mark visited, and for each dequeued index check if `arr[i] == 0` (return true), otherwise enqueue both in-bounds, unvisited neighbors. If the queue empties without finding a zero, return false. Each index is visited at most once, guaranteeing termination even with cycles.",
+  "hints": [
+    "From any index i, you can land on exactly two positions: i + arr[i] and i - arr[i]. Starting from `start` and following those jumps, could you ever arrive at the same index more than once? If so, what must you remember to avoid exploring forever?",
+    "Use BFS with a queue and a boolean visited array. In Example 1, start at index 5 (arr[5] = 1): enqueue 5+1 = 6 and 5−1 = 4, mark both visited, then dequeue 6 next.",
+    "```\nvisited = [false] * n\nqueue = [start]\nvisited[start] = true\nwhile queue not empty:\n    i = dequeue\n    if arr[i] == 0: return true\n    for next in [i + arr[i], i - arr[i]]:\n        if 0 <= next < n and not visited[next]:\n            visited[next] = true\n            enqueue next\nreturn false\n```",
+    "**Single element** - the array has exactly one element.\n`Input: arr = [0], start = 0` → `Expected: true`\n⚠️ Bug: adding `if (n == 1) return false` as a premature base case → returns false\n\n**No zeros** - no index contains 0, so no valid landing exists.\n`Input: arr = [1,1,1,1], start = 0` → `Expected: false`\n⚠️ Bug: returning true when the queue empties → returns true\n\n**Cycle without zero** - all jumps lead back to already-visited indices.\n`Input: arr = [2,2,2,2,2], start = 0` → `Expected: false`\n⚠️ Bug: marking visited at dequeue instead of enqueue → infinite loop, TLE\n\n**Start is zero** - the starting index already holds value 0.\n`Input: arr = [3,0,2,1,2], start = 1` → `Expected: true`\n⚠️ Bug: checking `arr[neighbor] == 0` instead of `arr[i] == 0` at dequeue; arr[1]=0 produces no unvisited neighbors → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "Find the minimum number of jumps to reach any index with value 0.",
+      "a": "BFS already explores in order of increasing distance, so track a level counter (or store distance alongside each index in the queue). Return the distance when arr[i] == 0 is first found. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you can also jump to any index j where arr[j] == arr[i] (Jump Game IV style)?",
+      "a": "Build a map from value to list of indices once, then BFS using three neighbor types: i+arr[i], i−arr[i], and all indices sharing arr[i]. Clear the map entry for a value after first use to avoid re-processing. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "Solve with O(1) auxiliary space (modifying the input is allowed).",
+      "a": "Mark visited indices in-place by negating arr[i] (all values are non-negative). Use an explicit stack/queue stored inside the array itself is not feasible, so use iterative DFS with the call simulated via the array - alternatively, since arr[i] < n, set arr[i] = n as a sentinel and recurse. TC: O(n), SC: O(1) auxiliary (input modified)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canReach(vector<int>& arr, int start) {\n        int n = arr.size();\n        vector<bool> visited(n, false);\n        queue<int> q;\n        q.push(start);\n        visited[start] = true;\n        while (!q.empty()) {\n            int i = q.front();\n            q.pop();\n            if (arr[i] == 0) return true;\n            int fwd = i + arr[i];\n            if (fwd < n && !visited[fwd]) {\n                visited[fwd] = true;\n                q.push(fwd);\n            }\n            int bwd = i - arr[i];\n            if (bwd >= 0 && !visited[bwd]) {\n                visited[bwd] = true;\n                q.push(bwd);\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

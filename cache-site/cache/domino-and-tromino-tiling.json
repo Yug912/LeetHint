@@ -1,0 +1,40 @@
+{
+  "slug": "domino-and-tromino-tiling",
+  "title": "Domino and Tromino Tiling",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP with Rolling Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- f0, f1, f2, f3: four long long scalars → O(1)\n- loop variable i: one int → O(1)\n- not counted: input n, returned int",
+  "approach": "The number of tilings of a 2×n board follows the recurrence f(n) = 2·f(n−1) + f(n−3), derivable by tracking the profile of the rightmost column (fully tiled vs. one cell missing) and eliminating the partial-tiling states. We compute f(n) iteratively with a rolling window of three values, taking results modulo 10⁹+7. Base cases: f(0)=1, f(1)=1, f(2)=2.",
+  "hints": [
+    "If you tile the board left to right, what different shapes can the rightmost boundary of a partial tiling have? The board is 2 rows high and n can be up to 1000.",
+    "Dynamic programming with a rolling window of three values. For n=3: f(3) = 2·f(2) + f(0) = 2·2 + 1 = 5, matching the example.",
+    "```\nf(0) = 1, f(1) = 1, f(2) = 2\nfor i from 3 to n:\n    f(i) = (2 * f(i-1) + f(i-3)) mod 1e9+7\n    shift window forward\nreturn f(n)\n```",
+    "**Smallest input** - n=1 is a base case that must be returned before the loop starts.\n`Input: n = 1` → `Expected: 1`\n⚠️ Bug: removing the n==1 early return → returns f2=2\n\n**Base case f(0)** - f(0)=1 is required for the recurrence to produce f(3)=5.\n`Input: n = 3` → `Expected: 5`\n⚠️ Bug: initializing f0=0 instead of 1 → f(3)=2·2+0=4, returns 4\n\n**Wrong recurrence** - using f(n−2) instead of f(n−3) passes n=3 but fails at n=4.\n`Input: n = 4` → `Expected: 11`\n⚠️ Bug: using f(n)=2·f(n−1)+f(n−2) → f(4)=2·5+2=12, returns 12\n\n**Integer overflow** - at n=29, the intermediate 2·f(28)+f(26) = 2·914332884+393528322 = 2222194090 exceeds 2³¹−1 = 2147483647.\n`Input: n = 29` → `Expected: 222194076`\n⚠️ Bug: using int for f0, f1, f2 → 2·914332884+393528322 overflows signed 32-bit, returns −72731992"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be as large as 10¹⁸?",
+      "a": "Express the recurrence f(n)=2·f(n−1)+f(n−3) as a 3×3 matrix multiplication and use binary exponentiation to compute M^(n−2) in O(log n) time, then multiply by the base vector [f(2), f(1), f(0)]. TC: O(log n), SC: O(1)."
+    },
+    {
+      "q": "What if trominoes are not allowed (only 2×1 dominoes)?",
+      "a": "The recurrence simplifies to f(n)=f(n−1)+f(n−2) (Fibonacci), since only vertical and horizontal domino placements remain. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the board is 3×n instead of 2×n?",
+      "a": "The column profile now has 2³=8 possible fill patterns, but only a subset are reachable. Build a transition matrix between valid profiles and run DP column by column with a rolling state vector. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numTilings(int n) {\n        const int MOD = 1e9 + 7;\n        if (n == 1) return 1;\n        if (n == 2) return 2;\n        \n        long long f0 = 1, f1 = 1, f2 = 2;\n        for (int i = 3; i <= n; i++) {\n            long long f3 = (2 * f2 + f0) % MOD;\n            f0 = f1;\n            f1 = f2;\n            f2 = f3;\n        }\n        return (int)f2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-time-to-collect-all-apples-in-a-tree",
+  "title": "Minimum Time to Collect All Apples in a Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS / Post-order Traversal",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> adj: stores n-1 edges twice → O(n)\n- recursion call-stack: worst case skewed tree depth O(n), balanced O(log n)\n- pointer `apple`, int `result`: O(1)\n- not counted: input edges/hasApple, returned int",
+  "approach": "The key insight is that any edge leading into a subtree that contains at least one apple must be traversed exactly twice (down and back). Edges leading to apple-free subtrees are never traversed. We run a DFS from vertex 0; each node reports whether its subtree (including itself) contains an apple. When a child's subtree has an apple, we add 2 to the total and propagate \"has apple\" upward. The answer is the sum of 2 for every edge whose subtree contains an apple.",
+  "hints": [
+    "Which edges in the tree must you walk at all to collect every apple, and what do the subtrees below those edges have in common?",
+    "Use DFS from vertex 0. Each node reports whether its subtree contains any apple; if a child's subtree does, that edge is needed. In Example 1, vertex 4 has an apple so edge 1-4 is traversed, and that propagates up so edge 0-1 is also traversed.",
+    "```\ndfs(u, parent):\n    subtreeHas = hasApple[u]\n    for v in neighbors(u) except parent:\n        if dfs(v, u):\n            answer += 2\n            subtreeHas = true\n    return subtreeHas\n```",
+    "**Single node with apple** - n = 1, no edges to walk.\n`Input: n = 1, edges = [], hasApple = [true]` → `Expected: 0`\n⚠️ Bug: adding 2 for the root node itself as if it were a child edge → returns 2\n\n**Skewed tree, apple only at deepest node** - linked-list-shaped tree, max recursion depth.\n`Input: n = 4, edges = [[0,1],[1,2],[2,3]], hasApple = [false,false,false,true]` → `Expected: 6`\n⚠️ Bug: BFS that visits children but never propagates \"subtree has apple\" back to the parent → returns 0\n\n**Apple only at root** - root already has the apple, no edges needed.\n`Input: n = 3, edges = [[0,1],[0,2]], hasApple = [true,false,false]` → `Expected: 0`\n⚠️ Bug: counting the root's own apple as requiring edge traversal → returns 4\n\n**No apples anywhere** - no edge is ever needed.\n`Input: n = 7, edges = [[0,1],[0,2],[1,4],[1,5],[2,3],[2,6]], hasApple = [false,false,false,false,false,false,false]` → `Expected: 0`\n⚠️ Bug: initializing answer to 2*(n-1) and only subtracting for apple-free leaves → returns 12"
+  ],
+  "followUps": [
+    {
+      "q": "What if you do not need to return to vertex 0 - you can stop at the last apple collected?",
+      "a": "The answer becomes 2 × (needed edges) minus the depth of the deepest apple-bearing node in the \"needed\" subtree. Compute the same DFS, but also track the maximum depth among nodes whose subtree contains an apple, then subtract that depth from the round-trip total. TC stays O(n), SC stays O(n)."
+    },
+    {
+      "q": "What if each edge has a positive integer weight (cost to traverse) instead of cost 1?",
+      "a": "Replace the \"+2\" with \"+2 × weight(edge)\" in the DFS. The logic is identical: an edge is traversed twice iff its subtree has an apple. TC O(n), SC O(n)."
+    },
+    {
+      "q": "What if the tree is given as a stream of edges and you must answer after each insertion (incremental)?",
+      "a": "Maintain a union-find or parent-pointer structure with subtree-has-apple flags. When a new apple appears, walk up to the root, marking each unmarked ancestor edge as \"needed\" and adding 2 per newly needed edge. Worst case O(n) per query if the tree is skewed, O(n × q) total; with heavy-light decomposition you can batch the propagation to O(log n) amortized per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<vector<int>> adj;\n    vector<bool>* apple;\n    int result;\n\n    bool dfs(int u, int parent) {\n        bool has = (*apple)[u];\n        for (int v : adj[u]) {\n            if (v == parent) continue;\n            if (dfs(v, u)) {\n                result += 2;\n                has = true;\n            }\n        }\n        return has;\n    }\npublic:\n    int minTime(int n, vector<vector<int>>& edges, vector<bool>& hasApple) {\n        adj.assign(n, {});\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        apple = &hasApple;\n        result = 0;\n        dfs(0, -1);\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

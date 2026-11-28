@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-subsequences-that-satisfy-the-given-sum-condition",
+  "title": "Number of Subsequences That Satisfy the Given Sum Condition",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers on Sorted Array",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> pow2: n+1 entries → O(n)\n- sort(): introsort uses O(log n) stack frames\n- no recursion, no other containers",
+  "approach": "Sort the array so that for any chosen minimum at index i, all valid maximums form a contiguous suffix ending at some index j. Use two pointers: as i increases (minimum grows), j only moves left (maximum shrinks), giving O(n) after the O(n log n) sort. For each valid (i, j) pair, any subset of the j−i elements strictly between them can be freely included or excluded, contributing 2^(j−i) subsequences. Precompute powers of two modulo 10^9+7 to handle the exponential counts.",
+  "hints": [
+    "Since a subsequence's validity depends only on its minimum and maximum, what freedom does this give you regarding the arrangement of elements before you start counting? The constraint n ≤ 10^5 rules out enumerating all 2^n subsequences.",
+    "Sort the array, then use two pointers. For each index i as the minimum, move a right pointer j leftward until nums[i] + nums[j] ≤ target. In Example 1, sorted [3,5,6,7] with target 9: for i=0 (value 3), j stops at index 2 (value 6), giving 2^(2−0) = 4 valid subsequences.",
+    "```\nsort nums\nprecompute pow2[k] = 2^k mod (10^9+7) for k = 0..n\nj = n - 1\nfor i = 0 to n-1:\n    while j >= i and nums[i] + nums[j] > target:\n        j = j - 1\n    if j < i: break\n    ans = ans + pow2[j - i]\nreturn ans mod (10^9+7)\n```",
+    "**Single element (n=1)** - the only subsequence is the element itself\n`Input: nums=[5], target=10` → `Expected: 1`\n⚠️ Bug: using `j > i` instead of `j >= i` → returns 0\n\n**All elements equal** - every pair sums to the same value\n`Input: nums=[5,5,5,5], target=10` → `Expected: 15`\n⚠️ Bug: using `<` instead of `<=` in the sum comparison → returns 0\n\n**Reverse sorted input** - array given in descending order\n`Input: nums=[7,6,5,3], target=9` → `Expected: 4`\n⚠️ Bug: skipping the sort step, running two pointers on the original array → returns 0\n\n**Duplicate minimums** - repeated values each contribute separate subsequences\n`Input: nums=[3,3,6,8], target=10` → `Expected: 6`\n⚠️ Bug: skipping indices where `nums[i] == nums[i-1]` → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must count subsequences where min + max equals target exactly (not ≤)?",
+      "a": "Sort and use two pointers as before, but for each i, binary search for the range [lo, hi] of j values where nums[i] + nums[j] == target. The count for that i is (2^(hi−i) − 2^(lo−1−i)) mod p using modular subtraction. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if nums[i] can be negative?",
+      "a": "The algorithm is unchanged. Sorting still orders elements, and the two-pointer invariant holds because the condition nums[i] + nums[j] ≤ target is monotonic in both arguments on a sorted array. TC: O(n log n), SC: O(n)."
+    },
+    {
+      "q": "What if memory is limited to O(1) beyond the input array?",
+      "a": "Sort in place with heapsort (O(1) extra space), and compute each 2^(j−i) mod p on the fly via fast modular exponentiation instead of precomputing a table. TC: O(n log n) for sorting + O(n log n) for n exponentiations = O(n log n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numSubseq(vector<int>& nums, int target) {\n        const int MOD = 1000000007;\n        int n = nums.size();\n        sort(nums.begin(), nums.end());\n        \n        vector<int> pow2(n + 1);\n        pow2[0] = 1;\n        for (int i = 1; i <= n; i++) {\n            pow2[i] = (int)((long long)pow2[i - 1] * 2 % MOD);\n        }\n        \n        long long ans = 0;\n        int j = n - 1;\n        for (int i = 0; i < n; i++) {\n            while (j >= i && nums[i] + nums[j] > target) {\n                j--;\n            }\n            if (j < i) break;\n            ans = (ans + pow2[j - i]) % MOD;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

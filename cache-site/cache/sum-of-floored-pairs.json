@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-floored-pairs",
+  "title": "Sum of Floored Pairs",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting with Prefix Sums (Harmonic Sieve)",
+  "tc": "O(n + maxVal log maxVal)",
+  "sc": "O(maxVal)",
+  "spaceBreakdown": "- vector<int> cnt: size maxVal+1 → O(maxVal)\n- vector<long long> prefix: size maxVal+2 → O(maxVal)\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "Count the frequency of each value and build a prefix-sum array over the value range [1, maxVal]. For each distinct divisor d, iterate its multiples m = 1, 2, …; all dividends in [m·d, (m+1)·d − 1] yield floor = m, so their count (via prefix sums) contributes m · cnt[d] · count. The harmonic-series loop runs in O(maxVal log maxVal), well within budget for maxVal ≤ 10^5. Use long long for accumulation and reduce modulo 10^9+7.",
+  "hints": [
+    "For a fixed divisor d, which contiguous ranges of dividend values all produce the same floor result? The constraint nums[i] ≤ 10^5 bounds the value range you must reason about.",
+    "Use a frequency array plus its prefix sums. For divisor d=2 in [2,5,9]: values in [2,3] give floor 1, [4,5] give floor 2, [8,9] give floor 4 - each range's count comes from prefix[hi] − prefix[lo−1].",
+    "```\ncnt[v] = frequency of v\nprefix[i] = sum of cnt[1..i]\nfor d in 1..maxVal where cnt[d] > 0:\n    for m = 1, 2, ... while m*d <= maxVal:\n        lo = m*d\n        hi = min((m+1)*d - 1, maxVal)\n        count = prefix[hi] - prefix[lo-1]\n        ans += m * cnt[d] * count\nreturn ans mod 1e9+7\n```",
+    "**Single element** - only the pair (0,0) exists\n`Input: nums = [5]` → `Expected: 1`\n⚠️ Bug: early-returning 0 when n == 1 → returns 0\n\n**All equal values** - every floor equals 1\n`Input: nums = [7,7,7,7,7,7,7]` → `Expected: 49`\n⚠️ Bug: loop condition `m*d < maxVal` instead of `<=` skips the only bucket → returns 0\n\n**Large counts overflow 32-bit** - n=10^5 identical values give product 10^10\n`Input: nums = [100000 repeated 100000 times]` → `Expected: 999999937`\n⚠️ Bug: using int for ans and the product m*cnt[d]*count → returns 410065401"
+  ],
+  "followUps": [
+    {
+      "q": "Return the sum only for ordered pairs (i < j) instead of all pairs.",
+      "a": "Sort the array and process elements in increasing order, maintaining cnt/prefix over elements seen so far. For each new element x as dividend, add sum of floor(x/d)·cnt[d] over previously seen d using the same multiple-jumping technique. TC: O(n log n + maxVal log maxVal), SC: O(maxVal)."
+    },
+    {
+      "q": "What if nums[i] can be up to 10^9?",
+      "a": "Coordinate-compress the distinct values and build prefix sums over the compressed array. For each distinct d, iterate multiples m and binary-search the compressed array to count values in [m·d, (m+1)·d − 1]. TC: O(U log U + Σ_d (maxVal/d)·log U) where U is the number of distinct values; SC: O(U)."
+    },
+    {
+      "q": "Solve with only O(√maxVal) extra space.",
+      "a": "Split divisors: small d ≤ √maxVal use a frequency array of size √maxVal; large d > √maxVal have at most √maxVal multiples, so iterate the sorted array with binary search per multiple. TC: O(n√maxVal log n), SC: O(√maxVal)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int sumOfFlooredPairs(vector<int>& nums) {\n        const int MOD = 1000000007;\n        int maxVal = 0;\n        for (int x : nums) maxVal = max(maxVal, x);\n        vector<int> cnt(maxVal + 1, 0);\n        for (int x : nums) cnt[x]++;\n        vector<long long> prefix(maxVal + 2, 0);\n        for (int i = 1; i <= maxVal; i++) prefix[i] = prefix[i - 1] + cnt[i];\n        prefix[maxVal + 1] = prefix[maxVal];\n        long long ans = 0;\n        for (int d = 1; d <= maxVal; d++) {\n            if (cnt[d] == 0) continue;\n            long long cd = cnt[d];\n            for (int m = 1; m * d <= maxVal; m++) {\n                int lo = m * d;\n                int hi = min((m + 1) * d - 1, maxVal);\n                long long count = prefix[hi] - prefix[lo - 1];\n                ans = (ans + (long long)m * cd % MOD * count % MOD) % MOD;\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

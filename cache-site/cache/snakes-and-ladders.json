@@ -1,0 +1,40 @@
+{
+  "slug": "snakes-and-ladders",
+  "title": "Snakes and Ladders",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Breadth-First Search",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<int> dist(target + 1): n²+1 entries → O(n²)\n- queue<int> q: up to n² entries → O(n²)\n- recursion depth: none\n- not counted: input board",
+  "approach": "Model the board as a graph where each square is a node and edges represent dice rolls (1-6). When a roll lands on a snake/ladder square, the edge goes to the destination square instead. BFS from square 1 finds the minimum number of rolls to reach square n², since BFS explores in order of increasing distance. The Boustrophedon labeling requires careful coordinate conversion: row from bottom is (s−1)/n, column flips direction on odd rows.",
+  "hints": [
+    "From any square there are at most 6 reachable squares in one move, and the board has at most 400 squares. How does the minimum number of moves relate to the order in which each square is first reached?",
+    "Use BFS over squares 1 to n². In Example 1, from square 1 you roll to 2, follow the ladder to 15, and enqueue 15 at distance 1.",
+    "```\nBFS from square 1:\n  dist[1] = 0, queue = [1]\n  while queue not empty:\n    curr = dequeue\n    for dice in 1..6:\n      next = curr + dice\n      if next > n²: break\n      (row, col) = boustrophedon_coord(next)\n      if board[row][col] != -1: next = board[row][col]\n      if dist[next] is unset:\n        dist[next] = dist[curr] + 1\n        if next == n²: return dist[next]\n        enqueue next\n  return -1\n```",
+    "**Smallest input** - n = 2, no snakes or ladders, target reachable in one roll.\n`[[-1,-1],[-1,-1]]` → `Expected: 1`\n⚠️ Bug: only trying dice values 1-3 instead of 1-6 → returns 3 (1→2→3→4) instead of 1\n\n**Boustrophedon column flip** - square 4 in a 2×2 board reads the wrong cell without the odd-row column flip.\n`[[-1,3],[-1,-1]]` → `Expected: 1`\n⚠️ Bug: using col = (s−1) % n without flipping for odd rows → reads board[0][1]=3 for square 4, follows ladder to 3, returns -1 instead of 1\n\n**No valid path** - every square within reach sends you back to square 1.\n`[[1,1,-1],[1,1,1],[-1,1,1]]` → `Expected: -1`\n⚠️ Bug: not tracking visited squares → infinite loop, TLE\n\n**Ladder to target** - a single ladder reaches the final square in one roll.\n`[[-1,-1],[-1,4]]` → `Expected: 1`\n⚠️ Bug: not following the snake/ladder on the landed square → returns 2 (1→2, then 2→4) instead of 1 (1→2, ladder to 4)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the die has k sides instead of 6?",
+      "a": "Replace the inner loop bound from 6 to k. BFS still works with O(n²·k) time and O(n²) space, since each square now has up to k neighbors instead of 6."
+    },
+    {
+      "q": "What if you could choose whether to take each snake or ladder?",
+      "a": "Model each square as two states: pre-ladder (just landed) and post-ladder (resolved). BFS over 2·n² states, trying both \"take\" and \"skip\" transitions from each pre-ladder state. Time O(n²), space O(n²)."
+    },
+    {
+      "q": "What if n ≤ 10⁵ (n² ≤ 10¹⁰) but there are at most m ≤ 10⁵ snakes/ladders?",
+      "a": "Between consecutive snake/ladder squares, the minimum rolls is ⌈gap/6⌉. Build a compressed graph with O(m) nodes (snake/ladder endpoints, start, end), compute inter-node distances arithmetically, then BFS on that graph. Time O(m log m) for sorting, space O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int snakesAndLadders(vector<vector<int>>& board) {\n        int n = board.size();\n        int target = n * n;\n        vector<int> dist(target + 1, -1);\n        queue<int> q;\n        q.push(1);\n        dist[1] = 0;\n        \n        while (!q.empty()) {\n            int curr = q.front();\n            q.pop();\n            for (int dice = 1; dice <= 6; dice++) {\n                int next = curr + dice;\n                if (next > target) break;\n                int r = (next - 1) / n;\n                int c = (next - 1) % n;\n                if (r % 2 == 1) c = n - 1 - c;\n                int row = n - 1 - r;\n                if (board[row][c] != -1) {\n                    next = board[row][c];\n                }\n                if (dist[next] == -1) {\n                    dist[next] = dist[curr] + 1;\n                    if (next == target) return dist[next];\n                    q.push(next);\n                }\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "partition-array-into-two-arrays-to-minimize-sum-difference",
+  "title": "Partition Array Into Two Arrays to Minimize Sum Difference",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Meet in the Middle",
+  "tc": "O(n · 2^n)",
+  "sc": "O(2^n)",
+  "spaceBreakdown": "- vector<vector<long long>> left: 2^n sums total across all k → O(2^n)\n- vector<vector<long long>> right: 2^n sums total across all k → O(2^n)\n- sort() on right[k]: O(log 2^n) = O(n) stack\n- recursion: none\n- not counted: input nums, returned int",
+  "approach": "Split the 2n elements into two halves of size n. For each half, enumerate all 2^n subsets and group their sums by subset size k (0..n). To form a valid partition of size n, we pick k elements from the left and n−k from the right; for each left sum s1 (with k elements), we want a right sum s2 (with n−k elements) so that s1+s2 is as close as possible to total/2. Sort each right[k] and binary-search the ideal complement, checking the two candidates around the target. The minimum |2(s1+s2) − total| over all (k, s1) is the answer.",
+  "hints": [
+    "You must choose exactly n of the 2n elements for one side. If you split the array into two groups of n elements each, how many elements of your chosen side can come from the first group versus the second?",
+    "Meet-in-the-middle: enumerate subset sums of each half grouped by subset size. In Example 1, left half [3,9] gives sums {0,3,9,12} tagged by size 0,1,1,2; right half [7,3] gives {0,7,3,10}. For a size-1 left pick (e.g. 3), pair it with a size-1 right pick to reach total/2 = 11.",
+    "split nums into L, R (each size n)\nfor each half: sums[k] = all subset sums using exactly k elements\nsort each sums_R[k]\nans = INF\nfor k in 0..n:\n  for s1 in sums_L[k]:\n    want = total/2 - s1\n    binary search want in sums_R[n-k]\n    check element at lower_bound and the one before it\n    update ans with |2*(s1+s2) - total|\nreturn ans",
+    "**Smallest input** - n = 1, only two elements to separate.\n`Input: nums = [-36,36]` → `Expected: 72`\n⚠️ Bug: using `int` for subset sums and computing `2*sum1` with total up to 6·10^8 overflows → returns garbage.\n\n**Negatives and zeros** - target total/2 can be negative or zero, so the searched complement is negative.\n`Input: nums = [2,-1,0,4,-2,-9]` → `Expected: 0`\n⚠️ Bug: initialising `ans` to `INT_MAX` but comparing against `long long` diffs, or skipping the `--it` branch when `lower_bound` returns `begin`, misses the closest smaller complement → returns 8 instead of 0.\n\n**All elements equal** - many subset sums coincide; duplicates must not break the search.\n`Input: nums = [5,5,5,5]` → `Expected: 0`\n⚠️ Bug: deduplicating right[k] with a set but then indexing by position mismatched with `lower_bound` → returns 10.\n\n**Maximum values** - 30 elements each up to 10^7 give |total| up to 3·10^8 and |2·sum1 − total| up to 6·10^8.\n`Input: nums = [10000000 repeated 30 times]` → `Expected: 0`\n⚠️ Bug: storing sums in `int` (max ~2.1·10^9) seems fine per value but `2*sum1 - total` can hit 6·10^8, still OK; however using `abs` on `int` with values near INT_MAX overflows → wrong sign.\n\n**Tie at the target** - multiple complements equal to `want`; `lower_bound` returns the first, both branches give the same diff, which is correct, but skipping the `--it` branch when `it == begin` is required.\n`Input: nums = [1,2,3,4]` → `Expected: 0`\n⚠️ Bug: always decrementing `it` without checking `it != begin` → undefined iterator → crash or wrong answer."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 20 (so 2n = 40)?",
+      "a": "Meet-in-the-middle still works: 2^20 ≈ 10^6 subsets per half, grouped by size. The pairing step becomes O(2^n · n · log 2^n) ≈ 2·10^8, feasible in C++. TC becomes O(n^2 · 2^n) with n=20."
+    },
+    {
+      "q": "What if you only need to report whether a perfect split (difference 0) exists?",
+      "a": "Early-exit as soon as any (k, s1) finds a complement s2 with 2(s1+s2) == total. This often returns far faster than computing the minimum. Worst-case TC unchanged."
+    },
+    {
+      "q": "What if the array arrives as a stream and you cannot store all 2n elements?",
+      "a": "Meet-in-the-middle needs the full set, so it breaks. With bounded element range you could use a bitset DP over achievable sums for each chosen count, but memory becomes O(n · sumRange), which is infeasible for |nums[i]| up to 10^7."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumDifference(vector<int>& nums) {\n        int n = (int)nums.size() / 2;\n        long long total = 0;\n        for (int x : nums) total += x;\n\n        vector<vector<long long>> left(n + 1), right(n + 1);\n\n        for (int mask = 0; mask < (1 << n); mask++) {\n            long long s = 0;\n            int cnt = __builtin_popcount((unsigned)mask);\n            for (int i = 0; i < n; i++) {\n                if (mask & (1 << i)) s += nums[i];\n            }\n            left[cnt].push_back(s);\n        }\n        for (int mask = 0; mask < (1 << n); mask++) {\n            long long s = 0;\n            int cnt = __builtin_popcount((unsigned)mask);\n            for (int i = 0; i < n; i++) {\n                if (mask & (1 << i)) s += nums[n + i];\n            }\n            right[cnt].push_back(s);\n        }\n\n        for (int k = 0; k <= n; k++) {\n            sort(right[k].begin(), right[k].end());\n        }\n\n        long long ans = LLONG_MAX;\n        for (int k = 0; k <= n; k++) {\n            auto &R = right[n - k];\n            for (long long s1 : left[k]) {\n                long long want = total / 2 - s1;\n                auto it = lower_bound(R.begin(), R.end(), want);\n                if (it != R.end()) {\n                    long long s2 = *it;\n                    long long sum1 = s1 + s2;\n                    long long diff = llabs(2 * sum1 - total);\n                    if (diff < ans) ans = diff;\n                }\n                if (it != R.begin()) {\n                    --it;\n                    long long s2 = *it;\n                    long long sum1 = s1 + s2;\n                    long long diff = llabs(2 * sum1 - total);\n                    if (diff < ans) ans = diff;\n                }\n            }\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

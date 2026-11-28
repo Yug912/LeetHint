@@ -1,0 +1,40 @@
+{
+  "slug": "sentence-similarity-iii",
+  "title": "Sentence Similarity III",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, m, k, i, j, pre, a, b, suf, ii, jj, aa, bb): constant → O(1)\n- swap(s1, s2): O(1) pointer swap on by-value copies → O(1)\n- not counted: input strings (by-value copies of the input)",
+  "approach": "One sentence must equal a prefix of the other concatenated with a suffix of the other (the inserted part sits between them). So we count how many leading words match (longest common prefix) and how many trailing words match (longest common suffix); if their sum reaches the word count of the shorter sentence, the shorter is fully covered by a prefix+suffix of the longer. We scan the raw strings with two pairs of pointers (front and back) comparing whole words character-by-character, never splitting into a vector, giving O(n+m) time and O(1) extra space.",
+  "hints": [
+    "The insertion happens at exactly one spot in one sentence. What does that tell you about the words that appear before and after that spot in the other sentence?",
+    "Use two pointers from each end of both strings, comparing whole words. For `\"My name is Haley\"` vs `\"My Haley\"`, the left pair matches `\"My\"` and the right pair matches `\"Haley\"`, leaving `\"name is\"` as the insertable middle.",
+    "```\nensure s1 is the longer string\nk = word count of shorter string s2\npre = count of words matching from the front of s1 and s2\nsuf = count of words matching from the back of s1 and s2\nreturn pre + suf >= k\n```",
+    "**Single word vs multi-word** - the shorter sentence is one word that is neither the first nor last word of the longer.\n`Input: sentence1 = \"of\", sentence2 = \"A lot of words\"` → `Expected: false`\n⚠️ Bug: matching characters instead of whole words → returns true (\"of\" is a substring of \"words\")\n\n**Insert at beginning** - the inserted sentence goes before the first word.\n`Input: sentence1 = \"a b\", sentence2 = \"x a b\"` → `Expected: true`\n⚠️ Bug: only counting prefix matches and ignoring suffix → returns false\n\n**Identical sentences** - no insertion needed.\n`Input: sentence1 = \"hello world\", sentence2 = \"hello world\"` → `Expected: true`\n⚠️ Bug: using `pre + suf > k` instead of `>=` → returns false\n\n**Word-boundary mismatch** - same characters but split differently into words.\n`Input: sentence1 = \"ab cd\", sentence2 = \"abc d\"` → `Expected: false`\n⚠️ Bug: comparing characters without verifying both strings hit a space/end at the word boundary → returns true"
+  ],
+  "followUps": [
+    {
+      "q": "What if each sentence can be up to 10^6 characters long?",
+      "a": "The two-pointer scan is already O(n+m) time and O(1) space, so it handles 10^6 characters with no change. Avoid splitting into word vectors, which would allocate O(n+m) memory."
+    },
+    {
+      "q": "What if you receive many sentence pairs in batch and need to answer all?",
+      "a": "Each pair is independent, so total time is the sum of all pair lengths. If the same sentence repeats across queries, pre-splitting it once into a word array lets you binary-search prefix/suffix lengths per query, but single-query complexity stays O(n+m)."
+    },
+    {
+      "q": "What if insertion is allowed at up to two positions instead of one?",
+      "a": "The shorter sentence must then be a prefix + middle + suffix of the longer one. Match a prefix, skip a gap in the longer string, match a middle segment, skip another gap, match a suffix - still O(n+m) time and O(1) space with three pointer pairs."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool areSentencesSimilar(string s1, string s2) {\n        if (s1.size() < s2.size()) swap(s1, s2);\n        int n = s1.size(), m = s2.size();\n        int k = 1;\n        for (char c : s2) if (c == ' ') k++;\n\n        int i = 0, j = 0, pre = 0;\n        while (j < m) {\n            int ii = i, jj = j;\n            while (jj < m && s2[jj] != ' ' && ii < n && s1[ii] == s2[jj]) {\n                ii++; jj++;\n            }\n            bool s2End = (jj == m || s2[jj] == ' ');\n            bool s1End = (ii == n || s1[ii] == ' ');\n            if (s2End && s1End) {\n                pre++;\n                while (jj < m && s2[jj] == ' ') jj++;\n                while (ii < n && s1[ii] == ' ') ii++;\n                i = ii; j = jj;\n            } else {\n                break;\n            }\n        }\n\n        int a = n - 1, b = m - 1, suf = 0;\n        while (b >= 0) {\n            int aa = a, bb = b;\n            while (bb >= 0 && s2[bb] != ' ' && aa >= 0 && s1[aa] == s2[bb]) {\n                aa--; bb--;\n            }\n            bool s2End = (bb < 0 || s2[bb] == ' ');\n            bool s1End = (aa < 0 || s1[aa] == ' ');\n            if (s2End && s1End) {\n                suf++;\n                while (bb >= 0 && s2[bb] == ' ') bb--;\n                while (aa >= 0 && s1[aa] == ' ') aa--;\n                a = aa; b = bb;\n            } else {\n                break;\n            }\n        }\n\n        return pre + suf >= k;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

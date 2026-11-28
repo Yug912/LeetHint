@@ -1,0 +1,40 @@
+{
+  "slug": "queries-on-a-permutation-with-key",
+  "title": "Queries on a Permutation With Key",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Fenwick Tree (Binary Indexed Tree)",
+  "tc": "O((m+n) log(m+n))",
+  "sc": "O(m+n)",
+  "spaceBreakdown": "- vector<int> bit: size m+n+1 → O(m+n)\n- vector<int> pos: size m+1 → O(m)\n- vector<int> result: not counted (returned output)\n- recursion depth: none",
+  "approach": "Each query asks for the rank (count of preceding elements) of a value in a dynamic permutation where one element moves to the front each step. A Fenwick tree (BIT) over an array of size m+n supports both rank queries (prefix sums) and point updates in O(log(m+n)). Elements 1..m are initially placed at BIT indices n+1..n+m, leaving indices 1..n as a buffer for front placements. For each query, the answer is the prefix sum up to pos[q]-1; we then remove the element from its old index and place it at the next free front index (decreasing from n).",
+  "hints": [
+    "When one element jumps to the front of the permutation, every other element shifts by at most one position. What single quantity about the queried element fully determines the answer for that query?",
+    "Use a Fenwick tree (Binary Indexed Tree) over an array of size m+n. In Example 1 (m=5, n=4), element 3 starts at index 7; prefix-sum(6) = 2, which is its 0-indexed position.",
+    "```\nsize = m + n\nfor i in 1..m:\n    position[i] = n + i\n    update(n + i, +1)\nfront = n\nfor each query q:\n    p = position[q]\n    result = prefix_sum(p - 1)\n    update(p, -1)\n    position[q] = front\n    update(front, +1)\n    front = front - 1\nreturn result\n```",
+    "**Single element** - m=1 and one query, so the only element is already at position 0.\n`queries = [1], m = 1` → `Expected: [0]`\n⚠️ Bug: sizing the BIT as m+1 instead of m+n+1 → element 1 is placed at index n+1=2, exceeding the array bounds → out-of-bounds write.\n\n**All identical queries** - the same value is queried repeatedly; after the first move it is always at the front.\n`queries = [1,1,1], m = 3` → `Expected: [0,0,0]`\n⚠️ Bug: forgetting to update position[q] after moving → second query reads the stale old index, returns 2 instead of 0.\n\n**Query the last element first** - the queried element sits at the very end of the initial permutation.\n`queries = [5], m = 5` → `Expected: [4]`\n⚠️ Bug: using prefix_sum(p) instead of prefix_sum(p-1) → returns 5 instead of 4.\n\n**Reverse sorted queries** - each query targets the current last remaining original element.\n`queries = [5,4,3,2,1], m = 5` → `Expected: [4,4,4,4,4]`\n⚠️ Bug: initializing front = n+1 instead of n → first moved element lands on index n+1, colliding with element 1 already there, making bit[n+1]=2 → second query returns 5 instead of 4."
+  ],
+  "followUps": [
+    {
+      "q": "If m could be up to 10^9 but queries.length ≤ 10^5, how would you avoid O(m) space?",
+      "a": "Use coordinate compression on the 2n indices that are ever touched (n initial placements for queried elements plus n front slots), building the BIT over those compressed coordinates. Time stays O(n log n), space drops to O(n)."
+    },
+    {
+      "q": "What if after each move you also need to answer \"which element is at position k?\" queries?",
+      "a": "Augment the Fenwick tree with a select operation (binary lifting on prefix sums) to find the k-th set bit in O(log(m+n)). The rest of the structure is unchanged; each select query adds O(log(m+n)) time."
+    },
+    {
+      "q": "What if the initial permutation is an arbitrary order given as input, not [1..m]?",
+      "a": "Build a position map from the initial array so position[element] = n + index, then place each element into the BIT at that index. The algorithm is identical from that point forward; only initialization changes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> processQueries(vector<int>& queries, int m) {\n        int n = (int)queries.size();\n        int sz = m + n;\n        vector<int> bit(sz + 1, 0);\n        vector<int> pos(m + 1);\n        \n        for (int i = 1; i <= m; i++) {\n            pos[i] = n + i;\n            for (int j = n + i; j <= sz; j += j & (-j))\n                bit[j] += 1;\n        }\n        \n        int front = n;\n        vector<int> result;\n        result.reserve(n);\n        \n        for (int q : queries) {\n            int p = pos[q];\n            int rank = 0;\n            for (int j = p - 1; j > 0; j -= j & (-j))\n                rank += bit[j];\n            result.push_back(rank);\n            for (int j = p; j <= sz; j += j & (-j))\n                bit[j] -= 1;\n            pos[q] = front;\n            for (int j = front; j <= sz; j += j & (-j))\n                bit[j] += 1;\n            front--;\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

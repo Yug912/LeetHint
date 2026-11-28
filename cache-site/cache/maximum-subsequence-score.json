@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-subsequence-score",
+  "title": "Maximum Subsequence Score",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Heap",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<pair<int,int>> v: n entries → O(n)\n- priority_queue: up to k+1 entries → O(k)\n- sort(): O(log n) stack\n- not counted: input arrays, returned long long",
+  "approach": "Sort index pairs by nums2 descending. As we iterate, the current nums2 value is the minimum among all elements seen so far (since we go from largest to smallest). Maintain a min-heap of the k largest nums1 values among processed elements; when the heap reaches size k, the candidate score is (heap sum) × (current nums2). The answer is the max over all such candidates. Correctness: for any optimal subsequence, its minimum nums2 element is some nums2[i]; when we reach i in sorted order, the heap contains the k largest nums1 values among elements with nums2 ≥ nums2[i], which is at least as good as the optimal's sum.",
+  "hints": [
+    "If you knew which chosen index supplies the minimum value of nums2, what restriction does that place on every other index you may pick? Also, n ≤ 10^5 rules out enumerating all C(n,k) subsequences.",
+    "Sort the pairs by nums2 in descending order and keep a min-heap of the k largest nums1 values seen so far. In Example 1, after sorting by nums2 desc we reach the pair with nums2=2 holding nums1 values {1,3,2} summing to 6, giving 6×2=12.",
+    "sort pairs by nums2 descending\nsum = 0, ans = 0, min-heap h\nfor each pair (b, a):\n    push a into h; sum += a\n    if size(h) > k:\n        sum -= top(h); pop(h)\n    if size(h) == k:\n        ans = max(ans, sum * b)\nreturn ans",
+    "**Smallest input** - only one element exists and must be chosen.\n`nums1 = [5], nums2 = [9], k = 1` → `Expected: 45`\n⚠️ Bug: initialising `ans = 0` and only updating inside the `size == k` branch still works here, but initialising `ans` to `nums1[0]*nums2[0]` before the loop and then comparing inside returns 45 correctly - the real bug is skipping the `size == k` check, which returns 0.\n\n**Overflow** - k=10^5, all nums1 and nums2 equal 10^5, so sum = 10^10 and product = 10^15.\n`nums1 = [100000]*100000, nums2 = [100000]*100000, k = 100000` → `Expected: 1000000000000000`\n⚠️ Bug: declaring `sum` and `ans` as `int` → returns 1551699264 (truncated).\n\n**All elements equal** - every subsequence gives the same score, so ties must not break the max.\n`nums1 = [2,2,2], nums2 = [3,3,3], k = 2` → `Expected: 12`\n⚠️ Bug: using `>` instead of `>=` in the answer update is fine here, but using `<` for the heap-size check (`size < k` instead of `size > k`) never pops, sum grows to 6, and at the last element returns 6×3=18.\n\n**Already sorted descending by nums2** - the first k elements form the first candidate.\n`nums1 = [1,2,3], nums2 = [3,2,1], k = 2` → `Expected: 8`\n⚠️ Bug: forgetting to push before checking size, so the heap never reaches k, returns 0.\n\n**k equals n** - the whole array is the only choice; min of nums2 is the global minimum.\n`nums1 = [4,5,6], nums2 = [1,2,3], k = 3` → `Expected: 15`\n⚠️ Bug: popping inside the loop when `size > k` is never triggered, but a buggy `size >= k` pop removes an element and returns 10×1=10."
+  ],
+  "followUps": [
+    {
+      "q": "What if you may choose any subsequence of size between 1 and k (not exactly k)?",
+      "a": "At each step after the heap first reaches size 1, treat the current heap (capped at k) as a valid candidate and update the answer with sum × current nums2. Time stays O(n log n); space unchanged."
+    },
+    {
+      "q": "What if nums2 values can be negative?",
+      "a": "A negative minimum flips the objective: you would want the smallest possible sum of nums1 for that minimum, so sort nums2 ascending and maintain a max-heap of the k smallest nums1 values instead. Complexity unchanged."
+    },
+    {
+      "q": "What if the input arrives as a stream and you cannot store all n pairs?",
+      "a": "Keep an external sort by nums2 is impossible online, so instead maintain a heap of size k for the largest nums1 values and a separate structure tracking the running minimum of nums2 among the k chosen; this changes the guarantee and typically requires a two-pass or reservoir-style approach, raising space to O(k) but losing the exact optimum without buffering."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxScore(vector<int>& nums1, vector<int>& nums2, int k) {\n        int n = (int)nums1.size();\n        vector<pair<int,int>> v;\n        v.reserve(n);\n        for (int i = 0; i < n; i++) {\n            v.push_back({nums2[i], nums1[i]});\n        }\n        sort(v.begin(), v.end(), greater<pair<int,int>>());\n        priority_queue<int, vector<int>, greater<int>> pq;\n        long long sum = 0;\n        long long ans = 0;\n        for (auto& p : v) {\n            pq.push(p.second);\n            sum += p.second;\n            if ((int)pq.size() > k) {\n                sum -= pq.top();\n                pq.pop();\n            }\n            if ((int)pq.size() == k) {\n                long long cur = sum * (long long)p.first;\n                if (cur > ans) ans = cur;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "path-with-minimum-effort",
+  "title": "Path With Minimum Effort",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dijkstra's Algorithm",
+  "tc": "O(m * n * log(m * n))",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- vector<vector<int>> dist: up to m * n entries → O(m * n)\n- priority_queue pq: up to m * n entries → O(m * n)\n- not counted: input heights",
+  "approach": "Treat the grid as a graph where the weight of an edge between adjacent cells is the absolute difference in their heights. The effort of a path is the maximum edge weight along it, so we use Dijkstra's algorithm to find the path that minimizes this maximum edge weight. For each cell, we track the minimum effort required to reach it, and we relax edges by taking the maximum of the current path's effort and the next edge's weight. When we pop the destination cell from the priority queue, we have found the minimum effort path.",
+  "hints": [
+    "If you know the minimum effort required to reach a cell, how does that help you determine the effort required to reach its adjacent cells? A route's effort is the maximum absolute difference in heights between two consecutive cells of the route.",
+    "Use Dijkstra's algorithm, where the distance to a cell is the minimum effort required to reach it. From (0,0) with effort 0 in Example 1, moving to (0,1) gives an effort of max(0, |1-2|) = 1.",
+    "dist[r][c] = infinity, dist[0][0] = 0\npq = min-heap of (effort, r, c), push (0, 0, 0)\nwhile pq not empty:\n    pop (d, r, c)\n    if (r, c) is destination: return d\n    for each neighbor (nr, nc):\n        new_effort = max(d, abs(heights[r][c] - heights[nr][nc]))\n        if new_effort < dist[nr][nc]:\n            dist[nr][nc] = new_effort, push (new_effort, nr, nc)",
+    "**Single cell** - The grid has only one cell, so no moves are needed.\n`Input: [[5]]` → `Expected: 0`\n⚠️ Bug: Returning `dist[0][0]` without initializing it to 0 → returns INT_MAX.\n\n**Summing differences** - The problem asks for the maximum difference, not the sum of differences.\n`Input: [[1,2,3],[3,8,4],[5,3,5]]` → `Expected: 1`\n⚠️ Bug: Using `d + diff` instead of `max(d, diff)` for the new effort → returns 4.\n\n**Revisiting a cell** - A cell can be reached via a high-effort path first, and later via a lower-effort path.\n`Input: [[1,100],[2,50]]` → `Expected: 48`\n⚠️ Bug: Not updating `dist[nr][nc]` and pushing to the priority queue when `new_effort < dist[nr][nc]` → returns 99."
+  ],
+  "followUps": [
+    {
+      "q": "What if you could move diagonally in addition to up, down, left, and right?",
+      "a": "The algorithm remains the same, but each cell now has up to 8 neighbors instead of 4. The time complexity stays O(m * n * log(m * n)) because the number of edges is still proportional to the number of vertices."
+    },
+    {
+      "q": "What if the grid was too large to fit in memory, and you could only request the height of a cell on demand?",
+      "a": "You would need a modified Dijkstra that dynamically discovers neighbors. The space complexity would still be O(m * n) in the worst case to store the `dist` array and priority queue, but practically you might use a hash map for `dist` to only store visited cells."
+    },
+    {
+      "q": "What if you needed to return the actual path taken instead of just the minimum effort?",
+      "a": "You would maintain a `parent` 2D array that stores the predecessor of each cell whenever you update its `dist`. After reaching the destination, you backtrack from the destination to the start using the `parent` array to reconstruct the path. The space complexity increases to O(m * n) for the `parent` array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumEffortPath(vector<vector<int>>& heights) {\n        int rows = heights.size();\n        int cols = heights[0].size();\n        \n        vector<vector<int>> dist(rows, vector<int>(cols, INT_MAX));\n        dist[0][0] = 0;\n        \n        priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int>>>, greater<pair<int, pair<int, int>>>> pq;\n        pq.push({0, {0, 0}});\n        \n        int dr[] = {-1, 1, 0, 0};\n        int dc[] = {0, 0, -1, 1};\n        \n        while (!pq.empty()) {\n            auto top = pq.top();\n            pq.pop();\n            \n            int d = top.first;\n            int r = top.second.first;\n            int c = top.second.second;\n            \n            if (r == rows - 1 && c == cols - 1) {\n                return d;\n            }\n            \n            if (d > dist[r][c]) {\n                continue;\n            }\n            \n            for (int i = 0; i < 4; i++) {\n                int nr = r + dr[i];\n                int nc = c + dc[i];\n                \n                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {\n                    int diff = abs(heights[r][c] - heights[nr][nc]);\n                    int new_effort = max(d, diff);\n                    \n                    if (new_effort < dist[nr][nc]) {\n                        dist[nr][nc] = new_effort;\n                        pq.push({new_effort, {nr, nc}});\n                    }\n                }\n            }\n        }\n        \n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

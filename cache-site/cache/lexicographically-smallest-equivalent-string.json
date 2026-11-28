@@ -1,0 +1,40 @@
+{
+  "slug": "lexicographically-smallest-equivalent-string",
+  "title": "Lexicographically Smallest Equivalent String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Union-Find",
+  "tc": "O((n + m) · α(26))",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int parent[26]: fixed 26 entries → O(1)\n- recursion depth: none (iterative find with path halving)\n- not counted: input strings, returned string",
+  "approach": "The equivalence relation partitions the 26 lowercase letters into connected components. Within each component, every letter can be replaced by any other, so to get the lexicographically smallest result, each letter should map to the smallest letter in its component. Union-Find with a twist: when uniting two components, always attach the larger root under the smaller root, so each root is automatically the smallest letter in its component. Then for each character in baseStr, output find(c).",
+  "hints": [
+    "The equivalence relation partitions letters into groups where every letter can substitute for any other in its group. For each group, which single representative should you pick so the final string is as small as possible?",
+    "Use Union-Find (DSU) on the 26 letters. When uniting two groups, attach the larger root under the smaller root so each root is its group's smallest letter. Example: uniting 'p' and 'm' makes 'm' the root since 'm' < 'p'.",
+    "```\nparent[c] = c for all 26 letters\nfor each i in range(len(s1)):\n    ra = find(s1[i])\n    rb = find(s2[i])\n    if ra < rb: parent[rb] = ra\n    elif rb < ra: parent[ra] = rb\nfor each c in baseStr:\n    append find(c) to result\nreturn result\n```",
+    "**Smallest input** - single equivalence pair, single query character.\n`s1=\"a\", s2=\"b\", baseStr=\"b\"` → `Expected: \"a\"`\n⚠️ Bug: not initializing parent[i]=i for all 26 letters → returns \"b\" (or garbage) instead of \"a\"\n\n**Union direction** - root must be the smallest character in its component.\n`s1=\"ab\", s2=\"ba\", baseStr=\"ab\"` → `Expected: \"aa\"`\n⚠️ Bug: always setting parent[ra]=rb without comparing roots → parent[a]=b, find(a)=b, returns \"bb\"\n\n**Disconnected letters** - letters not appearing in s1/s2 map to themselves.\n`s1=\"ab\", s2=\"cd\", baseStr=\"xyz\"` → `Expected: \"xyz\"`\n⚠️ Bug: only initializing parent for letters that appear in s1/s2 → x,y,z uninitialized, returns garbage\n\n**Union strategy** - must attach by smallest character, not by rank.\n`s1=\"ba\", s2=\"ab\", baseStr=\"ab\"` → `Expected: \"aa\"`\n⚠️ Bug: using union-by-rank (parent[ra]=rb when ranks equal) → parent[a]=b, find(a)=b, returns \"bb\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet were the full Unicode set (over 1 million code points) instead of 26 lowercase letters?",
+      "a": "Replace the fixed-size parent array with a hash map (unordered_map<int,int>) and initialize entries lazily on first access. The algorithm is unchanged. TC becomes O((n+m)·α) expected, SC becomes O(min(n+m, |alphabet|))."
+    },
+    {
+      "q": "What if equivalences and baseStr queries arrive interleaved in a stream - you must answer each query before seeing the next equivalence?",
+      "a": "DSU supports online union and find, so process each equivalence with unite and each query with find immediately as they arrive. No buffering needed. TC: O(α) amortized per operation, SC: O(1)."
+    },
+    {
+      "q": "Instead of the lexicographically smallest string, how would you find the number of distinct equivalent strings of baseStr?",
+      "a": "For each character in baseStr, the number of choices is the size of its equivalence class; the total count is the product of class sizes across all positions. Track group sizes during union. TC: O(n+m), SC: O(1). Use a 64-bit integer since 1000 positions with groups up to 26 can produce products up to 26^1000."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int parent[26];\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n    void unite(int a, int b) {\n        int ra = find(a), rb = find(b);\n        if (ra == rb) return;\n        if (ra < rb) parent[rb] = ra;\n        else parent[ra] = rb;\n    }\npublic:\n    string smallestEquivalentString(string s1, string s2, string baseStr) {\n        for (int i = 0; i < 26; i++) parent[i] = i;\n        for (int i = 0; i < (int)s1.size(); i++) {\n            unite(s1[i] - 'a', s2[i] - 'a');\n        }\n        string result;\n        result.reserve(baseStr.size());\n        for (char c : baseStr) {\n            result.push_back((char)('a' + find(c - 'a')));\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

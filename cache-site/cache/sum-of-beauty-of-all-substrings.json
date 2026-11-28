@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-beauty-of-all-substrings",
+  "title": "Sum of Beauty of All Substrings",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Incremental Frequency Array",
+  "tc": "O(n² · 26)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[26]: 26 ints, constant → O(1)\n- a few scalar locals (n, ans, i, j, mx, mn, k): O(1)\n- recursion depth: none\n- not counted: input string s, returned int",
+  "approach": "For each left endpoint i, walk a right endpoint j from i to the end, maintaining a single 26-element frequency array that is incremented by one each time j advances. After each increment, scan the 26 counts to find the max and min among the non-zero entries; their difference is the beauty of s[i..j], which is added to the running answer. This avoids recomputing frequencies from scratch for every substring and avoids the (n+1)×26 prefix table - the in-place array already holds exactly the counts for the current (i, j).",
+  "hints": [
+    "Given n ≤ 500, how many substrings does s contain, and what does that bound imply about the per-substring work you can afford?",
+    "Use an incremental frequency array of size 26. Fix the left endpoint i and extend j rightward, bumping one count per step; e.g., going from \"aab\" to \"aabc\" just increments freq['c'], then a 26-scan gives max−min.",
+    "ans = 0\nfor i in 0..n-1:\n    freq = [0] * 26\n    for j in i..n-1:\n        freq[s[j]] += 1\n        mx = max of freq entries that are > 0\n        mn = min of freq entries that are > 0\n        ans += mx - mn\nreturn ans",
+    "**Smallest input** - only one substring of length 1, beauty 0.\n`Input: \"a\"` → `Expected: 0`\n⚠️ Bug: initializing mn to 0 with no freq>0 guard → returns 1\n\n**All equal characters** - every substring has max equal to min.\n`Input: \"aaaa\"` → `Expected: 0`\n⚠️ Bug: initializing mn to 0 with no freq>0 guard → returns 20\n\n**Reset between starts** - the frequency array must restart at each left endpoint.\n`Input: \"aab\"` → `Expected: 1`\n⚠️ Bug: not resetting freq when i increments → returns 4\n\n**Boundary index** - substring ending at the last character must be included.\n`Input: \"aabcb\"` → `Expected: 5`\n⚠️ Bug: loop condition j < n-1 instead of j < n → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "If n could be up to 10^5, how would the approach change?",
+      "a": "O(n²·26) is too slow. Exploit that beauty is bounded by the alphabet size: for each ordered pair of characters (x, y), use prefix sums of (count[x] − count[y]) and inclusion-exclusion to count substrings where x is the strict max and y is the strict min. Time O(26²·n), space O(n) for the prefix arrays."
+    },
+    {
+      "q": "What if the alphabet were uppercase letters plus digits (size 62)?",
+      "a": "Replace the 26-element array with a 62-element one; the inner scan grows from 26 to 62 iterations. Time becomes O(n²·62), space stays O(1)."
+    },
+    {
+      "q": "What if you only needed the maximum beauty over all substrings, not the sum?",
+      "a": "For each ordered pair (a, b), map a to +1, b to −1, every other character to 0, and run Kadane's maximum-subarray sum while tracking that at least one a and one b appear. Take the max over all pairs. Time O(26²·n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int beautySum(string s) {\n        int n = s.size();\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            int freq[26] = {0};\n            for (int j = i; j < n; j++) {\n                freq[s[j] - 'a']++;\n                int mx = 0;\n                int mn = n;\n                for (int k = 0; k < 26; k++) {\n                    if (freq[k] > 0) {\n                        if (freq[k] > mx) mx = freq[k];\n                        if (freq[k] < mn) mn = freq[k];\n                    }\n                }\n                ans += mx - mn;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

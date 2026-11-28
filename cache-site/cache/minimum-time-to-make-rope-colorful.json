@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-time-to-make-rope-colorful",
+  "title": "Minimum Time to Make Rope Colorful",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int n, totalCost, i, j, sum, maxTime: six scalars → O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input string and vector (LeetCode-provided)",
+  "approach": "For each maximal run of consecutive same-colored balloons, exactly one must survive; to minimize total removal time, keep the one with the largest `neededTime` and remove the rest. The cost for a run is (sum of all times in the run) − (maximum time in the run). A single left-to-right pass groups consecutive identical colors, accumulates the sum and max per group, and adds `sum − max` to the answer. This is correct because every run of length ≥ 2 must lose all but one balloon, and keeping the costliest-to-remove one minimizes the total.",
+  "hints": [
+    "For any maximal block of consecutive same-colored balloons, how many are allowed to remain, and what determines which one to keep? n ≤ 10^5 rules out checking every possible subset of removals.",
+    "Greedy single pass: for each maximal run of identical colors, keep the balloon with the largest `neededTime` and remove the rest. For \"abaac\" with times [1,2,3,4,5], the run \"aa\" at indices 2-3 has sum 7 and max 4, so cost = 7 − 4 = 3.",
+    "```\ntotal = 0, i = 0\nwhile i < n:\n    j = i, runSum = 0, runMax = 0\n    while j < n and colors[j] == colors[i]:\n        runSum += neededTime[j]\n        runMax = max(runMax, neededTime[j])\n        j += 1\n    total += runSum - runMax\n    i = j\nreturn total\n```",
+    "**All same color** - entire string is one color, requiring removal of all but one balloon\n`Input: colors = \"aaaa\", neededTime = [4,1,4,1]` → `Expected: 6`\n⚠️ Bug: adding min(neededTime[i], neededTime[i-1]) for each adjacent pair instead of tracking the full group → returns 3\n\n**Last group** - the final run of same-colored balloons at the string's end\n`Input: colors = \"aabaa\", neededTime = [1,2,3,4,1]` → `Expected: 2`\n⚠️ Bug: only adding group cost when the color changes, not after the loop ends → returns 1\n\n**Already colorful** - no consecutive duplicates exist\n`Input: colors = \"abc\", neededTime = [1,2,3]` → `Expected: 0`\n⚠️ Bug: adding runSum without subtracting runMax for single-element groups → returns 6\n\n**Two-element group at start** - duplicate at the beginning of the string\n`Input: colors = \"aab\", neededTime = [3,1,2]` → `Expected: 1`\n⚠️ Bug: starting the scan at index 1 and not including neededTime[0] in the first group's sum → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if at most k consecutive balloons of the same color are allowed (instead of just 1)?",
+      "a": "For each run longer than k, keep the k balloons with the largest neededTime and remove the rest. Use a min-heap of size k per group to track the k largest values. TC: O(n log k), SC: O(k)."
+    },
+    {
+      "q": "What if colors can be any character, not just lowercase English letters?",
+      "a": "The algorithm only compares adjacent characters for equality, so the character set is irrelevant. No change to the approach. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if the input arrives as a stream and you cannot store the full arrays in memory?",
+      "a": "Process one element at a time, tracking only the previous color, the current group's running sum, and its maximum. When the color changes, flush the group's cost. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCost(string colors, vector<int>& neededTime) {\n        int n = colors.size();\n        int totalCost = 0;\n        int i = 0;\n        while (i < n) {\n            int j = i;\n            int sum = 0;\n            int maxTime = 0;\n            while (j < n && colors[j] == colors[i]) {\n                sum += neededTime[j];\n                maxTime = max(maxTime, neededTime[j]);\n                j++;\n            }\n            totalCost += sum - maxTime;\n            i = j;\n        }\n        return totalCost;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

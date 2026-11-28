@@ -1,0 +1,40 @@
+{
+  "slug": "shortest-path-with-alternating-colors",
+  "title": "Shortest Path with Alternating Colors",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS on Augmented State Graph",
+  "tc": "O(n + E)",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- adj: adjacency list storing every edge once → O(E)\n- dist[n][3]: distance table → O(n)\n- BFS queue: at most 3n states → O(n)\n- not counted: input vectors, returned ans",
+  "approach": "BFS over augmented states (node, lastEdgeColor) where color ∈ {red, blue, start}. From the start state at node 0 we may take any color; thereafter each step must use the opposite color of the previous edge. BFS on this state graph yields shortest alternating paths because every transition has unit weight. The answer for node x is the minimum distance among all color-states at x (or −1 if unreachable).",
+  "hints": [
+    "What do you need to remember about a path besides the current node to know which edges are legal to take next?\nThe graph has both red and blue edges, and the path must alternate colors.",
+    "Use BFS where each state is (node, color of the last edge taken). In Example 1, from node 0 (start state) you take the red edge to node 1 at distance 1; from node 1 the only outgoing edge is also red, so it cannot extend the path to node 2.",
+    "```\ndist[node][color] = INF for all, dist[0][start] = 0\nqueue = [(0, start, 0)]\nwhile queue not empty:\n    (u, c, d) = pop front\n    for each edge (u → v, edgeColor ec):\n        if c == start or ec != c:\n            if d + 1 < dist[v][ec]:\n                dist[v][ec] = d + 1\n                push (v, ec, d + 1)\nanswer[i] = min over all colors of dist[i][color], or -1 if INF\n```",
+    "**Single node** - n = 1 with no edges at all\n`Input: n = 1, redEdges = [], blueEdges = []` → `Expected: [0]`\n⚠️ Bug: initialising every answer to -1 and only updating nodes reached via an edge, never special-casing node 0 → returns `[-1]`\n\n**Alternating 2-cycle** - red and blue edges form a cycle that keeps alternating\n`Input: n = 2, redEdges = [[0,1]], blueEdges = [[1,0]]` → `Expected: [0,1]`\n⚠️ Bug: BFS that marks only `visited[node]` instead of `visited[node][color]` → infinite loop (0→red→1→blue→0→red→1→…)\n\n**Color-dependent reachability** - a node is reachable via both colors but only one lets the path continue\n`Input: n = 4, redEdges = [[0,1],[1,2]], blueEdges = [[0,1],[1,3]]` → `Expected: [0,1,2,2]`\n⚠️ Bug: tracking `visited[node]` only, so when node 1 is first reached via red the (1, blue) state is skipped → returns `[0,1,-1,2]` because the red edge 1→2 requires the previous edge to be blue\n\n**Unreachable node** - no alternating path exists to some node\n`Input: n = 3, redEdges = [[0,1]], blueEdges = []` → `Expected: [0,1,-1]`\n⚠️ Bug: initialising the answer array to 0 instead of -1 → returns `[0,1,0]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if edges have positive integer weights instead of unit length - how does the approach change?",
+      "a": "Replace BFS with Dijkstra on the same (node, color) state graph, using a min-heap keyed by total distance. Each state is relaxed once. TC becomes O((n + E) log n), SC stays O(n + E)."
+    },
+    {
+      "q": "What if you must report the actual alternating path (sequence of nodes) instead of just the length?",
+      "a": "Store a parent pointer `prev[node][color] = (parent_node, parent_color)` during BFS, then reconstruct by walking backwards from the best color-state at the target. TC and SC are unchanged; the parent table adds O(n) space."
+    },
+    {
+      "q": "What if n can be up to 10^5 and edges up to 2·10^5 - does the solution still work?",
+      "a": "Yes, the algorithm is already O(n + E). Use adjacency lists (as written) and a flat 1-D array of size 2n for distances instead of vector-of-vectors to improve cache locality. SC remains O(n + E)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> shortestAlternatingPaths(int n, vector<vector<int>>& redEdges, vector<vector<int>>& blueEdges) {\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& e : redEdges)  adj[e[0]].push_back({e[1], 0});\n        for (auto& e : blueEdges) adj[e[0]].push_back({e[1], 1});\n\n        const int INF = 1e9;\n        // dist[node][color]: 0 = last edge red, 1 = last edge blue, 2 = start (no edge yet)\n        vector<vector<int>> dist(n, vector<int>(3, INF));\n        dist[0][2] = 0;\n\n        queue<tuple<int,int,int>> q; // (node, lastColor, distance)\n        q.push({0, 2, 0});\n\n        while (!q.empty()) {\n            auto [u, c, d] = q.front(); q.pop();\n            if (d > dist[u][c]) continue;\n            for (auto& pr : adj[u]) {\n                int v  = pr.first;\n                int ec = pr.second; // edge color\n                if (c == 2 || ec != c) { // start state: any color; otherwise must differ\n                    if (d + 1 < dist[v][ec]) {\n                        dist[v][ec] = d + 1;\n                        q.push({v, ec, d + 1});\n                    }\n                }\n            }\n        }\n\n        vector<int> ans(n);\n        for (int i = 0; i < n; i++) {\n            int best = min({dist[i][0], dist[i][1], dist[i][2]});\n            ans[i] = (best >= INF) ? -1 : best;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

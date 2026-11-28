@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-subsequence-of-distinct-characters",
+  "title": "Smallest Subsequence of Distinct Characters",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int freq[26]: fixed 26 entries → O(1)\n- bool inStack[26]: fixed 26 entries → O(1)\n- string result: serves as both stack and return value (not counted as auxiliary per LeetCode convention)\n- recursion depth: none",
+  "approach": "Use a monotonic stack to greedily build the lexicographically smallest result. For each character, decrement its remaining count; if it's already in the stack, skip it. Otherwise, pop any larger characters from the stack top that still have remaining occurrences later in the string, then push the current character. This works because popping a character that reappears later never loses it, and keeping the stack lexicographically minimal at each step yields the globally smallest subsequence.",
+  "hints": [
+    "When building the answer left to right, you encounter a character smaller than one you already placed - under what condition is it safe to undo that placement? The string uses only lowercase English letters, so at most 26 distinct characters exist.",
+    "Use a monotonic stack. For s = \"bcabc\", after placing 'b' then 'c', seeing 'a' pops both (they reappear later), giving \"a\"; then 'b' and 'c' are pushed again for \"abc\".",
+    "```\ncount frequency of each char\nfor each char c in s:\n    decrement freq[c]\n    if c already in stack: skip\n    while stack not empty and stack.top > c and freq[stack.top] > 0:\n        mark stack.top as not in stack\n        pop stack\n    push c, mark as in stack\nreturn stack\n```",
+    "**Single character** - n = 1, only one distinct character\n`Input: \"a\"` → `Expected: \"a\"`\n⚠️ Bug: not guarding the while loop with `!result.empty()` → accessing `result.back()` on an empty string is undefined behavior\n\n**All same character** - every character is identical\n`Input: \"bbbb\"` → `Expected: \"b\"`\n⚠️ Bug: not checking `inStack` before pushing → returns \"bbbb\"\n\n**Last occurrence blocks popping** - a character appearing only once prevents popping past it\n`Input: \"bcac\"` → `Expected: \"bac\"`\n⚠️ Bug: popping without checking `freq[top] > 0` → pops 'b' (freq = 0, never reappears), returns \"ac\"\n\n**Popped character reappears** - a character popped from the stack appears again later\n`Input: \"bcabc\"` → `Expected: \"abc\"`\n⚠️ Bug: not setting `inStack[top] = false` when popping → 'b' and 'c' stay marked as in-stack, skipped at indices 3 and 4, returns \"a\""
+  ],
+  "followUps": [
+    {
+      "q": "What if the string can contain any ASCII character, not just lowercase letters?",
+      "a": "Replace the 26-element arrays with 128-element arrays (or a hash map keyed by char). The algorithm is unchanged. Time complexity stays O(n), space stays O(1) (128 is still constant)."
+    },
+    {
+      "q": "What if each distinct character must appear exactly k times in the result (k ≥ 1) instead of exactly once?",
+      "a": "Track how many times each character has been placed in the result. Only pop a character if its remaining occurrences (freq minus already-placed count plus one) can still reach k. Push a character only if it has been placed fewer than k times. Time complexity O(n), space O(1)."
+    },
+    {
+      "q": "What if the string is a stream of 10^9 characters and you can only afford O(26) memory?",
+      "a": "Since the output has at most 26 characters, use two passes: first pass computes frequencies (O(26) memory), second pass builds the result with the monotonic stack. If only one pass is allowed, optimality cannot be guaranteed because future frequencies are unknown. Two-pass time is O(n), space O(26) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string smallestSubsequence(string s) {\n        int freq[26] = {0};\n        bool inStack[26] = {false};\n        \n        for (char c : s) freq[c - 'a']++;\n        \n        string result;\n        for (char c : s) {\n            freq[c - 'a']--;\n            if (inStack[c - 'a']) continue;\n            while (!result.empty() && result.back() > c && freq[result.back() - 'a'] > 0) {\n                inStack[result.back() - 'a'] = false;\n                result.pop_back();\n            }\n            result.push_back(c);\n            inStack[c - 'a'] = true;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "capacity-to-ship-packages-within-d-days",
+  "title": "Capacity To Ship Packages Within D Days",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log S)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- Scalar variables (lo, hi, mid, need, cur, w): O(1)\n- No containers, arrays, or recursion allocated\n- not counted: input vector",
+  "approach": "The key insight is monotonicity: if a capacity C can ship all packages within D days, then any capacity C' > C can also do it (the extra capacity is simply unused). This means the set of feasible capacities is a contiguous range [answer, ∞), so we can binary search for the minimum feasible capacity. The search range is [max(weights), sum(weights)]. For each candidate capacity, we greedily simulate shipping in one O(n) pass: load packages in order until the next would exceed capacity, then start a new day. If the total days needed ≤ D, the capacity is feasible.",
+  "hints": [
+    "If a certain ship capacity ships all packages within the given days, which other capacities must also work?",
+    "Binary search on the answer. For each candidate capacity, greedily load packages in order until the next would exceed capacity, then start a new day. Example 1 with capacity 15: day 1 = 1+2+3+4+5, day 2 = 6+7, day 3 = 8, day 4 = 9, day 5 = 10 → 5 days, feasible.",
+    "```\nlo = max(weights), hi = sum(weights)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    days_needed = 1, load = 0\n    for w in weights:\n        if load + w > mid:\n            days_needed += 1, load = 0\n        load += w\n    if days_needed <= days: hi = mid\n    else: lo = mid + 1\nreturn lo\n```",
+    "**Day count initialization** - two packages must ship in a single day\n`Input: weights = [5,5], days = 1` → `Expected: 10`\n⚠️ Bug: initializing `need` to 0 instead of 1 → returns 5\n\n**All elements equal** - strict vs non-strict comparison at the boundary\n`Input: weights = [3,3,3,3], days = 2` → `Expected: 6`\n⚠️ Bug: using `cur + w >= mid` instead of `cur + w > mid` → returns 7\n\n**Feasible capacity at search boundary** - upper bound update\n`Input: weights = [3,2,2,4,1,4], days = 3` → `Expected: 6`\n⚠️ Bug: using `hi = mid - 1` instead of `hi = mid` → returns 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if packages could be shipped in any order, not just the given order?",
+      "a": "The problem becomes the multiprocessor scheduling problem (partition into D subsets minimizing the maximum subset sum), which is NP-hard. The greedy feasibility check no longer works because it relies on fixed order. For small D, you could use DP or branch-and-bound, but no polynomial-time solution is known."
+    },
+    {
+      "q": "What if each day also has a limit on the number of packages, not just total weight?",
+      "a": "In the feasibility check, track both running weight and package count for the current day. Start a new day when either limit is exceeded. Binary search on weight capacity still works; the check just has an extra condition. Time complexity remains O(n log S)."
+    },
+    {
+      "q": "What if weights stream in one at a time and you must commit to a capacity before seeing all of them?",
+      "a": "You can no longer binary search since you don't know max(weights) or sum(weights) upfront. You would need to either collect all weights first (if memory allows) or use an online strategy based on a running estimate, though you cannot guarantee optimality without seeing all data."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int shipWithinDays(vector<int>& weights, int days) {\n        int lo = *max_element(weights.begin(), weights.end());\n        long long hi = 0;\n        for (int w : weights) hi += w;\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2;\n            int need = 1;\n            long long cur = 0;\n            for (int w : weights) {\n                if (cur + w > mid) {\n                    need++;\n                    cur = 0;\n                }\n                cur += w;\n            }\n            if (need <= days) hi = mid;\n            else lo = mid + 1;\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

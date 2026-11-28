@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-closed-islands",
+  "title": "Number of Closed Islands",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Multi-Source BFS Flood Fill",
+  "tc": "O(m*n)",
+  "sc": "O(m+n)",
+  "spaceBreakdown": "- queue<pair<int,int>> q: holds one BFS frontier contour, max O(m+n) cells\n- int dx[4], dy[4]: O(1)\n- grid modified in place: O(1) auxiliary\n- not counted: input grid",
+  "approach": "An island is closed iff none of its cells touch the grid border. First, run multi-source BFS from every 0-cell on the border, marking all reachable 0s as water (1). This eliminates every island that touches the edge. Then, scan the grid and count remaining connected components of 0s - each one is entirely surrounded by water and therefore closed. The grid is modified in place, so no visited array is needed.",
+  "hints": [
+    "What single property of an island's cell locations makes it impossible for that island to ever be closed?",
+    "Use multi-source BFS (flood fill). In Example 2, start BFS from every 0 on the border - e.g., cell (0,0) - and mark all reachable 0s as water; whatever 0s remain afterward are closed islands.",
+    "```\nfor each border cell that is 0:\n    mark as 1, push to queue\nwhile queue not empty:\n    pop cell, for each 4-neighbor:\n        if in bounds and is 0: mark as 1, push\ncount = 0\nfor each cell:\n    if cell is 0:\n        count++\n        BFS from cell, marking all reachable 0s as 1\nreturn count\n```",
+    "**Border-only land** - 1×1 grid, the single land cell sits on the border.\n`Input: [[0]]` → `Expected: 0`\n⚠️ Bug: counting all 0-components without first removing border-connected ones → returns 1\n\n**Edge land not at corners** - land touches the border only through non-corner edge cells.\n`Input: [[1,0,1],[0,0,0],[1,0,1]]` → `Expected: 0`\n⚠️ Bug: flooding only from the four corner cells → corners are all 1, nothing removed → returns 1\n\n**Multi-cell closed island** - two adjacent land cells form one closed island.\n`Input: [[1,1,1,1,1],[1,0,0,1,1],[1,1,1,1,1]]` → `Expected: 1`\n⚠️ Bug: incrementing count for every 0 cell in the scan loop instead of once per component → returns 2\n\n**All water** - grid contains no land at all.\n`Input: [[1,1],[1,1]]` → `Expected: 0`\n⚠️ Bug: initializing count to 1 instead of 0 → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must also return the area of each closed island?",
+      "a": "During the counting BFS, track the number of cells visited per component and store each area in a vector. Return the vector alongside the count. Time stays O(m*n); space becomes O(m+n) for the queue plus O(k) for the areas vector, where k is the number of closed islands."
+    },
+    {
+      "q": "What if the grid is updated online (a cell flips between 0 and 1) and you must report the count after each flip?",
+      "a": "Use union-find to maintain land components and a border-touching flag per component. A 1→0 flip unions the new land cell with its land neighbors; a 0→1 flip splits a component, which union-find cannot handle, so fall back to local BFS around the changed cell. Worst case O(m*n) per flip, but typically much smaller."
+    },
+    {
+      "q": "What if diagonal connectivity (8 directions) is used instead of 4?",
+      "a": "Add the four diagonal offsets to the neighbor array. The algorithm is unchanged otherwise. Time stays O(m*n), space stays O(m+n), but the count may differ since diagonally adjacent land merges into one island."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int closedIsland(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int dx[4] = {0, 0, 1, -1};\n        int dy[4] = {1, -1, 0, 0};\n\n        queue<pair<int,int>> q;\n\n        // Flood-fill all border-connected land cells\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if ((i == 0 || i == m - 1 || j == 0 || j == n - 1) && grid[i][j] == 0) {\n                    grid[i][j] = 1;\n                    q.push({i, j});\n                }\n            }\n        }\n        while (!q.empty()) {\n            auto [x, y] = q.front(); q.pop();\n            for (int d = 0; d < 4; d++) {\n                int nx = x + dx[d], ny = y + dy[d];\n                if (nx >= 0 && nx < m && ny >= 0 && ny < n && grid[nx][ny] == 0) {\n                    grid[nx][ny] = 1;\n                    q.push({nx, ny});\n                }\n            }\n        }\n\n        // Count remaining closed islands\n        int count = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 0) {\n                    count++;\n                    grid[i][j] = 1;\n                    q.push({i, j});\n                    while (!q.empty()) {\n                        auto [x, y] = q.front(); q.pop();\n                        for (int d = 0; d < 4; d++) {\n                            int nx = x + dx[d], ny = y + dy[d];\n                            if (nx >= 0 && nx < m && ny >= 0 && ny < n && grid[nx][ny] == 0) {\n                                grid[nx][ny] = 1;\n                                q.push({nx, ny});\n                            }\n                        }\n                    }\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

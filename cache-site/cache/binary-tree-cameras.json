@@ -1,0 +1,40 @@
+{
+  "slug": "binary-tree-cameras",
+  "title": "Binary Tree Cameras",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Trees",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- struct State: O(1) per call frame, not persistent\n- recursion call stack: up to h deep (O(n) skewed, O(log n) balanced)\n- not counted: input tree, return value",
+  "approach": "Use post-order tree DP where each node returns three states: (0) not covered by any camera, (1) covered but no camera on itself, (2) has a camera. The transitions combine children's states: a node is uncovered only if both children are covered without cameras; a node is covered without a camera only if at least one child has a camera; a node with a camera allows children in any state. The answer is min(state1, state2) at the root since the root has no parent to cover it.",
+  "hints": [
+    "For a given node, in how many qualitatively different ways can it end up being monitored, and which of those involve a camera placed at the node itself versus at a neighbor?",
+    "Post-order tree DP: each node returns three values - (a) not covered, (b) covered without a camera, (c) has a camera. For the root in Example 1, its left child A returns (inf, 2, 1), so the root's \"covered without camera\" state = A's camera cost = 1.",
+    "```\ndfs(node):\n  if null: return (0, 0, INF)\n  (L0,L1,L2) = dfs(node.left); (R0,R1,R2) = dfs(node.right)\n  s0 = L1 + R1\n  s1 = min(L2 + min(R1,R2), R2 + min(L1,L2))\n  s2 = 1 + min(L0,L1,L2) + min(R0,R1,R2)\n  return (s0, s1, s2)\nanswer = min(dfs(root).s1, dfs(root).s2)\n```",
+    "**Single node** - the root has no parent or children to provide coverage.\n`Input: [0]` → `Expected: 1`\n⚠️ Bug: returning `min(s0, s1, s2)` at the root instead of `min(s1, s2)` → returns 0\n\n**Two nodes** - root with one leaf child.\n`Input: [0,0]` → `Expected: 1`\n⚠️ Bug: using `0` instead of `INF` for a null node's \"has camera\" state → leaf's s1 becomes 0, answer becomes 0\n\n**Skewed chain** - four nodes in a line, all left children.\n`Input: [0,0,null,0,null,0]` → `Expected: 2`\n⚠️ Bug: computing s1 as `min(L1,L2) + min(R1,R2)` without requiring a child to have a camera → returns 0\n\n**Full binary tree, height 1** - root with two leaf children.\n`Input: [0,0,0]` → `Expected: 1`\n⚠️ Bug: computing s2 as `1 + L1 + R1` instead of `1 + min(L0,L1,L2) + min(R0,R1,R2)` → root's s2 becomes INF, answer becomes 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if each camera can monitor nodes up to distance 2 instead of distance 1?",
+      "a": "Generalize to k+1 states per node representing \"distance to nearest camera in subtree\" (0 through k) plus an \"uncovered\" state. The DP becomes O(n·k) time with O(k) space per call frame, using the same post-order structure."
+    },
+    {
+      "q": "What if the tree is given as a general undirected graph instead of a rooted tree?",
+      "a": "This becomes the Minimum Dominating Set problem, which is NP-hard on general graphs. The tree DP works only because the unique parent-child ordering gives a clean bottom-up dependency; on general graphs you would need approximation algorithms (e.g., greedy log-factor approximation)."
+    },
+    {
+      "q": "What if the tree has up to 10^7 nodes - would your solution still work?",
+      "a": "Time remains O(n), but the O(h) recursion stack may overflow on a skewed tree. Convert the post-order traversal to an iterative version using an explicit stack, keeping the same three-state transitions; this avoids system stack limits while preserving O(h) auxiliary space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    struct State { int s0, s1, s2; };\n    int INF = 1000000;\n\n    State dfs(TreeNode* node) {\n        if (!node) return {0, 0, INF};\n        State l = dfs(node->left);\n        State r = dfs(node->right);\n        int s0 = l.s1 + r.s1;\n        int s1 = min(l.s2 + min(r.s1, r.s2), r.s2 + min(l.s1, l.s2));\n        int s2 = 1 + min({l.s0, l.s1, l.s2}) + min({r.s0, r.s1, r.s2});\n        return {s0, s1, s2};\n    }\n\n    int minCameraCover(TreeNode* root) {\n        State s = dfs(root);\n        return min(s.s1, s.s2);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

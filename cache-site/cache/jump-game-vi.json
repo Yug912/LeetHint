@@ -1,0 +1,40 @@
+{
+  "slug": "jump-game-vi",
+  "title": "Jump Game VI",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Deque",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n entries → O(n)\n- deque<int> dq: up to k entries (bounded by n) → O(k)\n- not counted: input nums, returned int",
+  "approach": "Define dp[i] as the maximum score to reach index i. Then dp[i] = nums[i] + max(dp[j]) for j in [i-k, i-1]. A monotonic deque storing indices with decreasing dp values maintains the sliding window maximum in O(1) amortized per step: pop stale front indices outside the window, read the max from the front, then pop back indices whose dp value is ≤ the new dp[i] before pushing i. This gives O(n) time and O(n) space.",
+  "hints": [
+    "At each position, you can arrive from any of the last k positions. With n and k both up to 10^5, what do you need to track about those k positions to avoid checking all of them at every step?",
+    "Use a monotonic deque storing indices with decreasing dp values. For nums = [1,-1,-2,4,-7,3], k = 2: at i = 3, the deque holds indices [1, 2] with dp values [0, -1], so dp[3] = 4 + 0 = 4.",
+    "```\ndp[0] = nums[0]\ndeque = [0]\nfor i from 1 to n-1:\n    remove front indices outside [i-k, i-1]\n    dp[i] = nums[i] + dp[deque.front]\n    remove back indices whose dp value <= dp[i]\n    push i to back\nreturn dp[n-1]\n```",
+    "**Single element** - n = 1, the loop never executes\n`Input: nums = [5], k = 1` → `Expected: 5`\n⚠️ Bug: returning dp[n-1] without initializing dp[0] = nums[0] first → returns 0\n\n**All negative values** - every jump decreases the total score\n`Input: nums = [-1,-2,-3], k = 2` → `Expected: -4`\n⚠️ Bug: initializing dp[0] = 0 instead of nums[0] → returns -3\n\n**Off-by-one window** - the boundary index i - k is still a valid jump source\n`Input: nums = [5,-10,1], k = 2` → `Expected: 6`\n⚠️ Bug: using `dq.front() <= i - k` instead of `<` removes index 0 at i = 2 → returns -4"
+  ],
+  "followUps": [
+    {
+      "q": "What if k varies per index, given as an array k[i]?",
+      "a": "The same monotonic deque works. At index i, remove front indices where index < i - k[i]. The window size changes per index but the deque operations remain O(1) amortized. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you must return the actual sequence of indices that achieves the maximum score?",
+      "a": "Store a predecessor array prev[i] alongside dp[i]. When computing dp[i], record which index j gave the maximum. Reconstruct the path by following prev pointers backward from n-1 to 0. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the array arrives as a stream and cannot fit in memory?",
+      "a": "Maintain a deque of size at most k and a circular buffer of the last k dp values. Process each element as it arrives, mapping index i to buffer slot i % k. Only the last k dp values and the deque need storage. TC: O(n), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxResult(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<int> dp(n);\n        deque<int> dq;\n        dp[0] = nums[0];\n        dq.push_back(0);\n        for (int i = 1; i < n; i++) {\n            while (!dq.empty() && dq.front() < i - k) dq.pop_front();\n            dp[i] = nums[i] + dp[dq.front()];\n            while (!dq.empty() && dp[dq.back()] <= dp[i]) dq.pop_back();\n            dq.push_back(i);\n        }\n        return dp[n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

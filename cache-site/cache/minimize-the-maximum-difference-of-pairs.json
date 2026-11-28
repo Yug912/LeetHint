@@ -1,0 +1,40 @@
+{
+  "slug": "minimize-the-maximum-difference-of-pairs",
+  "title": "Minimize the Maximum Difference of Pairs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log n + n log(max_diff))",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- sort(): modifies input in place, O(log n) stack space for introsort (counted as O(1) by LeetCode convention)\n- recursion depth: none\n- not counted: input vector `nums`",
+  "approach": "To minimize the maximum difference among `p` pairs, we first sort the array. In a sorted array, the minimum difference between any two elements is always between adjacent elements, so we only need to consider adjacent pairs. We then binary search for the minimum possible maximum difference. For a given candidate difference `mid`, we greedily count how many disjoint adjacent pairs have a difference `<= mid`. If we can form at least `p` such pairs, `mid` is feasible, and we try a smaller value; otherwise, we try a larger value.",
+  "hints": [
+    "With the array sorted, which elements are natural candidates to pair together to keep each pair's difference small? The constraint n ≤ 10⁵ rules out checking every possible pair combination.",
+    "Binary search on the answer (the maximum allowed difference). For each candidate threshold, greedily scan the sorted array left to right, pairing adjacent elements whose difference is ≤ threshold and skipping both indices. Example: sorted [1,1,2,3,7,10] with threshold 1 yields pairs (1,1) and (2,3) → 2 pairs.",
+    "```\nsort nums\nlo = 0, hi = max(nums) - min(nums)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    count = 0, i = 0\n    while i < n - 1:\n        if nums[i+1] - nums[i] <= mid:\n            count += 1\n            i += 2\n        else:\n            i += 1\n    if count >= p:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**p = 0** - no pairs needed, answer is 0 by definition\n`Input: nums = [10,1,2,7,1,3], p = 0` → `Expected: 0`\n⚠️ Bug: returning `nums[n-1] - nums[0]` without checking p == 0 → returns 9\n\n**All equal elements** - every adjacent pair has difference 0\n`Input: nums = [5,5,5,5], p = 2` → `Expected: 0`\n⚠️ Bug: starting `lo = 1` instead of `lo = 0` → returns 1\n\n**Unsorted input** - sorting is required for the greedy to pair the right elements\n`Input: nums = [10,1,2,7,1,3], p = 2` → `Expected: 1`\n⚠️ Bug: not sorting, checking adjacent pairs in original order → returns 2\n\n**Maximum p with all-zero differences** - p = n/2, all pairs have diff 0\n`Input: nums = [1,1,2,2,3,3], p = 3` → `Expected: 0`\n⚠️ Bug: using `count > p` instead of `count >= p` → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the actual p pairs of original indices that achieve the minimum maximum difference?",
+      "a": "After binary search finds the optimal threshold, re-scan the sorted array with the greedy to collect pairs. Store original indices alongside values before sorting so you can map each sorted pair back to its original positions. TC: O(n log n), SC: O(n) for the index array."
+    },
+    {
+      "q": "What if you must minimize the sum of the p pair differences instead of the maximum?",
+      "a": "Binary search no longer applies because the objective is not monotone in a single threshold. After sorting, use DP: dp[i][j] = min sum of j pairs from the first i elements, transitioning by either skipping element i or pairing (i−1, i). TC: O(n·p), SC: O(p) with a rolling array."
+    },
+    {
+      "q": "What if the array is too large to fit in memory and arrives as a stream?",
+      "a": "Use an external merge sort to"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimizeMax(vector<int>& nums, int p) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        int left = 0, right = nums.back() - nums.front();\n        int ans = 0;\n        \n        while (left <= right) {\n            int mid = left + (right - left) / 2;\n            int count = 0;\n            \n            for (int i = 0; i < n - 1; ) {\n                if (nums[i + 1] - nums[i] <= mid) {\n                    count++;\n                    i += 2;\n                } else {\n                    i += 1;\n                }\n            }\n            \n            if (count >= p) {\n                ans = mid;\n                right = mid - 1;\n            } else {\n                left = mid + 1;\n            }\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

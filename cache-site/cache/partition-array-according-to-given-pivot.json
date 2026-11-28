@@ -1,0 +1,40 @@
+{
+  "slug": "partition-array-according-to-given-pivot",
+  "title": "Partition Array According to Given Pivot",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stable Partition",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- result vector: n elements (returned output, not counted)\n- lessCount, equalCount, i, j, k: 5 integers → O(1)\n- no recursion, no other containers",
+  "approach": "Count how many elements are less than the pivot and how many are equal to it in a first pass. These two counts determine the starting indices for the three groups (less, equal, greater) in the output array. In a second pass, place each element directly at its group's current write position and increment that position. Relative order is preserved because elements are processed left-to-right and each group's write pointer only moves forward.",
+  "hints": [
+    "What property of the input, computable in a single pass, determines the exact starting index of each of the three groups in the output?",
+    "Two-pass counting: first count elements less than and equal to the pivot, then write each element directly to its precomputed offset in a result vector. For nums = [9,12,5,10,14,3,10], pivot = 10: lessCount = 3, equalCount = 2, so the first greater element (12) is placed at index 5.",
+    "```\ncount lessCount and equalCount in one pass\ni = 0, j = lessCount, k = lessCount + equalCount\nfor each x in nums:\n    if x < pivot: result[i] = x; i = i + 1\n    else if x == pivot: result[j] = x; j = j + 1\n    else: result[k] = x; k = k + 1\nreturn result\n```",
+    "**Single element** - n = 1, the only element is the pivot\n`Input: nums = [5], pivot = 5` → `Expected: [5]`\n⚠️ Bug: using `result.reserve(n)` then `result[i] = x` without `result.resize(n)` → reserve allocates capacity without creating elements, so `result[0] = 5` is undefined behavior → crash\n\n**Pivot appears multiple times** - duplicates of the pivot value\n`Input: nums = [9,12,5,10,14,3,10], pivot = 10` → `Expected: [9,5,3,10,10,12,14]`\n⚠️ Bug: using `<=` instead of `<` in the less-than check → 10s go to less group, lessCount = 5, equalCount = 0, result = [9,5,10,3,10,12,14]\n\n**Pivot is the minimum value** - all other elements are greater\n`Input: nums = [5,3,1,2], pivot = 1` → `Expected: [1,5,3,2]`\n⚠️ Bug: using `x >= pivot` for the greater check instead of `x > pivot` → pivot elements go to greater group, equalCount = 0, result = [5,3,1,2]\n\n**Negatives and zeros** - mix of negative, zero, and positive values\n`Input: nums = [-3,4,3,2], pivot = 2` → `Expected: [-3,2,4,3]`\n⚠️ Bug: using `abs(x) < abs(pivot)` instead of `x < pivot` → abs(-3) = 3 > 2, so -3 goes to greater group, result = [2,-3,4,3]"
+  ],
+  "followUps": [
+    {
+      "q": "Can you perform the partition in-place with O(1) extra space?",
+      "a": "Stable in-place partition requires a block-swap or merge-based approach that runs in O(n log n) time with O(1) extra space. The counting trick no longer applies because you cannot pre-allocate the output; instead, you repeatedly merge adjacent stable blocks of less-than and equal-to-pivot elements."
+    },
+    {
+      "q": "What if nums arrives as a read-only stream and you can only make one pass?",
+      "a": "You must buffer all elements in memory, giving O(n) space. The two-pass counting approach needs random access to the input for the second pass, so a single-pass stream forces you to store elements in three separate lists and concatenate them afterward."
+    },
+    {
+      "q": "What if you are given k sorted pivots and must partition into k+1 ordered groups?",
+      "a": "Sort the k pivots, then count how many input elements fall into each of the k+1 ranges in one pass. Compute prefix sums of the counts to get each group's starting index, then place elements in a second pass. Time is O(n + k log k), space is O(k) for the count array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> pivotArray(vector<int>& nums, int pivot) {\n        int n = nums.size();\n        int lessCount = 0, equalCount = 0;\n        for (int x : nums) {\n            if (x < pivot) lessCount++;\n            else if (x == pivot) equalCount++;\n        }\n        vector<int> result(n);\n        int i = 0, j = lessCount, k = lessCount + equalCount;\n        for (int x : nums) {\n            if (x < pivot) result[i++] = x;\n            else if (x == pivot) result[j++] = x;\n            else result[k++] = x;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

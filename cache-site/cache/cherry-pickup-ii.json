@@ -1,0 +1,40 @@
+{
+  "slug": "cherry-pickup-ii",
+  "title": "Cherry Pickup II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Grid (Two Agents)",
+  "tc": "O(m × n² × 9)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- dp: n×n vector → O(n²)\n- ndp: n×n vector → O(n²)\n- dc[3]: 3 ints → O(1)\n- not counted: input grid",
+  "approach": "Both robots always move down one row per step, so they are always on the same row. The state is (row, col1, col2): the columns of robot 1 and robot 2 on the current row. We use bottom-up DP where dp[col1][col2] = max cherries collected so far with robots at those columns. Each transition tries all 3×3=9 column-move combinations for the next row, adding cherries once if both land on the same cell. We roll the dp array row by row to save space.",
+  "hints": [
+    "Both robots descend exactly one row per step and never revisit a previous row. What minimal information about both robots' positions at any single row is enough to determine their best future choices?",
+    "Dynamic programming with state dp[col1][col2] - the max cherries when robot 1 is at column col1 and robot 2 at column col2 on the current row. In Example 1, dp[0][2] starts at 3+1=4; after one step, dp[0][1]=4+2+5=11.",
+    "```\ndp[0][n-1] = grid[0][0] + grid[0][n-1]\nfor i from 0 to m-2:\n    ndp = fresh array filled with -1\n    for each (j1, j2) where dp[j1][j2] >= 0:\n        for nj1 in {j1-1, j1, j1+1} ∩ [0, n):\n            for nj2 in {j2-1, j2, j2+1} ∩ [0, n):\n                gain = grid[i+1][nj1] + (nj1 != nj2 ? grid[i+1][nj2] : 0)\n                ndp[nj1][nj2] = max(ndp[nj1][nj2], dp[j1][j2] + gain)\n    dp = ndp\nreturn max over all dp[j1][j2]\n```",
+    "**Same cell double-count** - both robots land on the same cell, cherries must be counted once.\n`Input: [[1,1],[5,1]]` → `Expected: 8`\n⚠️ Bug: always adding grid[i+1][nj1]+grid[i+1][nj2] without checking nj1==nj2 → returns 12\n\n**Independent moves needed** - robots must move in different directions to reach optimal cells.\n`Input: [[1,0,1],[0,1,0]]` → `Expected: 3`\n⚠️ Bug: only moving both robots in the same direction (3 combos instead of 9) → returns 2\n\n**Wrong starting state** - robot 2 starts at column n-1, not column 0.\n`Input: [[1,1],[1,1]]` → `Expected: 4`\n⚠️ Bug: initializing dp[0][0] instead of dp[0][n-1] → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if there are three robots instead of two?",
+      "a": "The state becomes dp[col1][col2][col3], and each step explores 3³=27 transitions. Time complexity becomes O(m × n³ × 27), feasible for n ≤ 70 since 70³ × 27 ≈ 9.3M operations."
+    },
+    {
+      "q": "What if cols can be up to 10^5 but rows stays ≤ 70?",
+      "a": "After i rows, robot 1 can only be in columns [0, i] and robot 2 in [n-1-i, n-1], so the number of reachable (col1, col2) pairs per row is O(rows²) not O(cols²). Using a hash map for dp, time drops to O(rows × rows² × 9) = O(rows³)."
+    },
+    {
+      "q": "What if grid values can be negative (pits that cost cherries)?",
+      "a": "The DP recurrence still works unchanged since it maximizes without assuming non-negative values. Initialize unreachable states to a large negative sentinel instead of -1, and the algorithm handles negative values correctly with the same time and space complexity."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int cherryPickup(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        vector<vector<int>> dp(n, vector<int>(n, -1));\n        dp[0][n - 1] = grid[0][0] + grid[0][n - 1];\n        \n        int dc[3] = {-1, 0, 1};\n        \n        for (int i = 0; i < m - 1; i++) {\n            vector<vector<int>> ndp(n, vector<int>(n, -1));\n            for (int j1 = 0; j1 < n; j1++) {\n                for (int j2 = 0; j2 < n; j2++) {\n                    if (dp[j1][j2] < 0) continue;\n                    for (int d1 = 0; d1 < 3; d1++) {\n                        int nj1 = j1 + dc[d1];\n                        if (nj1 < 0 || nj1 >= n) continue;\n                        for (int d2 = 0; d2 < 3; d2++) {\n                            int nj2 = j2 + dc[d2];\n                            if (nj2 < 0 || nj2 >= n) continue;\n                            int gain = grid[i + 1][nj1] + (nj1 != nj2 ? grid[i + 1][nj2] : 0);\n                            ndp[nj1][nj2] = max(ndp[nj1][nj2], dp[j1][j2] + gain);\n                        }\n                    }\n                }\n            }\n            dp = move(ndp);\n        }\n        \n        int ans = 0;\n        for (int j1 = 0; j1 < n; j1++)\n            for (int j2 = 0; j2 < n; j2++)\n                ans = max(ans, dp[j1][j2]);\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

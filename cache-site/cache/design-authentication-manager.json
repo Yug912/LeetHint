@@ -1,0 +1,39 @@
+{
+  "slug": "design-authentication-manager",
+  "title": "Design Authentication Manager",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Ordered Set with Lazy Cleanup",
+  "tc": "O(log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- set<pair<int,string>> expiries: up to n entries → O(n)\n- unordered_map<string,int> tokenExpiry: up to n entries → O(n)\n- int ttl: O(1)\n- not counted: input parameters, return value",
+  "approach": "Since currentTime is strictly increasing across all calls, expired tokens never become relevant again. We maintain a `set<pair<int,string>>` ordered by expiry time and an `unordered_map<string,int>` mapping tokenId to its expiry. On `countUnexpiredTokens`, we lazily evict all entries from the front of the set whose expiry ≤ currentTime (each token is evicted at most once, giving amortized O(log n) per operation). `renew` checks the map for existence and expiry, then updates both structures atomically.",
+  "hints": [
+    "The constraint says currentTime is strictly increasing across all calls. What does this tell you about tokens that have expired by some time t - will they ever need to be examined again?",
+    "Use a `set<pair<int,string>>` ordered by expiry time, paired with an `unordered_map<string,int>` mapping tokenId to its expiry. In the example, `countUnexpiredTokens(15)` removes entries from the front of the set whose expiry ≤ 15, leaving an empty set.",
+    "```\ngenerate(tokenId, currentTime):\n    expiry = currentTime + ttl\n    map[tokenId] = expiry; set.insert({expiry, tokenId})\n\nrenew(tokenId, currentTime):\n    if tokenId not in map or map[tokenId] <= currentTime: return\n    set.erase({map[tokenId], tokenId}); map[tokenId] = currentTime + ttl; set.insert({map[tokenId], tokenId})\n\ncountUnexpiredTokens(currentTime):\n    while set not empty and set.begin().first <= currentTime: erase from set and map\n    return set.size()\n```",
+    "**Token expires exactly at query time** - expiration takes place before the count.\n`Input: AuthenticationManager(5), generate(\"a\",1), countUnexpiredTokens(6)` → `Expected: 0`\n⚠️ Bug: using `<` instead of `<=` in the expiry check → returns 1\n\n**Renew an expired token** - should be ignored, not extended.\n`Input: AuthenticationManager(5), generate(\"a\",1), renew(\"a\",7), countUnexpiredTokens(7)` → `Expected: 0`\n⚠️ Bug: not checking expiry before renewing → token gets new expiry 12, count returns 1\n\n**Multiple tokens with same expiry** - all must be cleaned up in one pass.\n`Input: AuthenticationManager(5), generate(\"a\",1), generate(\"b\",1), countUnexpiredTokens(6)` → `Expected: 0`\n⚠️ Bug: removing only one expired token per countUnexpiredTokens call → returns 1\n\n**Renew must remove old expiry entry** - duplicate set entries inflate the count.\n`Input: AuthenticationManager(5), generate(\"a\",1), renew(\"a\",3), countUnexpiredTokens(5)` → `Expected: 1`\n⚠️ Bug: not erasing the old {expiry, tokenId} from the set before inserting the new one → set has both {6,\"a\"} and {8,\"a\"}, count returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if currentTime is not strictly increasing (calls can arrive out of order)?",
+      "a": "Lazy cleanup from the front of the set no longer works because a later call might have a smaller currentTime. For countUnexpiredTokens, use lower_bound to find the first unexpired token, then count entries from there to end. Since std::set doesn't support O(log n) rank queries, replace it with a policy-based ordered set supporting order statistics, keeping O(log n) per operation and O(n) space."
+    },
+    {
+      "q": "What if generate can be called with a tokenId that already exists?",
+      "a": "Before inserting, check the map for an existing entry. If found, erase the old {expiry, tokenId} pair from the set first, then proceed with the new insertion. This prevents duplicate entries and keeps both structures consistent, with no change to complexity."
+    },
+    {
+      "q": "What if there are billions of tokens and memory is limited?",
+      "a": "Since currentTime is strictly increasing, partition tokens into time buckets by expiry time. During countUnexpiredTokens, discard entire buckets whose maximum expiry ≤ currentTime without iterating individual tokens. This bounds memory to the number of tokens within one ttl window, trading exact counts for bounded space."
+    }
+  ],
+  "code": {
+    "cpp": "class AuthenticationManager {\n    int ttl;\n    set<pair<int, string>> expiries;\n    unordered_map<string, int> tokenExpiry;\npublic:\n    AuthenticationManager(int timeToLive) : ttl(timeToLive) {}\n    \n    void generate(string tokenId, int currentTime) {\n        int expiry = currentTime + ttl;\n        tokenExpiry[tokenId] = expiry;\n        expiries.insert({expiry, tokenId});\n    }\n    \n    void renew(string tokenId, int currentTime) {\n        auto it = tokenExpiry.find(tokenId);\n        if (it == tokenExpiry.end()) return;\n        if (it->second <= currentTime) return;\n        expiries.erase({it->second, tokenId});\n        int newExpiry = currentTime + ttl;\n        it->second = newExpiry;\n        expiries.insert({newExpiry, tokenId});\n    }\n    \n    int countUnexpiredTokens(int currentTime) {\n        while (!expiries.empty() && expiries.begin()->first <= currentTime) {\n            auto it = expiries.begin();\n            tokenExpiry.erase(it->second);\n            expiries.erase(it);\n        }\n        return expiries.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

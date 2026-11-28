@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-index-of-the-first-occurrence-in-a-string",
+  "title": "Find the Index of the First Occurrence in a String",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "KMP String Matching",
+  "tc": "O(n + m)",
+  "sc": "O(m)",
+  "spaceBreakdown": "- vector<int> lps: m entries → O(m)\n- recursion depth: none\n- not counted: input strings, returned int",
+  "approach": "Use the KMP (Knuth-Morris-Pratt) algorithm. First, precompute the LPS (longest proper prefix-suffix) array for the needle, which records for each position the length of the longest proper prefix of the needle that is also a suffix of the substring ending at that position. Then scan the haystack left-to-right; on a mismatch after matching j characters, use the LPS array to skip j back to the longest prefix that is already known to match, avoiding re-scanning haystack characters. This guarantees every haystack character is examined at most once after the LPS preprocessing.",
+  "hints": [
+    "When you've matched k characters of the needle and then hit a mismatch, which of those k already-matched characters could still be part of a valid match starting somewhere inside the region you've already scanned?",
+    "KMP (Knuth-Morris-Pratt) algorithm. Precompute the LPS (longest proper prefix-suffix) array for the needle, then use it to skip ahead on mismatch. For needle \"sad\", LPS = [0,0,0] since no proper prefix is also a suffix; for \"abab\", LPS = [0,0,1,2].",
+    "```\nbuild LPS for needle:\n  len = 0, i = 1\n  while i < m:\n    if needle[i] == needle[len]:\n      lps[i] = len + 1; len++; i++\n    elif len > 0:\n      len = lps[len - 1]\n    else:\n      lps[i] = 0; i++\n\nsearch haystack:\n  i = 0, j = 0\n  while i < n:\n    if haystack[i] == needle[j]:\n      i++; j++\n      if j == m: return i - j\n    elif j > 0:\n      j = lps[j - 1]\n    else:\n      i++\n  return -1\n```",
+    "**Needle at the very end** - match only at the last valid starting position\n`Input: haystack = \"xxsad\", needle = \"sad\"` → `Expected: 2`\n⚠️ Bug: loop bound `i < n - m` instead of `i <= n - m` in a naive approach → returns -1\n\n**Single character** - both strings are length 1\n`Input: haystack = \"a\", needle = \"a\"` → `Expected: 0`\n⚠️ Bug: returning `i - j + 1` instead of `i - j` when j reaches m → returns 1\n\n**No match** - needle does not appear in haystack\n`Input: haystack = \"leetcode\", needle = \"leeto\"` → `Expected: -1`\n⚠️ Bug: defaulting to return 0 instead of -1 when the search loop ends → returns 0\n\n**Match at the very start** - needle matches at position 0 and again later\n`Input: haystack = \"sadbutsad\", needle = \"sad\"` → `Expected: 0`\n⚠️ Bug: starting the search loop from i = 1 instead of i = 0 → returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "Find all occurrences of needle in haystack, including overlapping ones.",
+      "a": "After finding a match at position i-j, record it, then set j = lps[j-1] and continue the search loop. This correctly handles overlapping matches like needle \"aa\" in haystack \"aaaa\". TC: O(n + m), SC: O(m + k) where k is the number of matches."
+    },
+    {
+      "q": "The haystack is too large to fit in memory and arrives as a character stream. Report each match as soon as it occurs.",
+      "a": "KMP processes the haystack left to right with no backtracking, so it works naturally as a stream. Precompute the LPS array for the needle, maintain the j pointer as persistent state, and feed each incoming character through the matching loop. TC: O(n + m), SC: O(m) for the LPS array."
+    },
+    {
+      "q": "Make the matching case-insensitive (treat 'a' and 'A' as equal).",
+      "a": "Convert both strings to lowercase before building the LPS array and searching, or compare characters using tolower in both the LPS construction and search loops. The LPS array is built on the lowercased needle. TC: O(n + m), SC: O(m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int strStr(string haystack, string needle) {\n        int n = haystack.size(), m = needle.size();\n        if (m == 0) return 0;\n\n        vector<int> lps(m, 0);\n        int len = 0;\n        for (int i = 1; i < m; ) {\n            if (needle[i] == needle[len]) {\n                lps[i++] = ++len;\n            } else {\n                if (len != 0) {\n                    len = lps[len - 1];\n                } else {\n                    lps[i++] = 0;\n                }\n            }\n        }\n\n        int i = 0, j = 0;\n        while (i < n) {\n            if (haystack[i] == needle[j]) {\n                i++;\n                j++;\n                if (j == m) return i - j;\n            } else {\n                if (j != 0) {\n                    j = lps[j - 1];\n                } else {\n                    i++;\n                }\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

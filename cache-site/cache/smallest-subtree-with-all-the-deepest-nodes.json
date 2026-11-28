@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-subtree-with-all-the-deepest-nodes",
+  "title": "Smallest Subtree with all the Deepest Nodes",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Post-order DFS / Bottom-up Tree DP",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call stack: up to h frames (h = tree height, worst case n for skewed, log n for balanced) → O(h)\n- per-frame locals (two pair<int,TreeNode*>): O(1) each, included in stack → O(h)\n- no other containers allocated",
+  "approach": "The answer is the lowest common ancestor (LCA) of all deepest nodes. Use a post-order DFS that returns a pair (height, candidate) for each subtree. When the left and right subtree heights are equal, the current node is the LCA of the deepest nodes in its subtree. When one side is deeper, the answer comes from that side. This works because equal heights mean deepest nodes exist in both subtrees, making the current node their meeting point.",
+  "hints": [
+    "In Example 1, node 2 is the answer while nodes 5 and 3 are not, yet all three contain the deepest nodes. What distinguishes node 2?",
+    "Use post-order DFS returning (height, candidate). At node 2 in Example 1, both children have height 1, so node 2 becomes the candidate; at node 5, the right subtree (height 2) is deeper, so the candidate comes from the right.",
+    "```\ndfs(node):\n    if node is null: return (0, null)\n    (lDepth, lAns) = dfs(node.left)\n    (rDepth, rAns) = dfs(node.right)\n    if lDepth == rDepth: return (lDepth + 1, node)\n    if lDepth > rDepth: return (lDepth + 1, lAns)\n    return (rDepth + 1, rAns)\n```",
+    "**Single node** - tree has only the root, which is also the deepest node\n`Input: [1]` → `Expected: [1]`\n⚠️ Bug: treating a leaf as a null base case returning {0, nullptr} → returns null\n\n**Deepest node in one subtree** - only one deepest node, answer is that node itself\n`Input: [0,1,3,null,2]` → `Expected: [2]`\n⚠️ Bug: returning the current node instead of the deeper child's answer when depths differ → returns [0]\n\n**Two deepest nodes under root** - deepest nodes are in both subtrees of root\n`Input: [1,2,3]` → `Expected: [1]`\n⚠️ Bug: using `>=` instead of checking equality first, returning left answer on tie → returns [2]\n\n**Deepest nodes share a non-root ancestor** - LCA is deep in the tree\n`Input: [3,5,1,6,2,0,8,null,null,7,4]` → `Expected: [2,7,4]`\n⚠️ Bug: not incrementing depth by 1 on each return → all depths appear equal, returns root [3]"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need the smallest subtree containing all nodes at depth exactly k (not just the maximum)?",
+      "a": "Same DFS structure, but track whether each subtree contains any node at depth k. When both children do, the current node is the LCA for that depth. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if the tree has 10^7 nodes and recursion would overflow the stack?",
+      "a": "Convert to an iterative post-order traversal using an explicit stack. The logic stays identical-compare child heights and propagate the candidate. TC: O(n), SC: O(h) with no system stack limit."
+    },
+    {
+      "q": "What if nodes can be inserted dynamically and you must answer after each insertion?",
+      "a": "Maintain parent pointers and depth annotations. After inserting a node, walk up to the root updating depths. If the new node is deeper than the current maximum, it becomes the sole answer. If it ties, recompute the LCA by walking up from both deepest nodes. TC: O(h) per insertion, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* subtreeWithAllDeepest(TreeNode* root) {\n        return dfs(root).second;\n    }\nprivate:\n    pair<int, TreeNode*> dfs(TreeNode* node) {\n        if (!node) return {0, nullptr};\n        auto left = dfs(node->left);\n        auto right = dfs(node->right);\n        if (left.first == right.first) {\n            return {left.first + 1, node};\n        } else if (left.first > right.first) {\n            return {left.first + 1, left.second};\n        } else {\n            return {right.first + 1, right.second};\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

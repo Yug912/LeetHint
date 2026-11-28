@@ -1,0 +1,40 @@
+{
+  "slug": "stone-game-vii",
+  "title": "Stone Game VII",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals (1D rolling array)",
+  "tc": "O(n^2)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> p (prefix sums): n+1 entries → O(n)\n- vector<int> dp (rolling array): n entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input vector stones",
+  "approach": "The game on any contiguous subarray stones[i..j] is self-contained: removing an end stone earns the sum of the remaining elements, then the opponent faces a smaller subarray. Define dp[i][j] as the best score difference (current player minus opponent) on stones[i..j]; the recurrence is dp[i][j] = max(sum(i+1,j) − dp[i+1][j], sum(i,j−1) − dp[i][j−1]). Since length-L states depend only on length-(L−1) states, a single 1D array rolled by length suffices, with prefix sums giving O(1) subarray sums - yielding O(n²) time and O(n) space.",
+  "hints": [
+    "When a player removes an end stone, the points earned equal the sum of the remaining stones - what subproblem does the opponent then face? n is at most 1000.",
+    "Use interval dynamic programming with a 1D rolling array and prefix sums. For stones [5,3,1,4,2], the pair [4,2] gives dp = max(2, 4) = 4 (remove 2 to score 4, or remove 4 to score 2).",
+    "```\nbuild prefix sums p\ndp[i] = 0 for all i          # length 1\nfor L = 2 to n:\n    prev = dp[n-L+1]\n    for i = n-L down to 0:\n        old = dp[i]\n        dp[i] = max( sum(i+1, i+L-1) - prev,\n                     sum(i,   i+L-2) - old )\n        prev = old\nreturn dp[0]\n```",
+    "**Smallest input** - n=2 with equal stones\n`Input: stones = [1,1]` → `Expected: 1`\n⚠️ Bug: base case dp[i] = stones[i] instead of 0 → returns 0\n\n**Boundary extreme values** - one stone is 1000\n`Input: stones = [1,1000]` → `Expected: 1000`\n⚠️ Bug: swapping sumLeft and sumRight in the max → returns 1\n\n**All equal** - three identical stones\n`Input: stones = [3,3,3]` → `Expected: 3`\n⚠️ Bug: dp = sumLeft + dp[next] (both players maximize own score, not net difference) → returns 9\n\n**Rolling array direction** - the statement's first example\n`Input: stones = [5,3,1,4,2]` → `Expected: 6`\n⚠️ Bug: high-to-low loop without saving old dp[i+1] before overwrite → returns 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5?",
+      "a": "The O(n^2) interval DP is too slow. For arbitrary stone values there is no known sub-quadratic solution, so you would need extra structure in the input (e.g., all equal, or bounded small values) to derive a closed form. Without such structure the problem is not tractable at that scale with this approach."
+    },
+    {
+      "q": "What if stones can be negative?",
+      "a": "The recurrence is unchanged - players still maximize/minimize the score difference, and prefix sums still give O(1) subarray sums. The DP automatically handles the case where removing the larger-magnitude stone is better. TC and SC remain O(n^2) and O(n)."
+    },
+    {
+      "q": "What if you must report the actual sequence of moves, not just the difference?",
+      "a": "Store a choice array alongside dp recording which end was picked at each (i, L). Reconstruct by walking from (0, n) downward, tracking the current subarray bounds. Space becomes O(n^2) for the full table, or O(n) per layer if you reconstruct incrementally; TC stays O(n^2)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int stoneGameVII(vector<int>& stones) {\n        int n = stones.size();\n        vector<int> p(n + 1, 0);\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + stones[i];\n        vector<int> dp(n, 0);\n        for (int L = 2; L <= n; L++) {\n            int prev = dp[n - L + 1];\n            for (int i = n - L; i >= 0; i--) {\n                int old = dp[i];\n                int sumLeft  = p[i + L] - p[i + 1];   // sum(i+1, i+L-1)\n                int sumRight = p[i + L - 1] - p[i];   // sum(i,   i+L-2)\n                dp[i] = max(sumLeft - prev, sumRight - old);\n                prev = old;\n            }\n        }\n        return dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

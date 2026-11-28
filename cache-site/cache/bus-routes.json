@@ -1,0 +1,40 @@
+{
+  "slug": "bus-routes",
+  "title": "Bus Routes",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Level-by-Level",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> stopToBuses: up to n entries with n total bus indices → O(n)\n- vector<char> busVisited: up to 500 entries → O(1) relative to n\n- unordered_set<int> stopVisited: up to n unique stops → O(n)\n- queue<int> q: up to n stops → O(n)\n- not counted: input routes, returned int",
+  "approach": "The key insight is that boarding one bus gives access to all stops on its route for the cost of one ride. Model this as BFS over stops, where each BFS level corresponds to taking one more bus. Build a map from each stop to the bus indices serving it. From the source, expand by taking every unvisited bus through the current stop and enqueueing all that bus's stops. The first time target appears, the current level is the minimum bus count.",
+  "hints": [
+    "Each bus cycles through all its stops forever. What does boarding one bus let you reach in a single step?\nThe sum of all route lengths is at most 10^5.",
+    "BFS over stops, expanding by entire bus routes. Build a map from stop → list of bus indices. In Example 1, source=1 is served by bus 0; enqueue all stops of bus 0: {1, 2, 7}, bus count = 1.",
+    "```\nbuild map: stop -> list of bus indices\nqueue = [source], visited_stops = {source}, visited_buses = {}\nbuses = 0\nwhile queue not empty:\n    buses += 1\n    for each stop in current level:\n        for each bus serving stop:\n            if bus in visited_buses: skip\n            mark bus visited\n            for each next_stop on bus:\n                if next_stop == target: return buses\n                if next_stop not in visited_stops:\n                    add to visited_stops and queue\nreturn -1\n```",
+    "**source equals target** - you start at the destination.\n`routes = [[1,2,3]], source = 1, target = 1` → `Expected: 0`\n⚠️ Bug: omitting the `source == target` early return → BFS finds target on bus 0, returns 1\n\n**source and target on same route** - one bus is enough.\n`routes = [[1,5,7],[3,6,7]], source = 1, target = 7` → `Expected: 1`\n⚠️ Bug: checking target only when dequeuing, not when expanding → enqueues stop 7, dequeues it next level, returns 2\n\n**multiple stops at same level** - level-by-level counting matters.\n`routes = [[1,2,3],[3,4,5]], source = 1, target = 5` → `Expected: 2`\n⚠️ Bug: incrementing bus count per dequeue instead of per level → returns 3\n\n**no path exists** - no chain of shared stops connects source to target.\n`routes = [[1,2],[3,4]], source = 1, target = 4` → `Expected: -1`\n⚠️ Bug: returning `buses` instead of `-1` when the queue empties → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if bus routes can be added or removed dynamically between queries?",
+      "a": "Maintain the stop-to-buses map incrementally. On each query, run the same BFS but cache nothing between queries. If routes change frequently, rebuild the map per batch of queries. Time per query stays O(n); the map update is O(route length) per add/remove."
+    },
+    {
+      "q": "What if instead of fewest buses, you want the fewest total stops passed (including transfers)?",
+      "a": "Switch to weighted BFS / Dijkstra where taking a bus costs the number of stops traversed on that bus before reaching a transfer point. Each bus route becomes a clique with edge weights equal to stop distance. Time becomes O(n log n) with a priority queue."
+    },
+    {
+      "q": "What if routes arrive as a stream and cannot all fit in memory?",
+      "a": "Process in two passes: first pass builds the stop-to-buses map for only stops near source or target; second pass loads routes on demand. If even that is too large, use a disk-backed hash map for stop-to-buses and stream route data during BFS expansion. Time stays O(n) but with I/O latency."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numBusesToDestination(vector<vector<int>>& routes, int source, int target) {\n        if (source == target) return 0;\n        \n        unordered_map<int, vector<int>> stopToBuses;\n        for (int i = 0; i < (int)routes.size(); i++) {\n            for (int s : routes[i]) {\n                stopToBuses[s].push_back(i);\n            }\n        }\n        \n        if (stopToBuses.find(source) == stopToBuses.end() || \n            stopToBuses.find(target) == stopToBuses.end()) return -1;\n        \n        vector<char> busVisited(routes.size(), 0);\n        unordered_set<int> stopVisited;\n        queue<int> q;\n        q.push(source);\n        stopVisited.insert(source);\n        int buses = 0;\n        \n        while (!q.empty()) {\n            int sz = q.size();\n            buses++;\n            for (int i = 0; i < sz; i++) {\n                int stop = q.front(); q.pop();\n                for (int bus : stopToBuses[stop]) {\n                    if (busVisited[bus]) continue;\n                    busVisited[bus] = 1;\n                    for (int nextStop : routes[bus]) {\n                        if (nextStop == target) return buses;\n                        if (stopVisited.find(nextStop) == stopVisited.end()) {\n                            stopVisited.insert(nextStop);\n                            q.push(nextStop);\n                        }\n                    }\n                }\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

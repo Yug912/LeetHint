@@ -1,0 +1,40 @@
+{
+  "slug": "sort-even-and-odd-indices-independently",
+  "title": "Sort Even and Odd Indices Independently",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Sort",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int countEven[101]: fixed 101 ints → O(1)\n- int countOdd[101]: fixed 101 ints → O(1)\n- scalars (n, evenIdx, oddIdx, v, i): O(1)\n- not counted: input/output vector (modified in place)",
+  "approach": "Since every value in `nums` is between 1 and 100, we use counting sort with two fixed-size count arrays of length 101 - one for even-index values, one for odd-index values. We count occurrences in a single pass, then reconstruct: even indices are filled by iterating values 1→100 (non-decreasing), odd indices by iterating 100→1 (non-increasing). This gives O(n) time and O(1) extra space, modifying the array in place.",
+  "hints": [
+    "Every value in `nums` lies between 1 and 100. What does this small, fixed range of possible values let you exploit about how you could rearrange them?",
+    "Use counting sort with two fixed-size arrays of 101 counters - one for even-index values, one for odd-index values. For `nums = [4,1,2,3]`, the even-index values 4 and 2 set `countEven[4]=1` and `countEven[2]=1`.",
+    "```\ncountEven[101], countOdd[101] = 0\nfor i in 0..n-1:\n    if i is even: countEven[nums[i]]++\n    else: countOdd[nums[i]]++\n\nevenIdx = 0\nfor v in 1..100:\n    while countEven[v] > 0:\n        nums[evenIdx] = v; evenIdx += 2; countEven[v]--\n\noddIdx = 1\nfor v in 100..1:\n    while countOdd[v] > 0:\n        nums[oddIdx] = v; oddIdx += 2; countOdd[v]--\n\nreturn nums\n```",
+    "**Max value boundary** - a value sits at the upper limit of the range.\n`Input: nums = [100,100]` → `Expected: [100,100]`\n⚠️ Bug: declaring `int countEven[100]` (indices 0-99) → out-of-bounds access at index 100, undefined behavior.\n\n**Odd-index direction** - odd indices must be non-increasing, not non-decreasing.\n`Input: nums = [4,1,2,3]` → `Expected: [2,3,4,1]`\n⚠️ Bug: iterating odd values 1→100 instead of 100→1 → odd indices sorted ascending → returns `[2,1,4,3]`.\n\n**Duplicate values at odd indices** - the same value appears at multiple odd positions.\n`Input: nums = [1,3,2,3,3,5]` → `Expected: [1,5,2,3,3,3]`\n⚠️ Bug: using `if (countOdd[v] > 0)` instead of `while` → places only one copy of value 3 at index 3, leaves index 5 as original 5 → returns `[1,5,2,3,3,5]`.\n\n**Shared count array** - the same value appears at both even and odd indices.\n`Input: nums = [3,3,7,7]` → `Expected: [3,7,7,3]`\n⚠️ Bug: using one shared `count[101]` for both parities → even reconstruction consumes all counts, odd indices never filled → returns `[3,3,7,7]`."
+  ],
+  "followUps": [
+    {
+      "q": "What if `nums[i]` can be up to 10^9?",
+      "a": "Counting sort is no longer viable since the count array would need 10^9 entries. Extract even-index and odd-index values into two separate vectors, sort each with std::sort, then write them back. This costs O(n log n) time and O(n) space."
+    },
+    {
+      "q": "What if the array arrives as a stream too large to store entirely?",
+      "a": "If the stream is replayable, make two passes: first pass fills the two 101-length count arrays (O(1) space), second pass writes values back in order. If only one pass is allowed, buffer the even and odd index values in two small vectors and reconstruct as values arrive - O(n) space in the worst case."
+    },
+    {
+      "q": "What if even indices must be non-increasing and odd indices non-decreasing (reversed rules)?",
+      "a": "Swap the iteration directions in the reconstruction loops: iterate even values 100→1 and odd values 1→100. Time and space complexity remain O(n) and O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> sortEvenOdd(vector<int>& nums) {\n        int countEven[101] = {0};\n        int countOdd[101] = {0};\n        int n = nums.size();\n        for (int i = 0; i < n; i++) {\n            if (i % 2 == 0) countEven[nums[i]]++;\n            else countOdd[nums[i]]++;\n        }\n        int evenIdx = 0;\n        for (int v = 1; v <= 100; v++) {\n            while (countEven[v] > 0) {\n                nums[evenIdx] = v;\n                evenIdx += 2;\n                countEven[v]--;\n            }\n        }\n        int oddIdx = 1;\n        for (int v = 100; v >= 1; v--) {\n            while (countOdd[v] > 0) {\n                nums[oddIdx] = v;\n                oddIdx += 2;\n                countOdd[v]--;\n            }\n        }\n        return nums;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

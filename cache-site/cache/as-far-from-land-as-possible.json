@@ -1,0 +1,40 @@
+{
+  "slug": "as-far-from-land-as-possible",
+  "title": "As Far from Land as Possible",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Pass Dynamic Programming",
+  "tc": "O(n^2)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- `n`, `INF`, `maxDist`: integer variables → O(1)\n- `grid`: modified in place, no auxiliary grid allocated → O(1)\n- recursion depth: none\n- not counted: input grid",
+  "approach": "The key insight is that the Manhattan distance to the nearest land cell can be computed using dynamic programming. We can decompose the 4-directional distance propagation into two passes: a forward pass (top-left to bottom-right) that propagates distances from the top and left neighbors, and a backward pass (bottom-right to top-left) that propagates distances from the bottom and right neighbors. By initializing land cells to 0 and water cells to a large number, these two passes correctly compute the exact minimum distance for every cell in O(n²) time and O(1) auxiliary space by modifying the grid in place.",
+  "hints": [
+    "Look at the Manhattan distance between a water cell and its nearest land cell. How does this distance relate to the distances of the water cell's immediate neighbors? The distance used is the Manhattan distance, which is the sum of horizontal and vertical distances.",
+    "Use two-pass dynamic programming. In Example 1, the water cell at (1, 1) can get its distance by taking the minimum of its top and left neighbors' distances plus one, which are 1 and 1, resulting in 2.",
+    "```\ninitialize land cells to 0 and water cells to INF\nfor each cell from top-left to bottom-right:\n    if cell is water:\n        update cell with min(top neighbor + 1, left neighbor + 1)\nfor each cell from bottom-right to top-left:\n    if cell is water:\n        update cell with min(bottom neighbor + 1, right neighbor + 1)\nreturn max distance among all water cells\n```",
+    "**All land** - The grid contains only land cells, so no water cell exists to measure distance from.\n`Input: grid = [[1,1],[1,1]]` → `Expected: -1`\n⚠️ Bug: initializing `maxDist = -1` and returning it directly without checking if it equals 0 → returns `0`\n\n**All water** - The grid contains only water cells, so no land cell exists to measure distance to.\n`Input: grid = [[0,0],[0,0]]` → `Expected: -1`\n⚠️ Bug: returning the maximum distance found without checking if it equals the initial large value → returns `201`\n\n**Bottom-right land** - The only land cell is at the bottom-right corner, requiring the backward pass to propagate distances.\n`Input: grid = [[0,0],[0,1]]` → `Expected: 3`\n⚠️ Bug: only performing the top-left to bottom-right pass and skipping the backward pass → returns `201`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is streamed row by row and cannot fit in memory?",
+      "a": "You can process the grid in two passes. In the first pass, stream the rows to perform the top-left to bottom-right propagation, storing the intermediate grid on disk. In the second pass, stream the rows in reverse to perform the bottom-right to top-left propagation. This keeps the time complexity at O(n^2) while reducing the in-memory space to O(n) for a single row."
+    },
+    {
+      "q": "What if diagonal moves were also allowed, making the distance Chebyshev distance?",
+      "a": "The DP recurrence would need to include diagonal neighbors. In the forward pass, you would also check the top-left diagonal neighbor, and in the backward pass, the bottom-right diagonal neighbor. The time and space complexity would remain O(n^2) and O(1) respectively."
+    },
+    {
+      "q": "What if you needed to return the coordinates of all water cells that achieve this maximum distance?",
+      "a": "During the backward pass, whenever you update a cell's distance to a new maximum, clear your list of coordinates and add the current cell. If it equals the current maximum, simply add the cell to the list. This adds O(k) space where k is the number of such cells, while time remains O(n^2)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxDistance(vector<vector<int>>& grid) {\n        int n = grid.size();\n        int INF = 201; // since n <= 100, max distance is 2*100 - 2 = 198\n        \n        for (int i = 0; i < n; ++i) {\n            for (int j = 0; j < n; ++j) {\n                if (grid[i][j] == 1) {\n                    grid[i][j] = 0;\n                } else {\n                    grid[i][j] = INF;\n                }\n            }\n        }\n        \n        // Forward pass: top-left to bottom-right\n        for (int i = 0; i < n; ++i) {\n            for (int j = 0; j < n; ++j) {\n                if (grid[i][j] != 0) {\n                    if (i > 0) {\n                        grid[i][j] = min(grid[i][j], grid[i - 1][j] + 1);\n                    }\n                    if (j > 0) {\n                        grid[i][j] = min(grid[i][j], grid[i][j - 1] + 1);\n                    }\n                }\n            }\n        }\n        \n        // Backward pass: bottom-right to top-left\n        int maxDist = 0;\n        for (int i = n - 1; i >= 0; --i) {\n            for (int j = n - 1; j >= 0; --j) {\n                if (grid[i][j] != 0) {\n                    if (i < n - 1) {\n                        grid[i][j] = min(grid[i][j], grid[i + 1][j] + 1);\n                    }\n                    if (j < n - 1) {\n                        grid[i][j] = min(grid[i][j], grid[i][j + 1] + 1);\n                    }\n                    maxDist = max(maxDist, grid[i][j]);\n                }\n            }\n        }\n        \n        if (maxDist == 0 || maxDist == INF) {\n            return -1;\n        }\n        return maxDist;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

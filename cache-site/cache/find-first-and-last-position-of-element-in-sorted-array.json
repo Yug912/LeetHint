@@ -1,0 +1,40 @@
+{
+  "slug": "find-first-and-last-position-of-element-in-sorted-array",
+  "title": "Find First and Last Position of Element in Sorted Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, first, last, lo, hi, mid): O(1)\n- returned vector<int>: not counted (output)\n- input vector<int>& nums: not counted (input)",
+  "approach": "Since the array is sorted, run binary search twice: once to find the leftmost index where `nums[i]` equals target, and once for the rightmost. In the leftmost search, when `nums[mid] >= target`, shrink the upper bound and record `mid` if it matches target; in the rightmost search, when `nums[mid] <= target`, shrink the lower bound and record `mid` if it matches. If target is absent, both searches leave their result at -1. This achieves O(log n) time with O(1) extra space.",
+  "hints": [
+    "The array is sorted in non-decreasing order and n can reach 10^5 with O(log n) required. What does comparing any single element to target tell you about which side of it the first (or last) copy of target must lie on?",
+    "Use binary search twice - once biased left to find the first occurrence, once biased right to find the last. For nums = [5,7,7,8,8,10], target = 8: in the leftmost search, when nums[mid] = 8 you record mid and continue searching the left half, eventually landing on index 3.",
+    "```\nfunction findLeftmost(nums, target):\n    lo, hi, res = 0, len(nums)-1, -1\n    while lo <= hi:\n        mid = (lo + hi) / 2\n        if nums[mid] >= target:\n            if nums[mid] == target: res = mid\n            hi = mid - 1\n        else: lo = mid + 1\n    return res\n# rightmost is symmetric: move lo up when nums[mid] <= target\n```",
+    "**Empty array** - n = 0, loop range is empty\n`Input: nums = [], target = 0` → `Expected: [-1,-1]`\n⚠️ Bug: initializing `hi = n` instead of `hi = n - 1` → with n = 0, lo = 0, hi = 0, loop condition `lo <= hi` is true, accesses nums[0] on empty array → out-of-bounds crash\n\n**Single element equal to target** - first and last are the same index\n`Input: nums = [8], target = 8` → `Expected: [0,0]`\n⚠️ Bug: using `while (lo < hi)` instead of `while (lo <= hi)` → loop body never runs when lo = hi = 0, returns [-1,-1]\n\n**All elements equal to target** - first = 0, last = n - 1\n`Input: nums = [8,8,8], target = 8` → `Expected: [0,2]`\n⚠️ Bug: using `hi = mid` instead of `hi = mid - 1` in the leftmost search when nums[mid] >= target → infinite loop when lo = hi = 0\n\n**Target absent but within value range** - must return [-1,-1]\n`Input: nums = [5,7,7,8,8,10], target = 6` → `Expected: [-1,-1]`\n⚠️ Bug: recording mid whenever nums[mid] >= target without checking nums[mid] == target → records index 1 (value 7), returns [1,-1]\n\n**Target at last index** - boundary check for rightmost search\n`Input: nums = [5,6,8], target = 8` → `Expected: [2,2]`\n⚠️ Bug: in the rightmost search, moving `hi = mid - 1` when nums[mid] <= target instead of `lo = mid + 1` → searches away from the target, returns [2,0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is stored on disk and you can only access elements by index?",
+      "a": "Binary search only needs O(1) random accesses per step, so it works identically with disk-based random access. Time remains O(log n) disk reads, space O(1)."
+    },
+    {
+      "q": "What if you need to answer many target queries on the same array?",
+      "a": "Precompute a map from each distinct value to its (first, last) index pair in one O(n) pass. Each query is then O(1) lookup. Total for q queries: O(n + q) time, O(n) space."
+    },
+    {
+      "q": "What if you need the total count of target occurrences instead of the positions?",
+      "a": "Find first and last as before, then count = last - first + 1 when found, 0 otherwise. Same O(log n) time, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> searchRange(vector<int>& nums, int target) {\n        int n = nums.size();\n        int first = -1, last = -1;\n\n        int lo = 0, hi = n - 1;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (nums[mid] >= target) {\n                if (nums[mid] == target) first = mid;\n                hi = mid - 1;\n            } else {\n                lo = mid + 1;\n            }\n        }\n\n        lo = 0; hi = n - 1;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (nums[mid] <= target) {\n                if (nums[mid] == target) last = mid;\n                lo = mid + 1;\n            } else {\n                hi = mid - 1;\n            }\n        }\n\n        return {first, last};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

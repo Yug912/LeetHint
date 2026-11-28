@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-tree-from-leaf-values",
+  "title": "Minimum Cost Tree From Leaf Values",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> st (monotonic stack): up to n+1 entries → O(n)\n- recursion depth: none (iterative)\n- not counted: input vector arr",
+  "approach": "Use a monotonic decreasing stack. The key insight is that in the optimal tree, each leaf value (except the global maximum) gets multiplied with the smaller of its nearest larger left and right neighbors. We maintain a decreasing stack; when a new element is larger than the stack top, we pop the top and pair it with `min(new_stack_top, current_element)`, adding their product to the result. After processing all elements, we pop remaining stack elements (which form a decreasing sequence) from the top, pairing each with the element below it. Each element is pushed and popped at most once, giving O(n) time.",
+  "hints": [
+    "In arr = [6,2,4], the value 2 appears in a product in every possible tree. What controls which value it gets multiplied by, and how small can that product be?",
+    "Use a monotonic decreasing stack. For arr = [6,2,4], after pushing 6 and 2, the value 4 exceeds the stack top 2-pop 2 and add 2 × min(6, 4) = 8 to the cost.",
+    "```\nstack = [infinity]; result = 0\nfor x in arr:\n    while stack.top <= x:\n        result += stack.pop * min(stack.top, x)\n    stack.push(x)\nwhile stack.size > 2:\n    result += stack.pop * stack.top\nreturn result\n```",
+    "**Smallest input (decreasing pair)** - n=2, second element smaller, no pop during the for loop.\n`Input: arr = [11,4]` → `Expected: 44`\n⚠️ Bug: omitting the final while loop → returns 0\n\n**Local minimum** - a small element between two larger ones.\n`Input: arr = [6,2,4]` → `Expected: 32`\n⚠️ Bug: using `max(st.top(), x)` instead of `min(st.top(), x)` → returns 36\n\n**Reverse sorted** - strictly decreasing, all pops happen in the final while.\n`Input: arr = [6,5,4,3]` → `Expected: 62`\n⚠️ Bug: using `st.size() > 1` instead of `st.size() > 2` in final while → pops sentinel, 6 × INT_MAX = 12884901882 overflows to -6, returns 56\n\n**All equal** - every comparison is a tie.\n`Input: arr = [5,5,5]` → `Expected: 50`\n⚠️ Bug: using `st.top() < x` (strict) and omitting the final while → no pops occur (5 < 5 is false), returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if arr[i] can be up to 10^9 instead of 15?",
+      "a": "The algorithm is unchanged-still O(n) time, O(n) space. Switch result and products to `long long`, since 10^9 × 10^9 = 10^18 overflows 32-bit int. Use LLONG_MAX as the sentinel."
+    },
+    {
+      "q": "What if n can be up to 10^6?",
+      "a": "The O(n) monotonic stack handles this directly. Each element is pushed and popped at most once, so time is O(n). The stack uses O(n) space-about 4 MB for 10^6 ints, well within limits."
+    },
+    {
+      "q": "What if you must also return the binary tree structure?",
+      "a": "Record each merge during processing: when popping `mid`, log the pair (`mid"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int mctFromLeafValues(vector<int>& arr) {\n        vector<int> st;\n        st.push_back(INT_MAX);\n        int res = 0;\n        for (int x : arr) {\n            while (st.back() <= x) {\n                int mid = st.back();\n                st.pop_back();\n                res += mid * min(st.back(), x);\n            }\n            st.push_back(x);\n        }\n        while (st.size() > 2) {\n            int top = st.back();\n            st.pop_back();\n            res += top * st.back();\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

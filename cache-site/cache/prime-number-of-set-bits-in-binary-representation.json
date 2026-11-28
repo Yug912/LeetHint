@@ -1,0 +1,40 @@
+{
+  "slug": "prime-number-of-set-bits-in-binary-representation",
+  "title": "Prime Number of Set Bits in Binary Representation",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Bitmask Lookup",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count: O(1)\n- int primes: O(1)\n- int i (loop variable): O(1)\n- No containers, no recursion, no dynamic allocation",
+  "approach": "Since right ≤ 10^6, every number has at most 20 bits, so the set-bit count ranges from 0 to 19. The primes in this range are {2, 3, 5, 7, 11, 13, 17, 19}. For each number in [left, right], count its set bits using `__builtin_popcount` and check if that count is prime by testing membership in a precomputed bitmask where bit *k* is set iff *k* is prime. This avoids a general primality test entirely.",
+  "hints": [
+    "Since right ≤ 10^6, every number in the range uses at most 20 bits. What does this imply about the range of possible set-bit counts?",
+    "Use `__builtin_popcount` to count set bits, then test membership in a hardcoded set of primes {2, 3, 5, 7, 11, 13, 17, 19}. For 6 = 110₂, popcount returns 2, and 2 is in the set, so 6 counts.",
+    "```\nprimes = bitmask with bits set at positions 2,3,5,7,11,13,17,19\ncount = 0\nfor n from left to right:\n    bits = popcount(n)\n    if bit `bits` is set in primes:\n        count += 1\nreturn count\n```",
+    "**Single power of two** - 1 set bit, which is not prime\n`Input: left = 1, right = 1` → `Expected: 0`\n⚠️ Bug: treating 1 as prime → returns 1\n\n**Two set bits (even prime)** - 2 is the only even prime\n`Input: left = 3, right = 3` → `Expected: 1`\n⚠️ Bug: primality test that skips all even numbers → returns 0\n\n**Nine set bits (odd composite)** - 511 = 111111111₂ has 9 set bits, 9 = 3×3 is not prime\n`Input: left = 511, right = 511` → `Expected: 0`\n⚠️ Bug: using `bits % 2 == 1` as primality test → returns 1\n\n**Maximum set bits** - 524287 = 2¹⁹−1 has 19 set bits, 19 is prime\n`Input: left = 524287, right = 524287` → `Expected: 1`\n⚠️ Bug: only checking primes up to 17 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if right could be up to 10^18?",
+      "a": "Numbers would have up to 60 set bits, so you'd extend the prime set to {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59}. The bitmask trick still works since 60 fits in a 64-bit integer. TC stays O(n), SC stays O(1)."
+    },
+    {
+      "q": "What if you needed to answer 10^5 queries of the form [left, right]?",
+      "a": "Precompute a prefix sum array where prefix[i] = count of numbers in [1, i] with prime set bits. Each query becomes prefix[right] − prefix[left−1] in O(1). Precomputation is O(10^6), total query time O(10^5), SC becomes O(10^6) for the prefix array."
+    },
+    {
+      "q": "What if the numbers arrive in a stream and you can only store O(1) integers?",
+      "a": "The current solution already processes each number independently with O(1) space, so it works as-is. Maintain a running count and apply the same popcount + bitmask check per number. TC is O(1) per element, SC is O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPrimeSetBits(int left, int right) {\n        int count = 0;\n        int primes = (1 << 2) | (1 << 3) | (1 << 5) | (1 << 7) |\n                     (1 << 11) | (1 << 13) | (1 << 17) | (1 << 19);\n        for (int i = left; i <= right; i++) {\n            if (primes & (1 << __builtin_popcount(i))) {\n                count++;\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "open-the-lock",
+  "title": "Open the Lock",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Breadth-First Search on Implicit Graph",
+  "tc": "O(V + E)",
+  "sc": "O(V)",
+  "spaceBreakdown": "- unordered_set<string> dead: up to 500 entries → O(D), D = deadends.size()\n- unordered_set<string> visited: up to 10000 entries → O(V)\n- queue<string> q: up to 10000 entries at widest level → O(V)\n- per-state strings (cur, next): O(1) each, reused\n- recursion depth: none (iterative BFS)\n- not counted: input deadends, returned int",
+  "approach": "Model the lock as a graph: 10000 nodes (\"0000\"-\"9999\"), each node has 8 neighbors (4 wheels × ±1 with wraparound). Minimum turns = shortest path from \"0000\" to `target` avoiding deadend nodes. BFS from \"0000\" level-by-level gives the shortest path in an unweighted graph. Treat deadends as blocked: never enqueue them, and bail out immediately if the start \"0000\" is itself a deadend.",
+  "hints": [
+    "The lock has only 10^4 possible states, and every move changes exactly one wheel by one slot (wrapping 0↔9). What does \"minimum number of turns\" measure in this fixed, uniformly-structured space of states and moves?",
+    "Use breadth-first search from \"0000\". From \"0000\" the 8 neighbors are '1000','9000','0100','0900','0010','0090','0001','0009'; enqueue every non-dead one at distance 1 and expand level by level until you hit `target`.",
+    "```\nif \"0000\" in deadends: return -1\nif target == \"0000\": return 0\nqueue = [\"0000\"], visited = {\"0000\"}, turns = 0\nwhile queue not empty:\n    turns += 1\n    for each state in current level:\n        for each wheel 0..3, for each delta in {-1, +1}:\n            neighbor = state with that wheel wrapped by delta\n            if neighbor == target: return turns\n            if neighbor not in visited and not in deadends:\n                mark visited, enqueue neighbor\nreturn -1\n```",
+    "**Start is a deadend** - \"0000\" itself appears in the deadends list.\n`Input: deadends = [\"0000\"], target = \"8888\"` → `Expected: -1`\n⚠️ Bug: skipping the deadend check on the start state before BFS → returns 0 or a bogus path length.\n\n**Target equals start** - target is \"0000\" with no moves needed.\n`Input: deadends = [\"1234\"], target = \"0000\"` → `Expected: 0`\n⚠️ Bug: incrementing `turns` before checking whether the start already equals target → returns 1.\n\n**Target fully surrounded by deadends** - all 8 neighbors of target are dead.\n`Input: deadends = [\"8887\",\"8889\",\"8878\",\"8898\",\"8788\",\"8988\",\"7888\",\"9888\"], target = \"8888\"` → `Expected: -1`\n⚠️ Bug: not inserting deadends into the visited/blocked set, only checking at enqueue time → may revisit dead states or never terminate cleanly.\n\n**One-step target** - target is a direct neighbor of \"0000\".\n`Input: deadends = [\"8888\"], target = \"0009\"` → `Expected: 1`\n⚠️ Bug: checking `neighbor == target` only after the whole level is processed instead of when generating each neighbor → returns 2."
+  ],
+  "followUps": [
+    {
+      "q": "How would you speed this up when the target is many turns away?",
+      "a": "Run bidirectional BFS: one frontier from \"0000\" and one from `target`, expanding the smaller frontier each step and stopping when a state appears in both visited sets. Same O(V+E) worst case but typically explores far fewer states, roughly O(b^(d/2)) vs O(b^d) for branching factor b=8 and depth d."
+    },
+    {
+      "q": "What if the lock had N wheels instead of 4?",
+      "a": "The state space becomes 10^N with 2N neighbors per state. BFS still works but is exponential in N; for large N you'd need A* with an admissible heuristic (sum of per-wheel distances to target) to prune."
+    },
+    {
+      "q": "What if deadends arrive as a stream and cannot all be stored?",
+      "a": "Use a Bloom filter for membership tests, accepting a small false-positive rate that may cause valid paths to be skipped. To guarantee correctness, re-verify any Bloom \"dead\" hit against the true stream log before discarding the state."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int openLock(vector<string>& deadends, string target) {\n        unordered_set<string> dead(deadends.begin(), deadends.end());\n        if (dead.count(\"0000\")) return -1;\n        if (target == \"0000\") return 0;\n\n        unordered_set<string> visited;\n        queue<string> q;\n        q.push(\"0000\");\n        visited.insert(\"0000\");\n        int turns = 0;\n\n        while (!q.empty()) {\n            int sz = q.size();\n            turns++;\n            for (int i = 0; i < sz; i++) {\n                string cur = q.front();\n                q.pop();\n                for (int j = 0; j < 4; j++) {\n                    for (int d = -1; d <= 1; d += 2) {\n                        string next = cur;\n                        int digit = next[j] - '0';\n                        digit = (digit + d + 10) % 10;\n                        next[j] = char('0' + digit);\n                        if (next == target) return turns;\n                        if (!visited.count(next) && !dead.count(next)) {\n                            visited.insert(next);\n                            q.push(next);\n                        }\n                    }\n                }\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

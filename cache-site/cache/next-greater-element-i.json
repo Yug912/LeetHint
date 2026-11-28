@@ -1,0 +1,40 @@
+{
+  "slug": "next-greater-element-i",
+  "title": "Next Greater Element I",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n + m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> nextGreater: up to n entries → O(n)\n- stack<int> st: up to n entries in the worst case (strictly decreasing nums2) → O(n)\n- vector<int> ans: returned output, not counted\n- input vectors nums1, nums2: not counted",
+  "approach": "Process nums2 once with a monotonic decreasing stack: when a new value x is larger than the stack's top, x is the next greater element for that top value - record it in a hash map and pop. After the scan, any value still on the stack has no next greater element (-1). Then for each query in nums1, just look it up in the map. Each element of nums2 is pushed and popped at most once, giving linear time.",
+  "hints": [
+    "When scanning nums2 left to right, what property of a newly seen value finally lets you resolve the next greater element for some earlier, still-unresolved values?",
+    "Use a monotonic decreasing stack over nums2. In nums2 = [1,3,4,2], reaching 3 pops 1 off the stack and records map[1] = 3.",
+    "for each x in nums2:\n    while stack not empty and stack.top < x:\n        map[stack.top] = x\n        pop stack\n    push x\nfor each q in nums1:\n    answer = map[q] if present else -1",
+    "**Single element** - nums2 has length 1, so nothing sits to the right of the only value.\n`nums1 = [5], nums2 = [5]` → `[-1]`\n⚠️ Bug: using `map[q]` (operator[]) which default-inserts 0 for missing keys → returns `[0]`\n\n**Strictly decreasing nums2** - no value ever finds a larger right neighbor, so the stack never pops.\n`nums1 = [4,3,2,1], nums2 = [4,3,2,1]` → `[-1,-1,-1,-1]`\n⚠️ Bug: assuming every element gets popped and only recording answers on pop, leaving missing entries as 0 → returns `[0,0,0,0]`\n\n**Strictly increasing nums2** - every value except the last is immediately resolved by its successor.\n`nums1 = [1,2,3,4], nums2 = [1,2,3,4]` → `[2,3,4,-1]`\n⚠️ Bug: comparing with `stack.top() > x` (wrong direction) so nothing ever pops → returns `[-1,-1,-1,-1]`\n\n**Full subset query** - nums1 equals nums2, exercising every position including the last.\n`nums1 = [1,3,4,2], nums2 = [1,3,4,2]` → `[3,4,-1,-1]`\n⚠️ Bug: looking up by index i instead of by value, returning nextGreater of nums2[i] regardless of nums1[i] → on a reordered nums1 like [2,4,3,1] returns wrong per-value answers"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums2 is circular (Next Greater Element II), so the right neighbor of the last element wraps to the front?",
+      "a": "Iterate twice over nums2 (2n steps) with the same monotonic stack, but store results by index and skip recording on the second pass for indices already resolved. Time O(n), space O(n)."
+    },
+    {
+      "q": "What if duplicates are allowed in nums2 - how does the map-by-value approach break?",
+      "a": "Two equal values share one map key, so the second occurrence overwrites the first's answer. Switch to storing results by index and resolve queries by locating each nums1 value's index in nums2 (e.g., via a map from value to list of indices). Time O(n + m), space O(n)."
+    },
+    {
+      "q": "What if nums2 arrives as a streaming sequence too large to hold in memory, but nums1 is known upfront?",
+      "a": "Keep only the monotonic stack and the map for values present in nums1 (a set built from nums1); discard all other entries. The stack still holds at most n values in the worst case, but the map is bounded by |nums1|. Time O(n), space O(|nums1| + stack) ≤ O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> nextGreaterElement(vector<int>& nums1, vector<int>& nums2) {\n        unordered_map<int, int> nextGreater;\n        nextGreater.reserve(nums2.size() * 2);\n        stack<int> st;\n        for (int x : nums2) {\n            while (!st.empty() && st.top() < x) {\n                nextGreater[st.top()] = x;\n                st.pop();\n            }\n            st.push(x);\n        }\n        vector<int> ans;\n        ans.reserve(nums1.size());\n        for (int q : nums1) {\n            auto it = nextGreater.find(q);\n            ans.push_back(it == nextGreater.end() ? -1 : it->second);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

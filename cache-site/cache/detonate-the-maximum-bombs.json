@@ -1,0 +1,40 @@
+{
+  "slug": "detonate-the-maximum-bombs",
+  "title": "Detonate the Maximum Bombs",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Graph DFS",
+  "tc": "O(n³)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<bool> visited: n entries → O(n)\n- vector<int> stk (DFS stack): up to n entries → O(n)\n- not counted: input bombs, returned int",
+  "approach": "Build a directed graph where bomb i has an edge to bomb j if j lies within i's blast radius (distance² ≤ r_i²). For each bomb, run an iterative DFS to count all reachable bombs, computing neighbors on-the-fly by scanning all n bombs instead of precomputing an adjacency list. The answer is the maximum count over all starting bombs. Use long long for distance calculations since coordinate differences up to 10^5 produce squared distances up to 2×10^10, exceeding INT_MAX.",
+  "hints": [
+    "If bomb A's circle contains bomb B, must bomb B's circle contain bomb A? The radii can differ by up to 10^5.",
+    "Model bombs as nodes in a directed graph; edge i→j exists when bomb j lies inside bomb i's circle. In Example 3, bomb 0 at (1,2) r=3 reaches bomb 1 at (2,3) since distance² = 1+1 = 2 ≤ 9.",
+    "```\nbest = 0\nfor each bomb i as start:\n    visited = {i}, stack = [i], count = 0\n    while stack not empty:\n        cur = stack.pop(), count++\n        for each bomb j not in visited:\n            if dist²(bombs[cur], bombs[j]) ≤ bombs[cur].radius²:\n                add j to visited, push j to stack\n    best = max(best, count)\nreturn best\n```",
+    "**Overflow in distance squared** - coordinate difference squared exceeds 2^31-1\n`Input: [[1,1,1],[46342,1,1]]` → `Expected: 1`\n⚠️ Bug: using int for dx*dx+dy*dy → 46341² = 2147488281 overflows to -2147479015, comparison -2147479015 ≤ 1 passes, returns 2\n\n**Duplicate positions** - multiple bombs at the same coordinates\n`Input: [[5,5,1],[5,5,1],[5,5,1]]` → `Expected: 3`\n⚠️ Bug: marking visited when popping instead of when pushing → bomb 1 pushed twice, count reaches 4\n\n**Asymmetric reachability** - bomb A reaches B but B does not reach A\n`Input: [[1,1,5],[4,1,1],[7,1,5]]` → `Expected: 2`\n⚠️ Bug: building undirected edges (adding reverse edge) → bomb 1 gains edges to 0 and 2, starting from 0 reaches all 3, returns 3\n\n**Single bomb** - only one bomb in the input\n`Input: [[1,1,1]]` → `Expected: 1`\n⚠️ Bug: loop condition `i < n-1` instead of `i < n` → loop never runs, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can detonate up to k bombs initially instead of just 1?",
+      "a": "This becomes an influence maximization problem. A greedy approach - repeatedly pick the bomb that detonates the most new bombs - gives a (1-1/e) approximation. Each round runs k BFS passes over all n bombs, giving O(k·n³) time and O(n) space."
+    },
+    {
+      "q": "What if bombs lie on a 1D number line instead of a 2D plane?",
+      "a": "Each bomb's range becomes an interval [x-r, x+r]. Sort bombs by position, then for each starting bomb expand left and right while intervals overlap. This reduces the neighbor scan to an interval merge, giving O(n²) time and O(n) space."
+    },
+    {
+      "q": "What if you need to answer many queries: \"how many bombs detonate starting from bomb i?\"",
+      "a": "Precompute the full transitive closure by running DFS from every bomb once and storing the reachable set for each. Preprocessing is O(n³) time and O(n²) space; each query is O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumDetonation(vector<vector<int>>& bombs) {\n        int n = bombs.size();\n        int best = 0;\n        for (int i = 0; i < n; i++) {\n            vector<bool> visited(n, false);\n            vector<int> stk;\n            stk.push_back(i);\n            visited[i] = true;\n            int count = 0;\n            while (!stk.empty()) {\n                int cur = stk.back();\n                stk.pop_back();\n                count++;\n                long long cx = bombs[cur][0], cy = bombs[cur][1], cr = bombs[cur][2];\n                long long cr2 = cr * cr;\n                for (int j = 0; j < n; j++) {\n                    if (!visited[j]) {\n                        long long dx = (long long)bombs[j][0] - cx;\n                        long long dy = (long long)bombs[j][1] - cy;\n                        if (dx * dx + dy * dy <= cr2) {\n                            visited[j] = true;\n                            stk.push_back(j);\n                        }\n                    }\n                }\n            }\n            best = max(best, count);\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

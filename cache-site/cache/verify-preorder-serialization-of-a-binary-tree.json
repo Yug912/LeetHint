@@ -1,0 +1,40 @@
+{
+  "slug": "verify-preorder-serialization-of-a-binary-tree",
+  "title": "Verify Preorder Serialization of a Binary Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Slot Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int slots: single integer → O(1)\n- int i, n: loop index and length → O(1)\n- no containers, no recursion, no heap allocation",
+  "approach": "Maintain a \"slots\" counter starting at 1 (the root position). Each non-null node consumes one slot and creates two (net +1); each '#' consumes one slot (net -1). If slots ever reaches 0 before all tokens are processed, the serialization is invalid (tree completed prematurely with leftover tokens). At the end, slots must be exactly 0 (all positions filled). This works because preorder traversal defines a unique tree structure, and the slot counter tracks whether that structure is valid at every point without reconstructing the tree.",
+  "hints": [
+    "In Example 1, count the non-null nodes and the '#' markers separately. Do the same for Example 2. What relationship between these two counts appears in the valid case but not the invalid one?",
+    "Use a single integer counter (\"slots\") starting at 1: each non-null token does slots += 1 (fills one, opens two), each '#' does slots -= 1. For Example 1, after reading \"9,3,4,#,#\" the counter reads 2, having gone 1→2→3→4→3→2.",
+    "```\nslots = 1\nfor each token in preorder:\n    if slots == 0: return false\n    if token is '#':\n        slots -= 1\n    else:\n        slots += 1\nreturn slots == 0\n```",
+    "**Single null** - smallest valid tree is just a null root.\n`Input: \"#\"` → `Expected: true`\n⚠️ Bug: initializing slots to 0 instead of 1 → returns false\n\n**Premature completion with balanced remainder** - tree completes early, extra tokens happen to balance back to 0.\n`Input: \"1,#,#,1,#\"` → `Expected: false`\n⚠️ Bug: checking `slots < 0` instead of `slots == 0` during iteration → returns true (slots goes 1→2→1→0→1→0, never negative, ends at 0)\n\n**Lone node** - a non-null node with no children provided.\n`Input: \"1\"` → `Expected: false`\n⚠️ Bug: returning true whenever slots stays non-negative, without checking the final value → returns true (slots ends at 2)\n\n**Deep left-skewed tree** - chain of left children ending with two nulls.\n`Input: \"1,2,#,#,#\"` → `Expected: true`\n⚠️ Bug: using `slots += 2` for non-null (forgetting to subtract the consumed slot) → returns false (slots ends at 2 instead of 0)"
+  ],
+  "followUps": [
+    {
+      "q": "What if each node can have up to k children instead of 2?",
+      "a": "Replace the non-null update from +1 (which is -1 + 2) to -1 + k. The rest of the algorithm is unchanged: maintain the slot counter, check it never hits 0 mid-stream, and verify it ends at 0. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if you must verify an inorder serialization instead of preorder?",
+      "a": "Inorder with null markers is ambiguous - multiple distinct trees can produce the same inorder string with nulls. The slot-counting approach relies on preorder's structural property (parent appears before its children), which inorder does not provide. You would need additional information such as depth annotations or a second traversal."
+    },
+    {
+      "q": "What if the input is a stream too large to fit in memory and you can only read one token at a time?",
+      "a": "The slot-counting approach already processes tokens one at a time with O(1) space, so it works as-is for streaming. Read each token, update the counter, and return false immediately if slots hits 0 prematurely. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isValidSerialization(string preorder) {\n        int slots = 1;\n        int n = preorder.size();\n        int i = 0;\n        while (i < n) {\n            if (slots == 0) return false;\n            if (preorder[i] == '#') {\n                slots--;\n                i++;\n            } else {\n                while (i < n && preorder[i] != ',') i++;\n                slots++;\n            }\n            if (i < n && preorder[i] == ',') i++;\n        }\n        return slots == 0;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

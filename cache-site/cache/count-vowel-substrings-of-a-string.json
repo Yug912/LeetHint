@@ -1,0 +1,40 @@
+{
+  "slug": "count-vowel-substrings-of-a-string",
+  "title": "Count Vowel Substrings of a String",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int counts[5]: fixed-size array of 5 ints → O(1)\n- scalar variables (n, result, i, segStart, left, distinct, idx, lidx): O(1)\n- no recursion, no dynamic containers\n- not counted: input string",
+  "approach": "The key insight is that valid substrings can only exist within maximal runs of consecutive vowels, since any consonant breaks eligibility. Within each such run, we use a sliding window: for each right endpoint, we shrink the left pointer as far as possible while still maintaining all five vowels present. The number of valid substrings ending at each right position is (left − segmentStart), since any start from segmentStart to left−1 yields all five vowels. Both pointers only move forward within each segment, giving linear total time.",
+  "hints": [
+    "Within a run of consecutive vowels, as you extend a substring to the right by one character, what happens to the set of starting positions that yield all five vowels?",
+    "Use a sliding window (two pointers) within each maximal vowel run. In \"aeiouu\", when the right pointer reaches index 4 ('u'), all five vowels are present; shrink the left pointer past 'a' to index 1, so 1 valid substring ends here.",
+    "```\nfor each maximal vowel-only segment:\n    left = segment_start, counts = empty\n    for right in segment:\n        add word[right] to counts\n        while counts has all 5 vowels:\n            remove word[left], left++\n        result += left - segment_start\n```",
+    "**Single vowel** - only one character, cannot contain all five vowels.\n`Input: word = \"a\"` → `Expected: 0`\n⚠️ Bug: counting whenever any vowel is seen instead of checking all 5 present → returns 1\n\n**Exactly five vowels** - minimal valid substring.\n`Input: word = \"aeiou\"` → `Expected: 1`\n⚠️ Bug: skipping the shrink loop so left never advances → returns 0\n\n**No vowels** - entire string is consonants.\n`Input: word = \"bcdfg\"` → `Expected: 0`\n⚠️ Bug: not checking isVowel before entering the segment loop → processes consonants and returns garbage\n\n**Repeated vowel extends count** - extra vowel at the end creates additional valid substrings.\n`Input: word = \"aeioua\"` → `Expected: 3`\n⚠️ Bug: adding 1 per valid right instead of (left - segment_start) → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if word length is up to 10^6 - does your approach still hold?",
+      "a": "Yes. The sliding window visits each character at most twice (once by the right pointer, once by the left), so time remains O(n). The fixed-size counts array keeps space at O(1)."
+    },
+    {
+      "q": "What if you must count substrings with at least k distinct vowels (k given as input, 1 ≤ k ≤ 5)?",
+      "a": "Replace the \"distinct == 5\" check with \"distinct >= k\". Shrink left while distinct > k, then count (left - segmentStart) for each right where distinct >= k. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if each of the five vowels must appear at least m times in the substring?",
+      "a": "Track per-vowel counts and maintain how many vowels have count >= m. Shrink left while all five have count >= m, counting valid lefts per right. Time stays O(n), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countVowelSubstrings(string word) {\n        int n = word.size();\n        int result = 0;\n        int i = 0;\n        while (i < n) {\n            if (!isVowel(word[i])) {\n                i++;\n                continue;\n            }\n            int segStart = i;\n            int left = i;\n            int counts[5] = {0, 0, 0, 0, 0};\n            int distinct = 0;\n            while (i < n && isVowel(word[i])) {\n                int idx = vowelIdx(word[i]);\n                if (counts[idx] == 0) distinct++;\n                counts[idx]++;\n                while (distinct == 5) {\n                    int lidx = vowelIdx(word[left]);\n                    counts[lidx]--;\n                    if (counts[lidx] == 0) distinct--;\n                    left++;\n                }\n                result += left - segStart;\n                i++;\n            }\n        }\n        return result;\n    }\nprivate:\n    bool isVowel(char c) {\n        return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u';\n    }\n    int vowelIdx(char c) {\n        if (c == 'a') return 0;\n        if (c == 'e') return 1;\n        if (c == 'i') return 2;\n        if (c == 'o') return 3;\n        return 4;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-dice-rolls-with-target-sum",
+  "title": "Number of Dice Rolls With Target Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix-Sum DP",
+  "tc": "O(n * target)",
+  "sc": "O(target)",
+  "spaceBreakdown": "- vector<int> prev: target+1 entries → O(target)\n- vector<int> cur: target+1 entries → O(target)\n- vector<long long> pref: target+2 entries → O(target)\n- recursion depth: none (iterative)\n- not counted: input parameters, returned int",
+  "approach": "Use DP where `dp[i][s]` = ways to roll `i` dice summing to `s`. The transition `dp[i][s] = Σ_{j=1}^{k} dp[i-1][s-j]` is a contiguous range sum over the previous row, so we build a prefix-sum array `P` over `dp[i-1]` and compute each cell as `P[s] − P[max(0, s−k)]` in O(1). This reduces the inner loop from O(k) to O(1), giving O(n·target) total time with O(target) space using two rolling arrays plus one prefix array.",
+  "hints": [
+    "For a fixed sum `s` after rolling `i` dice, which sums from `i−1` dice could have led to it, and how many of them are there? The constraints allow `target` up to 1000 and `n` up to 30.",
+    "Use prefix-sum DP: build a prefix array `P` over the previous row so each new cell is `P[s] − P[max(0, s−k)]` in O(1). For Example 2 (n=2, k=6, target=7): after die 1 the row is `[0,1,1,1,1,1,1,0]`, and `cur[7] = P[7] − P[1] = 6 − 0 = 6`.",
+    "```\nprev[0] = 1\nfor i = 1 to n:\n    for s = 0 to target:\n        P[s+1] = (P[s] + prev[s]) mod M\n    for s = 1 to target:\n        lo = max(0, s - k)\n        cur[s] = (P[s] - P[lo] + M) mod M\n    swap(prev, cur); clear cur\nreturn prev[target]\n```",
+    "**Single die** - only one die is rolled, so the answer is 1 if target ≤ k.\n`Input: n=1, k=6, target=3` → `Expected: 1`\n⚠️ Bug: initializing `prev[0]=0` instead of `1` → returns `0`\n\n**Stale values between rows** - three dice, minimum possible target.\n`Input: n=3, k=6, target=3` → `Expected: 1`\n⚠️ Bug: omitting `fill(cur.begin(), cur.end(), 0)` after `swap` → `cur[0]` retains stale value `1`, polluting the next row's prefix sum → returns `2`\n\n**Off-by-one in prefix lower bound** - two dice with two faces each.\n`Input: n=2, k=2, target=4` → `Expected: 1`\n⚠️ Bug: using `lo = max(0, s-k-1)` instead of `max(0, s-k)` → window includes one extra element → returns `2`\n\n**Loop bound excludes target** - the target index is never written.\n`Input: n=2, k=6, target=7` → `Expected: 6`\n⚠️ Bug: writing `s < target` instead of `s <= target` in the inner loop → `cur[target]` stays `0` → returns `0`"
+  ],
+  "followUps": [
+    {
+      "q": "What if k can be up to 10^6 (with n ≤ 30, target ≤ 1000)?",
+      "a": "The prefix-sum approach already runs in O(n·target) time independent of k, because each cell is a single prefix difference regardless of how large k is. No change to the algorithm is needed; just ensure the prefix array covers indices 0..target."
+    },
+    {
+      "q": "What if n can be up to 10^9 (with k ≤ 30, target ≤ 1000)?",
+      "a": "Build the (target+1)×(target+1) transition matrix where M[s'][s]=1 if 1 ≤ s'−s ≤ k, then use fast matrix exponentiation to raise it to the n-th power in O(target^3 · log n) time and O(target^2) space. The initial state vector is [1, 0, …, 0] and the answer is the target-th component."
+    },
+    {
+      "q": "What if you must answer many queries with different (n, target) pairs but fixed k?",
+      "a": "Precompute the full DP table for all dice counts 1..n_max and all sums 0..n_max·k in O(n_max · n_max·k) time and O(n_max · n_max·k) space, then answer each query in O(1). If only target varies for a fixed n, precompute just that row in O(n·target_max) time and O(target_max) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numRollsToTarget(int n, int k, int target) {\n        const int MOD = 1000000007;\n        vector<int> prev(target + 1, 0), cur(target + 1, 0);\n        vector<long long> pref(target + 2, 0);\n        prev[0] = 1;\n        for (int i = 1; i <= n; i++) {\n            for (int s = 0; s <= target; s++)\n                pref[s + 1] = (pref[s] + prev[s]) % MOD;\n            for (int s = 1; s <= target; s++) {\n                int lo = max(0, s - k);\n                cur[s] = (int)((pref[s] - pref[lo] + MOD) % MOD);\n            }\n            swap(prev, cur);\n            fill(cur.begin(), cur.end(), 0);\n        }\n        return prev[target];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

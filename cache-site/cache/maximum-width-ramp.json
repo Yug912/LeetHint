@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-width-ramp",
+  "title": "Maximum Width Ramp",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> st (monotonic stack of indices): up to n entries → O(n)\n- recursion depth: none\n- not counted: input vector nums, returned int",
+  "approach": "Build a monotonic decreasing stack of candidate left indices: an index `i` is worth keeping only if `nums[i]` is strictly smaller than every earlier candidate, because any later value that is ≥ an earlier candidate is dominated as a left endpoint. Then scan `j` from right to left; while the stack top's value ≤ `nums[j]`, pop it and update the answer with `j - top`. Each index is pushed and popped at most once, so the whole thing is linear.",
+  "hints": [
+    "For two indices i1 < i2 with nums[i1] <= nums[i2], which of them can never be the better left endpoint of a ramp, and why does that mean most indices are not worth keeping as left endpoints?",
+    "Use a monotonic decreasing stack of indices (push i only when nums[i] is strictly smaller than the value at the current stack top). For nums = [6,0,8,2,1,5], the stack ends as [0,1] because 8,2,1,5 are all >= 0.",
+    "stack = []\nfor i in 0..n-1:\n    if stack empty or nums[i] < nums[stack.top]:\n        stack.push(i)\nbest = 0\nfor j from n-1 down to 0:\n    while stack not empty and nums[stack.top] <= nums[j]:\n        best = max(best, j - stack.top)\n        stack.pop()\nreturn best",
+    "**All equal** - every pair is a valid ramp, so the widest uses the two ends.\n`Input: nums = [5,5,5,5]` → `Expected: 3`\n⚠️ Bug: pop condition `nums[stack.top] < nums[j]` (strict) → at j=3, 5<5 is false, no pop, returns 0.\n\n**Strictly decreasing (no ramp)** - no i<j satisfies nums[i] <= nums[j].\n`Input: nums = [5,4,3,2,1]` → `Expected: 0`\n⚠️ Bug: inverted pop trigger `nums[stack.top] >= nums[j]` → at j=4 pops index 0, returns 4.\n\n**Already sorted ascending** - the whole array is one big ramp from end to end.\n`Input: nums = [1,2,3,4,5]` → `Expected: 4`\n⚠️ Bug: scanning j left-to-right instead of right-to-left → stack=[0] is popped at j=0 with width 0, returns 0.\n\n**Minimum at the end** - the global minimum is the last element, so the best ramp uses an earlier right endpoint.\n`Input: nums = [2,3,4,5,1]` → `Expected: 3`\n⚠️ Bug: only testing j = n-1 as the right endpoint → nums[4]=1 is smaller than all earlier values, no pop, returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "Return the count of ramps achieving the maximum width, not just the width.",
+      "a": "Keep the same monotonic stack and right-to-left scan. While popping, if `j - top` equals the current best, increment a counter; if it exceeds the best, reset the counter to 1. Multiple stack entries can tie for one j, so count each pop separately. TC O(n), SC O(n)."
+    },
+    {
+      "q": "What if nums[i] can be negative?",
+      "a": "Nothing changes - the algorithm only compares values with `<=` and `<`, so signs are irrelevant. The monotonic stack and pop condition behave identically. TC O(n), SC O(n)."
+    },
+    {
+      "q": "The array arrives as a stream and you may store only O(√n) elements at a time.",
+      "a": "Process in blocks of size √n: keep a monotonic-decreasing list of block minima with their indices, then for each right endpoint scan blocks left-to-right, binary-searching the smallest block whose minimum ≤ nums[j] and scanning within it. TC O(n√n), SC O(√n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxWidthRamp(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> st;\n        st.reserve(n);\n        for (int i = 0; i < n; ++i) {\n            if (st.empty() || nums[i] < nums[st.back()]) {\n                st.push_back(i);\n            }\n        }\n        int best = 0;\n        for (int j = n - 1; j >= 0; --j) {\n            while (!st.empty() && nums[st.back()] <= nums[j]) {\n                int i = st.back();\n                st.pop_back();\n                if (j - i > best) best = j - i;\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

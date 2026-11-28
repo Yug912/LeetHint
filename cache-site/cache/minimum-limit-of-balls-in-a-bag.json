@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-limit-of-balls-in-a-bag",
+  "title": "Minimum Limit of Balls in a Bag",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Answer",
+  "tc": "O(n log M)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- lo, hi, mid, ops: scalars → O(1)\n- max_element: iterator only → O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Binary search the penalty value P (the maximum allowed balls per bag). For a fixed P, a bag of x balls needs ⌈x/P⌉−1 = (x−1)/P splits so every resulting bag has ≤ P balls. Summing over all bags gives the minimum operations needed; if that sum ≤ maxOperations, P is feasible, and we search for the smallest feasible P in [1, max(nums)]. Correctness follows because the operation count is monotonic decreasing in P, so feasibility is a monotone predicate.",
+  "hints": [
+    "If you were told \"no bag may ever exceed L balls,\" how many splits would a single bag of x balls force you to make? The total across all bags is the only thing that decides whether L is achievable.",
+    "Binary search the answer L in [1, max(nums)]; for each L, sum (x−1)/L over all bags and compare to maxOperations. Example: nums=[9], maxOperations=2, test L=3 → (9−1)/3 = 2 ≤ 2, feasible; L=2 → 8/2 = 4 > 2, not feasible → answer 3.",
+    "lo, hi = 1, max(nums)\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    ops = sum((x - 1) / mid for x in nums)\n    if ops <= maxOperations:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo",
+    "**Single element, zero operations** - one bag, no splits allowed.\n`nums = [9], maxOperations = 0` → `Expected: 9`\n⚠️ Bug: initializing `hi` to `maxOperations + 1` (or 0) instead of `max(nums)` → returns 1 or 0.\n\n**Overflow of the operation sum** - n = 10^5 bags each of size 10^9, testing L = 1 gives sum ≈ 10^5 × (10^9 − 1) = ~10^14 > 2^31 − 1.\n`nums = [1000000000]` repeated 10^5 times, `maxOperations = 1000000000` → `Expected: 1`\n⚠️ Bug: declaring `ops` as `int` → signed overflow → wrong feasibility, wrong answer.\n\n**All equal values** - every bag identical, so the split count is uniform.\n`nums = [4,4,4,4], maxOperations = 4` → `Expected: 2`\n⚠️ Bug: using `x / mid` instead of `(x - 1) / mid` → at L=2 computes 4/2=2 per bag, sum 8 > 4, skips L=2, returns 3.\n\n**Huge operation budget** - enough operations to reduce every bag to size 1.\n`nums = [2,4,8,2], maxOperations = 100` → `Expected: 1`\n⚠️ Bug: early-returning `max(nums)` whenever `maxOperations >= n` → returns 8."
+  ],
+  "followUps": [
+    {
+      "q": "Instead of splitting one bag into two, each operation may split one bag into k equal parts. How does the answer change?",
+      "a": "Replace (x−1)/L with ⌈x/L⌉−1 generalized as (x−1)/(k·L)·... actually the per-bag cost becomes ⌈x/(k·L)⌉−1 is wrong; the correct count is ⌈x/L⌉−1 still, because each split multiplies bag count by k, so to get all parts ≤ L you need ⌈x/L⌉−1 splits regardless of k. The answer is unchanged; only the operation semantics differ. TC stays O(n log M), SC O(1)."
+    },
+    {
+      "q": "nums arrives as an unbounded stream and you cannot store it all; answer queries online for the current multiset.",
+      "a": "Keep a running max and a Fenwick/ordered-statistic structure over bag sizes to evaluate the predicate sum((x−1)/L) for any L in O(log U) per query, then binary search L in O(log M · log U). Memory becomes O(distinct sizes) instead of O(n)."
+    },
+    {
+      "q": "Each split of a bag of size x costs x (proportional to balls moved); minimize max bag size subject to total cost ≤ B.",
+      "a": "The predicate changes: for a candidate L, a bag of size x needs ⌈x/L⌉−1 splits whose total cost is x·(⌈x/L⌉−1) (each split reprocesses all x balls). Sum these and compare to B; monotonicity in L still holds, so binary search on L remains valid. TC O(n log M), SC O(1), but watch overflow since cost can reach 10^9 × 10^9 = 10^18 per bag - use long long (and even __int128 if summing many)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumSize(vector<int>& nums, int maxOperations) {\n        int lo = 1;\n        int hi = *max_element(nums.begin(), nums.end());\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long long ops = 0;\n            for (int x : nums) {\n                ops += (x - 1) / mid;\n            }\n            if (ops <= maxOperations) {\n                hi = mid;\n            } else {\n                lo = mid + 1;\n            }\n        }\n        return lo;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "count-number-of-nice-subarrays",
+  "title": "Count Number of Nice Subarrays",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (left, count, result, right): constant → O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input vector",
+  "approach": "Use the \"at most k\" decomposition: the count of subarrays with exactly k odd numbers equals (subarrays with at most k odds) minus (subarrays with at most k−1 odds). Each \"at most\" count is computed with a sliding window-expand the right pointer, and whenever the odd count exceeds the limit, shrink from the left. The number of valid subarrays ending at each right position is (right − left + 1), because every left boundary from `left` to `right` yields a valid subarray.",
+  "hints": [
+    "For a subarray ending at a fixed position, what happens to its odd-number count as you move the left boundary leftward?",
+    "Sliding window counting subarrays with at most k odds, then subtract at most k−1. For nums = [1,1,2,1,1], k = 3: atMost(3) = 14, atMost(2) = 12, answer = 2.",
+    "```\nfunction atMost(k):\n    left = 0, oddCount = 0, result = 0\n    for right in 0..n-1:\n        if nums[right] is odd: oddCount += 1\n        while oddCount > k:\n            if nums[left] is odd: oddCount -= 1\n            left += 1\n        result += right - left + 1\n    return result\nreturn atMost(k) - atMost(k-1)\n```",
+    "**Single element** - minimum input size, one odd element\n`Input: nums = [1], k = 1` → `Expected: 1`\n⚠️ Bug: using `while count >= k` instead of `while count > k` → returns 0\n\n**All even** - no odd numbers exist in the array\n`Input: nums = [2,4,6], k = 1` → `Expected: 0`\n⚠️ Bug: returning atMost(k) without subtracting atMost(k−1) → returns 6\n\n**k equals n** - every element must be included\n`Input: nums = [1,3,5], k = 3` → `Expected: 1`\n⚠️ Bug: adding 1 instead of (right − left + 1) to result → returns 0\n\n**Odds at boundaries** - only first and last elements are odd\n`Input: nums = [1,2,2,2,1], k = 2` → `Expected: 1`\n⚠️ Bug: decrementing oddCount without incrementing left → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "Count subarrays with at most k odd numbers instead of exactly k.",
+      "a": "Return atMost(k) directly without the subtraction. The sliding window logic is identical. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "The array arrives as a stream too large to store. How do you answer online?",
+      "a": "Replace the sliding window with a running prefix sum of odd counts and a hash map from count to frequency. For each element, update the running count, add map[count − k] to the answer, then increment map[count]. TC: O(n), SC: O(n) for the map."
+    },
+    {
+      "q": "Given a matrix, count submatrices with exactly k odd numbers.",
+      "a": "Fix two rows r1 ≤ r2, compress columns between them into a 1D array of parity sums, then apply the 1D at-most-k solution. Iterate over all O(n²) row pairs. TC: O(n²·m), SC: O(m) for the compressed array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfSubarrays(vector<int>& nums, int k) {\n        return atMost(nums, k) - atMost(nums, k - 1);\n    }\nprivate:\n    int atMost(vector<int>& nums, int k) {\n        if (k < 0) return 0;\n        int left = 0, count = 0, result = 0;\n        for (int right = 0; right < (int)nums.size(); right++) {\n            if (nums[right] % 2 == 1) count++;\n            while (count > k) {\n                if (nums[left] % 2 == 1) count--;\n                left++;\n            }\n            result += (right - left + 1);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

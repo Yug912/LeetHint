@@ -1,0 +1,40 @@
+{
+  "slug": "add-one-row-to-tree",
+  "title": "Add One Row to Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tree DFS",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- recursion call-stack depth: up to h (tree height), worst case O(n) for skewed tree, O(log n) balanced\n- no containers/arrays allocated\n- new TreeNode allocations: part of the returned output, not counted as auxiliary space",
+  "approach": "The key insight is that only nodes at depth `depth-1` need modification - we insert two new nodes (value `val`) as their left and right children, attaching the original subtrees to the new nodes. We use DFS to reach depth `depth-1`, then perform the insertion. The special case `depth == 1` creates a new root with the original tree as its left child. This is correct because we only modify pointers at the target depth and preserve all original subtree connections.",
+  "hints": [
+    "If only nodes at one particular depth need modification, how far must you descend before you start changing anything?",
+    "Use DFS to reach depth `depth - 1`. In Example 1, the root (value 4) is at depth 1 = depth - 1, so we insert two new nodes with value 1: the new left node takes the old left subtree (rooted at 2), the new right node takes the old right subtree (rooted at 6).",
+    "```\nif depth == 1:\n    newRoot = Node(val)\n    newRoot.left = root\n    return newRoot\ndfs(node, curDepth):\n    if curDepth == depth - 1:\n        newLeft = Node(val); newLeft.left = node.left; node.left = newLeft\n        newRight = Node(val); newRight.right = node.right; node.right = newRight\n        return\n    dfs(node.left, curDepth + 1)\n    dfs(node.right, curDepth + 1)\n```",
+    "**depth == 1** - no depth-1 exists, so a new root must be created\n`Input: root = [1,2,3], val = 5, depth = 1` → `Expected: [5,1,null,2,3]`\n⚠️ Bug: not special-casing depth==1, trying to find nodes at depth 0 → returns [1,2,3] unchanged\n\n**Single node, depth 2** - both children of the root are null\n`Input: root = [1], val = 5, depth = 2` → `Expected: [1,5,5]`\n⚠️ Bug: checking `if (!node->left) return` before inserting → skips insertion entirely → returns [1]\n\n**Node at depth-1 has only one child** - must still insert both new nodes\n`Input: root = [1,2,null,3], val = 5, depth = 3` → `Expected: [1,2,null,5,5,3]`\n⚠️ Bug: only inserting when both children are non-null → skips node 2 (right is null) → returns [1,2,null,3]\n\n**depth == tree depth + 1** - inserting at the very bottom level\n`Input: root = [1,2,3], val = 5, depth = 3` → `Expected: [1,2,3,5,5,5,5]`\n⚠️ Bug: using `curDepth == depth` instead of `curDepth == depth - 1` → never finds target nodes → returns [1,2,3] unchanged"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to add rows at multiple depths simultaneously?",
+      "a": "Process the depths in decreasing order so that inserting at a deeper level doesn't shift the depth of nodes needed for a shallower insertion. Each depth is handled independently with the same DFS approach. TC: O(k·n) where k is the number of depths, SC: O(h)."
+    },
+    {
+      "q": "The tree could be skewed to depth 10^4, risking stack overflow with recursion. How would you solve this iteratively?",
+      "a": "Use BFS with a queue, processing level by level until reaching depth-1, then insert new nodes for all nodes at that level. TC: O(n), SC: O(w) where w is the maximum width of the tree."
+    },
+    {
+      "q": "Instead of inserting a single-valued node, what if you must insert a copy of a given subtree at each position, with the original children attached to the subtree's leftmost and rightmost leaves?",
+      "a": "Deep-copy the subtree template at each insertion point, then attach the original left child to the leftmost leaf and the original right child to the rightmost leaf. TC: O(n + k·s) where k is insertion points and s is subtree size, SC: O(h + s)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    TreeNode* addOneRow(TreeNode* root, int val, int depth) {\n        if (depth == 1) {\n            TreeNode* newRoot = new TreeNode(val);\n            newRoot->left = root;\n            return newRoot;\n        }\n        dfs(root, val, depth, 1);\n        return root;\n    }\nprivate:\n    void dfs(TreeNode* node, int val, int depth, int curDepth) {\n        if (!node) return;\n        if (curDepth == depth - 1) {\n            TreeNode* newLeft = new TreeNode(val);\n            newLeft->left = node->left;\n            node->left = newLeft;\n\n            TreeNode* newRight = new TreeNode(val);\n            newRight->right = node->right;\n            node->right = newRight;\n            return;\n        }\n        dfs(node->left, val, depth, curDepth + 1);\n        dfs(node->right, val, depth, curDepth + 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

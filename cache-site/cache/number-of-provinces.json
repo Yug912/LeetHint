@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-provinces",
+  "title": "Number of Provinces",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Connected Components",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> visited: n entries → O(n)\n- recursion call-stack: worst case O(n) when all cities form one connected component (skewed exploration order)\n- not counted: input matrix isConnected",
+  "approach": "Treat the matrix as an undirected graph's adjacency matrix. A province is exactly a connected component. Iterate over every city; whenever an unvisited city is found, increment the province count and run a DFS that marks every city reachable from it (directly or indirectly). Each DFS call scans one row of the matrix, so the total work is O(n²). Correctness follows because DFS explores exactly the transitive closure of direct connections, which is the definition of a province.",
+  "hints": [
+    "If you start at one city and repeatedly follow every direct connection as far as possible, what set of cities do you end up with, and how does that set relate to the definition of a province?",
+    "Use depth-first search over the adjacency matrix. In Example 1, starting at city 0 you mark it, recurse into city 1 (its only unvisited neighbor), find no further unvisited neighbors, and that completes one province; city 2 is still unvisited, so it forms a second.",
+    "```\nprovinces = 0\nfor i in 0..n-1:\n    if not visited[i]:\n        provinces += 1\n        dfs(i)\nreturn provinces\n\ndfs(c):\n    visited[c] = true\n    for j in 0..n-1:\n        if isConnected[c][j] == 1 and not visited[j]:\n            dfs(j)\n```",
+    "**Single city** - n equals the minimum value 1.\n`[[1]]` → `Expected: 1`\n⚠️ Bug: looping `for i in 1..n-1` instead of `0..n-1` → returns `0`\n\n**Self-loop on diagonal** - every `isConnected[i][i] == 1`.\n`[[1,0,0],[0,1,0],[0,0,1]]` → `Expected: 3`\n⚠️ Bug: recursing whenever `isConnected[c][j] == 1` without checking `visited[j]` first → infinite recursion on the diagonal entry `isConnected[c][c]`\n\n**All connected** - one province spanning every city.\n`[[1,1,1],[1,1,1],[1,1,1]]` → `Expected: 1`\n⚠️ Bug: marking `visited[c] = true` after the recursive calls instead of before → infinite recursion, since `c` is still unvisited when its neighbors are scanned\n\n**Fully disconnected** - no off-diagonal connections.\n`[[1,0,0],[0,1,0],[0,0,1]]` → `Expected: 3`\n⚠️ Bug: incrementing `provinces` only when a DFS actually recurses into a neighbor → returns `0` because no DFS finds any unvisited neighbor"
+  ],
+  "followUps": [
+    {
+      "q": "The graph is given as an edge list with up to 10^5 nodes and 10^6 edges instead of an adjacency matrix. How does the approach change?",
+      "a": "Build an adjacency list (O(V+E) space) and run the same DFS/BFS. Each node and edge is touched once, giving O(V+E) time and O(V) auxiliary space for the visited array plus recursion stack."
+    },
+    {
+      "q": "Edges are added and removed dynamically, and after each operation you must report the current province count. How do you adapt?",
+      "a": "Switch to a disjoint-set union (union-find) with path compression and union by rank. Each union/undo or add/remove edge is O(α(n)) amortized, and the province count is `n − (number of successful unions)`. Pure DFS per query would be too slow."
+    },
+    {
+      "q": "Instead of the count, return the size of the largest province. What changes?",
+      "a": "Keep a running `maxSize` updated inside each DFS by counting nodes visited during that traversal (increment a counter before each recursive call). Time stays O(n²), space stays O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findCircleNum(vector<vector<int>>& isConnected) {\n        int n = isConnected.size();\n        vector<int> visited(n, 0);\n        int provinces = 0;\n        for (int i = 0; i < n; i++) {\n            if (!visited[i]) {\n                provinces++;\n                dfs(isConnected, visited, i, n);\n            }\n        }\n        return provinces;\n    }\nprivate:\n    void dfs(vector<vector<int>>& isConnected, vector<int>& visited, int i, int n) {\n        visited[i] = 1;\n        for (int j = 0; j < n; j++) {\n            if (isConnected[i][j] == 1 && !visited[j]) {\n                dfs(isConnected, visited, j, n);\n            }\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

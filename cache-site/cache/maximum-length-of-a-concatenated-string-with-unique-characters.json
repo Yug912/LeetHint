@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-length-of-a-concatenated-string-with-unique-characters",
+  "title": "Maximum Length of a Concatenated String with Unique Characters",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking with Bitmask",
+  "tc": "O(2^n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> masks: n entries → O(n)\n- vector<int> valid: n entries → O(n)\n- recursion depth: up to n → O(n)\n- not counted: input arr",
+  "approach": "Represent each string as a 26-bit integer mask (bit *i* set if character 'a'+*i* is present). Strings with internal duplicate characters are detected during mask construction and marked invalid so they are never selected. DFS backtracking explores every subset: at each index, either skip the string or include it only if its mask has zero overlap with the current used mask. The maximum accumulated length across all valid subsets is the answer.",
+  "hints": [
+    "With arr.length ≤ 16, what is the maximum number of distinct subsets of the array you could form? Each string contains only lowercase English letters, so there are at most 26 distinct characters in the entire alphabet.",
+    "Use DFS backtracking with bitmasks: represent each string's characters as a 26-bit integer. For arr = [\"un\",\"iq\",\"ue\"], \"un\" maps to bits for u and n; when considering \"ue\" after \"un\", the u bit overlaps, so that branch is skipped.",
+    "```\ndfs(idx, usedMask, length):\n    if idx == n:\n        best = max(best, length)\n        return\n    dfs(idx + 1, usedMask, length)\n    if string[idx] has no internal duplicates and (usedMask & mask[idx]) == 0:\n        dfs(idx + 1, usedMask | mask[idx], length + len(string[idx]))\n```",
+    "**Internal duplicates** - a string with repeated letters can never be part of a valid result.\n`Input: [\"aa\",\"bc\"]` → `Expected: 2`\n⚠️ Bug: building each mask by OR-ing all characters without detecting repeats, so \"aa\" gets mask {a} and length 2 → returns 4\n\n**No valid strings** - all strings have internal duplicates, so the answer is 0.\n`Input: [\"aa\",\"bb\"]` → `Expected: 0`\n⚠️ Bug: initializing `best` to -1 instead of 0 → returns -1\n\n**All strings share a character** - no two strings can be combined.\n`Input: [\"ab\",\"ac\",\"ad\"]` → `Expected: 2`\n⚠️ Bug: only trying to include all strings together, not exploring subsets → returns 0\n\n**Bitwise vs logical AND** - two non-overlapping 13-character strings should combine to 26.\n`Input: [\"abcdefghijklm\",\"nopqrstuvwxyz\"]` → `Expected: 26`\n⚠️ Bug: checking overlap with `usedMask && masks[idx]` (logical AND) instead of `usedMask & masks[idx]` (bitwise AND) → always detects overlap when both masks are non-zero → returns 13"
+  ],
+  "followUps": [
+    {
+      "q": "What if arr.length could be up to 100?",
+      "a": "Enumerating all 2^100 subsets is infeasible. Instead, use DP over character masks: maintain a map from used-character mask to maximum length. For each valid string, update the map by combining it with every existing mask that doesn't overlap. Since there are at most 2^26 distinct masks, this runs in O(n · 2^26) worst-case time and O(2^26) space, though the number of reachable masks is typically much smaller."
+    },
+    {
+      "q": "What if the alphabet were all 128 ASCII characters instead of 26 lowercase letters?",
+      "a": "The bitmask would need 128 bits (use bitset<128> or unsigned __int128). The backtracking approach still works for small n (≤ 16) with the same O(2^n) time complexity, since each recursive call still does O(1) work (a fixed-size bitwise AND and OR on 128-bit values)."
+    },
+    {
+      "q": "What if you needed to return the actual concatenated string s instead of just its length?",
+      "a": "Track the selected string indices alongside the mask and length during backtracking. When updating the best length, also save a copy of the current index list. At the end, concatenate the strings at those indices. Time complexity remains O(2^n); space increases to O(n) for the index list plus O(answer length) for the output string."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxLength(vector<string>& arr) {\n        int n = arr.size();\n        vector<int> masks(n, 0);\n        vector<int> valid(n, 0);\n        for (int i = 0; i < n; i++) {\n            int m = 0;\n            bool ok = true;\n            for (char c : arr[i]) {\n                int bit = 1 << (c - 'a');\n                if (m & bit) { ok = false; break; }\n                m |= bit;\n            }\n            masks[i] = m;\n            valid[i] = ok ? (int)arr[i].size() : -1;\n        }\n        int best = 0;\n        dfs(0, 0, 0, masks, valid, n, best);\n        return best;\n    }\nprivate:\n    void dfs(int idx, int usedMask, int len, vector<int>& masks, vector<int>& valid, int n, int& best) {\n        if (idx == n) {\n            best = max(best, len);\n            return;\n        }\n        dfs(idx + 1, usedMask, len, masks, valid, n, best);\n        if (valid[idx] >= 0 && (usedMask & masks[idx]) == 0) {\n            dfs(idx + 1, usedMask | masks[idx], len + valid[idx], masks, valid, n, best);\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

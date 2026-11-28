@@ -1,0 +1,40 @@
+{
+  "slug": "the-k-th-lexicographical-string-of-all-happy-strings-of-length-n",
+  "title": "The k-th Lexicographical String of All Happy Strings of Length n",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Direct Construction",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- string result: length n (returned output, not counted per LeetCode convention)\n- int total, groupSize, k: O(1)\n- char chars[3]: O(1)\n- No recursion, no additional containers",
+  "approach": "The key insight is that at each position, the available characters partition the remaining happy strings into equal-sized groups. For the first position, there are 3 groups of size 2^(n-1); for each subsequent position i, there are 2 groups (the two characters different from the previous one) of size 2^(n-1-i). By comparing k against the current group size, we directly select the correct character at each position, constructing the answer in a single pass without enumerating strings.",
+  "hints": [
+    "If you fix the first character of a happy string of length n, how many complete happy strings of length n start with that character?",
+    "Direct construction via group-size arithmetic. For n=3, k=9: each first character starts 2^(3-1)=4 strings. Skip 'a' (k→5) and 'b' (k→1), pick 'c'.",
+    "```\ntotal = 3 * 2^(n-1)\nif k > total: return \"\"\ngroupSize = 2^(n-1)\nfor i = 0 to n-1:\n    for c in ['a','b','c']:\n        if c == previous char: skip\n        if k > groupSize: k -= groupSize\n        else: append c, break\n    groupSize = groupSize / 2\nreturn result\n```",
+    "**k exceeds total** - n=2 has only 6 happy strings, so k=7 is invalid.\n`Input: n = 2, k = 7` → `Expected: \"\"`\n⚠️ Bug: wrapping k with `(k-1) % total + 1` instead of returning \"\" when k > total → k wraps to 1, returns \"ab\"\n\n**Wrong group size** - n=1 has group size 2^0=1 per first character, not 2^1=2.\n`Input: n = 1, k = 3` → `Expected: \"c\"`\n⚠️ Bug: computing groupSize as 2^n instead of 2^(n-1) → groupSize=2, k=3>2 skips 'a' (k=1), picks 'b' → returns \"b\"\n\n**Not skipping previous character** - at position 2 of \"cab\", the previous char is 'a' and must be skipped.\n`Input: n = 3, k = 9` → `Expected: \"cab\"`\n⚠️ Bug: not checking `chars[c] == result.back()` → at i=2, picks 'a' (k=1<=1), returns \"caa\" (invalid happy string)\n\n**Not updating group size** - group size must halve each position; for n=10, k=100 it starts at 512 and must shrink.\n`Input: n = 10, k = 100` → `Expected: \"abacbabacb\"`\n⚠️ Bug: not dividing groupSize after each position → groupSize stays 512, k=100 always fits first group, returns \"ababababab\""
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^9 and k up to 10^18?",
+      "a": "After O(log k) positions, the group size drops below k and the remaining characters follow a deterministic alternating pattern (always pick the smallest available). Compute the first O(log k) characters directly, then fill the rest by repeating the 2-character pattern. TC: O(log k), SC: O(1) auxiliary (output is O(n))."
+    },
+    {
+      "q": "What if the alphabet is the first m lowercase letters instead of just {'a','b','c'}?",
+      "a": "The group size at position 0 is (m-1)^(n-1) and at position i is (m-1)^(n-1-i). The same construction works: iterate over m letters at each position, skipping the previous one. TC: O(n·m), SC: O(1)."
+    },
+    {
+      "q": "What if you need to answer q queries with different k values for the same n?",
+      "a": "Precompute the powers 2^0 through 2^(n-1) once in an array. Each query then runs in O(n) with O(1) lookups per position instead of recomputing powers. TC: O(n + q·n), SC: O(n) for the precomputed array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string getHappyString(int n, int k) {\n        int total = 3;\n        for (int i = 1; i < n; i++) total *= 2;\n        if (k > total) return \"\";\n        \n        string result;\n        int groupSize = 1;\n        for (int i = 1; i < n; i++) groupSize *= 2;\n        \n        char chars[3] = {'a', 'b', 'c'};\n        \n        for (int i = 0; i < n; i++) {\n            for (int c = 0; c < 3; c++) {\n                if (i > 0 && chars[c] == result.back()) continue;\n                if (k > groupSize) {\n                    k -= groupSize;\n                } else {\n                    result += chars[c];\n                    break;\n                }\n            }\n            groupSize /= 2;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

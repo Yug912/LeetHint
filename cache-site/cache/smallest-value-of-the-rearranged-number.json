@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-value-of-the-rearranged-number",
+  "title": "Smallest Value of the Rearranged Number",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Counting Sort",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int count[10]: fixed-size array of 10 elements → O(1)\n- long long n, result: two scalar variables → O(1)\n- recursion depth: none\n- not counted: input num, returned result",
+  "approach": "The digits of any number come from a fixed alphabet of 0-9, so counting sort arranges them in O(n) time and O(1) space. For positive numbers, place the smallest nonzero digit first (to avoid leading zeros), then append all remaining digits in ascending order. For negative numbers, place all digits in descending order (maximizing the absolute value, which minimizes the negative number), then negate the result.",
+  "hints": [
+    "Every digit in the input is one of only ten possible values. What does this small, fixed set of possibilities let you do when determining the final order?",
+    "Counting sort over the digit alphabet 0-9. For num = 310, tally digits into count[0]=1, count[1]=1, count[3]=1, then rebuild: pick the smallest nonzero digit (1) first, then append remaining digits ascending (0, 3) → 103.",
+    "```\nif num == 0: return 0\ncount digits of |num| into count[0..9]\nif num > 0:\n    place smallest nonzero digit first (decrement its count)\n    append all digits 0→9 by their remaining counts\nelse:\n    append all digits 9→0 by their counts\n    negate the result\nreturn result\n```",
+    "**Leading zeros** - positive number containing zero digits\n`Input: 310` → `Expected: 103`\n⚠️ Bug: placing all digits in ascending order without special-casing the leading position → returns 13 (from 013)\n\n**Negative ordering** - negative number requires descending digit order\n`Input: -7605` → `Expected: -7650`\n⚠️ Bug: using ascending order for negatives too → returns -567 (from -0567)\n\n**Single digit** - num has exactly one digit\n`Input: 7` → `Expected: 7`\n⚠️ Bug: using `while (n >= 10)` to extract digits → skips the only digit, returns 0\n\n**Overflow** - 10^15 has 16 digits, exceeding int range (10^15 > 2^31 - 1 ≈ 2.1 × 10^9)\n`Input: 1000000000000000` → `Expected: 1000000000000000`\n⚠️ Bug: accumulating result in `int` → 10^15 exceeds INT_MAX, overflow produces garbage"
+  ],
+  "followUps": [
+    {
+      "q": "What if the number can have up to 10^5 digits, given as a string?",
+      "a": "The counting sort approach still applies directly. Count digits in one pass over the string, then build the result string by appending digits according to their counts. Time O(n), space O(n) for the output string."
+    },
+    {
+      "q": "What if you must also minimize the number of digit swaps from the original arrangement?",
+      "a": "After determining the target arrangement via counting sort, compute the minimum swaps to transform the original digit sequence into the target using cycle decomposition on the permutation. This adds O(n log n) time for the swap computation on top of the O(n) counting."
+    },
+    {
+      "q": "What if leading zeros are allowed and you want the absolute smallest value?",
+      "a": "For positive numbers, place all digits in ascending order including zeros. For negative numbers, place all digits in descending order. The counting sort approach is unchanged-just skip the \"smallest nonzero first\" step for positives."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long smallestNumber(long long num) {\n        if (num == 0) return 0;\n        \n        long long n = num < 0 ? -num : num;\n        int count[10] = {0};\n        \n        while (n > 0) {\n            count[n % 10]++;\n            n /= 10;\n        }\n        \n        long long result = 0;\n        \n        if (num > 0) {\n            for (int d = 1; d <= 9; d++) {\n                if (count[d] > 0) {\n                    result = result * 10 + d;\n                    count[d]--;\n                    break;\n                }\n            }\n            for (int d = 0; d <= 9; d++) {\n                while (count[d] > 0) {\n                    result = result * 10 + d;\n                    count[d]--;\n                }\n            }\n        } else {\n            for (int d = 9; d >= 0; d--) {\n                while (count[d] > 0) {\n                    result = result * 10 + d;\n                    count[d]--;\n                }\n            }\n            result = -result;\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

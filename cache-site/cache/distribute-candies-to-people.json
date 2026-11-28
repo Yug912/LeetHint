@@ -1,0 +1,40 @@
+{
+  "slug": "distribute-candies-to-people",
+  "title": "Distribute Candies to People",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Math / Closed-Form with Binary Search",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> ans: size n (returned output, not counted)\n- binary search variables (lo, hi, mid, K): O(1)\n- loop variables (i, ci, sum, rem, idx): O(1)\n- recursion depth: none\n- not counted: input parameters, returned vector",
+  "approach": "The k-th turn distributes exactly k candies, so after K complete turns the total handed out is the triangular number K(K+1)/2. Binary search for the largest K with K(K+1)/2 ≤ candies. Each person i then receives an arithmetic series (turns i+1, i+1+n, i+1+2n, …) whose count ci = ⌊(K−i−1)/n⌋+1 and sum ci·(i+1) + n·ci·(ci−1)/2 are computed in O(1). The leftover candies go to person K mod n.",
+  "hints": [
+    "The k-th turn always hands out exactly k candies. What single value tells you precisely how many full turns complete before the supply runs out?",
+    "Binary search on K (the turn count), since the cumulative total K·(K+1)/2 is monotonic in K. For candies=7: K=3 gives 6≤7 but K=4 gives 10>7, so exactly 3 turns complete.",
+    "```\nbinary-search largest K with K*(K+1)/2 <= candies\nfor each person i in 0..n-1:\n    if i+1 <= K:\n        ci = (K - i - 1) / n + 1\n        ans[i] = ci*(i+1) + n*ci*(ci-1)/2\nremainder = candies - K*(K+1)/2\nans[K mod n] += remainder\nreturn ans\n```",
+    "**Smallest input** - only one candy and one person.\n`Input: candies = 1, num_people = 1` → `Expected: [1]`\n⚠️ Bug: binary-search upper bound hi=0 → K=0, remainder added to ans[0] but loop skipped → returns [1] only if remainder step exists; omitting it returns [0]\n\n**Remainder index** - the leftover goes to person K mod n, not (K+1) mod n.\n`Input: candies = 7, num_people = 4` → `Expected: [1,2,3,1]`\n⚠️ Bug: adding remainder to person (K+1) mod n → K=3, index 0 instead of 3 → returns [2,2,3,0]\n\n**More people than turns** - most entries stay zero; the guard i+1 ≤ K is essential.\n`Input: candies = 3, num_people = 10` → `Expected: [1,2,0,0,0,0,0,0,0,0]`\n⚠️ Bug: computing ci = (K−i−1)/n + 1 without checking i+1 ≤ K → i=2 gives ci=1, ans[2]=3 → returns [1,2,3,0,0,0,0,0,0,0]\n\n**Wrong count formula** - off-by-one in the number of turns per person.\n`Input: candies = 6, num_people = 3` → `Expected: [1,2,3]`\n⚠️ Bug: using ci = (K−i)/n + 1 instead of (K−i−1)/n + 1 → i=0 gives ci=2, ans[0]=5 → returns [5,2,3]"
+  ],
+  "followUps": [
+    {
+      "q": "If num_people can be up to 10⁹, you cannot allocate a full result array. How do you adapt?",
+      "a": "Return only the people who receive nonzero candy. Iterate over the min(K, n) relevant indices using the same per-person formula, plus the remainder index. Time becomes O(min(K, n)) = O(√candies), space O(1) beyond the output."
+    },
+    {
+      "q": "If each turn gives 2^k candies instead of k, how does the solution change?",
+      "a": "The cumulative total after K turns is 2^(K+1)−1, so K = ⌊log₂(candies+1)⌋−1. Each person's share is a geometric series with ratio 2^n, summed in O(1). Overall time stays O(n)."
+    },
+    {
+      "q": "If candies arrive as a stream of increments and you must report the distribution after each update, how do you handle it efficiently?",
+      "a": "Maintain K and the per-person sums. Each increment of Δ shifts K forward by O(√Δ) turns, updating at most O(√Δ) people via the same arithmetic-series formula. Amortized time per update is O(√Δ + n) if you must re-emit the full array."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> distributeCandies(int candies, int num_people) {\n        int n = num_people;\n        long long c = candies;\n        // Binary search for largest K with K*(K+1)/2 <= c\n        long long lo = 0, hi = 2000000LL;\n        while (lo < hi) {\n            long long mid = (lo + hi + 1) / 2;\n            if (mid * (mid + 1) / 2 <= c)\n                lo = mid;\n            else\n                hi = mid - 1;\n        }\n        long long K = lo;\n        vector<int> ans(n, 0);\n        for (int i = 0; i < n; i++) {\n            if ((long long)(i + 1) <= K) {\n                long long ci = (K - (long long)(i + 1)) / n + 1;\n                long long sum = ci * (i + 1) + (long long)n * ci * (ci - 1) / 2;\n                ans[i] = (int)sum;\n            }\n        }\n        long long rem = c - K * (K + 1) / 2;\n        int idx = (int)(K % n);\n        ans[idx] += (int)rem;\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

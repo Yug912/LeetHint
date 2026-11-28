@@ -1,0 +1,40 @@
+{
+  "slug": "two-best-non-overlapping-events",
+  "title": "Two Best Non-Overlapping Events",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Suffix Maximum + Binary Search",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> suffixMax: n entries → O(n)\n- sort(): introsort stack → O(log n)\n- not counted: input events, returned int",
+  "approach": "Sort events by start time and precompute a suffix maximum of values. For each event i (treated as the first chosen event), binary-search the first event j whose start time is strictly greater than event i's end time (since end times are inclusive). The best partner for event i is then suffixMax[j], the maximum value among all events from j onward. The answer is the maximum over all such pairs and the best single event.",
+  "hints": [
+    "If you commit to attending one event that ends at time t, where in an ordering of events by start time do all eligible second events live?",
+    "Sort by start time, precompute a suffix maximum of values, then binary-search per event. In Example 1, sorted = [[1,3,2],[2,4,3],[4,5,2]]; for [1,3,2] ending at 3, the first start strictly after 3 is index 2, suffixMax[2]=2, giving 2+2=4.",
+    "```\nsort events by start time\nsuffixMax[i] = max value among events[i..n-1]\nans = suffixMax[0]\nfor each event i:\n    j = first index with events[j].start > events[i].end\n    if j < n:\n        ans = max(ans, events[i].value + suffixMax[j])\nreturn ans\n```",
+    "**Inclusive end-time boundary** - an event ending at t and one starting at t overlap.\n`Input: [[1,3,2],[3,5,2]]` → `Expected: 2`\n⚠️ Bug: using `events[j][0] >= events[i][1]` instead of `>` → returns 4\n\n**Single event beats every pair** - one event's value exceeds any two non-overlapping events combined.\n`Input: [[1,3,2],[4,5,2],[1,5,5]]` → `Expected: 5`\n⚠️ Bug: initializing `ans = 0` and only updating on valid pairs → returns 4\n\n**All events mutually overlap** - no two events can be chosen together.\n`Input: [[1,10,5],[2,9,3],[3,8,4]]` → `Expected: 5`\n⚠️ Bug: returning 0 when binary search finds no valid j instead of the best single value → returns 0\n\n**Unsorted input** - events arrive in arbitrary start-time order.\n`Input: [[4,5,2],[2,4,3],[1,3,2]]` → `Expected: 4`\n⚠️ Bug: skipping the sort step and assuming input is already ordered → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could attend up to k non-overlapping events instead of 2?",
+      "a": "Sort by end time and use DP: dp[i] = max(dp[i-1], value_i + dp[p(i)]), where p(i) is the last event ending strictly before event i starts (found via binary search). This generalizes to any k in O(n log n) time and O(n) space."
+    },
+    {
+      "q": "What if events arrive in an online stream and you must report the current best two-event sum after each insertion?",
+      "a": "Maintain a sorted structure (e.g., a Fenwick tree or balanced BST over compressed time coordinates) supporting \"max value among events ending before time t\" queries and point updates. Each insertion does one update and one query in O(log n), giving O(n log n) total time and O(n) space."
+    },
+    {
+      "q": "What if you must choose exactly two events (not at most two)?",
+      "a": "Same approach, but initialize ans = -1 and only update it on valid pairs; never consider single events. If no non-overlapping pair exists, return -1. Time and space stay O(n log n) and O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxTwoEvents(vector<vector<int>>& events) {\n        int n = events.size();\n        sort(events.begin(), events.end(), [](const vector<int>& a, const vector<int>& b) {\n            return a[0] < b[0];\n        });\n        vector<int> suffixMax(n);\n        suffixMax[n - 1] = events[n - 1][2];\n        for (int i = n - 2; i >= 0; --i) {\n            suffixMax[i] = max(suffixMax[i + 1], events[i][2]);\n        }\n        int ans = suffixMax[0]; // best single event\n        for (int i = 0; i < n; ++i) {\n            int lo = i + 1, hi = n;\n            while (lo < hi) {\n                int mid = (lo + hi) / 2;\n                if (events[mid][0] > events[i][1]) {\n                    hi = mid;\n                } else {\n                    lo = mid + 1;\n                }\n            }\n            if (lo < n) {\n                ans = max(ans, events[i][2] + suffixMax[lo]);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

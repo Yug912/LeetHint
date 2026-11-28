@@ -1,0 +1,40 @@
+{
+  "slug": "filter-restaurants-by-vegan-friendly-price-and-distance",
+  "title": "Filter Restaurants by Vegan-Friendly, Price and Distance",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Filter and Sort",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> filtered: up to n entries → O(n)\n- sort(): C++ introsort uses O(log n) stack frames → O(log n)\n- vector<int> result: not counted (returned output)\n- not counted: input restaurants",
+  "approach": "Iterate once over the input, keeping only restaurants whose price ≤ maxPrice, distance ≤ maxDistance, and (if veganFriendly == 1) whose veganFriendly flag is 1. Collect the survivors in a vector, then sort them with a comparator that orders by rating descending and, on ties, by id descending. Finally project the sorted entries to their id field. This is correct because every filter is a simple independent predicate, and the comparator exactly matches the required ordering.",
+  "hints": [
+    "Once you've discarded restaurants that violate any filter, what two fields of each surviving entry determine its position relative to the others? The statement guarantees all id_i are distinct.",
+    "Collect survivors in a vector, then sort with a custom comparator (rating desc, then id desc). In Example 1, after filtering veganFriendly=1, maxPrice=50, maxDistance=10, survivors are restaurants 1, 3, 5; sorting by rating desc yields [3,1,5].",
+    "```\nfiltered = []\nfor r in restaurants:\n    if r.price <= maxPrice and r.distance <= maxDistance:\n        if veganFriendly == 0 or r.vegan == 1:\n            filtered.append(r)\nsort filtered by (rating desc, id desc)\nreturn [r.id for r in filtered]\n```",
+    "**Tie in rating** - two restaurants share the same rating, must order by id descending.\n`Input: restaurants = [[1,5,0,10,10],[2,5,0,10,10]], veganFriendly = 0, maxPrice = 10, maxDistance = 10` → `Expected: [2,1]`\n⚠️ Bug: comparator only compares rating → returns [1,2]\n\n**Boundary equality on price** - price exactly equal to maxPrice must be included.\n`Input: restaurants = [[1,5,0,50,10]], veganFriendly = 0, maxPrice = 50, maxDistance = 10` → `Expected: [1]`\n⚠️ Bug: using `price < maxPrice` instead of `<=` → returns []\n\n**veganFriendly = 0** - must include non-vegan restaurants too.\n`Input: restaurants = [[1,5,0,10,10],[2,5,1,10,10]], veganFriendly = 0, maxPrice = 10, maxDistance = 10` → `Expected: [2,1]`\n⚠️ Bug: checking `r.vegan == veganFriendly` → excludes restaurant 1, returns [2]\n\n**All filtered out** - no restaurant survives.\n`Input: restaurants = [[1,5,0,100,100]], veganFriendly = 0, maxPrice = 10, maxDistance = 10` → `Expected: []`\n⚠️ Bug: dereferencing filtered[0] without checking size → undefined behavior / crash\n\n**Single restaurant passing all filters** - n = 1.\n`Input: restaurants = [[7,9,1,20,5]], veganFriendly = 1, maxPrice = 20, maxDistance = 5` → `Expected: [7]`\n⚠️ Bug: special-casing `if (n == 1) return {}` → returns []"
+  ],
+  "followUps": [
+    {
+      "q": "If restaurants arrive as an unbounded stream and you must answer the same query once, how would you adapt?",
+      "a": "Apply each filter predicate as elements arrive, push survivors into a vector, then sort at the end. Time stays O(n log n), space O(n) for the survivors."
+    },
+    {
+      "q": "If the same restaurant list is queried many times with different (veganFriendly, maxPrice, maxDistance), how would you speed up repeated queries?",
+      "a": "Pre-sort all restaurants once by (rating desc, id desc). Each query then scans the pre-sorted list and emits entries passing the filters, giving O(n) per query after an O(n log n) preprocessing step."
+    },
+    {
+      "q": "If you only need the top-k restaurant IDs (k small) instead of all survivors, how would you reduce work?",
+      "a": "Maintain a min-heap of size k keyed by (rating, id) while scanning survivors; final extraction gives the top-k in O(n log k) time and O(k) auxiliary space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> filterRestaurants(vector<vector<int>>& restaurants, int veganFriendly, int maxPrice, int maxDistance) {\n        vector<vector<int>> filtered;\n        filtered.reserve(restaurants.size());\n        for (const auto& r : restaurants) {\n            int id = r[0];\n            int rating = r[1];\n            int vegan = r[2];\n            int price = r[3];\n            int dist = r[4];\n            if (price <= maxPrice && dist <= maxDistance) {\n                if (veganFriendly == 0 || vegan == 1) {\n                    filtered.push_back(r);\n                }\n            }\n        }\n        sort(filtered.begin(), filtered.end(), [](const vector<int>& a, const vector<int>& b) {\n            if (a[1] != b[1]) return a[1] > b[1];\n            return a[0] > b[0];\n        });\n        vector<int> result;\n        result.reserve(filtered.size());\n        for (const auto& r : filtered) {\n            result.push_back(r[0]);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

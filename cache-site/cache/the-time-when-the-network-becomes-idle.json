@@ -1,0 +1,40 @@
+{
+  "slug": "the-time-when-the-network-becomes-idle",
+  "title": "The Time When the Network Becomes Idle",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "BFS Shortest Path on Unweighted Graph",
+  "tc": "O(n + E)",
+  "sc": "O(n + E)",
+  "spaceBreakdown": "- vector<vector<int>> adj: 2E total entries → O(n + E)\n- vector<int> dist: n entries → O(n)\n- vector<int> q (BFS queue): up to n entries → O(n)\n- long long ans, loop variables: O(1)\n- not counted: input edges, patience, returned int",
+  "approach": "Each data server's behavior is fully determined by its shortest distance `d` to the master and its `patience` value. Using BFS from server 0, we compute `d` for every server. A server with round-trip time `2d` resends at multiples of `patience[i]` strictly before `2d`; the last send is `⌊(2d−1)/p⌋·p`, and its reply arrives `2d` later. The network is idle one second after the latest reply across all servers.",
+  "hints": [
+    "For each data server, what two properties of that server alone are enough to determine the exact second its final reply returns to it?",
+    "Use BFS from server 0 to compute each server's shortest distance `d`. For server `i`, the last resend occurs at `⌊(2d−1)/patience[i]⌋ × patience[i]`; its reply returns `2d` seconds later. Example 1 server 2: `d=2`, `patience=1` → last send `= ⌊3/1⌋×1 = 3`, reply at `3+4 = 7`.",
+    "```\nBFS from server 0 → dist[i] for all i\nans = 0\nfor i = 1 to n-1:\n    d = dist[i]\n    p = patience[i]\n    lastSend = ((2*d - 1) / p) * p\n    lastReply = lastSend + 2*d\n    ans = max(ans, lastReply)\nreturn ans + 1\n```",
+    "**patience divides round-trip exactly** - `2d` is a multiple of `patience`, so the reply arrives at the same second a resend would trigger.\n`Input: edges = [[0,1]], patience = [0,1]` → `Expected: 4`\n⚠️ Bug: using `(2*d / p) * p` instead of `((2*d - 1) / p) * p` → returns `5`\n\n**patience exceeds round-trip** - no resend ever occurs; only the initial message at second 0.\n`Input: edges = [[0,1]], patience = [0,10]` → `Expected: 3`\n⚠️ Bug: computing resend count as `ceil(2*d / p)` then multiplying → returns `13`\n\n**Forgetting the +1** - the answer is the first idle second, not the last busy second.\n`Input: edges = [[0,1]], patience = [0,10]` → `Expected: 3`\n⚠️ Bug: returning `lastReply` instead of `lastReply + 1` → returns `2`\n\n**Cyclic graph requiring BFS** - a cycle creates multiple paths; DFS may assign a longer distance.\n`Input: edges = [[0,1],[1,2],[2,3],[3,0]], patience = [0,1,1,1]` → `Expected: 8`\n⚠️ Bug: using DFS (visiting 1→2→3) gives `dist[3]=3` instead of `1` → returns `12`"
+  ],
+  "followUps": [
+    {
+      "q": "What if each message channel has a different transmission delay (weighted edges)?",
+      "a": "Replace BFS with Dijkstra's algorithm to compute shortest weighted distances from server 0. The last-send and last-reply formulas remain identical. TC becomes O(E log V), SC stays O(V + E)."
+    },
+    {
+      "q": "What if the master server can only process one message per second (FIFO queue)?",
+      "a": "Messages arriving simultaneously are queued and processed one per second, adding a processing delay equal to their queue position. You must compute each message's arrival time at the master, sort them, then add the queue offset. TC: O(M log M) where M is the total number of messages sent across all servers."
+    },
+    {
+      "q": "What if patience values can change at arbitrary times during execution?",
+      "a": "Use an event-driven simulation with a priority queue of events (sends, arrivals, patience changes) ordered by time. When a server's patience changes, recompute its future send schedule from the current time. TC: O((n + E + K) log(n + K)) where K is the number of patience-change events."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int networkBecomesIdle(vector<vector<int>>& edges, vector<int>& patience) {\n        int n = patience.size();\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        vector<int> dist(n, -1);\n        vector<int> q;\n        dist[0] = 0;\n        q.push_back(0);\n        int head = 0;\n        while (head < (int)q.size()) {\n            int u = q[head++];\n            for (int v : adj[u]) {\n                if (dist[v] == -1) {\n                    dist[v] = dist[u] + 1;\n                    q.push_back(v);\n                }\n            }\n        }\n        long long ans = 0;\n        for (int i = 1; i < n; i++) {\n            long long d = dist[i];\n            long long p = patience[i];\n            long long lastSend = ((2 * d - 1) / p) * p;\n            long long lastReply = lastSend + 2 * d;\n            ans = max(ans, lastReply);\n        }\n        return (int)(ans + 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

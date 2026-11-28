@@ -1,0 +1,40 @@
+{
+  "slug": "range-sum-of-sorted-subarray-sums",
+  "title": "Range Sum of Sorted Subarray Sums",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search + Sliding Window",
+  "tc": "O(n log V)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> prefix: up to n+1 entries → O(n)\n- vector<long long> pprefix: up to n+1 entries → O(n)\n- recursion depth: none\n- not counted: input, returned vector",
+  "approach": "Instead of generating all $O(n^2)$ subarray sums, we can binary search for the target sum $S$ such that at least $K$ subarrays have a sum $\\le S$. For a fixed $S$, a two-pointer sliding window counts the valid subarrays and accumulates their total sum in $O(n)$ time using prefix and prefix-of-prefix sums. The sum of the first $K$ subarrays is the total sum of subarrays $\\le S$ minus the excess from subarrays exactly equal to $S$.",
+  "hints": [
+    "If you needed the sum of the smallest $K$ subarray sums, what single value could you binary search for to separate the smallest $K$ sums from the rest? The array has up to $1000$ elements, each at most $100$.",
+    "Binary search for the smallest target sum $S$ such that at least $K$ subarrays have sum $\\le S$. For `nums = [1,2,3,4]` and $K=3$, the target $S$ is $3$, and the subarrays with sum $\\le 3$ are `[1]`, `[2]`, `[1,2]`, and `[3]`.",
+    "```\nfunction sumOfFirstK(K):\n    low = 1, high = max_possible_sum\n    while low < high:\n        mid = (low + high) / 2\n        if countAndSum(mid).count >= K:\n            high = mid\n        else:\n            low = mid + 1\n    count, total = countAndSum(low)\n    return total - (count - K) * low\n```",
+    "**Smallest input** - `n = 1`, only one subarray exists.\n`Input: nums = [5], n = 1, left = 1, right = 1` → `Expected: 5`\n⚠️ Bug: initializing `high = 0` in the binary search → returns 0 because the search space is empty.\n\n**Overflow** - Total sum of all subarray sums can exceed 32-bit integer limits.\n`Input: nums = [100]*1000, n = 1000, left = 1, right = 500500` → `Expected: 716699888`\n⚠️ Bug: using `int` for `total` and `sum_prefix` in `countAndSum` → returns 536830823 because $1.6 \\times 10^{10}$ overflows 32-bit signed integers.\n\n**All elements equal** - Multiple subarrays share the exact same sum, requiring careful subtraction of excess.\n`Input: nums = [1,1,1], n = 3, left = 2, right = 5` → `Expected: 6`\n⚠️ Bug: returning `total` directly without subtracting `(count - K) * low` → returns 7 instead of 6."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array contains negative numbers?",
+      "a": "The sliding window approach fails because prefix sums are no longer monotonically increasing, so the two-pointer technique cannot maintain a valid window. We would need a merge sort or Fenwick tree based inversion count method to count subarrays with sum $\\le S$ in $O(n \\log n)$, making the overall time $O(n \\log n \\log V)$."
+    },
+    {
+      "q": "What if `n` is up to $10^5$ and we only need the sum of the first $K$ subarray sums?",
+      "a": "The $O(n \\log V)$ approach scales perfectly, taking around $10^5 \\times 17 \\approx 1.7 \\times 10^6$ operations. The space complexity remains $O(n)$ for the prefix arrays."
+    },
+    {
+      "q": "What if we need to answer multiple queries of `(left, right)` on the same array?",
+      "a": "We can precompute the prefix and prefix-of-prefix arrays once in $O(n)$. Each query would then take $O(n \\log V)$ time. If $Q$ queries are needed, the total time is $O(n + Q \\cdot n \\log V)$."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\nprivate:\n    pair<long long, long long> countAndSum(int target, vector<int>& nums, vector<long long>& prefix, vector<long long>& pprefix) {\n        long long count = 0, total = 0;\n        int left = 0;\n        int n = nums.size();\n        for (int i = 1; i <= n; i++) {\n            while (prefix[i] - prefix[left] > target) {\n                left++;\n            }\n            int num_subarrays = i - left;\n            count += num_subarrays;\n            long long sum_prefix = pprefix[i] - pprefix[left];\n            total += (long long)num_subarrays * prefix[i] - sum_prefix;\n        }\n        return {count, total};\n    }\n\n    long long sumOfFirstK(int K, vector<int>& nums, vector<long long>& prefix, vector<long long>& pprefix) {\n        int low = 1, high = 100000;\n        while (low < high) {\n            int mid = low + (high - low) / 2;\n            if (countAndSum(mid, nums, prefix, pprefix).first >= K) {\n                high = mid;\n            } else {\n                low = mid + 1;\n            }\n        }\n        auto [count, total] = countAndSum(low, nums, prefix, pprefix);\n        return total - (count - K) * low;\n    }\n\npublic:\n    int rangeSum(vector<int>& nums, int n, int left, int right) {\n        int MOD = 1000000007;\n        vector<long long> prefix(n + 1, 0);\n        vector<long long> pprefix(n + 1, 0);\n        for (int i = 0; i < n; i++) {\n            prefix[i + 1] = prefix[i] + nums[i];\n            pprefix[i + 1] = pprefix[i] + prefix[i];\n        }\n        long long ans = (sumOfFirstK(right, nums, prefix, pprefix) - sumOfFirstK(left - 1, nums, prefix, pprefix)) % MOD;\n        if (ans < 0) ans += MOD;\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

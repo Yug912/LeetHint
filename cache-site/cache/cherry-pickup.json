@@ -1,0 +1,40 @@
+{
+  "slug": "cherry-pickup",
+  "title": "Cherry Pickup",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Dynamic Programming",
+  "tc": "O(n^3)",
+  "sc": "O(n^2)",
+  "spaceBreakdown": "- `vector<vector<int>> dp`: n x n matrix → O(n^2)\n- `vector<vector<int>> next_dp`: n x n matrix → O(n^2)\n- recursion depth: none\n- not counted: input grid",
+  "approach": "The problem asks for the maximum cherries collected on a round trip from `(0, 0)` to `(n-1, n-1)` and back. Moving left/up on the return trip is equivalent to moving right/down from `(0, 0)` to `(n-1, n-1)`. Thus, the problem transforms into finding two paths from `(0, 0)` to `(n-1, n-1)` that maximize the total cherries collected, where if both paths pass through the same cell, the cherry is only counted once. We use dynamic programming where the state is `dp[r1][r2]`, representing the maximum cherries collected by two paths ending at row `r1` and `r2` respectively at step `k` (where `c1 = k - r1` and `c2 = k - r2`). We iterate step-by-step, transitioning from the 4 possible previous row combinations, and handle thorns by marking states as unreachable.",
+  "hints": [
+    "Moving left/up from `(n-1, n-1)` to `(0, 0)` is symmetric to moving right/down from `(0, 0)` to `(n-1, n-1)`. What does the round trip become equivalent to if you think about the two trips happening simultaneously?",
+    "Simultaneous two-path dynamic programming. Define `dp[r1][r2]` as the max cherries collected by two paths ending at rows `r1` and `r2` at step `k`, where `c1 = k - r1` and `c2 = k - r2`.",
+    "```\ninitialize dp with -1, dp[0][0] = grid[0][0]\nfor k from 1 to 2n - 2:\n    for r1 from 0 to n - 1:\n        for r2 from 0 to n - 1:\n            c1 = k - r1, c2 = k - r2\n            if c1 or c2 out of bounds or grid[r1][c1] or grid[r2][c2] is -1: skip\n            max_prev = max of dp[r1][r2], dp[r1-1][r2], dp[r1][r2-1], dp[r1-1][r2-1]\n            if max_prev is -1: skip\n            if r1 == r2: next_dp[r1][r2] = max_prev + grid[r1][c1]\n            else: next_dp[r1][r2] = max_prev + grid[r1][c1] + grid[r2][c2]\n    dp = next_dp\nreturn max(0, dp[n-1][n-1])\n```",
+    "**Smallest input** - $n=1$ grid with a single cherry.\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: returning `dp[n-1][n-1]` without `max(0, ...)` when the loop doesn't run and `dp` is initialized to -1 → returns -1\n\n**No valid path** - thorns completely block the way to the destination.\n`Input: [[1,-1],[-1,1]]` → `Expected: 0`\n⚠️ Bug: returning `dp[n-1][n-1]` directly without `max(0, ...)` → returns -1\n\n**Double counting** - both paths pass through the same cell with a cherry.\n`Input: [[1,1],[1,1]]` → `Expected: 3`\n⚠️ Bug: always adding `grid[r1][c1] + grid[r2][c2]` without checking `if (r1 == r2)` → returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid values can be negative?",
+      "a": "The DP state would need to use negative infinity for unreachable states instead of -1, since -1 could be a valid sum. The core transition logic remains identical, but initialization and unreachable checks must distinguish between \"invalid\" and \"valid but negative\"."
+    },
+    {
+      "q": "What if there are $k$ robots instead of 2?",
+      "a": "The state becomes $k$-dimensional `dp[r1][r2]...[rk]`, leading to $O(n^{k+1})$ time and $O(n^k)$ space. This quickly becomes infeasible for large $k$, requiring approximation algorithms or heuristic search."
+    },
+    {
+      "q": "What if the robots can move in all 4 directions?",
+      "a": "The step-based DP approach breaks down because $r+c$ is no longer fixed for a given step, allowing infinite loops. The problem becomes NP-hard, as you would need to track the exact set of visited cells to avoid double-counting, which is intractable for large grids."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int cherryPickup(vector<vector<int>>& grid) {\n        int n = grid.size();\n        vector<vector<int>> dp(n, vector<int>(n, -1));\n        dp[0][0] = grid[0][0];\n        \n        for (int k = 1; k <= 2 * n - 2; ++k) {\n            vector<vector<int>> next_dp(n, vector<int>(n, -1));\n            for (int r1 = 0; r1 < n; ++r1) {\n                for (int r2 = 0; r2 < n; ++r2) {\n                    int c1 = k - r1;\n                    int c2 = k - r2;\n                    if (c1 < 0 || c1 >= n || c2 < 0 || c2 >= n) continue;\n                    if (grid[r1][c1] == -1 || grid[r2][c2] == -1) continue;\n                    \n                    int max_prev = -1;\n                    if (r1 > 0 && r2 > 0) max_prev = max(max_prev, dp[r1-1][r2-1]);\n                    if (r1 > 0) max_prev = max(max_prev, dp[r1-1][r2]);\n                    if (r2 > 0) max_prev = max(max_prev, dp[r1][r2-1]);\n                    max_prev = max(max_prev, dp[r1][r2]);\n                    \n                    if (max_prev == -1) continue;\n                    \n                    if (r1 == r2) {\n                        next_dp[r1][r2] = max_prev + grid[r1][c1];\n                    } else {\n                        next_dp[r1][r2] = max_prev + grid[r1][c1] + grid[r2][c2];\n                    }\n                }\n            }\n            dp = next_dp;\n        }\n        return max(0, dp[n-1][n-1]);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

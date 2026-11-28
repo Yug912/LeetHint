@@ -1,0 +1,40 @@
+{
+  "slug": "interval-list-intersections",
+  "title": "Interval List Intersections",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two Pointers",
+  "tc": "O(n + m)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int i, j, n, m, lo, hi: O(1)\n- vector<vector<int>> result: output, not counted\n- not counted: input lists, returned vector",
+  "approach": "Since both lists are sorted and internally disjoint, use two pointers (one per list). At each step, compute the overlap of the two current intervals as [max(starts), min(ends)]; if non-empty, append it. Then advance the pointer whose interval ends first, because that interval can no longer overlap with any future interval in the other list. This processes every relevant pair exactly once.",
+  "hints": [
+    "Both interval lists are sorted and each is internally disjoint. When comparing one interval from each list, what determines which list's next interval could still overlap with the other's current interval?",
+    "Two pointers, one per list. With firstList[0]=[0,2] and secondList[0]=[1,5], the overlap is [max(0,1), min(2,5)] = [1,2]. Since firstList[0] ends at 2 < 5, advance the first pointer.",
+    "```\ni = 0, j = 0\nwhile i < len(A) and j < len(B):\n    lo = max(A[i].start, B[j].start)\n    hi = min(A[i].end, B[j].end)\n    if lo <= hi:\n        append [lo, hi] to result\n    if A[i].end < B[j].end:\n        i = i + 1\n    else:\n        j = j + 1\nreturn result\n```",
+    "**Point overlap** - two closed intervals share exactly one endpoint\n`firstList = [[1,5]], secondList = [[5,9]]` → `Expected: [[5,5]]`\n⚠️ Bug: checking `lo < hi` instead of `lo <= hi` → returns `[]`\n\n**One list empty** - the other list has intervals but one is empty\n`firstList = [], secondList = [[1,3],[5,9]]` → `Expected: []`\n⚠️ Bug: accessing `firstList[0]` without guarding `i < n` → out-of-bounds access / crash\n\n**One interval overlaps multiple** - a single interval in one list spans two in the other\n`firstList = [[1,10]], secondList = [[3,5],[6,8]]` → `Expected: [[3,5],[6,8]]`\n⚠️ Bug: advancing both pointers after each intersection → returns `[[3,5]]`, missing `[6,8]`\n\n**Wrong pointer advanced** - advancing the interval that ends later instead of earlier\n`firstList = [[1,3],[5,7]], secondList = [[2,6]]` → `Expected: [[2,3],[5,6]]`\n⚠️ Bug: advancing the pointer with the larger end value → returns `[[2,3]]`, missing `[5,6]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if intervals within each list could overlap each other?",
+      "a": "First merge each list into disjoint sorted intervals (sort by start, then merge overlapping). Then apply the same two-pointer intersection algorithm on the merged lists. TC: O(n log n + m log m), SC: O(n + m) for the merged lists."
+    },
+    {
+      "q": "What if you need the intersection of k sorted interval lists instead of two?",
+      "a": "Use a min-heap of k entries, each holding the current interval and list index. At each step, the latest start among heap entries and the earliest end (heap top) give a candidate overlap; pop the entry with the earliest end and advance it. TC: O(N log k) where N is total intervals, SC: O(k)."
+    },
+    {
+      "q": "What if the lists arrive as streams too large to fit in memory?",
+      "a": "Maintain only the current interval from each stream. When a new interval arrives on one side, compare it with the other side's current interval using the same max-start / min-end logic, buffering only the output. TC: O(n + m), SC: O(1) beyond the output buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> intervalIntersection(vector<vector<int>>& firstList, vector<vector<int>>& secondList) {\n        vector<vector<int>> result;\n        int i = 0, j = 0;\n        int n = firstList.size(), m = secondList.size();\n        while (i < n && j < m) {\n            int lo = max(firstList[i][0], secondList[j][0]);\n            int hi = min(firstList[i][1], secondList[j][1]);\n            if (lo <= hi) {\n                result.push_back({lo, hi});\n            }\n            if (firstList[i][1] < secondList[j][1]) {\n                i++;\n            } else {\n                j++;\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

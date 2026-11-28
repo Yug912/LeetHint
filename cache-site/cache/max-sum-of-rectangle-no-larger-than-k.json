@@ -1,0 +1,40 @@
+{
+  "slug": "max-sum-of-rectangle-no-larger-than-k",
+  "title": "Max Sum of Rectangle No Larger Than K",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Prefix Sum + Ordered Set",
+  "tc": "O(min(m,n)² · max(m,n) · log(max(m,n)))",
+  "sc": "O(max(m,n))",
+  "spaceBreakdown": "- vector<int> colSum or rowSum: up to max(m,n) elements → O(max(m,n))\n- set<int> ps: up to max(m,n) entries → O(max(m,n))\n- recursion depth: none\n- not counted: input matrix, returned int",
+  "approach": "Fix two rows (or columns, whichever dimension is smaller) to reduce the 2D rectangle problem to a 1D max-subarray-sum-≤-k problem. For the 1D problem, maintain a running prefix sum and an ordered set of previous prefix sums. For each new prefix, use lower_bound to find the smallest previous prefix ≥ (prefix − k), giving the largest subarray sum ≤ k ending at the current position. The code picks the smaller dimension for the outer loop to minimize complexity.",
+  "hints": [
+    "If you fix the top and bottom rows of a rectangle, what one-dimensional problem over the columns remains to be solved?",
+    "Use an ordered set (std::set) of prefix sums with lower_bound. For colSum = [1,0,1] and k=2, when prefix reaches 2, lower_bound(0) finds 0 in the set, giving candidate sum 2.",
+    "```\nfor each pair of rows (top, bottom):\n    accumulate colSum by adding row 'bottom'\n    insert 0 into ordered set\n    for each column c:\n        prefix += colSum[c]\n        find smallest element in set >= prefix - k\n        if found: update result with prefix - that element\n        insert prefix into set\n```",
+    "**Single element** - the only rectangle is one cell, so the set must contain 0 to represent the empty prefix.\n`Input: matrix = [[5]], k = 5` → `Expected: 5`\n⚠️ Bug: not inserting 0 into the ordered set before scanning → returns INT_MIN (no candidate found)\n\n**All negatives** - every rectangle sum is negative, so the answer is the least negative sum within budget.\n`Input: matrix = [[-1,-2],[-3,-4]], k = -3` → `Expected: -3`\n⚠️ Bug: initializing result to 0 instead of INT_MIN → returns 0 (no negative candidate beats 0)\n\n**Answer equals k exactly** - the best rectangle sum hits the budget precisely.\n`Input: matrix = [[2,2,-1]], k = 3` → `Expected: 3`\n⚠️ Bug: using upper_bound instead of lower_bound → returns 2 (skips the exact match at prefix − k)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the number of rows is much larger than the number of columns?",
+      "a": "Iterate over column pairs instead of row pairs. The code already picks the smaller dimension for the outer loop, giving O(n² · m · log m) instead of O(m² · n · log n) when rows dominate."
+    },
+    {
+      "q": "What if we must return the rectangle coordinates, not just the sum?",
+      "a": "Store the column index alongside each prefix sum using set<pair<int,int>> sorted by prefix value. Track top, bottom, left, right whenever the result improves. TC and SC are unchanged."
+    },
+    {
+      "q": "What if we need the rectangle sum closest to k, allowing sums larger than k?",
+      "a": "For each prefix, also check the largest element below prefix − k by decrementing the lower_bound iterator. Compare candidates from both sides by absolute difference to k. TC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSumSubmatrix(vector<vector<int>>& matrix, int k) {\n        int m = matrix.size();\n        int n = matrix[0].size();\n        int result = INT_MIN;\n\n        if (m <= n) {\n            for (int top = 0; top < m; top++) {\n                vector<int> colSum(n, 0);\n                for (int bottom = top; bottom < m; bottom++) {\n                    for (int c = 0; c < n; c++)\n                        colSum[c] += matrix[bottom][c];\n                    set<int> ps;\n                    ps.insert(0);\n                    int prefix = 0;\n                    for (int c = 0; c < n; c++) {\n                        prefix += colSum[c];\n                        auto it = ps.lower_bound(prefix - k);\n                        if (it != ps.end()) {\n                            int candidate = prefix - *it;\n                            if (candidate > result)\n                                result = candidate;\n                        }\n                        ps.insert(prefix);\n                    }\n                }\n            }\n        } else {\n            for (int left = 0; left < n; left++) {\n                vector<int> rowSum(m, 0);\n                for (int right = left; right < n; right++) {\n                    for (int r = 0; r < m; r++)\n                        rowSum[r] += matrix[r][right];\n                    set<int> ps;\n                    ps.insert(0);\n                    int prefix = 0;\n                    for (int r = 0; r < m; r++) {\n                        prefix += rowSum[r];\n                        auto it = ps.lower_bound(prefix - k);\n                        if (it != ps.end()) {\n                            int candidate = prefix - *it;\n                            if (candidate > result)\n                                result = candidate;\n                        }\n                        ps.insert(prefix);\n                    }\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

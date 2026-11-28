@@ -1,0 +1,40 @@
+{
+  "slug": "non-decreasing-subsequences",
+  "title": "Non-decreasing Subsequences",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking with Per-Level Deduplication",
+  "tc": "O(2^n · n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- bool used[201] per call frame: O(1) each (constant 201 booleans), O(n) frames → O(n)\n- vector<int> current: up to n elements → O(n)\n- recursion call stack: up to n levels deep → O(n)\n- not counted: input vector, returned result vector",
+  "approach": "With n ≤ 15, we can enumerate all possible subsequences via backtracking. We build each subsequence incrementally from left to right, only extending with elements whose value is ≥ the last chosen element (maintaining non-decreasing order). To avoid duplicate subsequences, at each recursion level we maintain a `used` boolean array indexed by value (offset by 100 for the range [-100, 100]) - if we've already tried value v at this level, we skip subsequent occurrences of v. This per-level deduplication ensures each distinct subsequence is generated exactly once.",
+  "hints": [
+    "The array has at most 15 elements. In the expected output for [4,6,7,7], why does [4,7] appear only once even though there are two 7s at different indices?",
+    "Recursive backtracking with a per-level `used` array indexed by value. For nums = [4,6,7,7], at the level where current = [4], trying index 2 (value 7) marks 7 as used, so index 3 (also value 7) is skipped - preventing a duplicate [4,7].",
+    "```\nbacktrack(start, current):\n    if len(current) >= 2:\n        add copy of current to results\n    used = array of false\n    for i from start to n-1:\n        if current non-empty and nums[i] < current[-1]:\n            continue\n        if used[nums[i] + offset]:\n            continue\n        used[nums[i] + offset] = true\n        current.append(nums[i])\n        backtrack(i + 1, current)\n        current.pop()\n```",
+    "**Smallest input** - only one element, no subsequence of length ≥ 2 exists\n`Input: nums = [1]` → `Expected: []`\n⚠️ Bug: checking `current.size() >= 1` instead of `>= 2` → returns `[[1]]`\n\n**All equal** - every pair is non-decreasing, deduplication is critical\n`Input: nums = [7,7,7,7]` → `Expected: [[7,7],[7,7,7],[7,7,7,7]]`\n⚠️ Bug: no per-level `used` array → returns `[[7,7],[7,7],[7,7],[7,7,7],[7,7,7],...]` with duplicates\n\n**Duplicate values at same level** - two 7s at indices 2 and 3\n`Input: nums = [4,6,7,7]` → `Expected: [[4,6],[4,6,7],[4,6,7,7],[4,7],[4,7,7],[6,7],[6,7,7],[7,7]]`\n⚠️ Bug: no deduplication at all → returns `[4,7]` twice (once from index 2, once from index 3)\n\n**Strictly decreasing** - no valid non-decreasing pair exists\n`Input: nums = [5,4,3,2,1]` → `Expected: []`\n⚠️ Bug: not checking `nums[i] >= current.back()` → returns `[[5,4],[5,3],[5,2],[5,1],[4,3],...]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums.length could be up to 10^5 and you only need the count of distinct non-decreasing subsequences of length ≥ 2?",
+      "a": "Use a Fenwick tree indexed by value (offset by 100 for range [-100,100]). For each element x, query the sum of counts for values ≤ x, add 1 for the new subsequence consisting of just x, and update the tree at position x. This gives O(n log V) time where V = 201, effectively O(n), with O(V) space."
+    },
+    {
+      "q": "What if values could be any 32-bit integer instead of [-100,100]?",
+      "a": "Replace the fixed-size `used` array with an `unordered_set<int>` per recursion level. The time complexity stays O(2^n · n) but with higher constant factors from hashing. Alternatively, coordinate-compress all values first to map them into [0, n) and use a smaller array."
+    },
+    {
+      "q": "What if you need to return only subsequences of exactly length k?",
+      "a": "Add a length parameter and only add to results when `current.size() == k`. Prune branches where `(n - start) + current.size() < k` since not enough elements remain. Time becomes O(C(n,k) · k) in the worst case, with O(k) auxiliary space for the recursion depth."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> findSubsequences(vector<int>& nums) {\n        vector<vector<int>> result;\n        vector<int> current;\n        backtrack(nums, 0, current, result);\n        return result;\n    }\nprivate:\n    void backtrack(vector<int>& nums, int start, vector<int>& current, vector<vector<int>>& result) {\n        if (current.size() >= 2) {\n            result.push_back(current);\n        }\n        bool used[201] = {false};\n        for (int i = start; i < (int)nums.size(); i++) {\n            if (!current.empty() && nums[i] < current.back()) continue;\n            int idx = nums[i] + 100;\n            if (used[idx]) continue;\n            used[idx] = true;\n            current.push_back(nums[i]);\n            backtrack(nums, i + 1, current, result);\n            current.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

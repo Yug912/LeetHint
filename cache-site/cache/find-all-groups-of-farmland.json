@@ -1,0 +1,40 @@
+{
+  "slug": "find-all-groups-of-farmland",
+  "title": "Find All Groups of Farmland",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Linear Scan with In-Place Marking",
+  "tc": "O(m * n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- result vector: output, not counted\n- land modified in place: O(1) auxiliary\n- no recursion, no extra containers",
+  "approach": "Since groups are rectangular and non-adjacent, the first unvisited `1` found in row-major scan order is always the top-left corner of a new group. From that corner, expand rightward along the top row to find the rightmost column `c2`, then expand downward along the left column to find the bottommost row `r2`. Mark every cell in the rectangle `[r1,r2]×[c1,c2]` as visited (set to 0) so no cell is processed twice. This works because the group is guaranteed to be a solid rectangle, so the top row and left column fully determine its extent.",
+  "hints": [
+    "When scanning the grid row by row from top-left, what makes a `1` cell the top-left corner of a new group rather than an interior cell of one already found?",
+    "Scan the grid in row-major order; when you hit an unvisited `1`, expand right along its row and down along its column to find the rectangle's far corner, then zero out the rectangle. Example: at `(0,0)` in `[[1,1],[1,1]]`, expanding right gives `c2=1`, expanding down gives `r2=1`, yielding `[0,0,1,1]`.",
+    "```\nfor each cell (i, j) in row-major order:\n    if land[i][j] == 1:\n        r1, c1 = i, j\n        r2, c2 = i, j\n        while c2+1 < n and land[i][c2+1] == 1: c2++\n        while r2+1 < m and land[r2+1][j] == 1: r2++\n        add [r1, c1, r2, c2] to result\n        set all cells in [r1..r2] x [c1..c2] to 0\n```",
+    "**Single cell** - one hectare of farmland in a 1×1 grid\n`Input: [[1]]` → `Expected: [[0,0,0,0]]`\n⚠️ Bug: using `while (c2 < n && land[i][c2] == 1) c2++` (checking current cell instead of next) → c2 reaches 1, returns `[[0,0,0,1]]`\n\n**Single row with gap** - two separate groups in one row\n`Input: [[1,1,0,1]]` → `Expected: [[0,0,0,1],[0,3,0,3]]`\n⚠️ Bug: not marking visited cells to 0 → cell (0,1) still reads 1, returns `[[0,0,0,1],[0,1,0,1],[0,3,0,3]]`\n\n**Tall single column** - farmland spanning multiple rows in one column\n`Input: [[1],[1],[0]]` → `Expected: [[0,0,1,0]]`\n⚠️ Bug: expanding down with `while (r2 < m && land[r2][j] == 1) r2++` (checking current cell) → r2 reaches 2, returns `[[0,0,2,0]]`\n\n**All farmland** - entire grid is one group\n`Input: [[1,1],[1,1]]` → `Expected: [[0,0,1,1]]`\n⚠️ Bug: expanding only rightward, not downward → r2 stays 0, returns `[[0,0,0,1]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if farmland groups can have arbitrary shapes, not just rectangles?",
+      "a": "Use BFS or DFS to find each connected component of 1's, tracking the minimum and maximum row and column visited. The bounding box `[min_r, min_c, max_r, max_c]` gives the corners. Time stays O(m*n), space becomes O(m*n) if you cannot modify the input (need a visited matrix)."
+    },
+    {
+      "q": "What if m and n can be up to 10^5 but the grid is sparse (few 1's)?",
+      "a": "Store farmland coordinates in a hash set. For each unvisited cell, expand its rectangle by probing right and down in the set. Time O(k) where k is the number of farmland cells, space O(k) for the set."
+    },
+    {
+      "q": "What if rows arrive as a stream (one at a time) and you must output each group as soon as its bottom edge is detected?",
+      "a": "Track active rectangles by their column range. When a new row arrives, check which active rectangles continue (same column span of 1's) and which end (span broken or shortened). Output a rectangle when its bottom row is detected. Time O(m*n), space O(n) for tracking active column spans."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> findFarmland(vector<vector<int>>& land) {\n        int m = land.size();\n        int n = land[0].size();\n        vector<vector<int>> result;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (land[i][j] == 1) {\n                    int r1 = i, c1 = j;\n                    int r2 = i, c2 = j;\n                    while (c2 + 1 < n && land[i][c2 + 1] == 1) c2++;\n                    while (r2 + 1 < m && land[r2 + 1][j] == 1) r2++;\n                    result.push_back({r1, c1, r2, c2});\n                    for (int r = r1; r <= r2; r++) {\n                        for (int c = c1; c <= c2; c++) {\n                            land[r][c] = 0;\n                        }\n                    }\n                }\n            }\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

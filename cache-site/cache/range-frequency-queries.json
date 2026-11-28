@@ -1,0 +1,39 @@
+{
+  "slug": "range-frequency-queries",
+  "title": "Range Frequency Queries",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Sorted Index Lists",
+  "tc": "O(n + q log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> pos: stores every index exactly once across all vectors → O(n)\n- recursion depth: none\n- not counted: input array, returned int",
+  "approach": "For each distinct value, store the sorted list of indices where it appears (built in one pass, naturally sorted since we scan left to right). To answer `query(left, right, value)`, binary-search that value's index list for the first index ≥ `left` (lower_bound) and the first index > `right` (upper_bound); the count of occurrences in the range is exactly the difference of these two iterators. If the value never appears, return 0 immediately. This is correct because the index list is strictly increasing, so the elements between the two iterators are precisely the occurrences inside `[left, right]`.",
+  "hints": [
+    "For a fixed value, what property does the sequence of all its occurrence indices have, and how could that let you count how many fall inside `[left, right]` without scanning them? With up to 10^5 queries on an array of length up to 10^5, each query must run in sublinear time.",
+    "Store, per value, a sorted vector of the indices where it appears; answer each query with two binary searches - `lower_bound(left)` and `upper_bound(right)` - and return the difference. Example: value 33 appears at indices [1, 7]; `query(0, 11, 33)` → lower_bound(0) lands at position 0, upper_bound(11) lands at position 2, count = 2.",
+    "```\nbuild(arr):\n  for i in 0..len(arr)-1:\n    positions[arr[i]].append(i)\n\nquery(left, right, value):\n  v = positions.get(value)\n  if v is empty: return 0\n  lo = first index in v with v[idx] >= left\n  hi = first index in v with v[idx] > right\n  return hi - lo\n```",
+    "**Value absent** - the queried value never appears in arr.\n`Input: arr=[1,2,3], query(0,2,7)` → `Expected: 0`\n⚠️ Bug: not checking existence first and calling `pos[value].front()` to validate → dereferences an empty vector (undefined behavior), likely returns garbage instead of 0.\n\n**All elements equal** - every arr[i] is the same value.\n`Input: arr=[7,7,7,7], query(0,3,7)` → `Expected: 4`\n⚠️ Bug: using `lower_bound` for the right boundary instead of `upper_bound` → lower_bound(3) on [0,1,2,3] returns position 3, so count = 3 - 0 = 3 instead of 4.\n\n**Single element** - array has length 1.\n`Input: arr=[5], query(0,0,5)` → `Expected: 1`\n⚠️ Bug: returning `hi - lo + 1` (off-by-one) → lower_bound(0)=pos 0, upper_bound(0)=pos 1, returns 1 + 1 = 2 instead of 1.\n\n**Boundary: right = n-1** - query reaches the last index.\n`Input: arr=[1,2,3,3], query(2,3,3)` → `Expected: 2`\n⚠️ Bug: swapping the two searches (upper_bound for left, lower_bound for right) → upper_bound(2) on [2,3]=pos 1, lower_bound(3) on [2,3]=pos 1, returns 0 instead of 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array supports point updates (change arr[i] to a new value) between queries?",
+      "a": "Replace each value's sorted vector with a balanced BST or a Fenwick tree keyed by index, so an update removes one index from the old value's structure and inserts it into the new value's structure in O(log n). Queries stay O(log n); space stays O(n)."
+    },
+    {
+      "q": "What if values can be up to 10^9 instead of 10^4?",
+      "a": "Nothing changes - the hash map is already keyed by value directly, so arbitrary keys are fine. Build remains O(n), each query O(log n), space O(n); no coordinate compression is needed."
+    },
+    {
+      "q": "What if a query asks for the frequency of the most frequent value in [left, right] (no specific value given)?",
+      "a": "This is strictly harder. Offline, Mo's algorithm answers all queries in O((n + q)·√n) by maintaining running counts. Online, a merge-sort tree storing a frequency map per segment gives O(log² n) per query but uses O(n log n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class RangeFreqQuery {\n    unordered_map<int, vector<int>> pos;\npublic:\n    RangeFreqQuery(vector<int>& arr) {\n        for (int i = 0; i < (int)arr.size(); i++) {\n            pos[arr[i]].push_back(i);\n        }\n    }\n    \n    int query(int left, int right, int value) {\n        auto it = pos.find(value);\n        if (it == pos.end()) return 0;\n        const vector<int>& v = it->second;\n        auto lo = lower_bound(v.begin(), v.end(), left);\n        auto hi = upper_bound(v.begin(), v.end(), right);\n        return (int)(hi - lo);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2
+  }
+}

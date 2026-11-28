@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-insertion-steps-to-make-a-string-palindrome",
+  "title": "Minimum Insertion Steps to Make a String Palindrome",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Intervals (space-optimized)",
+  "tc": "O(n²)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> dp: n entries → O(n)\n- scalar variables (prev, temp, i, j): O(1)\n- recursion: none\n- not counted: input string s",
+  "approach": "The minimum insertions needed equals n minus the length of the longest palindromic subsequence (LPS). Characters already in the LPS are \"paired\" in the final palindrome; every other character needs one insertion to create its mirror partner. We compute LPS via interval DP: dp[i][j] = LPS length of s[i..j], with transitions on whether s[i]==s[j]. We use a 1D rolling array since each row only depends on the previous row.",
+  "hints": [
+    "In a finished palindrome, every character except possibly one has a mirror partner on the opposite side. Given the string as-is, which characters already have a usable partner somewhere inside it, and which are left unpaired?",
+    "Use dynamic programming to find the longest palindromic subsequence (LPS). For s = \"mbadm\", the LPS is \"mam\" (length 3), so the answer is 5 − 3 = 2.",
+    "```\nn = length(s)\ndp = array of n zeros\nfor i from n-1 down to 0:\n    dp[i] = 1\n    prev = 0\n    for j from i+1 to n-1:\n        temp = dp[j]\n        if s[i] == s[j]:\n            dp[j] = prev + 2\n        else:\n            dp[j] = max(dp[j], dp[j-1])\n        prev = temp\nreturn n - dp[n-1]\n```",
+    "**Single character** - n = 1, trivially a palindrome\n`Input: s = \"a\"` → `Expected: 0`\n⚠️ Bug: skipping the `dp[i] = 1` base case (leaving dp all zeros) → LPS = 0, returns 1\n\n**Two distinct characters** - minimal non-palindrome needing one insertion\n`Input: s = \"ab\"` → `Expected: 1`\n⚠️ Bug: initializing all dp entries to 1 instead of 0 → LPS = 2, returns 0\n\n**All identical** - every character already pairs\n`Input: s = \"aaaa\"` → `Expected: 0`\n⚠️ Bug: on match setting `dp[j] = prev` instead of `prev + 2` → LPS = 1, returns 3\n\n**Already palindrome** - no insertions needed\n`Input: s = \"zzazz\"` → `Expected: 0`\n⚠️ Bug: iterating i forward (0 to n-1) so dp[i+1][*] is still 0 → LPS = 2, returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Can you reduce the space from O(n²) to O(n)?",
+      "a": "Yes - since dp[i][j] only depends on row i+1, use a 1D array and iterate i from n-1 down to 0. Keep a `prev` variable to hold the old dp[j-1] (which is dp[i+1][j-1]) before it gets overwritten. Time stays O(n²), space drops to O(n)."
+    },
+    {
+      "q": "How would you also return one optimal palindrome string after the insertions?",
+      "a": "Store the full 2D DP table, then backtrack from (0, n-1): if s[i]==s[j], append s[i] to both ends and move to (i+1, j-1); otherwise move toward whichever neighbor gave the larger value. Build the left half, then mirror it. Time O(n²), space O(n²) for the table."
+    },
+    {
+      "q": "What if you could also delete characters instead of only inserting?",
+      "a": "The answer is unchanged: deleting an unpaired character costs 1, the same as inserting its mirror partner. Both operations reduce to n − LPS, so the minimum is still n − LPS."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minInsertions(string s) {\n        int n = s.size();\n        vector<int> dp(n, 0);\n        for (int i = n - 1; i >= 0; i--) {\n            dp[i] = 1;\n            int prev = 0;\n            for (int j = i + 1; j < n; j++) {\n                int temp = dp[j];\n                if (s[i] == s[j]) {\n                    dp[j] = prev + 2;\n                } else {\n                    dp[j] = max(dp[j], dp[j - 1]);\n                }\n                prev = temp;\n            }\n        }\n        return n - dp[n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

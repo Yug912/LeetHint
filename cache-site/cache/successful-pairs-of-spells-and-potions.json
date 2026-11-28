@@ -1,0 +1,40 @@
+{
+  "slug": "successful-pairs-of-spells-and-potions",
+  "title": "Successful Pairs of Spells and Potions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search on Sorted Array",
+  "tc": "O(m log m + n log m)",
+  "sc": "O(log m)",
+  "spaceBreakdown": "- sort(potions): in-place, introsort recursion stack O(log m)\n- vector<int> pairs(n): returned output, not counted\n- no other containers or recursion",
+  "approach": "Sort the potions array. For each spell, binary search for the smallest potion index where spell × potion ≥ success; every potion from that index to the end is successful, so the count is m − index. The product is computed in `long long` to avoid overflow since 10⁵ × 10⁵ = 10¹⁰ exceeds 32-bit int range.",
+  "hints": [
+    "If you arrange the potions from weakest to strongest and fix one spell, what can you say about the positions of all potions that produce a successful pair?",
+    "Sort the potions, then for each spell use binary search to find the first potion whose product with the spell reaches success. For spell 3 with potions [1,2,3,4,5] and success 7: 3×3=9≥7, so index 2 onward gives 3 successful potions.",
+    "```\nsort potions\nfor each spell s at index i:\n    lo = 0, hi = m\n    while lo < hi:\n        mid = (lo + hi) / 2\n        if s * potions[mid] >= success:\n            hi = mid\n        else:\n            lo = mid + 1\n    pairs[i] = m - lo\n```",
+    "**Exact boundary** - product equals success exactly\n`spells = [1], potions = [1], success = 1` → `Expected: [1]`\n⚠️ Bug: using `>` instead of `>=` in the comparison → returns `[0]`\n\n**Overflow** - 10⁵ × 10⁵ = 10¹⁰ exceeds 2³¹−1\n`spells = [100000], potions = [100000], success = 10000000000` → `Expected: [1]`\n⚠️ Bug: computing `spells[i] * potions[mid]` as int multiplication → overflow → returns `[0]`\n\n**Floor division** - threshold computed with integer division\n`spells = [3], potions = [1,2,3,4,5], success = 7` → `Expected: [3]`\n⚠️ Bug: using `success / spell` = 2 as the lower_bound target → finds index 1 → returns `[4]`\n\n**Duplicates at threshold** - all potions equal the boundary value\n`spells = [2], potions = [5,5,5], success = 10` → `Expected: [3]`\n⚠️ Bug: using `upper_bound` for threshold 5 → finds index 3 (past end) → returns `[0]`"
+  ],
+  "followUps": [
+    {
+      "q": "If both arrays are already sorted, can you solve it in O(n + m) instead of O(n log m)?",
+      "a": "Use two pointers: process spells from strongest to weakest and maintain a threshold index that only moves left as spells get stronger, since a stronger spell needs a weaker minimum potion. Both pointers move monotonically, giving O(n + m)."
+    },
+    {
+      "q": "What if potions arrive in a stream and you must answer spell queries online?",
+      "a": "Maintain a Fenwick tree over the potion value range [1, 10⁵]. Insert each potion in O(log 10⁵). For a spell query, compute threshold = ceil(success / spell) and query the count of potions with value ≥ threshold in O(log 10⁵)."
+    },
+    {
+      "q": "What if each spell has its own success threshold instead of a global one?",
+      "a": "The approach is unchanged - for each spell, binary search using its own success value. The time complexity remains O(m log m + n log m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> successfulPairs(vector<int>& spells, vector<int>& potions, long long success) {\n        int n = spells.size();\n        int m = potions.size();\n        sort(potions.begin(), potions.end());\n        vector<int> pairs(n);\n        for (int i = 0; i < n; i++) {\n            long long spell = spells[i];\n            int lo = 0, hi = m;\n            while (lo < hi) {\n                int mid = (lo + hi) / 2;\n                if (spell * (long long)potions[mid] >= success) {\n                    hi = mid;\n                } else {\n                    lo = mid + 1;\n                }\n            }\n            pairs[i] = m - lo;\n        }\n        return pairs;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

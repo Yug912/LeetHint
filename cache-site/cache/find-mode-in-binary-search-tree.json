@@ -1,0 +1,40 @@
+{
+  "slug": "find-mode-in-binary-search-tree",
+  "title": "Find Mode in Binary Search Tree",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Morris In-Order Traversal",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> result: output, not counted (LeetCode convention)\n- int currVal, currCount, maxCount: O(1)\n- TreeNode* prev, curr, pred: O(1)\n- recursion stack: none (Morris traversal is iterative)\n- not counted: input tree, returned vector",
+  "approach": "The key insight is that an in-order traversal of a BST visits nodes in non-decreasing order, so all duplicate values appear consecutively. We perform a Morris in-order traversal (which uses O(1) extra space by temporarily threading right pointers from each node's in-order predecessor back to the node) and maintain a running count of the current value. When the count exceeds the maximum seen so far, we reset the result list; when it ties, we append. This correctly identifies all modes in a single pass without recursion or a hash map.",
+  "hints": [
+    "What ordering of nodes in a BST would place all equal values next to each other?",
+    "Morris in-order traversal visits BST nodes in sorted order using O(1) extra space by temporarily linking each node's predecessor. For root = [1,null,2,2], the in-order sequence is 1, 2, 2 - value 2 appears twice, so the mode is [2].",
+    "```\ncurr = root\nwhile curr is not null:\n    if curr.left is null:\n        update running count for curr.val\n        update mode list if count >= max\n        curr = curr.right\n    else:\n        pred = rightmost node in curr.left subtree\n        if pred.right is null:\n            pred.right = curr      // thread\n            curr = curr.left\n        else:\n            pred.right = null      // unthread\n            update running count for curr.val\n            update mode list if count >= max\n            curr = curr.right\n```",
+    "**Single node** - only one value exists, prev is null on first visit\n`Input: [0]` → `Expected: [0]`\n⚠️ Bug: accessing `prev->val` without checking `prev != nullptr` → null pointer dereference, crashes\n\n**Multiple modes (tie)** - every value appears exactly once\n`Input: [2,1,3]` → `Expected: [1,2,3]`\n⚠️ Bug: only using `currCount > maxCount` without an `else if (currCount == maxCount)` branch → returns `[1]`\n\n**All equal values** - every node has the same value\n`Input: [2,2,2]` → `Expected: [2]`\n⚠️ Bug: forgetting to update `prev = curr` after processing each node → currCount never increments past 1, returns `[2,2,2]`\n\n**Skewed tree** - all nodes chain left, stressing Morris predecessor logic\n`Input: [3,2,1]` → `Expected: [1,2,3]`\n⚠️ Bug: using `while pred->right` instead of `while pred->right && pred->right != curr` → infinite loop when predecessor already threads back to curr"
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve this if the tree were a general binary tree, not a BST?",
+      "a": "In a general binary tree, in-order traversal doesn't guarantee sorted order, so duplicates aren't adjacent. Use a hash map to count frequencies in one pass, then scan for the maximum. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the tree is immutable and you cannot modify it, even temporarily?",
+      "a": "Morris traversal temporarily modifies right pointers. Use recursive in-order traversal instead, which leaves the tree untouched but uses O(h) stack space where h is the tree height. TC: O(n), SC: O(h)."
+    },
+    {
+      "q": "What if you need to find all values that appear more than ⌊n/3⌋ times?",
+      "a": "The same in-order traversal works. Track the running count as before, but when the value changes, check whether the previous count exceeded n/3 and add it to the result. Since the sequence is sorted, at most two values can exceed n/3. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findMode(TreeNode* root) {\n        vector<int> result;\n        int currVal = 0;\n        int currCount = 0;\n        int maxCount = 0;\n        TreeNode* prev = nullptr;\n        TreeNode* curr = root;\n\n        while (curr) {\n            if (curr->left == nullptr) {\n                if (prev && prev->val == curr->val) {\n                    currCount++;\n                } else {\n                    currVal = curr->val;\n                    currCount = 1;\n                }\n                if (currCount > maxCount) {\n                    maxCount = currCount;\n                    result.clear();\n                    result.push_back(currVal);\n                } else if (currCount == maxCount) {\n                    result.push_back(currVal);\n                }\n                prev = curr;\n                curr = curr->right;\n            } else {\n                TreeNode* pred = curr->left;\n                while (pred->right && pred->right != curr) {\n                    pred = pred->right;\n                }\n                if (pred->right == nullptr) {\n                    pred->right = curr;\n                    curr = curr->left;\n                } else {\n                    pred->right = nullptr;\n                    if (prev && prev->val == curr->val) {\n                        currCount++;\n                    } else {\n                        currVal = curr->val;\n                        currCount = 1;\n                    }\n                    if (currCount > maxCount) {\n                        maxCount = currCount;\n                        result.clear();\n                        result.push_back(currVal);\n                    } else if (currCount == maxCount) {\n                        result.push_back(currVal);\n                    }\n                    prev = curr;\n                    curr = curr->right;\n                }\n            }\n        }\n\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

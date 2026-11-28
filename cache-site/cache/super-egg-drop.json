@@ -1,0 +1,36 @@
+{
+  "slug": "super-egg-drop",
+  "title": "Super Egg Drop",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search",
+  "tc": "O(k log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- local variables (lo, hi, mid, sum, c, i): constant size → O(1)\n- recursion depth: none\n- not counted: input, returned value",
+  "approach": "The minimum number of moves $m$ with $k$ eggs can be found by binary searching $m$. For a given $m$ and $k$, the maximum number of floors we can check is $\\sum_{i=1}^{k} \\binom{m}{i}$. We binary search $m$ in the range $[1, n]$ and use a helper function to compute the binomial coefficient sum in $O(k)$ time, capping values at $n$ to prevent overflow and allow early exit. This finds the smallest $m$ such that the sum is $\\ge n$.",
+  "hints": [
+    "With a fixed budget of m moves and k eggs, what is the maximum number of floors whose critical value you can always pinpoint? The constraints allow k up to 100 and n up to 10^4.",
+    "Binary search on m. For each m, compute Σ C(m,i) for i=1..k via C(m,i)=C(m,i−1)·(m−i+1)/i, capping at n. For k=2, n=6: m=3 gives C(3,1)+C(3,2)=3+3=6≥6, so 3 moves suffice.",
+    "```\nlo = 1, hi = n\nwhile lo < hi:\n    mid = (lo + hi) / 2\n    sum = 0, binom = 1\n    for i = 1 to min(k, mid):\n        binom = binom * (mid - i + 1) / i\n        sum += binom\n        if sum >= n: break\n    if sum >= n:\n        hi = mid\n    else:\n        lo = mid + 1\nreturn lo\n```",
+    "**Exact coverage** - the binomial sum equals n exactly, so the comparison operator matters.\n`Input: k = 2, n = 6` → `Expected: 3`\n⚠️ Bug: using `sum > n` instead of `sum >= n` → returns 4\n\n**Off-by-one in loop bound** - the loop must include i = k, not stop at i = k − 1.\n`Input: k = 2, n = 3` → `Expected: 2`\n⚠️ Bug: using `i < k` instead of `i <= k` → returns 3\n\n**Binary search upper bound** - hi must be n, not n − 1, since the answer can equal n.\n`Input: k = 1, n = 2` → `Expected: 2`\n⚠️ Bug: setting `hi = n - 1` → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^9?",
+      "a": "The binary search range becomes [1, 10^9], giving about 30 iterations. The binomial sum still terminates early at n, and the intermediate product binom·(m−i+1) stays below n·m ≤ 10^13, which fits in long long. TC: O(k log n), SC: O(1)."
+    },
+    {
+      "q": "What if you must answer Q different (k, n) queries online?",
+      "a": "Each query is independent and runs the same binary search in O(k log n). No preprocessing is needed since the method uses O(1) space. TC: O(Q·k·"
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int superEggDrop(int k, int n) {\n        int lo = 1, hi = n;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (check(mid, k, n) >= n) {\n                hi = mid;\n            } else {\n                lo = mid + 1;\n            }\n        }\n        return lo;\n    }\n    \nprivate:\n    long long check(int m, int k, int n) {\n        long long sum = 0;\n        long long c = 1;\n        for (int i = 1; i <= k; ++i) {\n            c = c * (m - i + 1) / i;\n            if (c > n) c = n;\n            sum += c;\n            if (sum >= n) return sum;\n        }\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

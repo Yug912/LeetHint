@@ -1,0 +1,40 @@
+{
+  "slug": "step-by-step-directions-from-a-binary-tree-node-to-another",
+  "title": "Step-By-Step Directions From a Binary Tree Node to Another",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Lowest Common Ancestor via Root-to-Node Paths",
+  "tc": "O(n)",
+  "sc": "O(h)",
+  "spaceBreakdown": "- string pathS: up to h characters → O(h)\n- string pathT: up to h characters → O(h)\n- string result: up to 2·h characters → O(h)\n- recursion call-stack (findPath): up to h frames → O(h)\n- not counted: input tree, returned string\n(h = tree height; worst case O(n) for a skewed tree, O(log n) for balanced)",
+  "approach": "The shortest path in a tree from s to t goes upward from s to their Lowest Common Ancestor, then downward from the LCA to t. Compute root→s and root→t as strings of 'L'/'R' via DFS; their longest common prefix is exactly the root→LCA path. Strip it: the remaining suffix of the s-path becomes all 'U's (going up), and the remaining suffix of the t-path is appended verbatim (going down). This is correct because the common prefix is the shared portion of both root-to-node paths, which by definition ends at the LCA.",
+  "hints": [
+    "In a tree there is exactly one simple path between any two nodes. What single node on the path from s to t marks where the upward ('U') steps end and the downward ('L'/'R') steps begin?",
+    "Find the Lowest Common Ancestor implicitly: compute root→s and root→t as 'L'/'R' strings via DFS, then strip their longest common prefix. Example 1: root→3 = \"LL\", root→6 = \"RL\"; no common prefix, so LCA is the root.",
+    "```\npathS = DFS(root, startValue)   # string of L/R\npathT = DFS(root, destValue)   # string of L/R\ni = length of longest common prefix of pathS, pathT\nanswer = 'U' repeated (len(pathS) - i) times\nanswer += pathT[i:]\nreturn answer\n```",
+    "**Smallest input** - only two nodes, start is the root so pathS is empty.\n`Input: root=[2,1], startValue=2, destValue=1` → `Expected: \"L\"`\n⚠️ Bug: initializing prefix counter `i=1` instead of `i=0` → returns `\"\"` (skips pathT[0])\n\n**Shared ancestor below root** - start and dest are cousins under the same subtree, so the common prefix is non-empty.\n`Input: root=[1,2,3,4,5], startValue=4, destValue=5` → `Expected: \"UR\"`\n⚠️ Bug: skipping common-prefix removal, returning `'U'*len(pathS)+pathT` → returns `\"UULR\"`\n\n**Dest is ancestor of start** - destValue lies on the root→startValue path, so pathT is a prefix of pathS.\n`Input: root=[5,1,2,3,null,6,4], startValue=3, destValue=1` → `Expected: \"U\"`\n⚠️ Bug: `while (pathS[i]==pathT[i]) i++` with no bounds check → reads past end of pathT, undefined behavior\n\n**Skewed tree** - right-leaning chain of 10^5 nodes, pathS length ~10^5.\n`Input: root=[1,null,2,null,3,...], startValue=100000, destValue=1` → `Expected: \"UUU...U\" (99999 U's)`\n⚠️ Bug: using `result = result + 'U'` instead of `result += 'U'` in the up-step loop → O(n²) time, TLE"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must answer many (start, dest) queries on the same tree?",
+      "a": "Precompute parent pointers and depths in O(n). For each query, find the LCA via binary lifting in O(log n), then walk up from s to LCA emitting 'U's and down from LCA to t emitting 'L'/'R'. Total O(n + Q log n) time, O(n log n) space for the ancestor table."
+    },
+    {
+      "q": "What if a specific node is \"blocked\" and the path must avoid it?",
+      "a": "In a tree the unique simple path is the only candidate. Check whether the blocked node lies on the s→t path (it is an ancestor of exactly one of s, t). If so, no valid path exists - return \"\". Otherwise the standard LCA path is unaffected. O(n) per query."
+    },
+    {
+      "q": "What if the tree is too large for memory and you only get a streaming API (node value + child pointers, one pass)?",
+      "a": "You cannot store all nodes. Stream once, keeping only the root→s and root→t path strings (each O(h)) by backtracking when a branch fails. Then strip the common prefix and build the answer. O(n) time, O(h) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    bool findPath(TreeNode* node, int target, string& path) {\n        if (!node) return false;\n        if (node->val == target) return true;\n        path.push_back('L');\n        if (findPath(node->left, target, path)) return true;\n        path.pop_back();\n        path.push_back('R');\n        if (findPath(node->right, target, path)) return true;\n        path.pop_back();\n        return false;\n    }\npublic:\n    string getDirections(TreeNode* root, int startValue, int destValue) {\n        string pathS, pathT;\n        findPath(root, startValue, pathS);\n        findPath(root, destValue, pathT);\n        int i = 0;\n        while (i < (int)pathS.size() && i < (int)pathT.size() && pathS[i] == pathT[i]) i++;\n        string result;\n        result.reserve((pathS.size() - i) + (pathT.size() - i));\n        for (int j = i; j < (int)pathS.size(); j++) result += 'U';\n        result += pathT.substr(i);\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

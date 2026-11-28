@@ -1,0 +1,40 @@
+{
+  "slug": "dota2-senate",
+  "title": "Dota2 Senate",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Queue Simulation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- queue<int> rq: up to n entries → O(n)\n- queue<int> dq: up to n entries → O(n)\n- recursion depth: none\n- not counted: input string, returned string",
+  "approach": "The key insight is that each senator should ban the next opposing senator in circular voting order (the one who would vote soonest after them), since this denies the opposing party the most future votes. We simulate this with two queues storing senator indices: the senator with the smaller front index acts first, bans the front of the other queue, and re-enqueues themselves with index + n to maintain round ordering. When one queue empties, the other party wins. Adding n preserves relative order across rounds, and each iteration bans exactly one senator, giving O(n) total.",
+  "hints": [
+    "When a senator gets to act, should they ban an opponent who already voted this round or one who hasn't voted yet? Which choice denies the opposing party more future votes?",
+    "Use two queues storing senator indices. The senator with the smaller front index acts first, bans the other queue's front, then re-enqueues with index + n. For \"RDD\": R(0) vs D(1), 0 < 1, so R bans D(1) and re-enqueues as index 3.",
+    "```\nenqueue all R indices into rq, all D indices into dq\nwhile both queues are non-empty:\n    r = front(rq), d = front(dq)\n    pop both fronts\n    if r < d:\n        push r + n into rq\n    else:\n        push d + n into dq\nreturn \"Radiant\" if rq is non-empty else \"Dire\"\n```",
+    "**Single senator** - only one senator exists, one queue starts empty\n`Input: \"R\"` → `Expected: \"Radiant\"`\n⚠️ Bug: calling front() on an empty queue before the loop check → crash/UB\n\n**Re-enqueue without offset** - index not incremented by n when re-queuing\n`Input: \"RDD\"` → `Expected: \"Dire\"`\n⚠️ Bug: pushing r instead of r+n → returns \"Radiant\"\n\n**Ban last instead of next** - banning the farthest opposing senator instead of the nearest in circular order\n`Input: \"RDRDD\"` → `Expected: \"Radiant\"`\n⚠️ Bug: banning the last active opposing senator instead of the next → returns \"Dire\"\n\n**Wrong comparison direction** - comparing r > d instead of r < d\n`Input: \"RDRD\"` → `Expected: \"Radiant\"`\n⚠️ Bug: using r > d to decide who acts first → returns \"Dire\""
+  ],
+  "followUps": [
+    {
+      "q": "What if there are k parties instead of just 2?",
+      "a": "Use k queues. Each step, find the queue with the smallest front index; that senator bans the front of the next non-empty opposing queue (circularly among parties), then re-enqueues with index + n. Finding the minimum front among k queues takes O(k) per step, or O(log k) with a priority queue. TC: O(n log k), SC: O(n)."
+    },
+    {
+      "q": "What if each senator can ban up to b senators per turn instead of 1?",
+      "a": "The acting senator pops and discards up to b fronts from the opposing queue, then re-enqueues with index + n. Each senator is still banned at most once, so total work remains O(n). TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the input must be processed in-place with O(1) extra space?",
+      "a": "Mark banned senators in-place (e.g., lowercase the character). Each round, scan left to right: a surviving senator bans the next surviving opposing senator circularly. Repeat until one party has no survivors. Each round is O(n) and there are at most O(n) rounds. TC: O(n²), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string predictPartyVictory(string senate) {\n        int n = senate.size();\n        queue<int> rq, dq;\n        for (int i = 0; i < n; i++) {\n            if (senate[i] == 'R') rq.push(i);\n            else dq.push(i);\n        }\n        while (!rq.empty() && !dq.empty()) {\n            int r = rq.front(); rq.pop();\n            int d = dq.front(); dq.pop();\n            if (r < d) {\n                rq.push(r + n);\n            } else {\n                dq.push(d + n);\n            }\n        }\n        return rq.empty() ? \"Dire\" : \"Radiant\";\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

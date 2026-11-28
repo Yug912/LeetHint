@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-subarray-ranges",
+  "title": "Sum of Subarray Ranges",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> left, right: each size n → O(n)\n- stack<int> st: up to n entries → O(n)\n- not counted: input nums, returned long long",
+  "approach": "The sum of all subarray ranges equals (sum of max over all subarrays) − (sum of min over all subarrays). For each index i, count how many subarrays have nums[i] as their maximum (and similarly as their minimum) using a monotonic stack: find the nearest element to the left/right that \"stops\" nums[i] from being the max. To handle duplicates without double-counting, use strict comparison on one side and non-strict on the other. The contribution of nums[i] as max is nums[i] · leftCount · rightCount; subtract the analogous min contribution.",
+  "hints": [
+    "The answer is the sum of (max − min) over every subarray. What algebraic split turns \"sum of (max − min)\" into two independent sums you could compute separately?",
+    "Use a monotonic stack to count, for each index i, how many subarrays have nums[i] as their maximum (and as their minimum). For nums = [1,2,3], index 2 is the max of subarrays [3], [2,3], [1,2,3] → contributes 3·3 = 9 to the max-sum.",
+    "for each i: find L = count of consecutive elements to the left that are < nums[i] (stop at first >=)\nfind R = count of consecutive elements to the right that are <= nums[i] (stop at first >)\nsumMax += nums[i] * L * R\nrepeat with reversed comparisons (>, >=) to get sumMin\nreturn sumMax - sumMin",
+    "**Single element** - only one subarray exists, range is 0.\n`Input: nums = [5]` → `Expected: 0`\n⚠️ Bug: returning sumMax without subtracting sumMin → returns 5.\n\n**All equal values** - every subarray range is 0; tie-breaking must avoid double counting.\n`Input: nums = [3,3,3]` → `Expected: 0`\n⚠️ Bug: using strict `<` on both sides for max → middle 3 counted in zero subarrays, ends counted in 3 each, giving sumMax = 18, sumMin = 18 → 0 (works here), but using strict on both sides for a mixed array like [1,3,3] double-counts duplicates → sumMax = 19 instead of 16 → returns 7 instead of 4.\n\n**Large values, overflow** - n=1000, values up to 10^9; max-sum can reach ~10^9 · n^2/2 ≈ 5·10^14.\n`Input: nums = [1000000000,1000000000,...] (1000 times)` → `Expected: 0`\n⚠️ Bug: accumulating sumMax/sumMin in `int` → overflow → wrong/negative result.\n\n**Negatives mixed** - min can be negative, so sumMin is negative and subtracting it adds to the answer.\n`Input: nums = [4,-2,-3,4,1]` → `Expected: 59`\n⚠️ Bug: using `nums[i] * L * R` with `int` multiplication before casting to long long → overflow on negative products → wrong result.\n\n**Already sorted ascending** - each element is max of a growing suffix; stress-tests the L·R counting.\n`Input: nums = [1,2,3]` → `Expected: 4`\n⚠️ Bug: swapping the strict/non-strict sides → off-by-one in L or R → returns 5 instead of 4."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums.length can be up to 10^5 - does your solution still pass?",
+      "a": "Yes. The monotonic-stack approach is O(n) time and O(n) space, so it scales to 10^5 with no change. A naive O(n^2) enumeration of all subarrays would TLE."
+    },
+    {
+      "q": "What if you must also return the count of subarrays whose range equals a given target k?",
+      "a": "Still use monotonic stacks to get, for each i, the number of subarrays where nums[i] is the max and where it is the min. Then count pairs (i as max, j as min) with max−min = k via a two-pointer/hash approach on the contribution lists; complexity becomes O(n log n) or O(n) depending on the counting structure."
+    },
+    {
+      "q": "What if the array arrives as a stream and you must answer the running sum of ranges after each append?",
+      "a": "Maintain the monotonic stacks incrementally: on each new element, pop and finalize contributions of invalidated indices, then push. Each element is pushed and popped once, so amortized O(1) per append and O(n) total, with O(n) space for the stacks and contribution bookkeeping."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long subArrayRanges(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> left(n), right(n);\n        stack<int> st;\n        long long sumMax = 0, sumMin = 0;\n\n        // Max contributions: left strict <, right <=\n        while (!st.empty()) st.pop();\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && nums[st.top()] < nums[i]) st.pop();\n            left[i] = st.empty() ? (i + 1) : (i - st.top());\n            st.push(i);\n        }\n        while (!st.empty()) st.pop();\n        for (int i = n - 1; i >= 0; i--) {\n            while (!st.empty() && nums[st.top()] <= nums[i]) st.pop();\n            right[i] = st.empty() ? (n - i) : (st.top() - i);\n            st.push(i);\n        }\n        for (int i = 0; i < n; i++) {\n            sumMax += (long long)nums[i] * left[i] * right[i];\n        }\n\n        // Min contributions: left strict >, right >=\n        while (!st.empty()) st.pop();\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && nums[st.top()] > nums[i]) st.pop();\n            left[i] = st.empty() ? (i + 1) : (i - st.top());\n            st.push(i);\n        }\n        while (!st.empty()) st.pop();\n        for (int i = n - 1; i >= 0; i--) {\n            while (!st.empty() && nums[st.top()] >= nums[i]) st.pop();\n            right[i] = st.empty() ? (n - i) : (st.top() - i);\n            st.push(i);\n        }\n        for (int i = 0; i < n; i++) {\n            sumMin += (long long)nums[i] * left[i] * right[i];\n        }\n\n        return sumMax - sumMin;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

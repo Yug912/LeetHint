@@ -1,0 +1,40 @@
+{
+  "slug": "solving-questions-with-brainpower",
+  "title": "Solving Questions With Brainpower",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "1D Dynamic Programming (right-to-left / suffix DP)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> dp: size n+1 → O(n)\n- recursion depth: none (iterative)\n- not counted: input questions, returned long long",
+  "approach": "Process questions right-to-left. Let dp[i] be the maximum points achievable starting from question i (with dp[n]=0). For each question i, either skip it (earning dp[i+1]) or solve it (earning points[i] plus dp[i + brainpower[i] + 1], or 0 if that index is past the end). dp[i] is the max of these two options. The answer is dp[0]. This is correct because the decision at i only affects questions after i, so once all later dp values are known, the optimal choice at i is fully determined.",
+  "hints": [
+    "When you solve or skip question i, only questions at indices greater than i are affected - nothing before i changes. In what order could you process the questions so that each decision only needs information about questions you have already handled?",
+    "Use 1D dynamic programming filled right-to-left, where dp[i] = max points achievable starting at question i. In Example 1, dp[3] = max(dp[4]=0, 2+0) = 2, then dp[0] = max(dp[1], 3 + dp[3]) = max(4, 5) = 5.",
+    "```\ndp[n] = 0\nfor i from n-1 down to 0:\n    next = i + brainpower[i] + 1\n    solve = points[i] + (dp[next] if next <= n else 0)\n    skip  = dp[i+1]\n    dp[i] = max(solve, skip)\nreturn dp[0]\n```",
+    "**Single question** - only one question exists, so solving it is always optimal.\n`Input: questions = [[5,1]]` → `Expected: 5`\n⚠️ Bug: reading dp[i+1] with a dp array of size n (not n+1) → out-of-bounds read, returns garbage\n\n**Overflow** - with n = 10^5 and every points_i = 10^5, brainpower_i = 1, you solve 50000 questions for 50000 × 100000 = 5×10^9 points.\n`Input: questions = [[100000,1]] repeated 100000 times` → `Expected: 5000000000`\n⚠️ Bug: storing dp as int → 5×10^9 wraps past 2^31-1 ≈ 2.1×10^9, returns 705032704\n\n**Brainpower skips past the end** - question 3 in Example 1 has brainpower 5, but only 0 questions remain after it.\n`Input: questions = [[3,2],[4,3],[4,4],[2,5]]` → `Expected: 5`\n⚠️ Bug: indexing dp[i + brainpower[i] + 1] without checking it is ≤ n → out-of-bounds read, returns garbage\n\n**All brainpower huge** - every question skips past the end, so you can solve every question.\n`Input: questions = [[1,100000],[2,100000],[3,100000]]` → `Expected: 6`\n⚠️ Bug: treating \"next > n\" as \"cannot solve this question\" instead of \"no future bonus\" → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you could solve the questions in any order instead of left-to-right?",
+      "a": "The problem changes fundamentally: solving question i now removes brainpower_i other questions, but you choose which. With no fixed order, the suffix structure breaks and this becomes a much harder combinatorial selection problem, likely needing a different paradigm (and possibly NP-hard for large brainpower values). The right-to-left recurrence no longer applies because \"future\" is not well-defined."
+    },
+    {
+      "q": "What if brainpower_i could be 0, meaning solving a question skips nothing?",
+      "a": "The same algorithm works unchanged: next = i + 0 + 1 = i + 1, so solving question i earns points[i] + dp[i+1], and dp[i] = max(dp[i+1], points[i] + dp[i+1]) = dp[i+1] + points[i] (since points[i] ≥ 1). No code change is needed; the bounds check next <= n still handles the last question correctly."
+    },
+    {
+      "q": "Suppose brainpower_i is bounded by a constant k (e.g., k ≤ 10). Can you reduce space below O(n)?",
+      "a": "Yes. Since next = i + brainpower[i] + 1 lies in [i+1, i+k+1], dp[i] only depends on the next k+1 entries. Use a circular buffer of size k+2 instead of a full array, giving O(k) = O(1) auxiliary space while keeping O(n) time. The recurrence and logic are identical; only the storage layout changes."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long mostPoints(vector<vector<int>>& questions) {\n        int n = questions.size();\n        vector<long long> dp(n + 1, 0);\n        for (int i = n - 1; i >= 0; i--) {\n            int points = questions[i][0];\n            int bp = questions[i][1];\n            long long solve = points;\n            int next = i + bp + 1;\n            if (next <= n) solve += dp[next];\n            dp[i] = max(dp[i + 1], solve);\n        }\n        return dp[0];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

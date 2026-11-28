@@ -1,0 +1,40 @@
+{
+  "slug": "longest-string-chain",
+  "title": "Longest String Chain",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "DP on Strings (Longest Chain)",
+  "tc": "O(n·L² + n log n)",
+  "sc": "O(n·L)",
+  "spaceBreakdown": "- unordered_map<string,int> dp: up to n entries → O(n)\n- sort(): introsort uses O(log n) stack\n- temporary predecessor strings in loop: O(L) each, transient\n- not counted: input vector, returned int",
+  "approach": "A predecessor is always exactly one character shorter, so process words from shortest to longest. For each word, generate all possible predecessors (the word with one character removed at each position) and look each up in a hash map storing the longest chain ending at that word. The chain length for the current word is 1 plus the best predecessor's chain length (or 1 if no predecessor exists). Track the global maximum. This works because sorting by length guarantees every possible predecessor has already been processed.",
+  "hints": [
+    "If word_A is a predecessor of word_B, how do their lengths compare? With each word at most 16 characters long, how many candidate predecessors does any single word have?",
+    "Use a hash map from each word to the longest chain ending at it. Process words from shortest to longest; for \"bdca\", remove the 'd' to get \"bca\", look it up, and extend its chain by one.",
+    "```\nsort words by length\nbest = 1\nfor each word w:\n    chain[w] = 1\n    for each position i in w:\n        pred = w with character at i removed\n        if pred in chain:\n            chain[w] = max(chain[w], chain[pred] + 1)\n    best = max(best, chain[w])\nreturn best\n```",
+    "**Smallest input** - only one word in the array\n`Input: words = [\"a\"]` → `Expected: 1`\n⚠️ Bug: initializing `best` to 0 instead of 1 → returns 0\n\n**Unsorted input** - a shorter predecessor appears after a longer word\n`Input: words = [\"ba\",\"a\"]` → `Expected: 2`\n⚠️ Bug: processing words in input order without sorting by length → returns 1\n\n**No valid chain** - no word is a predecessor of another\n`Input: words = [\"abcd\",\"dbqca\"]` → `Expected: 1`\n⚠️ Bug: returning 0 when no chain of length ≥ 2 is found → returns 0\n\n**Only one predecessor checked** - the extending predecessor is not the first character removed\n`Input: words = [\"a\",\"b\",\"ba\",\"bca\",\"bda\",\"bdca\"]` → `Expected: 4`\n⚠️ Bug: only removing the first character of each word → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if word lengths can be up to 10^5 instead of 16?",
+      "a": "Generating all L substrings per word becomes O(L²) which is too slow. Use rolling hashes: precompute a polynomial hash for each word, then removing character at position i costs O(1) via prefix/suffix hash combination. Total time becomes O(n · L), space stays O(n)."
+    },
+    {
+      "q": "What if you must return the actual chain of words, not just its length?",
+      "a": "Store a parent pointer alongside each chain length in the hash map, recording which predecessor gave the best extension. After finding the word with the maximum chain, backtrack through parent pointers to reconstruct the full sequence. Time complexity is unchanged; space stays O(n)."
+    },
+    {
+      "q": "What if words arrive in a stream and you cannot store all of them at once?",
+      "a": "Keep only words of the current length and the previous length in memory. Since a predecessor is exactly one character shorter, once you finish processing all words of length L you can discard words of length L−2 and earlier. Space drops to O(number of words at two consecutive lengths), which in the worst case is still O(n) but typically much smaller."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int longestStrChain(vector<string>& words) {\n        sort(words.begin(), words.end(), [](const string& a, const string& b) {\n            return a.size() < b.size();\n        });\n        unordered_map<string, int> dp;\n        int best = 1;\n        for (const string& w : words) {\n            int cur = 1;\n            int len = (int)w.size();\n            for (int i = 0; i < len; ++i) {\n                string pred = w.substr(0, i) + w.substr(i + 1);\n                auto it = dp.find(pred);\n                if (it != dp.end()) {\n                    cur = max(cur, it->second + 1);\n                }\n            }\n            dp[w] = cur;\n            best = max(best, cur);\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "watering-plants",
+  "title": "Watering Plants",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long steps: single scalar → O(1)\n- int water, pos, n: single scalars → O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Simulate the watering process in a single left-to-right pass. Track your current position (`pos`) and remaining water. If you have enough water for plant `i`, walk forward `i - pos` steps and subtract. Otherwise, walk back to the river (`pos + 1` steps), refill, walk to plant `i` (`i + 1` steps), and set `water = capacity - plants[i]`. The step counts are derived directly from the x-coordinates: river at -1, plant `i` at `i`.",
+  "hints": [
+    "What determines whether you can walk straight to the next plant or must detour to the river first? The river is at x = -1 and plant i is at x = i.",
+    "Simulate the process in one pass, tracking current position and remaining water. When water < plants[i], add (pos + 1) steps to return to the river and (i + 1) steps to reach plant i. Example: at plant 1 with 1 unit left, plant 2 needs 3 - go back 2 steps, forward 3 steps.",
+    "```\nsteps = 0, water = capacity, pos = -1\nfor i from 0 to n-1:\n    if water >= plants[i]:\n        steps += i - pos\n        water -= plants[i]\n        pos = i\n    else:\n        steps += pos + 1\n        steps += i + 1\n        water = capacity - plants[i]\n        pos = i\nreturn steps\n```",
+    "**Single plant** - Only one plant, walk from river to plant 0.\n`Input: plants = [5], capacity = 5` → `Expected: 1`\n⚠️ Bug: initializing pos to 0 instead of -1 → returns 0\n\n**Exact capacity match mid-sequence** - Water equals next plant's need but you are not at the river.\n`Input: plants = [3,3,3], capacity = 6` → `Expected: 7`\n⚠️ Bug: using `water > plants[i]` instead of `water >= plants[i]` → returns 9\n\n**All plants equal capacity** - Every plant after the first should force a refill.\n`Input: plants = [5,5,5], capacity = 5` → `Expected: 9`\n⚠️ Bug: setting `water = capacity` instead of `water = capacity - plants[i]` in the refill branch → returns 5\n\n**No refills needed** - Capacity far exceeds total water needed.\n`Input: plants = [1,1,1], capacity = 100` → `Expected: 3`\n⚠️ Bug: always returning to river between plants without checking water → returns 9"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can water the plants in any order, not just left to right?",
+      "a": "This becomes a variant of the vehicle routing problem. You would still water consecutive plants between refills, but choosing the optimal grouping and order is NP-hard in general. A greedy heuristic: sort plants by position, then greedily extend each trip as far as capacity allows. TC: O(n log n) for sorting, SC: O(n) for the sorted copy."
+    },
+    {
+      "q": "What if there are multiple refill stations at various positions along the row?",
+      "a": "When water < plants[i], go to the nearest station instead of always x = -1. Pre-sort station positions; for each refill, binary-search the closest station to your current position, add the round-trip distance, and continue. TC: O(n log k) where k is the number of stations, SC: O(k) for the station list."
+    },
+    {
+      "q": "What if plants is a data stream too large to fit in memory?",
+      "a": "The algorithm only needs the current plant's water requirement, current position, and remaining water - all O(1) state. Process each element as it arrives without storing the array. TC: O(n), SC: O(1) with no array storage."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int wateringPlants(vector<int>& plants, int capacity) {\n        long long steps = 0;\n        int water = capacity;\n        int pos = -1;\n        int n = plants.size();\n        for (int i = 0; i < n; i++) {\n            if (water >= plants[i]) {\n                steps += (i - pos);\n                water -= plants[i];\n                pos = i;\n            } else {\n                steps += (pos + 1);\n                steps += (i + 1);\n                water = capacity - plants[i];\n                pos = i;\n            }\n        }\n        return (int)steps;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

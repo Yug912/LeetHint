@@ -1,0 +1,40 @@
+{
+  "slug": "where-will-the-ball-fall",
+  "title": "Where Will the Ball Fall",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation",
+  "tc": "O(m × n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<int> answer: n entries → O(n) (returned output, not counted)\n- no recursion, no auxiliary containers\n- not counted: input grid, returned vector",
+  "approach": "Simulate each ball's descent through the grid one row at a time. At each cell, a right-leaning board (1) sends the ball one column right, and a left-leaning board (-1) sends it one column left. The ball gets stuck if the adjacent cell in the movement direction has an opposing board (forming a V) or if the movement would exit the grid. After processing all m rows, the ball's final column is the answer, or -1 if it got stuck at any point.",
+  "hints": [
+    "When a ball lands on a right-leaning board (value 1), it moves to the column on its right. What must be true about that neighboring cell for the ball to keep falling instead of getting stuck?",
+    "Simulate each ball's descent row by row. In Example 1, ball 0 starts at column 0: grid[0][0]=1 and grid[0][1]=1 (same direction, no V), so it moves to column 1 and continues to the next row.",
+    "```\nfor each starting column c from 0 to n-1:\n    col = c\n    for each row r from 0 to m-1:\n        if grid[r][col] == 1:\n            if col+1 >= n or grid[r][col+1] == -1: mark stuck, break\n            col = col + 1\n        else:\n            if col-1 < 0 or grid[r][col-1] == 1: mark stuck, break\n            col = col - 1\n    answer[c] = stuck ? -1 : col\n```",
+    "**Single cell, right-leaning** - The ball immediately hits the right wall with no room to move.\n`Input: [[1]]` → `Expected: [-1]`\n⚠️ Bug: accessing `grid[row][col+1]` before checking `col+1 >= n` → out-of-bounds access on `grid[0][1]`\n\n**V shape** - Two adjacent cells form opposing diagonals that trap the ball.\n`Input: [[1,-1]]` → `Expected: [-1,-1]`\n⚠️ Bug: only checking wall boundaries, not checking if `grid[row][col+1] == -1` when `grid[row][col] == 1` → returns `[1,0]`\n\n**All right-leaning, last column** - The ball in the last column cannot move right.\n`Input: [[1,1,1]]` → `Expected: [1,2,-1]`\n⚠️ Bug: checking V shape but forgetting the wall boundary check `col+1 >= n` → out-of-bounds access on `grid[0][3]` for ball at column 2\n\n**Multi-row zigzag** - The ball changes direction across multiple rows.\n`Input: [[1,1],[-1,-1]]` → `Expected: [0,-1]`\n⚠️ Bug: only processing the first row (loop bound `row < 1` instead of `row < m`) → ball 0 exits at column 1 instead of 0, returns `[1,-1]`"
+  ],
+  "followUps": [
+    {
+      "q": "If you need to answer many queries (different starting columns) on the same fixed grid, how can you speed up each query?",
+      "a": "Precompute the exit column for every (row, column) pair in O(m×n) by simulating all balls simultaneously and storing intermediate results. Each subsequent query is an O(1) lookup into this table."
+    },
+    {
+      "q": "What if a single cell's value can be flipped between queries?",
+      "a": "Build a segment tree over rows where each node stores the column-mapping for its row range. A cell flip requires rebuilding O(n) entries per affected node along one root-to-leaf path, giving O(n log m) per update and O(log m) per query."
+    },
+    {
+      "q": "Given a target exit column, find all starting columns that lead to it.",
+      "a": "Reverse the simulation: start from each bottom cell and trace upward, flipping the direction logic (a right-leaning board reached from below means the ball came from the right). Collect all top columns that reach the target. This runs in O(m×n) for all targets at once."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> findBall(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        vector<int> answer(n);\n        for (int ball = 0; ball < n; ball++) {\n            int col = ball;\n            bool stuck = false;\n            for (int row = 0; row < m; row++) {\n                if (grid[row][col] == 1) {\n                    if (col + 1 >= n || grid[row][col + 1] == -1) {\n                        stuck = true;\n                        break;\n                    }\n                    col++;\n                } else {\n                    if (col - 1 < 0 || grid[row][col - 1] == 1) {\n                        stuck = true;\n                        break;\n                    }\n                    col--;\n                }\n            }\n            answer[ball] = stuck ? -1 : col;\n        }\n        return answer;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

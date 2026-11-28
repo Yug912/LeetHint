@@ -1,0 +1,40 @@
+{
+  "slug": "all-paths-from-source-to-target",
+  "title": "All Paths From Source to Target",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Backtracking DFS",
+  "tc": "O(2^n · n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> path: up to n entries → O(n)\n- recursion call-stack depth: up to n → O(n)\n- not counted: input graph, returned result",
+  "approach": "Since the graph is a DAG, every walk from node 0 is automatically simple (no repeats), so we can enumerate all source-to-target routes with depth-first search and backtracking. We keep a `path` vector seeded with `0`, recurse into each neighbor, and when we land on node `n-1` we push a copy of `path` into the result. After recursing into a neighbor we pop it, restoring the path for the next branch. Correctness follows because every route from 0 to n-1 is a finite simple path, and DFS along outgoing edges visits each such route exactly once.",
+  "hints": [
+    "The graph is acyclic, so any walk starting at node 0 can never revisit a node. With n ≤ 15, what does that imply about how many distinct routes from 0 to n-1 could exist, and how would you enumerate each one without duplication?",
+    "Use depth-first search with backtracking: keep the current path, recurse on each neighbor, then pop after returning. In Example 1, from node 0 push 1 → reach 3 (target) → record [0,1,3] → pop 3 and 1 → push 2 → reach 3 → record [0,2,3].",
+    "```\ndfs(node):\n    if node == target:\n        record copy of path\n        return\n    for each neighbor of node:\n        push neighbor onto path\n        dfs(neighbor)\n        pop neighbor from path\npath = [0]\ndfs(0)\n```",
+    "**Smallest input** - n = 2, single edge from 0 to 1.\n`Input: [[1],[]]` → `Expected: [[0,1]]`\n⚠️ Bug: not seeding `path` with 0 before the first call → returns `[[1]]`\n\n**Direct edge to target** - node 0 connects straight to n-1.\n`Input: [[4,3,1],[3,2,4],[3],[4],[]]` → `Expected: [[0,4],[0,3,4],[0,1,3,4],[0,1,2,3,4],[0,1,4]]`\n⚠️ Bug: recording the path only after the neighbor loop instead of at the target check → misses `[0,4]`\n\n**Linear chain** - each node has exactly one outgoing edge.\n`Input: [[1],[2],[3],[]]` → `Expected: [[0,1,2,3]]`\n⚠️ Bug: pushing `path` by reference into `result` → all entries mutate to the final state, returns `[[0,1,2,3]]` only by luck or `[]` if cleared\n\n**Complete DAG** - n = 15, node i connects to every j > i, yielding 2^13 = 8192 paths.\n`Input: [[1,2,...,14],[2,3,...,14],...,[14],[]]` → `Expected: 8192 paths of varying length`\n⚠️ Bug: forgetting to `pop_back()` after recursion → path keeps growing, every recorded path is wrong"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph could contain cycles - how would you adapt the solution?",
+      "a": "Track which nodes are on the current path with a boolean array, and skip any neighbor already in it. This prevents infinite loops while still enumerating every simple path. Time stays O(2^n · n) in the worst case; auxiliary space becomes O(n) for the path plus O(n) for the visited markers."
+    },
+    {
+      "q": "What if you only need the count of paths, not the paths themselves?",
+      "a": "Use DP over reverse topological order: dp[target] = 1, dp[v] = sum of dp[u] over neighbors u. Process nodes from n-1 down to 0. Time O(V + E), space O(V) - far cheaper than enumerating."
+    },
+    {
+      "q": "What if n can be up to 10^5 and you need just one path from 0 to n-1?",
+      "a": "Run a single DFS or BFS from 0 with a parent array, stopping the moment you reach n-1, then reconstruct via parents. Time O(V + E), space O(V). Listing all paths is infeasible since there can be exponentially many."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> allPathsSourceTarget(vector<vector<int>>& graph) {\n        vector<vector<int>> result;\n        vector<int> path;\n        path.push_back(0);\n        int n = static_cast<int>(graph.size());\n        dfs(0, n - 1, graph, path, result);\n        return result;\n    }\nprivate:\n    void dfs(int node, int target, const vector<vector<int>>& graph,\n             vector<int>& path, vector<vector<int>>& result) {\n        if (node == target) {\n            result.push_back(path);\n            return;\n        }\n        for (int next : graph[node]) {\n            path.push_back(next);\n            dfs(next, target, graph, path, result);\n            path.pop_back();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

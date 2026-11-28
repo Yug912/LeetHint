@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-distances-in-tree",
+  "title": "Sum of Distances in Tree",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Rerooting DP (DP on Trees)",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> adj: n nodes, 2(n−1) total entries → O(n)\n- vector<int> count: n entries → O(n)\n- vector<long long> res: n entries → O(n)\n- vector<int> parent: n entries → O(n)\n- vector<int> order: n entries → O(n)\n- vector<bool> visited: n entries → O(n)\n- vector<long long> ans: n entries → O(n)\n- vector<int> stk: up to n entries → O(n)\n- not counted: input edges, returned vector",
+  "approach": "The key insight is rerooting: if you know the answer for node u, moving to adjacent node v changes the sum by −count[v] + (n − count[v]), where count[v] is v's subtree size when rooted at u. A post-order DFS first computes subtree sizes and subtree distance sums; a pre-order DFS then propagates the answer from parent to child using the rerooting formula. This avoids recomputing from scratch for each node.",
+  "hints": [
+    "If you already knew the sum of distances from node u to all others, how would shifting your reference point from u to an adjacent node v change that sum - which nodes get closer by 1, and which get farther by 1?",
+    "Rerooting DP via two tree traversals. From example 1: answer[0]=8, node 2's subtree has 4 nodes, so answer[2] = 8 − 4 + (6−4) = 6.",
+    "```\nDFS1(u, p):\n    for v in adj[u], v != p:\n        DFS1(v, u)\n        count[u] += count[v]\n        res[u] += res[v] + count[v]\n\nDFS2(u, p):\n    for v in adj[u], v != p:\n        ans[v] = ans[u] - count[v] + (n - count[v])\n        DFS2(v, u)\n\ncount[*] = 1\nDFS1(0, -1)\nans[0] = res[0]\nDFS2(0, -1)\n```",
+    "**Single node** - n=1 with no edges\n`Input: n = 1, edges = []` → `Expected: [0]`\n⚠️ Bug: accessing edges[0] or adj[0][0] without checking n → out-of-bounds crash\n\n**Skewed path tree** - maximum recursion depth\n`Input: n = 4, edges = [[0,1],[1,2],[2,3]]` → `Expected: [6,4,4,6]`\n⚠️ Bug: recursive DFS on a path of 3×10^4 nodes → stack overflow / segfault\n\n**Star graph** - one center node connected to all leaves\n`Input: n = 5, edges = [[0,1],[0,2],[0,3],[0,4]]` → `Expected: [4,7,7,7,7]`\n⚠️ Bug: using `ans[v] = ans[u] + (n - count[v])` (omitting the −count[v] term) → returns [4,8,8,8,8]"
+  ],
+  "followUps": [
+    {
+      "q": "What if each edge has a positive integer weight, and distance is the sum of edge weights on the path?",
+      "a": "The rerooting formula generalizes: ans[v] = ans[u] − w(u,v)·count[v] + w(u,v)·(n − count[v]). First pass: res[u] += res[v] + w(u,v)·count[v]. Time O(n), space O(n)."
+    },
+    {
+      "q": "Given k queries each specifying a subset of nodes, for each node compute the sum of distances to all nodes in that subset. k up to 10^5.",
+      "a": "For each query, run the same two-pass algorithm but count only subset nodes (count[u] = number of subset nodes in u's subtree). Time O(n) per query, O(nk) total, space O(n) per query."
+    },
+    {
+      "q": "What if n = 10^6 and memory is limited to 64 MB?",
+      "a": "Replace vector<vector<int>> adj with a CSR-format flat array (two int arrays of size 2n−2). Use int for count/parent/order (max 10^6) and long long only for res/ans (max ~5×10^11). Total ~37 MB. Time O(n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> sumOfDistancesInTree(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n\n        vector<int> count(n, 1);\n        vector<long long> res(n, 0);\n        vector<int> parent(n, -1);\n        vector<int> order;\n        order.reserve(n);\n        vector<bool> visited(n, false);\n        vector<int> stk;\n        stk.reserve(n);\n        stk.push_back(0);\n        visited[0] = true;\n        while (!stk.empty()) {\n            int u = stk.back();\n            stk.pop_back();\n            order.push_back(u);\n            for (int v : adj[u]) {\n                if (!visited[v]) {\n                    visited[v] = true;\n                    parent[v] = u;\n                    stk.push_back(v);\n                }\n            }\n        }\n\n        for (int i = n - 1; i >= 0; i--) {\n            int u = order[i];\n            for (int v : adj[u]) {\n                if (v != parent[u]) {\n                    count[u] += count[v];\n                    res[u] += res[v] + count[v];\n                }\n            }\n        }\n\n        vector<long long> ans(n);\n        ans[0] = res[0];\n        for (int i = 1; i < n; i++) {\n            int u = order[i];\n            int p = parent[u];\n            ans[u] = ans[p] - count[u] + (n - count[u]);\n        }\n\n        return vector<int>(ans.begin(), ans.end());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "construct-binary-tree-from-preorder-and-postorder-traversal",
+  "title": "Construct Binary Tree from Preorder and Postorder Traversal",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Divide and Conquer",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int,int> postIdx: up to n entries → O(n)\n- recursion call stack: worst case O(n) for a skewed tree, O(log n) for balanced\n- not counted: input vectors preorder/postorder, returned tree",
+  "approach": "The preorder array's first element is the root. The second element (if present) is treated as the left subtree's root; locating it in postorder via a hash map reveals the left subtree's size, since postorder lists the entire left subtree before the right subtree. Recursively split both arrays at that boundary to build left and right children. This works because preorder and postorder together determine subtree boundaries (up to the left/right ambiguity when a node has one child, which the problem allows).",
+  "hints": [
+    "Preorder lists each subtree's root first; postorder lists it last. If preorder's second value is a child subtree's root, what does its position in postorder reveal about how the remaining nodes split? In Example 1, preorder = [1,2,4,5,3,6,7] and postorder = [4,5,2,6,7,3,1].",
+    "Use a hash map from value → postorder index for O(1) lookup. In Example 1, preorder[1] = 2 maps to postorder index 2, so the left subtree spans postorder[0..2] (3 nodes) and the right subtree spans postorder[3..5].",
+    "```\nbuild(postStart, postEnd):\n    root = new Node(pre[preIdx++])\n    if postStart == postEnd: return root\n    idx = postIdx[pre[preIdx]]\n    root.left  = build(postStart, idx)\n    root.right = build(idx + 1, postEnd - 1)\n    return root\n```",
+    "**Single node** - n = 1, no children to split\n`Input: preorder = [1], postorder = [1]` → `Expected: [1]`\n⚠️ Bug: reading pre[preIdx] for the left root before checking postStart == postEnd → out-of-bounds read on pre[1]\n\n**Left-only child** - right subtree range is empty\n`Input: preorder = [1,2], postorder = [2,1]` → `Expected: [1,2]`\n⚠️ Bug: omitting the postStart > postEnd guard → build(1, 0) reads pre[2] out of bounds\n\n**Skewed left chain** - every node has only a left child\n`Input: preorder = [1,2,3], postorder = [3,2,1]` → `Expected: [1,2,3]`\n⚠️ Bug: passing postEnd instead of postEnd - 1 to the right subtree → build(2, 2) reads pre[3] out of bounds\n\n**Full binary tree** - both subtrees non-empty (Example 1)\n`Input: preorder = [1,2,4,5,3,6,7], postorder = [4,5,2,6,7,3,1]` → `Expected: [1,2,3,4,5,6,7]`\n⚠️ Bug: using idx - 1 instead of idx as the left subtree's postEnd → node 4 becomes right child of node 2, producing [1,2,5,null,4,null,3,null,null,6,7]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree values are not distinct - can you still reconstruct it?",
+      "a": "No, not uniquely. The hash map from value to index becomes ambiguous, and multiple valid trees may produce the same traversal pair. You would need additional information such as an inorder traversal or explicit node references to disambiguate."
+    },
+    {
+      "q": "What if preorder and postorder can be up to 10^5 elements - does your solution still hold?",
+      "a": "TC stays O(n) thanks to the hash map, but the recursion depth can reach O(n) on a skewed tree, risking stack overflow. Converting to an explicit stack-based iterative build eliminates the call-stack risk while keeping O(n) time."
+    },
+    {
+      "q": "What if you also had the inorder traversal - how would the approach change?",
+      "a": "With inorder plus either preorder or postorder, the left/right split is exact rather than assumed, removing the single-child ambiguity entirely. You would hash inorder indices and split at the root's inorder position, yielding a unique tree even when a node has one child."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int preIdx;\n    unordered_map<int, int> postIdx;\npublic:\n    TreeNode* constructFromPrePost(vector<int>& preorder, vector<int>& postorder) {\n        preIdx = 0;\n        postIdx.clear();\n        for (int i = 0; i < (int)postorder.size(); i++)\n            postIdx[postorder[i]] = i;\n        return build(preorder, 0, (int)postorder.size() - 1);\n    }\nprivate:\n    TreeNode* build(vector<int>& pre, int postStart, int postEnd) {\n        if (postStart > postEnd) return nullptr;\n        TreeNode* root = new TreeNode(pre[preIdx++]);\n        if (postStart == postEnd) return root;\n        int idx = postIdx[pre[preIdx]];\n        root->left  = build(pre, postStart, idx);\n        root->right = build(pre, idx + 1, postEnd - 1);\n        return root;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

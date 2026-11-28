@@ -1,0 +1,40 @@
+{
+  "slug": "sum-of-subarray-minimums",
+  "title": "Sum of Subarray Minimums",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> left: n entries → O(n)\n- vector<int> right: n entries → O(n)\n- stack<int> st: up to n entries → O(n)\n- not counted: input arr, returned int",
+  "approach": "For each element `arr[i]`, count how many subarrays have it as their minimum. This count equals `(i - left[i]) * (right[i] - i)`, where `left[i]` is the index of the previous strictly smaller element and `right[i]` is the index of the next smaller-or-equal element. Using strict on one side and non-strict on the other ensures each subarray's minimum is counted exactly once, even with duplicates. A monotonic stack computes both arrays in O(n).",
+  "hints": [
+    "For a fixed element `arr[i]`, which subarrays have `arr[i]` as their minimum - what stops a subarray from extending further left or right while keeping `arr[i]` the minimum?",
+    "Use a **monotonic stack**. For `arr = [3,1,2,4]`, element `1` at index 1: previous smaller is at index −1 (none), next smaller-or-equal is at index 4 (none), so `1` is the minimum of `(1−(−1))×(4−1) = 6` subarrays.",
+    "```\nfor each i left to right:\n    pop stack while arr[top] >= arr[i]\n    left[i] = stack empty ? -1 : top\n    push i\nfor each i right to left:\n    pop stack while arr[top] > arr[i]\n    right[i] = stack empty ? n : top\n    push i\nans = sum over i of arr[i] * (i - left[i]) * (right[i] - i)\n```",
+    "**Single element** - n = 1, only one subarray exists.\n`Input: arr = [5]` → `Expected: 5`\n⚠️ Bug: defaulting `left[i]` to `0` and `right[i]` to `n-1` instead of `-1` and `n` → returns `0`\n\n**All equal** - every element is a duplicate minimum.\n`Input: arr = [2,2,2]` → `Expected: 12`\n⚠️ Bug: using `>=` in both stack loops (popping equal elements on both sides) → returns `20`\n\n**Overflow** - n = 30000, all values 30000; sum = 30000 × (1+2+…+30000) = 1.35×10^13, exceeding 2^31−1.\n`Input: arr = [30000, 30000, ..., 30000]` (30000 elements) → `Expected: 44905500`\n⚠️ Bug: using `int` for `ans` and applying `% MOD` only at return → returns `615143112`\n\n**Descending sorted** - each element is smaller than all to its left.\n`Input: arr = [4,3,2,1]` → `Expected: 20`\n⚠️ Bug: using `n-1` instead of `n` as the empty-stack default for `right[i]` → returns `16`"
+  ],
+  "followUps": [
+    {
+      "q": "What if we need the sum of subarray maximums instead of minimums?",
+      "a": "Reverse the comparison operators in both stack loops: pop while `arr[top] <= arr[i]` for the left pass and `arr[top] < arr[i]` for the right pass. The contribution formula stays identical. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the array supports point updates and we must recompute the sum after each one?",
+      "a": "Use a segment tree where each node stores the segment minimum and the sum of subarray minimums within that segment. Merging two children combines their sums and adds contributions from subarrays crossing the midpoint. TC: O(n log n) per update, SC: O(n)."
+    },
+    {
+      "q": "What if we need the sum of minimums only for subarrays of length exactly k?",
+      "a": "Use a sliding window of size k with a monotonic deque that keeps candidates in increasing order. The front of the deque is always the current window's minimum. Sum the front value for each window position. TC: O(n), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int sumSubarrayMins(vector<int>& arr) {\n        int n = arr.size();\n        const long long MOD = 1000000007;\n        vector<int> left(n), right(n);\n        stack<int> st;\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && arr[st.top()] >= arr[i]) st.pop();\n            left[i] = st.empty() ? -1 : st.top();\n            st.push(i);\n        }\n        while (!st.empty()) st.pop();\n        for (int i = n - 1; i >= 0; i--) {\n            while (!st.empty() && arr[st.top()] > arr[i]) st.pop();\n            right[i] = st.empty() ? n : st.top();\n            st.push(i);\n        }\n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            long long cnt = (long long)(i - left[i]) * (right[i] - i);\n            ans = (ans + cnt * arr[i]) % MOD;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

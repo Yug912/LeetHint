@@ -1,0 +1,40 @@
+{
+  "slug": "count-artifacts-that-can-be-extracted",
+  "title": "Count Artifacts That Can Be Extracted",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Hash Set Lookup",
+  "tc": "O(d + a)",
+  "sc": "O(d)",
+  "spaceBreakdown": "- unordered_set<int> dug: up to dig.length entries → O(d)\n- recursion depth: none\n- not counted: input artifacts and dig vectors, returned int",
+  "approach": "Store every excavated cell in a hash set keyed by `r * n + c` for O(1) membership lookup. For each artifact, iterate over all its cells (at most 4 per the constraint) and check if each key exists in the set. If every cell is present, the artifact can be extracted. This avoids O(n²) grid allocation and runs in time linear in the input sizes.",
+  "hints": [
+    "Each artifact covers at most 4 cells. For each of those cells, what single fact determines whether the artifact can be extracted?",
+    "Use an `unordered_set<int>` keyed by `r * n + c` to store all dug cells. For artifact `[0,0,0,0]` with `dig = [[0,0]]`, cell (0,0) maps to key 0, found in the set → artifact fully excavated.",
+    "```\ndug = empty hash set\nfor each (r, c) in dig:\n    insert r*n + c into dug\ncount = 0\nfor each artifact (r1, c1, r2, c2):\n    all_dug = true\n    for r from r1 to r2:\n        for c from c1 to c2:\n            if r*n + c not in dug: all_dug = false\n    if all_dug: count++\nreturn count\n```",
+    "**Single-cell artifact** - artifact spans exactly one cell, so the loop must include both endpoints\n`n=1, artifacts=[[0,0,0,0]], dig=[[0,0]]` → `Expected: 1`\n⚠️ Bug: using `r < a[2]` instead of `r <= a[2]` → returns 0\n\n**Partial excavation** - artifact has 4 cells but only 3 are dug\n`n=2, artifacts=[[0,0,1,1]], dig=[[0,0],[0,1],[1,0]]` → `Expected: 0`\n⚠️ Bug: checking only corner cells (0,0) and (1,1) instead of all four → returns 1\n\n**Key collision** - using r+c as key makes (0,1) and (1,0) indistinguishable\n`n=2, artifacts=[[1,0,1,0]], dig=[[0,1]]` → `Expected: 0`\n⚠️ Bug: using key = r+c instead of r*n+c → cell (1,0) collides with dug cell (0,1), returns 1\n\n**No overlap** - dug cells do not touch any artifact\n`n=3, artifacts=[[0,0,0,0]], dig=[[2,2]]` → `Expected: 0`\n⚠️ Bug: returning the count of dug cells instead of fully excavated artifacts → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if digs arrive one at a time in a stream, and after each dig you must report how many artifacts are fully extracted?",
+      "a": "Precompute a map from each cell key to its artifact ID, and track a remaining-undug-cell count per artifact. When a dig hits an artifact cell, decrement that artifact's counter; when it reaches zero, increment the answer. Each dig is O(1), preprocessing is O(total artifact cells)."
+    },
+    {
+      "q": "What if artifacts can overlap (share cells)?",
+      "a": "A single dug cell may belong to multiple artifacts. Store a map from cell key to a list of artifact IDs that cover it. When a cell is dug, decrement the remaining count for every artifact in that list. Preprocessing is O(total artifact cells), each dig is O(artifacts sharing that cell)."
+    },
+    {
+      "q": "What if n can be up to 10^9 but artifacts.length and dig.length stay ≤ 10^5?",
+      "a": "The hash set approach already handles this since we never allocate an n×n grid. Use `long long` for keys since r*n+c can reach 10^9 × 10^9 = 10^18. Time and space remain O(d + a)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int digArtifacts(int n, vector<vector<int>>& artifacts, vector<vector<int>>& dig) {\n        unordered_set<int> dug;\n        for (auto& d : dig) {\n            dug.insert(d[0] * n + d[1]);\n        }\n        int count = 0;\n        for (auto& a : artifacts) {\n            bool allDug = true;\n            for (int r = a[0]; r <= a[2] && allDug; r++) {\n                for (int c = a[1]; c <= a[3] && allDug; c++) {\n                    if (!dug.count(r * n + c)) {\n                        allDug = false;\n                    }\n                }\n            }\n            if (allDug) count++;\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

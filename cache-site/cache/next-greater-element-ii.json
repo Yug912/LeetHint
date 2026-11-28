@@ -1,0 +1,40 @@
+{
+  "slug": "next-greater-element-ii",
+  "title": "Next Greater Element II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> ans: n entries → O(n) (returned output, but counted here as auxiliary)\n- vector<int> stk: up to n indices → O(n)\n- not counted: input nums",
+  "approach": "Use a monotonic decreasing stack of indices. Scan the array twice (2n iterations) to simulate circularity: when the current value exceeds the value at the index on top of the stack, that index's answer is the current value, so pop and record it. Push each index only during the first pass so we don't reprocess. Any index still on the stack at the end has no greater element and keeps its default -1. Correctness: every element gets compared against all later elements (including wrap-around) in decreasing-value order, so the first pop sets the true next greater.",
+  "hints": [
+    "When scanning left to right and meeting a value larger than some earlier ones, which earlier elements can you immediately answer for? The array is circular, so the next greater for the last element may sit at the very start.",
+    "Use a monotonic decreasing stack of indices and scan the array twice (2n steps) to simulate the wrap. Example: nums=[1,2,1]; at i=1, value 2 exceeds nums[stack.top()=0]=1, so pop index 0 and set ans[0]=2.",
+    "```\nans = [-1] * n\nstack = empty\nfor i in 0 .. 2n-1:\n    idx = i mod n\n    while stack not empty and nums[stack.top] < nums[idx]:\n        ans[stack.pop] = nums[idx]\n    if i < n:\n        stack.push(idx)\nreturn ans\n```",
+    "**Single element** - n=1, no greater element exists even after wrapping.\n`Input: nums = [5]` → `Expected: [-1]`\n⚠️ Bug: pushing the index on every iteration instead of only when i<n → reprocesses forever or returns [5]\n\n**All equal** - no element is strictly greater than another.\n`Input: nums = [7,7,7]` → `Expected: [-1,-1,-1]`\n⚠️ Bug: using <= instead of < in the comparison → pops equal values, returns [7,7,7]\n\n**Strictly decreasing, wrap needed** - only the wrap-around pass finds next greaters for the tail.\n`Input: nums = [3,2,1]` → `Expected: [-1,3,3]`\n⚠️ Bug: scanning only n iterations instead of 2n → returns [-1,-1,-1]\n\n**Negatives** - values can be negative; comparisons must stay signed.\n`Input: nums = [-3,-2,-1]` → `Expected: [-2,-1,-1]`\n⚠️ Bug: initialising ans with 0 instead of -1 → returns [-2,-1,0]"
+  ],
+  "followUps": [
+    {
+      "q": "Solve the non-circular version (Next Greater Element I) using the same idea.",
+      "a": "Drop the second pass and scan only n iterations; the stack logic is identical. Time O(n), space O(n)."
+    },
+    {
+      "q": "Return the distance (number of steps, circularly) to the next greater element instead of its value.",
+      "a": "Keep the same 2n-pass monotonic stack; when popping index j at iteration i, store (i - j) mod n as the answer. Time O(n), space O(n)."
+    },
+    {
+      "q": "nums arrives as a stream and is too large to store; you may make two sequential passes but only O(k) working memory.",
+      "a": "First pass keeps a bounded sliding window of the last k unresolved indices; second pass re-reads the stream to resolve them. Time O(n), space O(k), but answers may be incomplete when k < n."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> nextGreaterElements(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> ans(n, -1);\n        vector<int> stk;\n        stk.reserve(n);\n        for (int i = 0; i < 2 * n; i++) {\n            int idx = i % n;\n            while (!stk.empty() && nums[stk.back()] < nums[idx]) {\n                ans[stk.back()] = nums[idx];\n                stk.pop_back();\n            }\n            if (i < n) {\n                stk.push_back(idx);\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

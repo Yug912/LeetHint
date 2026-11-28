@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-refueling-stops",
+  "title": "Minimum Number of Refueling Stops",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy with Max-Heap",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- priority_queue<int> pq: up to n entries → O(n)\n- local variables (fuel, stops, prev, loop counters): O(1)\n- not counted: input stations vector, returned int",
+  "approach": "Drive along the route, treating the target as a final virtual station. Maintain a max-heap of fuel amounts from every station already passed. When the current fuel is insufficient to reach the next checkpoint, retroactively \"refuel\" by popping the largest fuel from the heap (counting one stop each time) until fuel suffices or the heap is empty. This greedy choice is optimal: at any shortfall, we must have stopped at some earlier station, and picking the one with the most fuel maximizes range extension without ever hurting future decisions.",
+  "hints": [
+    "If the car cannot reach the next gas station, it must have refueled at some station it already passed. Among all stations the car has already driven past, which single one would extend its range the most?",
+    "Use a max-heap (priority queue) of fuel amounts from stations already passed. In Example 3, after reaching position 10 with 0 fuel, the heap holds {60}; when position 20 needs 10 more miles, pop 60 → fuel becomes 60, count 1 stop.",
+    "```\nfuel = startFuel, prev = 0, stops = 0\nheap = max-heap\nfor each station and target as final checkpoint:\n    dist = position - prev\n    while fuel < dist and heap not empty:\n        fuel += heap.pop_max(); stops++\n    if fuel < dist: return -1\n    fuel -= dist; prev = position\n    heap.push(station.fuel)\nreturn stops\n```",
+    "**Exact fuel match** - fuel equals the remaining distance exactly, no refueling needed.\n`Input: target = 10, startFuel = 10, stations = [[5,100]]` → `Expected: 0`\n⚠️ Bug: using `fuel <= dist` instead of `fuel < dist` in the while condition → returns 1\n\n**Cannot reach first station** - startFuel is less than the distance to the first station.\n`Input: target = 100, startFuel = 1, stations = [[10,100]]` → `Expected: -1`\n⚠️ Bug: returning `stops` (0) instead of -1 when the heap is empty and fuel is still insufficient → returns 0\n\n**Refuel needed after last station** - the car must refuel between the last station and the target.\n`Input: target = 100, startFuel = 50, stations = [[50,100]]` → `Expected: 1`\n⚠️ Bug: only checking fuel against inter-station distances, not treating target as a final checkpoint → returns -1\n\n**Using fuel before reaching station** - the car cannot use a station's fuel to reach that same station.\n`Input: target = 100, startFuel = 5, stations = [[10,100]]` → `Expected: -1`\n⚠️ Bug: pushing station fuel into the heap before verifying the car can reach that station → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the car has a fuel tank capacity C and cannot hold more than C liters at any time?",
+      "a": "Cap current fuel at C after each refuel. When popping from the heap, add only up to C - current_fuel; excess is wasted. The greedy choice (always pop the largest) remains optimal. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if each station charges a different price per liter and you want to minimize total cost?",
+      "a": "Use a min-heap keyed by price. When fuel is insufficient, buy from the cheapest station already passed, purchasing only as many liters as needed. Time O(n log n), space O(n)."
+    },
+    {
+      "q": "What if you must reach the target using at most k refueling stops - does a DP approach work?",
+      "a": "Yes. Let dp[i] = farthest position reachable with exactly i stops. For each station in position order, update dp[j] = max(dp[j], dp[j-1] + fuel) if dp[j-1] >= position. Answer is the smallest i ≤ k with dp[i] >= target. Time O(nk), space O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minRefuelStops(int target, int startFuel, vector<vector<int>>& stations) {\n        priority_queue<int> pq;\n        long long fuel = startFuel;\n        int stops = 0;\n        int prev = 0;\n        int n = stations.size();\n        for (int i = 0; i <= n; i++) {\n            int pos = (i < n) ? stations[i][0] : target;\n            int stationFuel = (i < n) ? stations[i][1] : 0;\n            long long dist = pos - prev;\n            while (fuel < dist && !pq.empty()) {\n                fuel += pq.top();\n                pq.pop();\n                stops++;\n            }\n            if (fuel < dist) return -1;\n            fuel -= dist;\n            prev = pos;\n            pq.push(stationFuel);\n        }\n        return stops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

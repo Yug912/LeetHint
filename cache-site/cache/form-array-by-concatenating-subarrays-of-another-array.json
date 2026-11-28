@@ -1,0 +1,40 @@
+{
+  "slug": "form-array-by-concatenating-subarrays-of-another-array",
+  "title": "Form Array by Concatenating Subarrays of Another Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy KMP Pattern Matching",
+  "tc": "O(N + S)",
+  "sc": "O(M)",
+  "spaceBreakdown": "- vector<int> lps inside kmpSearch: up to max group length → O(M)\n- recursion depth: none\n- not counted: input groups/nums, returned bool",
+  "approach": "Process groups left to right, maintaining a pointer `pos` into `nums`. For each group, find its earliest occurrence starting at or after `pos` using KMP pattern matching; if found at index `idx`, advance `pos = idx + group.length`. The greedy earliest-match choice is optimal because it maximizes the remaining suffix for subsequent groups. If any group cannot be matched, return false; if all match, return true.",
+  "hints": [
+    "Once you fix where the current group matches in `nums`, what determines how much of `nums` is left for every later group? The constraints bound `nums.length` and `sum(groups[i].length)` at 10^3 each.",
+    "Use KMP to find the earliest occurrence of each group as a subarray, scanning `nums` from the current pointer. Example 1: group `[1,-1,-1]` is found starting at index 3 in `nums = [1,-1,0,1,-1,-1,3,-2,0]`, so the next search begins at index 6.",
+    "```\npos = 0\nfor each group g:\n    idx = earliest match of g in nums starting at pos   # KMP\n    if idx not found: return false\n    pos = idx + length(g)\nreturn true\n```",
+    "**Smallest input** - single-element group and nums.\n`groups = [[5]], nums = [5]` → `Expected: true`\n⚠️ Bug: returning false when `group.length == remaining nums length` → returns `false`\n\n**Group longer than remaining suffix** - after earlier matches, not enough elements left.\n`groups = [[1,2,3],[4,5]], nums = [1,2,3,4]` → `Expected: false`\n⚠️ Bug: skipping the `start + m > n` guard before KMP → reads past the array and returns `true`\n\n**Overlapping greedy choice** - earliest match must be picked to leave room.\n`groups = [[1,1],[1]], nums = [1,1,1]` → `Expected: true`\n⚠️ Bug: choosing the last match of `[1,1]` (index 1) instead of the first (index 0) → leaves no room for `[1]` → returns `false`\n\n**Zeros and negatives** - values include 0 and negative numbers.\n`groups = [[0,-1],[0]], nums = [0,-1,0]` → `Expected: true`\n⚠️ Bug: comparing with `!nums[i]` or `nums[i]` as a truthy check instead of `nums[i] == pat[j]` → treats 0 as no-match → returns `false`"
+  ],
+  "followUps": [
+    {
+      "q": "What if `nums` is a streaming input you can only read once, with no random access?",
+      "a": "Run KMP online: feed each incoming element to the current group's KMP automaton; when it accepts, switch to the next group's automaton. Time stays O(sum of group lengths + nums length); space is O(max group length) for the active LPS table."
+    },
+    {
+      "q": "What if groups could be matched in any order (not necessarily the given sequence)?",
+      "a": "This becomes a set-cover / interval-scheduling variant: find an ordering and disjoint placements. With small constraints you could try all permutations of groups and run the same greedy matcher, giving O(G! × (G × N)) time - feasible only for tiny G."
+    },
+    {
+      "q": "What if `nums.length` were up to 10^9 and groups are short?",
+      "a": "Precompute KMP automata for all groups, then stream `nums` once while tracking which group you are currently matching. Time O(nums length + sum of group lengths); space O(sum of group lengths) for all automata."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool canChoose(vector<vector<int>>& groups, vector<int>& nums) {\n        int pos = 0;\n        int n = nums.size();\n        for (auto& g : groups) {\n            int idx = kmpSearch(nums, pos, g);\n            if (idx < 0) return false;\n            pos = idx + (int)g.size();\n        }\n        return true;\n    }\nprivate:\n    vector<int> computeLPS(const vector<int>& pat) {\n        int m = pat.size();\n        vector<int> lps(m, 0);\n        int len = 0;\n        int i = 1;\n        while (i < m) {\n            if (pat[i] == pat[len]) {\n                lps[i++] = ++len;\n            } else if (len > 0) {\n                len = lps[len - 1];\n            } else {\n                lps[i++] = 0;\n            }\n        }\n        return lps;\n    }\n    int kmpSearch(const vector<int>& nums, int start, const vector<int>& pat) {\n        int m = pat.size();\n        int n = nums.size();\n        if (m == 0) return start;\n        if (start + m > n) return -1;\n        vector<int> lps = computeLPS(pat);\n        int i = start, j = 0;\n        while (i < n) {\n            if (nums[i] == pat[j]) {\n                i++;\n                j++;\n                if (j == m) return i - m;\n            } else if (j > 0) {\n                j = lps[j - 1];\n            } else {\n                i++;\n            }\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

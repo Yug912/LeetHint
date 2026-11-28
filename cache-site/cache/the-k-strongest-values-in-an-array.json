@@ -1,0 +1,40 @@
+{
+  "slug": "the-k-strongest-values-in-an-array",
+  "title": "The k Strongest Values in an Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Quickselect / Partial Selection",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- lambda capturing int m: O(1)\n- nth_element: in-place partitioning, O(log n) internal recursion stack (bounded, treated as O(1) auxiliary)\n- not counted: input array (modified in place), returned vector",
+  "approach": "We only need two order statistics, not a full sort: the median m = arr[(n-1)/2], and the k-th strongest element by the measure |arr[i]-m| (ties broken by larger value). std::nth_element places one chosen rank in its sorted position and partitions the rest around it in O(n) average time, in place. Call it once to fix the median, then again with a comparator \"a is stronger than b\" so the k strongest land in the first k slots; slice them off. Correctness follows from nth_element's guarantee that all elements before position k are \"less\" (here: stronger) than the element at position k.",
+  "hints": [
+    "Do you need every element placed in its final sorted position, or only two particular ranks of the array? The constraints allow n up to 10^5.",
+    "Use std::nth_element twice: first to place the median at index (n-1)/2, then to partition the k strongest into the first k slots. For arr=[1,2,3,4,5], the first call fixes m=3; the second brings 5 and 1 to the front for k=2.",
+    "```\nn = length(arr)\nnth_element(arr, position=(n-1)/2)\nm = arr[(n-1)/2]\nnth_element(arr, position=k,\n            comp=(a,b) -> |a-m| > |b-m|, ties broken by a > b)\nreturn arr[0 : k]\n```",
+    "**Even-length median index** - n is even, the centre sits at index (n-1)/2, not n/2.\n`Input: arr=[-7,22,17,3], k=4` → `Expected: [22,17,-7,3]`\n⚠️ Bug: using n/2 as the median index → m=17 → returns `[-7,3,22,17]`\n\n**Tie-break by value** - equal distances must prefer the larger value.\n`Input: arr=[1,5,2,4,3], k=3` → `Expected: [5,1,4]`\n⚠️ Bug: comparator compares only |a-m| without the value tie-break → returns `[5,1,2]`\n\n**Single element** - n=1, k=1, median index must be 0.\n`Input: arr=[42], k=1` → `Expected: [42]`\n⚠️ Bug: computing median index as (n+1)/2 → index 1 → out-of-bounds access → undefined behavior\n\n**Signed difference without abs** - distances must be non-negative magnitudes.\n`Input: arr=[-5,0,5], k=2` → `Expected: [5,-5]`\n⚠️ Bug: comparator uses (a-m) instead of |a-m| → 5,0,-5 ranked as 5,0,-5 → returns `[5,0]`"
+  ],
+  "followUps": [
+    {
+      "q": "Return the k strongest in strictly sorted order (strongest first).",
+      "a": "After the second nth_element partitions the k strongest to the front, sort just those k elements by strength in O(k log k). Total TC O(n + k log k), SC O(1)."
+    },
+    {
+      "q": "arr arrives as a sorted stream and memory is limited to O(k); produce the k strongest at the end.",
+      "a": "Maintain the running median with two heaps (max-heap below, min-heap at/above) and keep a size-k min-heap of candidates keyed by (|x-m|, x), evicting the weakest whenever size exceeds k. TC O(n log n + n log k), SC O(n + k) for the median heaps plus the top-k heap."
+    },
+    {
+      "q": "Values arrive online and you must answer \"current k strongest\" after each insertion.",
+      "a": "Keep the two-heap median structure and a size-k min-heap of strongest elements; on each insert, update the median heaps and push/evict in the top-k heap. TC O(log n + log k) per element, SC O(n + k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getStrongest(vector<int>& arr, int k) {\n        int n = arr.size();\n        int mid = (n - 1) / 2;\n        nth_element(arr.begin(), arr.begin() + mid, arr.end());\n        int m = arr[mid];\n        nth_element(arr.begin(), arr.begin() + k, arr.end(), [m](int a, int b) {\n            int da = abs(a - m);\n            int db = abs(b - m);\n            if (da != db) return da > db;\n            return a > b;\n        });\n        return vector<int>(arr.begin(), arr.begin() + k);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-domino-rotations-for-equal-row",
+  "title": "Minimum Domino Rotations For Equal Row",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Greedy Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- no containers allocated; only a fixed set of int counters\n- no recursion\n- not counted: input vectors tops/bottoms",
+  "approach": "A target value v can fill a row only if it appears on at least one side of every domino. Crucially, any feasible v must appear in domino 0, so we only test v ∈ {tops[0], bottoms[0]} (at most two candidates). For each candidate, scan once: if a domino has v on neither side, v is infeasible; otherwise rotations to make all tops = v is the count of indices where tops[i] ≠ v, and rotations to make all bottoms = v is the count where bottoms[i] ≠ v. Take the minimum feasible value. This is O(n) time, O(1) space.",
+  "hints": [
+    "If some value v is going to fill an entire row, where must v appear in the very first domino? Also recall every face value is between 1 and 6.",
+    "Greedy counting over at most two candidate values. For v = tops[0] in Example 1 (tops = [2,1,2,4,2,2]), scan each domino: count indices where tops[i] ≠ 2 (these need a rotation to make tops all 2) → 2 rotations, feasible.",
+    "```\nans = INF\nfor v in {tops[0], bottoms[0]}:\n    topRot = 0, botRot = 0, ok = true\n    for i in 0..n-1:\n        if tops[i] != v and bottoms[i] != v:\n            ok = false; break\n        if tops[i] != v: topRot++\n        if bottoms[i] != v: botRot++\n    if ok: ans = min(ans, topRot, botRot)\nreturn ans if ans < INF else -1\n```",
+    "**Already uniform** - every domino already shows the same value on both rows.\n`tops = [1,1], bottoms = [1,1]` → `Expected: 0`\n⚠️ Bug: counting rotations as \"number of i where bottoms[i] == v\" (instead of \"tops[i] != v\") → returns 2.\n\n**Only bottoms[0] is a feasible candidate** - tops[0]'s value fails at some later domino, but bottoms[0]'s value works.\n`tops = [3,1,1], bottoms = [1,2,2]` → `Expected: 1`\n⚠️ Bug: only testing candidate tops[0] and skipping bottoms[0] → returns -1.\n\n**No feasible value** - neither candidate appears in every domino.\n`tops = [3,5,1,2,3], bottoms = [3,6,3,3,4]` → `Expected: -1`\n⚠️ Bug: initializing ans = 0 and returning ans when no candidate is feasible → returns 0.\n\n**tops[0] == bottoms[0]** - only one distinct candidate exists; the second iteration is redundant but harmless.\n`tops = [2,2,2], bottoms = [2,3,2]` → `Expected: 0`\n⚠️ Bug: deduplicating candidates with a set but then indexing `candidates[1]` unconditionally → undefined/out-of-range access."
+  ],
+  "followUps": [
+    {
+      "q": "What if face values could be up to 10^9 instead of 1..6?",
+      "a": "Nothing changes - feasibility still requires v to be in domino 0, so we still test at most two candidates {tops[0], bottoms[0]}. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if you must make BOTH rows uniform (tops all equal to a, bottoms all equal to b, a possibly ≠ b), minimizing rotations?",
+      "a": "For each candidate pair (a, b) drawn from {tops[0], bottoms[0]} × {tops[0], bottoms[0]}, scan once: domino i is satisfiable with 0 rotations if (tops[i]==a and bottoms[i]==b), or 1 rotation if (bottoms[i]==a and tops[i]==b), else infeasible. With V=6 this is O(n); with arbitrary values it is O(n) per pair, still constant pairs."
+    },
+    {
+      "q": "What if dominoes arrive in a stream and you must answer after each prefix?",
+      "a": "Track, for each of the 6 values, a feasibility flag and two rotation counts (top-misses and bottom-misses). On each new domino, update the 6 counters and invalidate any value absent from both faces. Answer after each step is the min feasible count. O(1) per domino, O(6) = O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minDominoRotations(vector<int>& tops, vector<int>& bottoms) {\n        int n = tops.size();\n        int ans = INT_MAX;\n        int c1 = tops[0], c2 = bottoms[0];\n        for (int v : {c1, c2}) {\n            int topRot = 0, botRot = 0;\n            bool ok = true;\n            for (int i = 0; i < n; i++) {\n                if (tops[i] != v && bottoms[i] != v) {\n                    ok = false;\n                    break;\n                }\n                if (tops[i] != v) topRot++;\n                if (bottoms[i] != v) botRot++;\n            }\n            if (ok) {\n                ans = min(ans, min(topRot, botRot));\n            }\n        }\n        return ans == INT_MAX ? -1 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

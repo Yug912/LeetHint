@@ -1,0 +1,40 @@
+{
+  "slug": "making-a-large-island",
+  "title": "Making A Large Island",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Flood Fill + Component Labeling",
+  "tc": "O(n²)",
+  "sc": "O(n²)",
+  "spaceBreakdown": "- vector<vector<int>> islandId: n×n grid → O(n²)\n- vector<int> islandSize: up to n²/2 entries → O(n²)\n- queue<pair<int,int>> q (BFS): up to O(n²) cells enqueued → O(n²)\n- set<int> neighbors: at most 4 elements → O(1)\n- not counted: input grid",
+  "approach": "First, label every existing island with a unique ID and record its size using BFS. Then, for each 0 cell, examine its 4 neighbors: collect the distinct island IDs touching that cell, sum their sizes, and add 1 for the flipped cell itself. The answer is the maximum over all such candidates, also considering the largest existing island (in case there are no 0s to flip, or flipping doesn't help). This works because flipping a single 0 can only merge islands that are already 4-adjacent to that cell, and deduplicating island IDs prevents double-counting when the same island touches the cell from multiple sides.",
+  "hints": [
+    "If you flip one 0 to 1, the new cell can only join islands that already touch that cell. How many distinct existing islands can be 4-adjacent to a single grid cell?",
+    "Label each island with a unique ID and record its size via BFS/DFS. Then for each 0 cell, sum the sizes of its distinct neighboring island IDs plus 1. In [[1,0],[0,1]], the two 1s are separate islands of size 1; flipping (0,1) touches both → 1+1+1=3.",
+    "```\nfor each unvisited 1-cell:\n    flood-fill all connected 1s, assign island ID, record size\nmaxAnswer = largest existing island size\nfor each 0-cell:\n    collect distinct island IDs among 4 neighbors\n    candidate = 1 + sum of sizes of those distinct islands\n    maxAnswer = max(maxAnswer, candidate)\nreturn maxAnswer\n```",
+    "**All zeros** - no island exists at all\n`Input: [[0,0],[0,0]]` → `Expected: 1`\n⚠️ Bug: initialising maxAnswer to 0 and only updating from island sizes (none found) → returns 0\n\n**All ones** - no 0 to flip\n`Input: [[1,1],[1,1]]` → `Expected: 4`\n⚠️ Bug: computing the answer only from 0-cells and never tracking the largest existing island → returns 0\n\n**Duplicate neighbor island** - same island touches the 0-cell from multiple sides\n`Input: [[1,0,1],[1,0,1],[1,1,1]]` → `Expected: 8`\n⚠️ Bug: summing neighbor island sizes without deduplicating island IDs → returns 22\n\n**Single zero cell** - smallest possible input\n`Input: [[0]]` → `Expected: 1`\n⚠️ Bug: returning 0 when no island exists instead of handling the all-zero case → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if you can flip at most k zeros (k ≤ 5) instead of just 1?",
+      "a": "For each 0 cell, BFS up to k levels through other 0 cells, collecting all distinct island IDs reachable within k flips. The candidate size is the number of flipped zeros plus the sum of distinct neighboring island sizes. TC: O(n² · 4^k), SC: O(n²)."
+    },
+    {
+      "q": "What if the grid is streamed row by row and you can only keep O(n) memory?",
+      "a": "Use union-find with only the current and previous row in memory. Maintain a map from island root to size. When a 0 cell is encountered, check the previous row's island IDs. TC: O(n² · α(n)), SC: O(n)."
+    },
+    {
+      "q": "What if islands are 8-directionally connected instead of 4-directionally?",
+      "a": "The same approach applies, but use 8 neighbors instead of 4 during both island labeling and candidate evaluation. A single flipped 0 can now merge up to 8 distinct islands. TC: O(n²), SC: O(n²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int largestIsland(vector<vector<int>>& grid) {\n        int n = grid.size();\n        vector<vector<int>> islandId(n, vector<int>(n, -1));\n        vector<int> islandSize;\n        int id = 0;\n        int dx[4] = {0, 0, 1, -1};\n        int dy[4] = {1, -1, 0, 0};\n\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 1 && islandId[i][j] == -1) {\n                    int size = 0;\n                    queue<pair<int,int>> q;\n                    q.push({i, j});\n                    islandId[i][j] = id;\n                    while (!q.empty()) {\n                        auto [x, y] = q.front();\n                        q.pop();\n                        size++;\n                        for (int d = 0; d < 4; d++) {\n                            int nx = x + dx[d], ny = y + dy[d];\n                            if (nx >= 0 && nx < n && ny >= 0 && ny < n\n                                && grid[nx][ny] == 1 && islandId[nx][ny] == -1) {\n                                islandId[nx][ny] = id;\n                                q.push({nx, ny});\n                            }\n                        }\n                    }\n                    islandSize.push_back(size);\n                    id++;\n                }\n            }\n        }\n\n        if (id == 0) return 1;\n\n        int maxIsland = *max_element(islandSize.begin(), islandSize.end());\n\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 0) {\n                    set<int> neighbors;\n                    for (int d = 0; d < 4; d++) {\n                        int ni = i + dx[d], nj = j + dy[d];\n                        if (ni >= 0 && ni < n && nj >= 0 && nj < n\n                            && grid[ni][nj] == 1) {\n                            neighbors.insert(islandId[ni][nj]);\n                        }\n                    }\n                    int total = 1;\n                    for (int nid : neighbors) {\n                        total += islandSize[nid];\n                    }\n                    maxIsland = max(maxIsland, total);\n                }\n            }\n        }\n\n        return maxIsland;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

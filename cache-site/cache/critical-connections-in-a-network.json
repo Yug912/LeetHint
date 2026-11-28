@@ -1,0 +1,40 @@
+{
+  "slug": "critical-connections-in-a-network",
+  "title": "Critical Connections in a Network",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Tarjan's Bridge-Finding (Iterative DFS)",
+  "tc": "O(n + m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- adj (adjacency list): 2m ints → O(n + m)\n- disc: n ints → O(n)\n- low: n ints → O(n)\n- stk (explicit DFS frames): up to n frames → O(n)\n- not counted: input connections, returned res",
+  "approach": "A connection is critical exactly when it is a bridge: no alternate path connects its endpoints, i.e., it lies on no cycle. Tarjan's bridge algorithm computes, during one DFS, a discovery time `disc[u]` and a `low[u]` value (the earliest discovery time reachable from `u`'s subtree using at most one back edge). Edge `(parent, u)` is a bridge iff `low[u] > disc[parent]`. I implement the DFS iteratively with an explicit frame stack so a skewed 10^5-node path cannot overflow the call stack.",
+  "hints": [
+    "For an edge to be safely removable, what kind of alternate route must exist between its two endpoints? The constraints allow up to 10^5 servers and 10^5 connections, so checking each edge by deleting it and re-running connectivity is too slow.",
+    "Use Tarjan's bridge algorithm: one DFS tracking `disc` (entry time) and `low` (earliest entry time reachable from the subtree). In Example 1, node 3 has no back edge, so `low[3]` stays at its discovery time 4 while `disc[1]` is 2; since `low[3] > disc[1]`, edge (1,3) is a bridge.",
+    "```\ndfs(root, parent=-1):\n  disc[u] = low[u] = ++time\n  for v in adj[u]:\n    if v == parent: continue\n    if disc[v] == -1:\n      dfs(v, u)\n      low[u] = min(low[u], low[v])\n      if low[v] > disc[u]: bridge (u,v)\n    else:\n      low[u] = min(low[u], disc[v])\n```",
+    "**Smallest input** - only two servers and one link, nothing else to route through.\n`Input: n=2, connections=[[0,1]]` → `Expected: [[0,1]]`\n⚠️ Bug: skipping the bridge check for nodes with a single neighbor → returns `[]`\n\n**Pure cycle** - every edge lies on a cycle, so none is critical.\n`Input: n=3, connections=[[0,1],[1,2],[2,0]]` → `Expected: []`\n⚠️ Bug: using `low[v] >= disc[u]` (articulation-point test) instead of `low[v] > disc[u]` → returns `[[0,1]]`\n\n**Skewed path** - a line of 10^5 nodes, every edge is a bridge and the DFS goes 10^5 deep.\n`Input: n=100000, connections=[[0,1],[1,2],...,[99998,99999]]` → `Expected: all 99999 edges`\n⚠️ Bug: recursive DFS → stack overflow / segfault on the deepest path\n\n**Star graph** - one center, all leaves; every spoke is a bridge.\n`Input: n=4, connections=[[0,1],[0,2],[0,3]]` → `Expected: [[0,1],[0,2],[0,3]]`\n⚠️ Bug: initializing `low[u]` to 0 instead of `disc[u]` → `low[leaf]=0 ≤ disc[center]`, returns `[]`"
+  ],
+  "followUps": [
+    {
+      "q": "Find articulation points (critical servers) instead of critical connections.",
+      "a": "Reuse the same DFS. A non-root node u is an articulation point if it has a child v with `low[v] >= disc[u]`; the root is one iff it has at least two DFS children. Time stays O(n + m), space O(n + m)."
+    },
+    {
+      "q": "Connections are added and removed online; after each operation report whether the graph is still 2-edge-connected.",
+      "a": "Build the bridge-tree (compress each 2-edge-connected component into one node; bridges become tree edges). A dynamic-tree structure (link-cut tree) maintains connectivity under edge updates in O(log n) per operation, versus O(n + m) per re-run."
+    },
+    {
+      "q": "Group servers into 2-edge-connected components (servers that stay mutually reachable after any single edge removal).",
+      "a": "Run the same Tarjan pass; whenever `low[v] > disc[u]`, that edge separates components. Assign component IDs by a second DFS that does not cross bridge edges, or label during the first pass. Time O(n + m), space O(n + m)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> criticalConnections(int n, vector<vector<int>>& connections) {\n        vector<vector<int>> adj(n);\n        for (auto& c : connections) {\n            adj[c[0]].push_back(c[1]);\n            adj[c[1]].push_back(c[0]);\n        }\n        vector<int> disc(n, -1), low(n, 0);\n        vector<vector<int>> res;\n        int time = 0;\n        struct Frame { int u, p, idx; };\n        vector<Frame> stk;\n        for (int s = 0; s < n; s++) {\n            if (disc[s] != -1) continue;\n            stk.push_back({s, -1, 0});\n            while (!stk.empty()) {\n                Frame& f = stk.back();\n                int u = f.u, p = f.p;\n                if (f.idx == 0) {\n                    disc[u] = low[u] = ++time;\n                }\n                if (f.idx < (int)adj[u].size()) {\n                    int v = adj[u][f.idx];\n                    f.idx++;\n                    if (v == p) continue;\n                    if (disc[v] == -1) {\n                        stk.push_back({v, u, 0});\n                    } else {\n                        low[u] = min(low[u], disc[v]);\n                    }\n                } else {\n                    stk.pop_back();\n                    if (!stk.empty()) {\n                        int par = stk.back().u;\n                        low[par] = min(low[par], low[u]);\n                        if (low[u] > disc[par]) {\n                            res.push_back({par, u});\n                        }\n                    }\n                }\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

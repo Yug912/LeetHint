@@ -1,0 +1,40 @@
+{
+  "slug": "robot-bounded-in-circle",
+  "title": "Robot Bounded In Circle",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Simulation",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int dx[4], dy[4]: fixed 4 entries → O(1)\n- scalar variables x, y, dir → O(1)\n- recursion depth: none\n- not counted: input string",
+  "approach": "Simulate one full pass of the instructions, tracking position (x,y) and facing direction. The robot is bounded iff either it returns to the origin after one pass, OR its final direction is not north. If it still faces north but has moved, each pass adds the same displacement and it drifts forever; otherwise, after at most 4 passes the rotations bring it back to the start, keeping it in a bounded cycle.",
+  "hints": [
+    "The robot repeats the same instruction string forever. After completing one full pass, what single fact about its final facing direction tells you whether every subsequent pass keeps drifting the same way or eventually loops back?",
+    "Simulate one pass tracking (x, y) and a direction index 0=N,1=E,2=S,3=W. For \"GL\": move to (0,1) facing N, then turn to W, so final direction ≠ N → bounded.",
+    "```\nx = 0, y = 0, dir = 0   # 0=N 1=E 2=S 3=W\nfor c in instructions:\n    if c == 'G':  x += dx[dir]; y += dy[dir]\n    if c == 'L':  dir = (dir + 3) % 4\n    if c == 'R':  dir = (dir + 1) % 4\nreturn (x == 0 and y == 0) or dir != 0\n```",
+    "**Smallest input** - single instruction, no movement.\n`Input: \"L\"` → `Expected: true`\n⚠️ Bug: checking only `x==0 && y==0` and ignoring direction → returns `false`.\n\n**Pure drift** - moves north every pass, never turns.\n`Input: \"GG\"` → `Expected: false`\n⚠️ Bug: returning `true` whenever `dir != 0` is checked but forgetting to also require non-zero displacement when `dir == 0` → returns `true` (wrong) if you only test direction.\n\n**Return to origin** - ends at start regardless of direction.\n`Input: \"GGLLGG\"` → `Expected: true`\n⚠️ Bug: only checking `dir != 0` and not the origin case → returns `false` because final dir is S but... actually dir=2≠0 gives true; correct bug: a solution that requires BOTH origin AND dir!=0 → returns `false`.\n\n**360-degree turn, no net move** - turns cancel, position unchanged.\n`Input: \"LLRR\"` → `Expected: true`\n⚠️ Bug: treating `dir != 0` as the only condition without also accepting `x==0 && y==0` when dir happens to be 0 → returns `false`."
+  ],
+  "followUps": [
+    {
+      "q": "What if each instruction also has an integer distance to move on 'G' (e.g., \"G3L G2\")?",
+      "a": "Parse the number following each 'G' and add that many units in the current direction; turns still rotate by 90°. The same invariant holds: bounded iff final position is origin or final direction ≠ north. TC stays O(n), SC O(1)."
+    },
+    {
+      "q": "What if 'L'/'R' can turn by an arbitrary angle θ (not necessarily 90°)?",
+      "a": "Track direction as an angle and a unit vector; the robot is bounded iff the vector sum over one pass is zero, or the rotation per pass is a nonzero rational multiple of 2π so the directions cycle. Use floating point carefully or exact rational arithmetic. TC O(n), SC O(1)."
+    },
+    {
+      "q": "What if instructions stream in forever and you must report bounded/unbounded online after each instruction?",
+      "a": "Maintain running (x,y,dir); after every instruction, check whether the current prefix, when repeated, would keep direction cycling - but a single prefix isn't enough. Instead, buffer until you've seen a full logical cycle (direction returns to north or position returns to origin with consistent displacement) and decide then. TC O(n) amortized, SC O(n) for the buffer."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isRobotBounded(string instructions) {\n        int x = 0, y = 0, dir = 0; // 0=N, 1=E, 2=S, 3=W\n        int dx[4] = {0, 1, 0, -1};\n        int dy[4] = {1, 0, -1, 0};\n        for (char c : instructions) {\n            if (c == 'G') {\n                x += dx[dir];\n                y += dy[dir];\n            } else if (c == 'L') {\n                dir = (dir + 3) % 4;\n            } else { // 'R'\n                dir = (dir + 1) % 4;\n            }\n        }\n        return (x == 0 && y == 0) || (dir != 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}
