@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-square-area-by-removing-fences-from-a-field",
+  "title": "Maximum Square Area by Removing Fences From a Field",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Set Intersection",
+  "tc": "O(h² + v²)",
+  "sc": "O(h²)",
+  "spaceBreakdown": "- unordered_set<int> hDiffs: up to ~602·601/2 ≈ 181k entries → O(h²)\n- sort(): introsort stack O(log h)\n- not counted: input vectors hFences, vFences (modified in place)",
+  "approach": "Add the boundary positions 1 and m to hFences, and 1 and n to vFences. After sorting, any pairwise difference in hFences represents an achievable horizontal side length, and any pairwise difference in vFences represents an achievable vertical side length. A square requires both to be equal, so we collect all horizontal differences into a hash set, then scan all vertical differences and keep the largest one that appears in the set. The answer is that side length squared (mod 10^9+7), or -1 if no common difference exists.",
+  "hints": [
+    "A square needs its horizontal side and vertical side to be the same length. Which lengths can actually appear as a horizontal span between two horizontal fences (including the unremovable boundary fences at rows 1 and m)?",
+    "Use a hash set. In Example 1, hFences becomes [1,2,3,4]; its pairwise differences {1,2,3} are achievable horizontal sides. Store them, then check each vertical difference against the set and keep the largest match.",
+    "```\nadd 1 and m to hFences; sort\nadd 1 and n to vFences; sort\nS = empty set\nfor each pair (i,j) in hFences: add hFences[j]-hFences[i] to S\nbest = 0\nfor each pair (i,j) in vFences:\n    d = vFences[j]-vFences[i]\n    if d in S: best = max(best, d)\nif best == 0: return -1\nreturn (best*best) mod (10^9+7)\n```",
+    "**No common difference** - horizontal and vertical achievable side sets are disjoint.\n`Input: m=6, n=7, hFences=[2], vFences=[4]` → `Expected: -1`\n⚠️ Bug: returning 0 instead of -1 when no match is found → returns `0`\n\n**Missing boundaries** - forgetting to insert 1 and m (or 1 and n) into the fence lists.\n`Input: m=4, n=3, hFences=[2,3], vFences=[2]` → `Expected: 4`\n⚠️ Bug: skipping the `push_back(1)` and `push_back(m)` calls → hDiffs={1}, vDiffs={} → returns `-1`\n\n**Overflow on large side** - with m=n=10^9, the max side can be 10^9−1, so side² ≈ 10^18.\n`Input: m=1000000000, n=1000000000, hFences=[500000000], vFences=[500000000]` → `Expected: 999999998000000001 mod (10^9+7)`\n⚠️ Bug: computing `best*best` in `int` → overflow wraps to a garbage value like `1000000007`"
+  ],
+  "followUps": [
+    {
+      "q": "What if fences can be added (not just removed) at any integer coordinate up to 10^9?",
+      "a": "Adding fences only increases the set of achievable spans, but the boundary positions 1 and m/n still bound the maximum side. The answer becomes min(m−1, n−1)² mod 10^9+7 whenever that side is achievable, which it always is by placing a fence at the midpoint. Time stays O(1)."
+    },
+    {
+      "q": "What if hFences and vFences can each have up to 10^5 elements?",
+      "a": "The O(h²) pairwise difference approach becomes too slow. Instead, note we only need the largest common difference; sort both lists and use a meet-in-the-middle or FFT-based approach on the difference sets, but in general this becomes a hard problem. A practical heuristic: enumerate only the largest O(h) differences from each side and intersect, giving O(h log h) but no longer guaranteed optimal."
+    },
+    {
+      "q": "What if you must answer many queries, each removing a different single fence?",
+      "a": "Precompute the full difference sets once. For each query, removing one fence only deletes differences involving that fence's position; maintain a multiset of differences and decrement counts. Each query costs O(h) to update. Space becomes O(h²) for the multiset."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximizeSquareArea(int m, int n, vector<int>& hFences, vector<int>& vFences) {\n        const long long MOD = 1000000007;\n        hFences.push_back(1);\n        hFences.push_back(m);\n        vFences.push_back(1);\n        vFences.push_back(n);\n        sort(hFences.begin(), hFences.end());\n        sort(vFences.begin(), vFences.end());\n        \n        unordered_set<int> hDiffs;\n        int hs = (int)hFences.size();\n        for (int i = 0; i < hs; i++) {\n            for (int j = i + 1; j < hs; j++) {\n                hDiffs.insert(hFences[j] - hFences[i]);\n            }\n        }\n        \n        long long best = 0;\n        int vs = (int)vFences.size();\n        for (int i = 0; i < vs; i++) {\n            for (int j = i + 1; j < vs; j++) {\n                int d = vFences[j] - vFences[i];\n                if (hDiffs.count(d) && d > best) {\n                    best = d;\n                }\n            }\n        }\n        \n        if (best == 0) return -1;\n        return (int)((best * best) % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

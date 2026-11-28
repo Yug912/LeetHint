@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-minimum-area-to-cover-all-ones-i",
+  "title": "Find the Minimum Area to Cover All Ones I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bounding Box Extremes",
+  "tc": "O(m·n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables minRow/maxRow/minCol/maxCol/m/n: constant → O(1)\n- no containers, no recursion, no heap/stack allocations\n- not counted: input grid, returned int",
+  "approach": "The smallest axis-aligned rectangle covering all 1's must have its four edges exactly at the extreme rows and columns that contain a 1 - any tighter edge would exclude a 1, any looser edge wastes area. So scan the grid once, tracking the minimum/maximum row index and minimum/maximum column index among cells equal to 1, then return (maxRow−minRow+1)·(maxCol−minCol+1). Correctness follows because the rectangle is uniquely determined by these four extremes, and it is minimal since shrinking any side would cut off a 1.",
+  "hints": [
+    "If the rectangle must contain every 1 yet be as small as possible, which specific cells force its top, bottom, left, and right edges to sit exactly where they do?",
+    "Track the minimum and maximum row index and column index among all cells holding a 1. In Example 1 the 1's are at (0,1),(1,0),(1,2), giving rows 0-1 and columns 0-2, so area = 2×3 = 6.",
+    "```\nminR = INF, maxR = -INF, minC = INF, maxC = -INF\nfor each cell (i, j) where grid[i][j] == 1:\n    minR = min(minR, i);  maxR = max(maxR, i)\n    minC = min(minC, j);  maxC = max(maxC, j)\nreturn (maxR - minR + 1) * (maxC - minC + 1)\n```",
+    "**Bottom-right only** - the only 1 is not at the origin\n`Input: [[0,0],[0,1]]` → `Expected: 1`\n⚠️ Bug: initializing minRow=0, minCol=0 instead of large sentinels → returns 4\n\n**All ones** - every cell is 1\n`Input: [[1,1],[1,1]]` → `Expected: 4`\n⚠️ Bug: computing `(maxR-minR)*(maxC-minC)` without the +1 terms → returns 1\n\n**Single row** - grid has one row with 1's spread apart\n`Input: [[0,1,0,1]]` → `Expected: 3`\n⚠️ Bug: returning grid.size()*grid[0].size() (the whole grid) instead of the extremes → returns 4\n\n**Single cell** - grid is 1×1\n`Input: [[1]]` → `Expected: 1`\n⚠️ Bug: initializing maxR=-1/maxC=-1 but never updating because the loop starts at i=1 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the covering rectangle may be rotated 45° - find the minimum-area axis-aligned box in a rotated frame covering all 1's?",
+      "a": "Project each 1's coordinates onto two perpendicular axes (e.g. i+j and i−j) and track the min/max of each projection; the product of the two spans is the area. Time stays O(m·n), space O(1)."
+    },
+    {
+      "q": "The grid arrives as a stream of rows and you cannot store the whole matrix - how do you compute the answer?",
+      "a": "Keep only the four running extremes plus the current row index, updating them as each row arrives. Time O(m·n), space O(1) beyond the current row buffer."
+    },
+    {
+      "q": "You may use up to k rectangles to cover all 1's, minimizing total area - how does the approach change?",
+      "a": "This becomes a partition problem over row/column ranges solvable with DP; with small k you'd memoize over (row range, col range, rectangles used). Time grows to roughly O(m²·n²·k), space O(m·n·k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumArea(vector<vector<int>>& grid) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int minRow = m, maxRow = -1;\n        int minCol = n, maxCol = -1;\n        for (int i = 0; i < m; ++i) {\n            for (int j = 0; j < n; ++j) {\n                if (grid[i][j] == 1) {\n                    if (i < minRow) minRow = i;\n                    if (i > maxRow) maxRow = i;\n                    if (j < minCol) minCol = j;\n                    if (j > maxCol) maxCol = j;\n                }\n            }\n        }\n        return (maxRow - minRow + 1) * (maxCol - minCol + 1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

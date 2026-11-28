@@ -1,0 +1,40 @@
+{
+  "slug": "count-submatrices-with-top-left-element-and-sum-less-than-k",
+  "title": "Count Submatrices with Top-Left Element and Sum Less Than k",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "2D Prefix Sum",
+  "tc": "O(m × n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> colsum: n entries → O(n)\n- recursion depth: none\n- not counted: input grid, returned int",
+  "approach": "A submatrix containing the top-left cell is fully determined by its bottom-right corner (i, j), so there are exactly m×n candidates. For each corner we need the sum of the rectangle [0..i]×[0..j]. We maintain a column-prefix array `colsum[j]` = sum of column j from row 0 to the current row i; then a running total of `colsum[0..j]` gives the rectangle sum for corner (i, j) incrementally. We count every corner whose running sum is ≤ k. This is correct because each corner is visited exactly once and its sum is built from non-negative additions of previously computed column sums.",
+  "hints": [
+    "A submatrix containing the top-left cell is uniquely determined by its bottom-right corner - so what single value must you compute for each of the m×n corners? The grid can be up to 1000 × 1000.",
+    "Use a 2D prefix sum, or equivalently a running column-sum array. In Example 1, after processing row 0 the corner (0,2) has sum 7+6+3 = 16 ≤ 18, so it counts.",
+    "```\ncolsum = array of n zeros\nans = 0\nfor each row i:\n    running = 0\n    for each col j:\n        colsum[j] += grid[i][j]\n        running += colsum[j]\n        if running <= k:\n            ans++\nreturn ans\n```",
+    "**Single cell, sum equals k** - only one submatrix exists and it sits on the ≤ boundary.\n`grid = [[5]], k = 5` → `Expected: 1`\n⚠️ Bug: using `<` instead of `<=` → returns 0\n\n**No valid submatrix** - k is below the top-left element, so no corner qualifies.\n`grid = [[7,6,3],[6,6,1]], k = 5` → `Expected: 0`\n⚠️ Bug: initializing `ans = 1` assuming grid[0][0] always qualifies → returns 1\n\n**All elements equal** - rectangle sums grow quadratically, so later corners exceed k.\n`grid = [[2,2],[2,2]], k = 6` → `Expected: 3`\n⚠️ Bug: using 1D row-prefix sums only (summing within the current row) → returns 4\n\n**Single row** - m = 1, only one row of corners to consider.\n`grid = [[7,6,3]], k = 18` → `Expected: 3`\n⚠️ Bug: starting the outer loop at i = 1 (assuming a header row) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if submatrices could start at any corner, not just the top-left?",
+      "a": "For each pair of rows (r1, r2), compress the columns between them into a 1D array of column sums, then count subarrays with sum ≤ k using an ordered set over prefix sums in O(n log n) per row-pair. Total time O(m² · n log n), space O(n)."
+    },
+    {
+      "q": "What if the grid arrives row-by-row as a stream and cannot fit in memory?",
+      "a": "The algorithm already only keeps the n-length column-sum array, so it works unchanged: update colsum and the running total as each row arrives. Time stays O(m × n), space O(n)."
+    },
+    {
+      "q": "What if grid values can be negative?",
+      "a": "The column-sum + running-total computation still yields each corner's exact sum, so the count is still correct in O(m × n). However, the running total is no longer monotonic in j, so any early-break optimization (valid for non-negative values) must be removed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countSubmatrices(vector<vector<int>>& grid, int k) {\n        int m = grid.size();\n        int n = grid[0].size();\n        vector<long long> colsum(n, 0);\n        int ans = 0;\n        for (int i = 0; i < m; i++) {\n            long long running = 0;\n            for (int j = 0; j < n; j++) {\n                colsum[j] += grid[i][j];\n                running += colsum[j];\n                if (running <= k) ans++;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

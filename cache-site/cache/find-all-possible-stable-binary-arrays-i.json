@@ -1,0 +1,40 @@
+{
+  "slug": "find-all-possible-stable-binary-arrays-i",
+  "title": "Find All Possible Stable Binary Arrays I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix-Sum-Optimized DP on Runs",
+  "tc": "O(Z * O * L)",
+  "sc": "O(O * L)",
+  "spaceBreakdown": "- 4 vector<vector<long long>> layers (p0,p1,s0,s1), each (one+1)×(limit+1) → O(one·limit)\n- 4 temporary layers allocated per a-iteration, same size, freed by swap → O(one·limit)\n- recursion depth: none\n- not counted: input integers",
+  "approach": "Track how many stable prefixes exist with exactly `a` zeros, `b` ones, ending in bit `last` with a trailing run of exactly `k` equal bits. A stable array's every prefix is stable, so we build arrays by appending one bit at a time: extending the same run uses `k-1`, switching bits sums all run lengths of the opposite ending (must be ≤ limit or the array dies). Direct 4-D DP is O(zero·one·limit) states with an O(limit) transition; keeping a per-layer prefix sum over `k` makes each transition O(1), giving O(zero·one·limit) total with rolling layers.",
+  "hints": [
+    "When you append one bit to a valid array, what is the only thing about the array's tail that decides whether the new array is still stable - and how much of the tail do you actually need to remember?\nA subarray longer than `limit` must contain both symbols, so in Example 2 (limit = 1) the array [0,1,1] is rejected.",
+    "Use a DP state dp[a][b][last][k] = number of stable prefixes with a zeros, b ones, ending in a run of exactly k copies of `last`. E.g. for zero=1, one=1, limit=2: [0,1] is dp[1][1][1][1] and [1,0] is dp[1][1][0][1], summing to 2.",
+    "for a in 0..zero:\n  for b in 0..one:\n    for k in 1..limit:\n      same-run: dp[a][b][x][k] = dp[a-1 or b-1][x][k-1]\n      switch-run (k=1): dp[a][b][x][1] = sum over j=1..limit of dp[prev][opposite x][j]\n    replace that sum with a prefix sum over k of the previous layer\nanswer = sum over k of dp[zero][one][0][k] + dp[zero][one][1][k]",
+    "**Smallest input** - zero = one = 1, only two arrays exist.\n`Input: zero = 1, one = 1, limit = 2` → `Expected: 2`\n⚠️ Bug: forgetting the base cases dp[1][0][0][1] = 1 and dp[0][1][1][1] = 1 (all-one-symbol arrays) → returns 0.\n\n**limit = 1** - no two adjacent equal bits are allowed, so runs longer than 1 must never be created.\n`Input: zero = 1, one = 2, limit = 1` → `Expected: 1`\n⚠️ Bug: appending the opposite bit without checking the resulting run fits the k ≤ limit index range → counts [0,1,1] and returns 3.\n\n**limit larger than both counts** - the run constraint is vacuous, answer must equal the binomial C(zero+one, zero).\n`Input: zero = 2, one = 2, limit = 200` → `Expected: 6`\n⚠️ Bug: indexing the run dimension only up to min(count, limit) but reading prefix sums at index limit without guarding → reads stale/zero cells and returns a wrong count.\n\n**Overflow** - counts grow like binomials: C(400,200) ≈ 10^119 before the modulo.\n`Input: zero = 200, one = 200, limit = 200` → `Expected: (computed mod 1e9+7)`\n⚠️ Bug: storing dp values in int and adding two ~10^9 terms before reducing → signed overflow / wrong residue."
+  ],
+  "followUps": [
+    {
+      "q": "How would you solve the hard version (zero, one up to 10^9, limit up to 10^9)?",
+      "a": "The same run-DP recurrence becomes a linear transformation whose prefix-sum form is a convolution of geometric-like series; it can be solved with matrix exponentiation or by deriving a closed-form sum over compositions, giving roughly O(limit) or O(log n) time instead of O(zero·one·limit)."
+    },
+    {
+      "q": "Can you reduce the memory below O(one·limit)?",
+      "a": "Yes - each layer only reads the previous layer at the same b (for same-bit extension) and the current layer at b-1 (for switching), so keeping two rolling layers of size (one+1)×(limit+1) suffices; the prefix sums can be computed on the fly into O(limit) scratch, giving O(one·limit) → still needed for the k dimension, but constants drop by ~4×."
+    },
+    {
+      "q": "What if instead of the total count you must output the arrays themselves for small inputs?",
+      "a": "Run the same DP forward and do a DFS from dp[zero][one][*][*] backwards, following transitions with nonzero values and prepending bits; output size can be exponential, so time is O(number of arrays · length), feasible only when the count is small."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfStableArrays(int zero, int one, int limit) {\n        const long long MOD = 1000000007LL;\n        int Z = zero, O = one, L = limit;\n        // p0[b][k], p1[b][k]: counts for previous layer a-1\n        // s0[b][k], s1[b][k]: prefix sums over k of p0/p1\n        vector<vector<long long>> p0(O + 1, vector<long long>(L + 1, 0)),\n                                  p1(O + 1, vector<long long>(L + 1, 0)),\n                                  s0(O + 1, vector<long long>(L + 1, 0)),\n                                  s1(O + 1, vector<long long>(L + 1, 0));\n        // layer a = 0: only all-ones arrays, dp[0][b][1][k] = 1 iff k == b <= limit\n        for (int b = 1; b <= O && b <= L; ++b) p1[b][b] = 1;\n        for (int b = 0; b <= O; ++b)\n            for (int k = 1; k <= L; ++k)\n                s1[b][k] = (s1[b][k - 1] + p1[b][k]) % MOD;\n        for (int a = 1; a <= Z; ++a) {\n            vector<vector<long long>> n0(O + 1, vector<long long>(L + 1, 0)),\n                                      n1(O + 1, vector<long long>(L + 1, 0)),\n                                      t0(O + 1, vector<long long>(L + 1, 0)),\n                                      t1(O + 1, vector<long long>(L + 1, 0));\n            for (int b = 0; b <= O; ++b) {\n                if (b == 0) {\n                    // all-zeros prefix: run at end is exactly a\n                    if (a <= L) n0[0][a] = 1;\n                } else {\n                    for (int k = 1; k <= L; ++k) {\n                        // dp[a][b][0][k]: append 0 to array with a-1 zeros, b ones\n                        long long v0 = (k >= 2 ? p0[b][k - 1] : 0);\n                        if (k == 1) v0 += s1[b][L];          // append 0 after run of 1s (prev layer)\n                        // dp[a][b][1][k]: append 1 to array with a zeros, b-1 ones (current layer)\n                        long long v1 = (k >= 2 ? n1[b - 1][k - 1] : 0);\n                        if (k == 1) v1 += t0[b - 1][L];      // append 1 after run of 0s (current layer)\n                        n0[b][k] = v0 % MOD;\n                        n1[b][k] = v1 % MOD;\n                    }\n                }\n                for (int k = 1; k <= L; ++k) {\n                    t0[b][k] = (t0[b][k - 1] + n0[b][k]) % MOD;\n                    t1[b][k] = (t1[b][k - 1] + n1[b][k]) % MOD;\n                }\n            }\n            p0.swap(n0); p1.swap(n1); s0.swap(t0); s1.swap(t1);\n        }\n        return (int)((s0[O][L] + s1[O][L]) % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

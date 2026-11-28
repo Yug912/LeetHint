@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-count-of-good-integers",
+  "title": "Find the Count of Good Integers",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Palindrome Enumeration + Multiset Dedup Counting",
+  "tc": "O(10^(n/2) · n)",
+  "sc": "O(10^(n/2) · n)",
+  "spaceBreakdown": "- set<string> seen: up to 9·10^(⌈n/2⌉−1) sorted strings of length n → O(10^(n/2)·n)\n- factorial table fact[11]: O(1)\n- digit count array cnt[10]: O(1)\n- not counted: input, returned value",
+  "approach": "Every good integer's digit multiset must contain at least one k-palindromic arrangement, and it suffices to enumerate all n-digit palindromes (only the first half is free, ~9·10^(⌈n/2⌉−1) of them), keep the sorted digit string of each divisible one in a set to dedupe multisets, then for each distinct multiset count distinct n-digit arrangements as n!/∏cnt! minus arrangements with a leading zero, (n−1)!·cnt₀/∏cnt!. This counts each good integer exactly once since goodness depends only on the multiset.",
+  "hints": [
+    "Two numbers with the same digits are good or bad together - so what is the smallest set of \"digit fingerprints\" you must inspect to cover every good n-digit number, given a palindrome is fully determined by its first half?",
+    "Enumerate palindromes by mirroring their first half, store each divisible one's sorted digit string in a set to dedupe. For n=3, k=5 the palindromes are 5b5 for b=0..9, giving fingerprints {055, 155, ..., 555}.",
+    "for each first half v of length ceil(n/2):\n    build palindrome t by mirroring v\n    if t as number is divisible by k: add sorted(t) to set\nans = 0\nfor each distinct sorted digit string s in set:\n    total = n! / product(cnt[d]!)\n    leadingZero = (n-1)! * cnt[0] / product(cnt[d]!)\n    ans += total - leadingZero\nreturn ans",
+    "**n = 1** - single digits are their own palindromes; the mirror step must add nothing.\n`Input: n = 1, k = 4` → `Expected: 2`\n⚠️ Bug: mirroring the whole half (doubling the digit) → treats 4 as 44, returns 0.\n\n**Leading-zero arrangements** - a multiset containing 0 has arrangements starting with 0 that are not valid n-digit numbers.\n`Input: n = 3, k = 5` → `Expected: 27`\n⚠️ Bug: counting n!/∏cnt! without subtracting (n−1)!·cnt₀/∏cnt! → multiset {0,5,5} contributes 3 instead of 2, returns 28.\n\n**Duplicate multisets** - different palindromes can share the same digit multiset and must be counted once.\n`Input: n = 3, k = 5` → `Expected: 27`\n⚠️ Bug: iterating palindromes instead of distinct sorted strings → 515 and 551 both add the {1,5,5} count, returns 51.\n\n**Overflow of the palindrome value** - n = 10 palindromes reach 9,999,999,999 > 2^31 − 1.\n`Input: n = 10, k = 9` → `Expected: 546360`\n⚠️ Bug: parsing the palindrome into int instead of long long → signed overflow, wrong divisibility results.\n\n**k = 1 boundary** - every palindrome qualifies, maximizing the number of distinct multisets.\n`Input: n = 2, k = 1` → `Expected: 9`\n⚠️ Bug: skipping the divisibility check incorrectly (e.g. testing val % k == 1) → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5 and the answer is required modulo 1e9+7?",
+      "a": "Enumerating all palindromes is impossible; instead count digit multisets directly with a DP over digit counts tracking the multiset's residue mod k (palindromicity depends only on counts of paired positions plus the middle digit). Time becomes O(10 · k · n) with combinatorial multinomials mod p, space O(k · n)."
+    },
+    {
+      "q": "Return the actual good integers instead of the count?",
+      "a": "Keep the same enumeration but, for each distinct multiset, generate its distinct permutations with backtracking, skipping those starting with '0'. Output size can be huge (up to ~10^10 for n=10), so this is only feasible when the count is small; generation costs O(output · n)."
+    },
+    {
+      "q": "What if rearrangements must also avoid a specific forbidden digit?",
+      "a": "Exclude that digit when building palindrome halves and drop multisets containing it; the permutation formula then runs over the remaining 9 digits unchanged. Complexity stays O(10^(n/2) · n) time and space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long countGoodIntegers(int n, int k) {\n        set<string> seen;\n        int half = (n + 1) / 2;\n        long long start = 1;\n        for (int i = 0; i < half - 1; i++) start *= 10;\n        long long end = start * 10;\n        for (long long v = start; v < end; v++) {\n            string s = to_string(v);\n            string t = s;\n            if (n % 2 == 1)\n                t += string(s.rbegin() + 1, s.rend());\n            else\n                t += string(s.rbegin(), s.rend());\n            long long val = stoll(t);\n            if (val % k != 0) continue;\n            sort(t.begin(), t.end());\n            seen.insert(t);\n        }\n        long long fact[11];\n        fact[0] = 1;\n        for (int i = 1; i <= 10; i++) fact[i] = fact[i - 1] * i;\n        long long ans = 0;\n        for (const string& sig : seen) {\n            int cnt[10] = {0};\n            for (char c : sig) cnt[c - '0']++;\n            long long total = fact[n];\n            long long bad = fact[n - 1] * cnt[0];\n            for (int d = 0; d < 10; d++) {\n                total /= fact[cnt[d]];\n                bad /= fact[cnt[d]];\n            }\n            ans += total - bad;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

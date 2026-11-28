@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-segment-sum-after-removals",
+  "title": "Maximum Segment Sum After Removals",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Reverse Processing + Union-Find with Multiset",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- parent/size/sum arrays: 3 × n entries → O(n)\n- multiset<long long> of segment sums: at most n entries → O(n)\n- answer vector: n entries (returned, not counted)\n- find is iterative path-halving: O(1) stack\n- not counted: input arrays, returned vector",
+  "approach": "Process removals in reverse: start with everything removed and \"add back\" one index per step, so each step merges at most two neighboring segments. Use DSU (union-find) where each root stores its segment's size and sum, and a multiset of current segment sums to get the max in O(log n). After adding back removeQueries[i] (for i from n-1 down to 1), the active set equals the state after removal i-1, so that multiset max is answer[i-1]; answer[n-1] = 0. Correct because each addition only merges with the immediately adjacent active segments, which DSU handles exactly.",
+  "hints": [
+    "The very last removal always leaves no segments, so that answer is 0 - what does that suggest about which direction you could fill in the answer array?\n(Constraint: n ≤ 10^5, and each index is removed exactly once.)",
+    "Use union-find (each root stores segment sum) plus a multiset of live segment sums, processing queries backwards as additions. In Example 1, going backwards: add index 1 (sum 2), then index 4 (sums {1,2}), then index 2 merges with it → 7, then index 3 merges both sides → 14, matching [14,7,2,2,0] read right-to-left.",
+    "ans[last] = 0\nfor i from n-1 down to 1:\n    j = removeQueries[i]\n    activate j: parent[j]=j, sum[j]=nums[j], insert sum[j] into multiset\n    if j-1 active: erase both sums, union j into left root, insert merged sum\n    if j+1 active: erase both sums, union j into right root, insert merged sum\n    ans[i-1] = multiset max (0 if empty)\nreturn ans",
+    "**Smallest input** - n = 1, the single removal empties everything.\n`Input: nums = [5], removeQueries = [0]` → `Expected: [0]`\n⚠️ Bug: forgetting ans[n-1]=0 and reading an uninitialized/absent max → returns garbage or crashes.\n\n**Overflow** - n = 10^5 values of 10^9 give segment sums up to 10^14.\n`Input: nums = [1000000000]*100000, removeQueries = [99999,99998,...,0]` → `Expected: [0, 1000000000, 2000000000, ..., 99990000000000]` (first entries grow by 10^9 each step)\n⚠️ Bug: storing segment sums in int → wraps past 2^31-1 (10^14 > 2.1×10^9), wrong answers from the second query on.\n\n**Tied segment sums** - two segments with equal sums; erasing by value kills both.\n`Input: nums = [3,1,3], removeQueries = [1,0,2]` → `Expected: [3,3,0]`\n⚠️ Bug: using ms.erase(value) instead of ms.erase(ms.find(value)) → erases both 3s, returns [3,0,0].\n\n**Boundary merge at index 0** - the added index sits at the left edge with only a right neighbor.\n`Input: nums = [4,4], removeQueries = [1,0]` → `Expected: [4,0]`\n⚠️ Bug: checking neighbor j-1 without the j>0 guard → reads index -1 out of bounds.\n\n**Full sweep in order** - removals go 0,1,2,... so every addition merges exactly one left segment.\n`Input: nums = [1,2,3], removeQueries = [0,1,2]` → `Expected: [5,3,0]`\n⚠️ Bug: only merging with the right neighbor (or not merging at all) → returns [3,3,0] instead of [5,3,0]."
+  ],
+  "followUps": [
+    {
+      "q": "What if you had to process removals forward (true deletions) instead of in reverse?",
+      "a": "Use an ordered set of removed boundaries plus prefix sums: each segment is (prev removed boundary, next removed boundary), and its sum is prefix[next] - prefix[prev+1]. Keep segment sums in a multiset, inserting the two new segments created by each removal and erasing the old one; still O(n log n)."
+    },
+    {
+      "q": "What if queries could remove and restore the same index repeatedly (toggle queries)?",
+      "a": "The reverse trick breaks, so go forward with the ordered-set-of-boundaries approach: on remove, split the containing segment into two and update the multiset; on restore, merge with active neighbors if present. Each operation is O(log n), so O(q log n) total with O(n) space."
+    },
+    {
+      "q": "Can you answer the queries with O(n) total time and O(1) extra space beyond the output?",
+      "a": "Not with the max requirement - you need to know the maximum over a dynamically changing set of sums each step. A union-find + multiset gives O(n log n); a truly O(n) solution would need an offline monotonic argument, which does not exist for arbitrary query orders, so O(n log n) is effectively optimal here."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<long long> maximumSegmentSum(vector<int>& nums, vector<int>& removeQueries) {\n        int n = nums.size();\n        vector<int> par(n);\n        vector<long long> segSum(n, 0);\n        vector<int> sz(n, 0); // sz > 0 means active\n        for (int i = 0; i < n; ++i) par[i] = i;\n        \n        multiset<long long> ms;\n        vector<long long> ans(n);\n        ans[n - 1] = 0;\n        \n        auto find = [&](int x) {\n            while (par[x] != x) {\n                par[x] = par[par[x]];\n                x = par[x];\n            }\n            return x;\n        };\n        \n        for (int i = n - 1; i >= 1; --i) {\n            int j = removeQueries[i];\n            par[j] = j;\n            segSum[j] = nums[j];\n            sz[j] = 1;\n            ms.insert(segSum[j]);\n            \n            if (j > 0 && sz[j - 1] > 0) {\n                int a = find(j - 1), b = find(j);\n                ms.erase(ms.find(segSum[a]));\n                ms.erase(ms.find(segSum[b]));\n                par[b] = a;\n                segSum[a] += segSum[b];\n                sz[a] += sz[b];\n                ms.insert(segSum[a]);\n            }\n            if (j < n - 1 && sz[j + 1] > 0) {\n                int a = find(j + 1), b = find(j);\n                ms.erase(ms.find(segSum[a]));\n                ms.erase(ms.find(segSum[b]));\n                par[b] = a;\n                segSum[a] += segSum[b];\n                sz[a] += sz[b];\n                ms.insert(segSum[a]);\n            }\n            \n            ans[i - 1] = ms.empty() ? 0 : *ms.rbegin();\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

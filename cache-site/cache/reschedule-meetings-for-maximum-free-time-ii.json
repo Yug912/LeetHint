@@ -1,0 +1,40 @@
+{
+  "slug": "reschedule-meetings-for-maximum-free-time-ii",
+  "title": "Reschedule Meetings for Maximum Free Time II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Gap Enumeration with Top-3 Tracking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- three (value, index) slots for top-3 gaps: O(1)\n- lambda-captured scalars only, no containers allocated\n- not counted: input arrays, returned int",
+  "approach": "The free segments (gaps) between meetings, including before the first and after the last, are fixed except around the one meeting we move. Moving meeting i merges its two neighboring gaps plus its duration if the meeting can be relocated into some other gap of size ≥ its duration; otherwise we just merge the two neighboring gaps. Precompute the top-3 largest gaps with their indices: for any meeting, at most 2 of the top-3 are its adjacent gaps, so the largest non-adjacent gap is always found among them, giving O(n) time and O(1) extra space (gaps are recomputed on the fly in a second pass).",
+  "hints": [
+    "When meeting i is the one moved, which free segments of the timeline change, and what extra amount appears inside the merged free block only when the meeting can land somewhere else? With n up to 10^5 and eventTime up to 10^9, what tiny set of numbers would you need to know about all gaps to answer every meeting's question?",
+    "Keep the three largest gaps together with their indices. In Example 3 (eventTime=10, gaps 0,2,3,1,0), for meeting [3,4] the adjacent gaps are 2 and 3; the largest gap not adjacent to it is 1 ≥ duration 1, so the answer there is 2+3+1=6.",
+    "pass 1: scan all n+1 gaps, keep top-3 (value, index)\npass 2: for each meeting i\n    left = gap before i, right = gap after i, dur = length of meeting i\n    best = largest top-3 gap whose index is not i or i+1\n    cand = left + right + (dur if best >= dur else 0)\n    answer = max(answer, cand)",
+    "**No relocation possible** - every gap is smaller than the meeting's duration, so only the two adjacent gaps merge.\n`Input: eventTime = 5, startTime = [0,1,2,3,4], endTime = [1,2,3,4,5]` → `Expected: 0`\n⚠️ Bug: unconditionally adding dur to left+right → returns 1 on this input.\n\n**Meeting moved into another gap** - the moved meeting's duration joins its two neighboring gaps.\n`Input: eventTime = 10, startTime = [0,7,9], endTime = [1,8,10]` → `Expected: 7`\n⚠️ Bug: forgetting to add dur when a non-adjacent gap fits the meeting → returns 6.\n\n**Meeting touching the boundary** - the first meeting starts at 0, so its left gap is 0 and must still count as a gap index.\n`Input: eventTime = 10, startTime = [0,7,9], endTime = [1,8,10]` → `Expected: 7`\n⚠️ Bug: skipping gap index 0 or using startTime[0]-1 as the left edge → wrong merged length for meeting 0.\n\n**Equal gap values with index tracking** - several gaps share the same length, so the stored index decides adjacency.\n`Input: eventTime = 8, startTime = [2,5], endTime = [3,6]` → gaps are 2,2,2 → `Expected: 3`\n⚠️ Bug: storing only values without indices and rejecting \"adjacent\" by position guess → returns 2 instead of 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if you may reschedule up to k meetings instead of one?",
+      "a": "A greedy exchange argument breaks; you would need a DP over meetings where each state tracks which gaps are still free, or a flow/matching formulation pairing meetings to gaps. Complexity rises to roughly O(nk) or O(n log n) with a more careful matching."
+    },
+    {
+      "q": "What if meetings could also be resized (duration changed) within a total budget?",
+      "a": "Then the merged block around a meeting is bounded only by the neighboring meetings, and you would enumerate each meeting's maximal free window directly (left+right plus budget), taking the maximum in O(n) time and O(1) space - the top-3 structure is no longer needed since no relocation search is required."
+    },
+    {
+      "q": "Can you solve it in a streaming setting where meetings arrive one at a time and eventTime is given upfront?",
+      "a": "The answer needs the final gap configuration, so you must process all meetings before answering; however, you can maintain the top-3 gaps incrementally in O(1) space per update and answer a query about any prefix in O(1), giving O(n) total time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxFreeTime(int eventTime, vector<int>& startTime, vector<int>& endTime) {\n        int n = startTime.size();\n        long long v[3] = {-1, -1, -1};\n        int idx[3] = {-1, -1, -1};\n\n        auto add = [&](long long val, int i) {\n            for (int k = 0; k < 3; ++k) {\n                if (val > v[k]) {\n                    for (int j = 2; j > k; --j) { v[j] = v[j-1]; idx[j] = idx[j-1]; }\n                    v[k] = val; idx[k] = i;\n                    break;\n                }\n            }\n        };\n\n        auto gap = [&](int i) -> long long {\n            long long l = (i == 0) ? 0 : endTime[i-1];\n            long long r = (i == n) ? eventTime : startTime[i];\n            return r - l;\n        };\n\n        for (int i = 0; i <= n; ++i) add(gap(i), i);\n\n        long long ans = 0;\n        for (int i = 0; i < n; ++i) {\n            long long left = gap(i), right = gap(i+1);\n            long long dur = (long long)endTime[i] - startTime[i];\n            long long best = 0;\n            for (int k = 0; k < 3; ++k)\n                if (idx[k] != i && idx[k] != i+1 && v[k] >= dur)\n                    best = max(best, v[k]);\n            long long cand = left + right + (best >= dur ? dur : 0);\n            ans = max(ans, cand);\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "4/4",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-maximum-number-of-fruits-collected",
+  "title": "Find the Maximum Number of Fruits Collected",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Triangle Paths (constrained grid walks)",
+  "tc": "O(n^2)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- two rolling vectors dp, nd inside helper: 2 × n long long each, reused for both children → O(n)\n- recursion depth: none (iterative DP)\n- not counted: input fruits, returned int",
+  "approach": "Child 1 at (0,0) has exactly n-1 moves and must gain one row and one column per move, so its path is forced: the main diagonal - collect all fruits[i][i]. The other two children each make exactly one \"down\" (resp. one \"right\") move per step, so child 2 is always in row = step and can only stay in the region col ≥ row, child 3 in row ≥ col; they can only meet child 1's diagonal, where fruits are already counted (worth 0 extra). So run a row-by-row DP for child 2 over columns [row, n-1] (adding fruits only when col > row), the transposed DP for child 3, and add the diagonal sum. Overlaps are impossible off the diagonal, so the sum of the three independent optima is the global optimum.",
+  "hints": [
+    "Child 1 starts at (0,0) and must reach (n-1,n-1) in exactly n-1 moves, each move increasing the row by 0 or 1 and the column by 0 or 1 - which cells can it possibly visit? And for the child starting at (0,n-1), after k moves it is in row k: which columns at row k still allow reaching (n-1,n-1) in the remaining n-1-k moves?",
+    "Dynamic programming row by row. In Example 1, child 2's DP at row 1 considers columns 1..3 coming from row 0's column 3: (1,2) gives 8 via a diagonal move, (1,3) gives 7 via a straight-down move - keep the best per column.",
+    "```\nanswer += sum of fruits[i][i]\nfor each of the two non-diagonal children (second one on the transposed grid):\n    dp[c] = -inf for all c; dp[n-1] = fruits[0][n-1]\n    for r = 1 .. n-1:\n        for c = r .. n-1:\n            best_prev = max(dp[c-1], dp[c], dp[c+1])  # valid indices only\n            value = fruits[r][c] if c > r else 0\n            nd[c] = best_prev + value\n        dp = nd\n    answer += dp[n-1]\nreturn answer\n```",
+    "**Smallest input n = 2** - every child makes exactly one move and all three end at (1,1).\n`Input: [[1,1],[1,1]]` → `Expected: 4`\n⚠️ Bug: counting fruits[1][1] again for children 2 and 3 (not zeroing the diagonal cell) → returns 6.\n\n**Diagonal cell visited by child 2** - child 2 may be forced onto the diagonal (col == row), where the fruit is already collected by child 1.\n`Input: [[1,2,3],[4,5,6],[7,8,9]]` → `Expected: 39`\n⚠️ Bug: adding fruits[r][r] when child 2 stands on the diagonal → returns 44 (counts 5 twice).\n\n**Boundary columns at row edges** - at column n-1 the move (r, c+1) does not exist and must be skipped, not read as 0.\n`Input: [[0,9],[9,0]]` → `Expected: 18`\n⚠️ Bug: reading dp[c+1] out of range as 0 instead of skipping it → wrong transition from the last column, returns 9.\n\n**All-equal large grid** - n = 1000, all cells 1000; total is 3·10^6, but per-child sums near 10^6 must not be accumulated in a narrowing way.\n`Input: 1000×1000 grid of 1000` → `Expected: 3000000`\n⚠️ Bug: accumulating in `int` after int overflow-prone intermediate products (e.g. multiplying counts) → wrong total; keep long long accumulators."
+  ],
+  "followUps": [
+    {
+      "q": "What if the three children may start at arbitrary cells and each makes exactly n-1 moves?",
+      "a": "Generalize the DP to three simultaneous walks with a combined state (row1, col1, col2, col3 per shared step), taking care to count a shared cell's fruit once. Time becomes O(n^4) with O(n^3) rolling space for two tracked columns per child."
+    },
+    {
+      "q": "What if each child makes at most n-1 moves instead of exactly n-1?",
+      "a": "The diagonal child can now stop early, so the DP must allow a \"stay/stop\" transition with value 0 for skipped steps; the same rolling-row DP works with one extra transition per state, still O(n^2) time and O(n) space."
+    },
+    {
+      "q": "Can the memory be reduced below O(n) for the two triangle DPs?",
+      "a": "No sub-O(n) rolling array is possible since each row's answer depends on up to three columns of the previous row, but you can process both children in one pass over the grid storing a single O(n) array per child, keeping total auxiliary space O(n) - already optimal for this recurrence."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    long long best(vector<vector<int>>& f, bool T) {\n        int n = f.size();\n        const long long NEG = LLONG_MIN / 4;\n        vector<long long> dp(n, NEG), nd(n);\n        dp[n - 1] = T ? f[n - 1][0] : f[0][n - 1];\n        for (int r = 1; r < n; r++) {\n            for (int c = r; c < n; c++) {\n                long long b = NEG;\n                if (c - 1 >= r - 1) b = max(b, dp[c - 1]);\n                b = max(b, dp[c]);\n                if (c + 1 <= n - 1) b = max(b, dp[c + 1]);\n                long long v = 0;\n                if (c > r) v = T ? f[c][r] : f[r][c];\n                nd[c] = (b == NEG) ? NEG : b + v;\n            }\n            swap(dp, nd);\n        }\n        return dp[n - 1];\n    }\npublic:\n    int maxCollectedFruits(vector<vector<int>>& fruits) {\n        int n = fruits.size();\n        long long ans = 0;\n        for (int i = 0; i < n; i++) ans += fruits[i][i];\n        ans += best(fruits, false);\n        ans += best(fruits, true);\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

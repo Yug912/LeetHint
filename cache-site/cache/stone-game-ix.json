@@ -1,0 +1,40 @@
+{
+  "slug": "stone-game-ix",
+  "title": "Stone Game IX",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Game Theory Counting (mod-3 case analysis)",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long c[3]: fixed 3 counters → O(1)\n- recursion: none\n- not counted: input vector",
+  "approach": "Only stone values mod 3 matter; count c0, c1, c2. Stones ≡0 are \"free moves\" that just pass the turn, so their parity decides the tempo. If c0 is even, Alice wins exactly when both c1≥1 and c2≥1 (she opens with the smaller pile and mirrors); if c0 is odd, she wins only when |c1−c2|>2, since the extra zero-turn lets Bob mirror Alice's 1/2 choices until she is forced to complete a multiple of 3.",
+  "hints": [
+    "Each stone's value only matters through its remainder mod 3 - with n up to 10^5, what small set of counts fully describes the position?\nIn Example 3, values 5,1,2,4,3 give remainders 2,1,2,1,0.",
+    "Count stones by remainder mod 3 into three counters, then branch on the count of remainder-0 stones. Example 1 ([2,1]) gives counts (0,1,1) - even zeros with both nonzero piles, and Alice wins.",
+    "count c0, c1, c2 = stones with value mod 3 = 0, 1, 2\nif c0 is even:\n    return c1 >= 1 and c2 >= 1\nelse:\n    return abs(c1 - c2) > 2",
+    "**Single stone** - n = 1, Alice is forced to take it and no one removes more.\n`Input: stones = [2]` → `Expected: false`\n⚠️ Bug: returning true whenever any stone exists → returns true.\n\n**All multiples of 3** - every move makes the sum divisible by 3 immediately.\n`Input: stones = [3,3]` → `Expected: false`\n⚠️ Bug: ignoring the c1≥1 && c2≥1 requirement when c0 is even and only checking c0 parity → returns true.\n\n**Odd zeros, balanced piles** - c0 odd with equal 1s and 2s lets Bob mirror Alice.\n`Input: stones = [5,1,2,4,3]` → `Expected: false`\n⚠️ Bug: using the even-c0 rule (c1≥1 && c2≥1) for the odd-c0 case → returns true.\n\n**Odd zeros, one-sided piles** - only remainder-1 and remainder-0 stones exist.\n`Input: stones = [1,3]` → `Expected: false`\n⚠️ Bug: computing abs(c1−c2) > 2 without requiring both piles considered, or mis-signing the difference → can return true."
+  ],
+  "followUps": [
+    {
+      "q": "What if the losing condition were \"sum divisible by k\" for general k?",
+      "a": "Count stones by remainder mod k and do the same game analysis over remainder states; for k > 3 the state space grows but is still O(k), giving O(n + k) time. The mirroring argument generalizes but the win conditions need a small game search over the O(k) states."
+    },
+    {
+      "q": "What if stones arrive as a stream and you cannot store the array?",
+      "a": "The solution already only needs three counters, so process each value as it arrives, updating c[value % 3]; time O(n), space O(1) regardless of stream length."
+    },
+    {
+      "q": "What if the player who makes the sum divisible by 3 wins instead of loses?",
+      "a": "The parity/tempo analysis flips: now completing a multiple of 3 is good, so the conditions invert (e.g. with even c0, Alice wins unless both piles are empty in a way that forces Bob's win); re-derive with the same counting framework, still O(n) time and O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool stoneGameIX(vector<int>& stones) {\n        long c[3] = {0, 0, 0};\n        for (int x : stones) c[x % 3]++;\n        if (c[0] % 2 == 0) return c[1] >= 1 && c[2] >= 1;\n        long d = c[1] > c[2] ? c[1] - c[2] : c[2] - c[1];\n        return d > 2;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

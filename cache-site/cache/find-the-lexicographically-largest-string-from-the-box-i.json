@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-lexicographically-largest-string-from-the-box-i",
+  "title": "Find the Lexicographically Largest String From the Box I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Two-Pointer Largest Suffix",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- integers i, j, k, len, n: O(1)\n- returned string (excluded by convention): not counted\n- no containers, no recursion",
+  "approach": "The answer is always a piece taken from the start of the lexicographically largest suffix of `word`: any other start either loses the suffix comparison or ties only when truncation makes them equal. Find that start with the classic two-pointer suffix comparison (compare candidate starts i and j with an offset k, jump past mismatched prefixes), then take `min(n - numFriends + 1, n - i)` characters from it - the length cap guarantees the remaining `n - len` characters can still be split into `numFriends - 1` non-empty pieces. This runs in O(n) time with O(1) extra space, never materializing substrings.",
+  "hints": [
+    "The answer is one contiguous piece of `word` - which starting index should own it, and how does one starting index's piece beat another's?\nIf a piece takes too many characters, the friends splitting the rest run out of characters - what length limit does `numFriends` force? (Note `1 <= numFriends <= word.length`.)",
+    "Compare two candidate starting positions character by character with an offset; on a mismatch, the loser's start can be jumped far forward, never rebuilt. In `\"dbca\"` with `numFriends = 2`: start 0 (`d`) beats start 1 (`b`) at the first character, so start 1 is discarded entirely.",
+    "i = 0, j = 1, k = 0\nwhile j + k < n:\n    if word[i+k] == word[j+k]: k = k + 1\n    else if word[i+k] < word[j+k]: i = max(i+k+1, j); j = i + 1; k = 0\n    else: j = j + k + 1; k = 0\nlen = min(n - numFriends + 1, n - i)\nreturn the len characters starting at i",
+    "**Single friend** - `numFriends = 1` means no split happens at all.\n`Input: word = \"dbca\", numFriends = 1` → `Expected: \"dbca\"`\n⚠️ Bug: unconditionally capping the piece at `n - numFriends + 1` computed before guarding `numFriends == 1` is fine here, but a version that returns only the largest single character when `numFriends == 1` returns `\"d\"`.\n\n**All characters equal** - every suffix ties character-wise until length runs out.\n`Input: word = \"gggg\", numFriends = 4` → `Expected: \"g\"`\n⚠️ Bug: a comparison loop that keeps advancing `k` without the `j + k < n` bound reads `word[4]` out of bounds on `\"gggg\"`.\n\n**Truncation beats a longer suffix** - the largest suffix may start so late that its piece is shorter than the cap.\n`Input: word = \"abab\", numFriends = 3` → `Expected: \"ab\"`\n⚠️ Bug: taking the full largest suffix `\"bab\"` instead of capping at `n - numFriends + 1 = 2` leaves only 1 character for 2 friends → invalid, correct capped answer is `\"ab\"`.\n\n**Largest character at the very end** - the winning start is the last index, piece length 1.\n`Input: word = \"abcz\", numFriends = 2` → `Expected: \"z\"`\n⚠️ Bug: a buggy pointer update that lets `j` reach `n` and indexes `word[j]` returns garbage or crashes instead of `\"z\"`."
+  ],
+  "followUps": [
+    {
+      "q": "Return the actual split into `numFriends` pieces that contains the largest piece, not just the piece.",
+      "a": "After finding start `i` and length `len`, emit the piece, then greedily cut the remaining `n - len` characters before and after into `numFriends - 1` single characters plus one multi-character chunk as needed. Still O(n) time, O(n) space for the output split."
+    },
+    {
+      "q": "`word.length` grows to 5×10^7 and the string is given as a read-only stream (no random access).",
+      "a": "Keep the same two-pointer comparison but buffer only the current best suffix candidate and the challenger, up to O(L) = O(n) characters in the worst case; comparisons remain O(n) total amortized. Time stays O(n), extra space becomes O(L) for the buffered candidate instead of O(1)."
+    },
+    {
+      "q": "The word is circular - the piece may wrap around the end.",
+      "a": "Duplicate the word (conceptually) to length 2n and run the same two-pointer scan on it, capping piece length at `n - numFriends + 1` and start index below `n`. Time O(n), space O(n) for the doubled buffer (or O(1) with modular indexing)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string answerString(string word, int numFriends) {\n        int n = word.size();\n        if (numFriends == 1) return word;\n        int i = 0, j = 1, k = 0;\n        while (j + k < n) {\n            if (word[i + k] == word[j + k]) {\n                k++;\n            } else if (word[i + k] < word[j + k]) {\n                i = max(i + k + 1, j);\n                j = i + 1;\n                k = 0;\n            } else {\n                j = j + k + 1;\n                k = 0;\n            }\n        }\n        int len = min(n - numFriends + 1, n - i);\n        return word.substr(i, len);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

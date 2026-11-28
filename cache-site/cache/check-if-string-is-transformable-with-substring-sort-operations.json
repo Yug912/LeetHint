@@ -1,0 +1,40 @@
+{
+  "slug": "check-if-string-is-transformable-with-substring-sort-operations",
+  "title": "Check If String Is Transformable With Substring Sort Operations",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Position Tracking",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> pos[10]: stores n positions total across 10 vectors → O(n)\n- int idx[10]: 10 integers → O(1)\n- recursion depth: none\n- not counted: input strings s and t",
+  "approach": "Sorting a substring in ascending order lets a digit move left past larger digits, but never past a smaller or equal digit. So the relative order of identical digits is preserved, and a digit can reach an earlier position only if no smaller digit still sits before it in s. For each digit 0-9, store a queue of its positions in s. Process t left to right: for each character c, pop the next position p of c from its queue, then verify no digit d < c has an unconsumed position before p in s. If any does, c is blocked and the transform is impossible.",
+  "hints": [
+    "When you sort a substring in ascending order, which digits can move to earlier positions and which cannot? The strings contain only digits 0-9 with n up to 10^5.",
+    "Maintain a queue of positions for each digit 0-9 in s. For s = \"84532\", to place '3' first in t = \"34852\", dequeue position 3 from the '3' queue, then verify no digit smaller than '3' has an unused position before index 3 in s.",
+    "```\nfor each digit d in 0..9:\n    queue[d] = positions of d in s, in order\nfor each char c in t:\n    p = dequeue front of queue[c]\n    for each d in 0..c-1:\n        if queue[d] not empty and front(queue[d]) < p:\n            return false\nreturn true\n```",
+    "**Single character, mismatch** - n = 1, different digits\n`Input: s = \"5\", t = \"3\"` → `Expected: false`\n⚠️ Bug: accessing position list for digit 3 without checking emptiness → undefined behavior\n\n**Cannot unsort** - s is already sorted ascending, t is reverse\n`Input: s = \"12345\", t = \"54321\"` → `Expected: false`\n⚠️ Bug: omitting the inner loop that checks smaller digits → returns true\n\n**Duplicate digits, reorderable** - same digit appears multiple times, relative order matters\n`Input: s = \"212\", t = \"122\"` → `Expected: true`\n⚠️ Bug: storing only one position per digit instead of a queue → returns false\n\n**Mismatched multiset** - t contains a digit absent from s\n`Input: s = \"12\", t = \"13\"` → `Expected: false`\n⚠️ Bug: not checking if position list for digit 3 is empty before accessing → undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if s and t contain lowercase letters (a-z) instead of digits?",
+      "a": "The same approach works with 26 position queues instead of 10. Each character in t still requires checking all smaller characters' queues. TC becomes O(26n) = O(n), SC stays O(n)."
+    },
+    {
+      "q": "What if you must also return the minimum number of sort operations needed?",
+      "a": "This is significantly harder. Each operation can fix multiple target positions simultaneously. A greedy strategy that groups consecutive matched characters and sorts the minimal covering substring may work, but proving optimality requires careful analysis. TC likely O(n) or O(n log n)."
+    },
+    {
+      "q": "What if you have only O(1) extra space?",
+      "a": "You cannot store position queues. Instead, scan s for each character in t, tracking consumed positions via in-place marking if s is mutable. TC degrades to O(n²) in the worst case, SC becomes O(1) extra."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool isTransformable(string s, string t) {\n        int n = s.size();\n        vector<int> pos[10];\n        for (int i = 0; i < n; i++) {\n            pos[s[i] - '0'].push_back(i);\n        }\n        int idx[10] = {};\n        \n        for (int i = 0; i < n; i++) {\n            int c = t[i] - '0';\n            if (idx[c] >= (int)pos[c].size()) return false;\n            int p = pos[c][idx[c]];\n            for (int d = 0; d < c; d++) {\n                if (idx[d] < (int)pos[d].size() && pos[d][idx[d]] < p) {\n                    return false;\n                }\n            }\n            idx[c]++;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

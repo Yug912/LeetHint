@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-value-after-replacing-with-sum-of-prime-factors",
+  "title": "Smallest Value After Replacing With Sum of Prime Factors",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation with Trial Division",
+  "tc": "O(√n · log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int sum, int x, int d: three scalar variables → O(1)\n- no containers, no recursion, no heap/stack allocation\n- not counted: input n, returned int",
+  "approach": "The sum of prime factors (with multiplicity) of n is always ≤ n, with equality only when n is prime or n = 4. So repeatedly replacing n with this sum yields a non-increasing sequence that must reach a fixed point. We simulate the process using trial division to compute the sum of prime factors each step, stopping when the sum equals n (the fixed point). The value roughly halves each iteration, so at most O(log n) steps are needed.",
+  "hints": [
+    "Starting from n = 15, the sequence goes 15 → 8 → 6 → 5. What property of a number makes the sequence stop changing at that value?",
+    "Use trial division to sum all prime factors (with multiplicity), then simulate replacements until the value stabilizes. For n = 15: factors 3 and 5 give sum 8; repeat with 8.",
+    "```\nloop:\n    sum = 0, x = n\n    for d from 2 while d*d <= x:\n        while x % d == 0:\n            sum += d\n            x /= d\n    if x > 1: sum += x\n    if sum == n: return n\n    n = sum\n```",
+    "**Non-prime fixed point** - n = 4 maps to itself because 2+2=4, even though 4 is not prime.\n`Input: n = 4` → `Expected: 4`\n⚠️ Bug: Stopping when n is prime instead of when sum == n → infinite loop on 4 (4 → 4 → …)\n\n**Smallest input** - n = 2 is prime, so its only prime factor is itself.\n`Input: n = 2` → `Expected: 2`\n⚠️ Bug: Not adding the remaining x > 1 after the trial division loop → primeFactorSum(2) = 0, returns 0\n\n**Perfect square of a prime** - n = 9 = 3², sum = 6, then 5.\n`Input: n = 9` → `Expected: 5`\n⚠️ Bug: Using d*d < x instead of d*d <= x → primeFactorSum(9) = 9 (misses factor 3), returns 9\n\n**Prime power with repeated factor** - n = 16 = 2⁴, sum = 8, then 6, then 5.\n`Input: n = 16` → `Expected: 5`\n⚠️ Bug: Using `if` instead of `while` for the divisibility check → primeFactorSum(16) = 2+8 = 10 (treats 8 as prime), returns 7"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^12?",
+      "a": "Trial division up to √n (10^6) per step becomes too slow. Use Pollard's rho algorithm for factorization, which runs in O(n^{1/4}) expected time per factor. The simulation still takes O(log n) iterations, giving O(n^{1/4} · log n) total."
+    },
+    {
+      "q": "What if you must answer 10^5 queries for different values of n ≤ 10^5?",
+      "a": "Precompute the smallest prime factor (SPF) for every integer up to 10^5 using a sieve in O(n log log n). Each factorization then takes O(log n) by repeatedly dividing by the SPF. Total: O(n log log n + Q · log² n)."
+    },
+    {
+      "q": "What if you replace n with the product of (each prime factor + 1) instead of the sum?",
+      "a": "The product can grow, so the sequence may not converge or may cycle. Use a hash set to detect when a value repeats, then return the minimum value seen in the cycle. Time complexity depends on cycle length, which is hard to bound tightly."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int smallestValue(int n) {\n        while (true) {\n            int sum = primeFactorSum(n);\n            if (sum == n) break;\n            n = sum;\n        }\n        return n;\n    }\nprivate:\n    int primeFactorSum(int n) {\n        int sum = 0;\n        int x = n;\n        for (int d = 2; d * d <= x; d++) {\n            while (x % d == 0) {\n                sum += d;\n                x /= d;\n            }\n        }\n        if (x > 1) sum += x;\n        return sum;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

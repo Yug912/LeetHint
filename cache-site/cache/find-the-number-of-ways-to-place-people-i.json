@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-number-of-ways-to-place-people-i",
+  "title": "Find the Number of Ways to Place People I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sort + Greedy Sweep",
+  "tc": "O(n^2)",
+  "sc": "O(log n)",
+  "spaceBreakdown": "- in-place sort of the input vector: introsort stack O(log n)\n- loop variables: O(1)\n- not counted: input vector (sorted in place), returned int",
+  "approach": "Sort points by x ascending, and for equal x by y descending. For each point A (upper-left candidate), sweep points to its right; a point B forms a valid pair iff y_B ≤ y_A and y_B is strictly greater than the largest y_B seen so far in this sweep - otherwise some earlier point would sit inside/on the rectangle. This greedy check is correct because any point with y between maxY and y_A would block the pair, and keeping the maximum seen y is exactly the tightest lower bound.",
+  "hints": [
+    "When A is the upper-left point, which points B to its right could ever form an empty rectangle with A - and what happens to the candidates as you move rightward through points with decreasing y? (n ≤ 50, so even checking every pair is cheap - the question is what makes a pair valid.)",
+    "Sort by x ascending, ties by y descending. For points = [[2,6],[4,4],[6,2]]: from (2,6), the first candidate (4,4) is valid; then (6,2) is blocked because y=2 is not above the already-seen y=4.",
+    "```\nsort points by (x asc, y desc)\ncount = 0\nfor each i:\n    maxY = -infinity\n    for each j > i:\n        if y_j <= maxY: continue\n        if y_j <= y_i:\n            count += 1\n            maxY = y_j\nreturn count\n```",
+    "**Same x coordinate** - two points on a vertical line, e.g. [[1,3],[1,1]].\n`Input: [[1,3],[1,1]]` → `Expected: 1`\n⚠️ Bug: sorting ties by y ascending makes the lower point come first, so the pair is checked in the wrong direction and returns 0.\n\n**Collinear points on a line** - a middle point lies exactly on the segment, e.g. Example 3.\n`Input: [[3,1],[1,3],[1,1]]` → `Expected: 2`\n⚠️ Bug: using strict inequality y_j < y_i for the \"inside\" check rejects the valid pair (1,1)-(3,1) and returns 1.\n\n**No valid pair** - points along an ascending diagonal.\n`Input: [[1,1],[2,2],[3,3]]` → `Expected: 0`\n⚠️ Bug: forgetting the y_j ≤ y_i condition and counting pairs where B is above A returns 3.\n\n**Duplicate coordinates impossible but near-duplicates** - all points share x with distinct y, sorted order must be y descending.\n`Input: [[0,5],[0,4],[0,3]]` → `Expected: 3`\n⚠️ Bug: skipping j when x_j == x_i returns 0 instead of 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5 (Find the Number of Ways to Place People II)?",
+      "a": "The same sort + sweep is already O(n^2), which is the intended solution for the harder version too - 10^10 would be too slow but 10^10 is not needed since the sweep is O(n) per anchor, giving O(n^2) ≈ 10^10... actually for n = 10^5 you keep the identical O(n^2) sweep, which is the accepted complexity for LC 3027. Space stays O(1) beyond the sort."
+    },
+    {
+      "q": "What if points could have negative coordinates down to -10^9?",
+      "a": "Nothing changes - the algorithm only compares coordinates, never indexes by them. Just keep using int (comparisons don't overflow); time and space remain O(n^2) / O(log n)."
+    },
+    {
+      "q": "What if you had to return the actual pairs instead of just the count, in a streaming setting where points arrive one at a time?",
+      "a": "Keep the sorted structure (e.g. an ordered container by x, y desc) and for each new point run the same sweep against previously stored points in both directions, emitting pairs as found. Insertion is O(n) per point, so O(n^2) total time and O(n) space for the stored points."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfPairs(vector<vector<int>>& points) {\n        sort(points.begin(), points.end(), [](const vector<int>& a, const vector<int>& b) {\n            if (a[0] != b[0]) return a[0] < b[0];\n            return a[1] > b[1];\n        });\n        int n = points.size(), count = 0;\n        for (int i = 0; i < n; ++i) {\n            int maxY = INT_MIN;\n            for (int j = i + 1; j < n; ++j) {\n                int yj = points[j][1];\n                if (yj <= maxY) continue;\n                if (yj <= points[i][1]) {\n                    ++count;\n                    maxY = yj;\n                }\n            }\n        }\n        return count;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

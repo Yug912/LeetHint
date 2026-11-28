@@ -1,0 +1,40 @@
+{
+  "slug": "reconstruct-a-2-row-binary-matrix",
+  "title": "Reconstruct a 2-Row Binary Matrix",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<vector<int>> res (2×n): returned output, not counted\n- scalars n, i, upper, lower: O(1)\n- recursion depth: none\n- not counted: input colsum, returned res",
+  "approach": "Columns with colsum = 2 force both cells to 1 (decrementing both upper and lower); columns with colsum = 0 force both to 0. Only colsum = 1 columns offer a choice. After locking all forced columns, greedily assign each remaining colsum = 1 column to the upper row while it still needs 1s, then to the lower row. If any budget goes negative, or isn't exactly zero at the end, no valid matrix exists.",
+  "hints": [
+    "For each column, colsum[i] is the sum of its two cells - which values of colsum[i] force both cells, and which leave you a choice about where the single 1 goes?",
+    "Greedy with two passes. First, lock all forced columns (colsum = 2 → both 1; colsum = 0 → both 0), decrementing upper and lower for each 2. Then assign each colsum = 1 column to whichever row still needs 1s. In Example 1, all three columns have colsum 1; fill upper first (columns 0-1), then lower (column 2).",
+    "```\ncreate 2×n result matrix filled with 0\nfor each column i:\n    if colsum[i] == 2:\n        set result[0][i] = 1, result[1][i] = 1\n        decrement upper, lower\nif upper < 0 or lower < 0: return empty\nfor each column i:\n    if colsum[i] == 1:\n        if upper > 0: set result[0][i] = 1, decrement upper\n        else: set result[1][i] = 1, decrement lower\nif upper != 0 or lower != 0: return empty\nreturn result\n```",
+    "**Forced column exceeds budget** - colsum = 2 but one row's budget is 0.\n`Input: upper=1, lower=0, colsum=[2]` → `Expected: []`\n⚠️ Bug: skipping the `upper < 0 || lower < 0` check after the first pass → returns `[[1],[1]]` with lower silently at -1\n\n**Total mismatch** - remaining 1-columns don't match remaining budgets.\n`Input: upper=2, lower=3, colsum=[2,2,1,1]` → `Expected: []`\n⚠️ Bug: not verifying `upper == 0 && lower == 0` at the end → returns `[[1,1,0,0],[1,1,1,1]]` with lower = -1\n\n**Upper exhausted by 2s** - all colsum = 1 columns must go to lower.\n`Input: upper=1, lower=2, colsum=[2,1,1]` → `Expected: [[1,0,0],[1,1,1]]`\n⚠️ Bug: assigning colsum = 1 to upper without checking `upper > 0` → returns `[[1,1,1],[1,0,0]]` with upper = -1\n\n**Boundary: single column, upper = 0** - the 1 must go to lower.\n`Input: upper=0, lower=1, colsum=[1]` → `Expected: [[0],[1]]`\n⚠️ Bug: using `upper >= 0` instead of `upper > 0` before assigning to upper → returns `[[1],[0]]` with upper = -1"
+  ],
+  "followUps": [
+    {
+      "q": "What if the matrix has 3 rows with given sums upper, middle, lower?",
+      "a": "The greedy extends directly. For colsum = 3, all three rows get 1; for colsum = 0, all get 0; for colsum = 1 or 2, assign to rows that still have remaining budget. Check for negative budgets and verify all budgets reach exactly zero. TC: O(n), SC: O(n) for output."
+    },
+    {
+      "q": "What if colsum[i] can be any value from 0 to k for a k-row matrix?",
+      "a": "For each column, assign colsum[i] ones to any rows with remaining budget. If fewer than colsum[i] rows have budget left, return empty. The greedy works because the constraint matrix is totally unimodular. TC: O(n·k), SC: O(n·k) for output."
+    },
+    {
+      "q": "What if colsum arrives as a stream and you must output each column before seeing the next?",
+      "a": "For colsum = 0 or 2, output is forced. For colsum = 1, you must commit to upper or lower without knowing future columns. No online algorithm guarantees correctness - e.g., upper=1, lower=2 with stream [1,2] requires assigning the first 1 to lower, but upper=2, lower=1 with stream [1,2] requires assigning to upper. Without seeing the full stream, the right choice is unknowable. TC: O(n), SC: O(1), but correctness is not guaranteed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> reconstructMatrix(int upper, int lower, vector<int>& colsum) {\n        int n = colsum.size();\n        vector<vector<int>> res(2, vector<int>(n, 0));\n        \n        for (int i = 0; i < n; i++) {\n            if (colsum[i] == 2) {\n                res[0][i] = 1;\n                res[1][i] = 1;\n                upper--;\n                lower--;\n            }\n        }\n        \n        if (upper < 0 || lower < 0) return {};\n        \n        for (int i = 0; i < n; i++) {\n            if (colsum[i] == 1) {\n                if (upper > 0) {\n                    res[0][i] = 1;\n                    upper--;\n                } else {\n                    res[1][i] = 1;\n                    lower--;\n                }\n            }\n        }\n        \n        if (upper != 0 || lower != 0) return {};\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "groups-of-strings",
+  "title": "Groups of Strings",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask + Union-Find",
+  "tc": "O(n · 26²)",
+  "sc": "O(n + 2²⁶)",
+  "spaceBreakdown": "- unordered_map<int,int> id: at most n distinct masks → O(n)\n- parent/size arrays: n ints each → O(n)\n- masks array: n ints → O(n)\n- recursion depth: none (iterative find with path halving)\n- not counted: input words, returned vector",
+  "approach": "Each word is a 26-bit mask of its letters. Two masks are connected iff one can be obtained from the other by deleting a bit, adding a bit, or replacing a bit (replace = delete + add, since replacing with itself is identity). Map each distinct mask to a word index, and for every word union it with: each mask obtained by removing one set bit (delete), and each mask obtained by removing one set bit and adding one unset bit (replace). Adding is covered symmetrically by deleting from the longer word. Then answer = number of DSU components and the largest component size.",
+  "hints": [
+    "Two words are connected only if their letter sets differ in at most one letter. With up to 2·10^4 words, checking every pair is ~4·10^8 comparisons - what small, fixed set of letter-set transformations could link each word to its possible partners?",
+    "Use a hash map from 26-bit letter mask to word index, plus union-find over word indices. For \"ab\" (mask 0b11): removing 'a' gives \"b\", removing 'a' and adding 'c' gives \"bc\" - union with any word whose mask equals those.",
+    "for each word: mask = bits of its letters; register mask → index in map (if mask already present, union the two words)\nfor each word i:\n  for each set bit b:\n    sub = mask without b\n    if sub in map: union(i, that word)\n    for each unset bit c:\n      if (sub with c) in map: union(i, that word)\nanswer = [number of components, largest component size]",
+    "**Duplicate words** - two identical strings must end up in one group even though no add/delete/replace edge links equal masks.\n`Input: [\"a\",\"a\"]` → `Expected: [1,2]`\n⚠️ Bug: skipping the \"mask already in map → union\" check → returns [2,1]\n\n**Single word** - the smallest allowed input; the lone word is its own group.\n`Input: [\"a\"]` → `Expected: [1,1]`\n⚠️ Bug: initializing largest group size to 0 instead of 1 → returns [1,0]\n\n**Full alphabet word** - no letter can be added and every replacement target is already present, so only replace-with-self applies.\n`Input: [\"abcdefghijklmnopqrstuvwxyz\"]` → `Expected: [1,1]`\n⚠️ Bug: iterating unset bits without checking the bit is absent creates a self-loop miscount → returns [0,1] if components decrement per union\n\n**Replace-only connection** - equal-size sets differing in one letter connect via replace, not add/delete.\n`Input: [\"a\",\"b\"]` → `Expected: [1,2]`\n⚠️ Bug: only unioning delete-neighbors (sub-masks) and forgetting the delete+add (replace) case → returns [2,1]"
+  ],
+  "followUps": [
+    {
+      "q": "What if words could contain up to 10^5 strings and memory is tight?",
+      "a": "Replace the hash map with a sorted vector of (mask, index) pairs plus binary search, or an array of size 2^26 only if n justifies it. Time stays O(n·26²) plus an O(n log n) sort; space drops to O(n)."
+    },
+    {
+      "q": "What if the operation allowed changing exactly two letters instead of one?",
+      "a": "Enumerate all pairs of set bits to remove and pairs to add - O(26⁴) ≈ 4.6·10^5 per word, giving O(n·26⁴) total, still feasible for n = 2·10^4 with DSU. Space is unchanged at O(n)."
+    },
+    {
+      "q": "How would you return the actual groups, not just counts?",
+      "a": "After DSU, bucket word indices by find(i) root into a hash map of root → vector of indices; that adds O(n) time and space and yields every group explicitly."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<int> par, sz;\n    int groups, best;\n\n    int find(int x) {\n        while (par[x] != x) {\n            par[x] = par[par[x]];\n            x = par[x];\n        }\n        return x;\n    }\n\n    void unite(int a, int b) {\n        a = find(a); b = find(b);\n        if (a == b) return;\n        if (sz[a] < sz[b]) swap(a, b);\n        par[b] = a;\n        sz[a] += sz[b];\n        groups--;\n        best = max(best, sz[a]);\n    }\n\npublic:\n    vector<int> groupStrings(vector<string>& words) {\n        int n = words.size();\n        par.resize(n);\n        sz.assign(n, 1);\n        groups = n;\n        best = 1;\n        unordered_map<int, int> id;\n        id.reserve(2 * n);\n        vector<int> masks(n);\n        for (int i = 0; i < n; i++) {\n            int m = 0;\n            for (char c : words[i]) m |= 1 << (c - 'a');\n            masks[i] = m;\n            auto it = id.find(m);\n            if (it == id.end()) id[m] = i;\n            else unite(i, it->second);\n            par[i] = i;\n        }\n        for (int i = 0; i < n; i++) {\n            int m = masks[i];\n            for (int b = 0; b < 26; b++) {\n                if (m >> b & 1) {\n                    int sub = m ^ (1 << b);\n                    auto it = id.find(sub);\n                    if (it != id.end()) unite(i, it->second);\n                    for (int c = 0; c < 26; c++) {\n                        if (!(m >> c & 1)) {\n                            auto it2 = id.find(sub | (1 << c));\n                            if (it2 != id.end()) unite(i, it2->second);\n                        }\n                    }\n                }\n            }\n        }\n        return {groups, best};\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-great-partitions",
+  "title": "Number of Great Partitions",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Knapsack DP with Complementary Counting",
+  "tc": "O(n·k)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<long long> dp(k): up to k entries → O(k)\n- scalar variables (total, bad, p2, ans): O(1)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "Each element independently chooses one of two ordered groups, giving 2^n total partitions. A partition is \"bad\" if at least one group has sum < k. When total sum ≥ 2k, both groups cannot simultaneously be below k, so the bad partitions split into two disjoint sets: those where group 1 sums to < k and those where group 2 sums to < k. Each set's size equals the number of subsets with sum < k (computed via 0/1 knapsack DP over sums 0..k−1). The answer is 2^n − 2·(subsets with sum < k), all mod 10^9+7. If total < 2k, return 0 immediately.",
+  "hints": [
+    "Each of the n elements independently lands in one of two ordered groups, giving 2^n partitions. When the total array sum is at least 2k, can both groups ever be below k simultaneously?",
+    "Use a 0/1 knapsack DP where dp[s] counts subsets summing to s, for s in [0, k). For nums = [1,2,3,4], k = 4: after processing 1 then 2, dp[0..3] = [1,1,1,1].",
+    "```\nif total_sum < 2*k: return 0\ndp[0..k-1] = 0; dp[0] = 1\nfor each x in nums where x < k:\n    for s from k-1 down to x:\n        dp[s] = (dp[s] + dp[s-x]) mod MOD\nbad = 2 * sum(dp[0..k-1]) mod MOD\nanswer = (pow(2, n) - bad + MOD) mod MOD\n```",
+    "**No valid answer (total < 2k)** - total sum cannot fill both groups to k.\n`Input: nums = [1,1], k = 2` → `Expected: 0`\n⚠️ Bug: omitting the `total < 2*k` early return → computes 4 − 2·3 = −2, returns 1000000005\n\n**Overflow** - n = 1000 and nums[i] up to 10^9 gives total up to 10^12.\n`Input: nums = [1000000000, 1000000000, 1000000000], k = 1` → `Expected: 6`\n⚠️ Bug: storing total in `int` → 3×10^9 overflows to −1294967296, early return gives 0\n\n**Duplicates with forward loop** - repeated small values amplify the unbounded-knapsack error.\n`Input: nums = [1,1,2,2], k = 3` → `Expected: 4`\n⚠️ Bug: iterating s from 0 up to k−1 (forward) instead of backward → each element reused, returns 0\n\n**Boundary (total = 2k)** - both groups can each have sum exactly k.\n`Input: nums = [1,2,3], k = 3` → `Expected: 2`\n⚠️ Bug: using `total <= 2*k` instead of `total < 2*k` → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array must be split into three ordered groups, each with sum ≥ k?",
+      "a": "Apply inclusion-exclusion: total is 3^n, subtract partitions where any single group is below k (3 × subset-count), add back where two groups are both below k. The subset-sum DP stays the same. TC: O(n·k), SC: O(k)."
+    },
+    {
+      "q": "What if n can be up to 10^6 but k stays ≤ 1000?",
+      "a": "Group elements by value and process each distinct value with its frequency using a bounded knapsack update (binary splitting or direct coefficient loop), reducing from O(n·k) to O(k²). TC: O(k²), SC: O(k)."
+    },
+    {
+      "q": "What if we need partitions where both groups have sum exactly k (not ≥ k)?",
+      "a": "The total must equal exactly 2k. Count subsets summing to exactly k via the same DP, then each such subset defines both groups uniquely. TC: O(n·k), SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countPartitions(vector<int>& nums, int k) {\n        const long long MOD = 1000000007;\n        long long total = 0;\n        for (int x : nums) total += x;\n        if (total < 2LL * k) return 0;\n\n        vector<long long> dp(k, 0);\n        dp[0] = 1;\n        for (int x : nums) {\n            if (x >= k) continue;\n            for (int s = k - 1; s >= x; s--) {\n                dp[s] = (dp[s] + dp[s - x]) % MOD;\n            }\n        }\n\n        long long bad = 0;\n        for (int s = 0; s < k; s++) bad = (bad + dp[s]) % MOD;\n        bad = bad * 2 % MOD;\n\n        long long p2 = 1;\n        for (int i = 0; i < (int)nums.size(); i++) p2 = p2 * 2 % MOD;\n\n        long long ans = (p2 - bad + MOD) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

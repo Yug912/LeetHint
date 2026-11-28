@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-time-to-complete-all-tasks",
+  "title": "Minimum Time to Complete All Tasks",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy scheduling + Segment Tree",
+  "tc": "O(n log n + (n + T) log T)",
+  "sc": "O(T)",
+  "spaceBreakdown": "- segment tree array `sum`: size 2·2048 = 4096 ints → O(T)\n- sorting: introsort O(log n) stack\n- not counted: input `tasks`",
+  "approach": "Sort tasks by end time. Process each task, counting how many slots in [start,end] are already used via a segment tree range-sum; if more seconds are needed, mark the rightmost still-free slots in the range (found by descending the tree right-first) as used. Running late lets earlier-ending tasks' slots be reused by later tasks, and the segment tree makes each count/locate step O(log T) with T ≤ 2000.",
+  "hints": [
+    "When two tasks' windows overlap, a second spent inside the overlap can serve both - so which end of a task's window is the \"cheapest\" place to put its running time, and in what order should the tasks be handled so those cheap choices stay available? Time values never exceed 2000, so every second of the whole timeline is a countable unit.",
+    "Use a segment tree over time points 1..2000 storing how many slots are used, supporting range-sum and \"rightmost free slot in a range\". Example 2, sorted by end: [1,3,2] marks 3 then 2; [2,5,3] sees 2 used in [2,5], marks only 5; [5,6,2] sees 5 used, marks 6 → total 4.",
+    "sort tasks by end time\nbuild empty segment tree over time points\nfor each task (s, e, d):\n    used = range_sum(s, e)\n    for k = 1 to d - used:\n        p = rightmost_free_slot(s, e)\n        mark p used (point update)\nreturn total number of used slots",
+    "**Single task** - smallest input, one task filling its whole window.\n`Input: [[1,1,1]]` → `Expected: 1`\n⚠️ Bug: returning 0 when the loop body never runs because `used == d` check is written as `>` instead of `>=`-aware counting → returns 0.\n\n**Task fully covered by earlier slots** - a later task needs zero new seconds.\n`Input: [[1,3,2],[1,3,2]]` → `Expected: 2`\n⚠️ Bug: computing `need = d` and ignoring already-used slots → returns 4.\n\n**Tie on end time** - two tasks share end = 5 (statement Example 1).\n`Input: [[2,3,1],[1,5,2],[4,5,1]]` → `Expected: 2`\n⚠️ Bug: filling the leftmost free slot instead of the rightmost → [2,3,1] takes 2, [1,5,2] takes 1 and 3, [4,5,1] takes 4 → returns 4.\n\n**Largest window** - one task spanning the whole timeline.\n`Input: [[1,2000,2000]]` → `Expected: 2000`\n⚠️ Bug: building the segment tree over only `max(end)` of a partially processed prefix or off-by-one leaf range excluding index 2000 → returns 1999 or crashes."
+  ],
+  "followUps": [
+    {
+      "q": "What if end_i could be up to 10^9?",
+      "a": "Coordinate-compress the 2n endpoints (plus gaps) into at most 4000 segments, each representing a run of equal \"used\" state; the segment tree then stores per-segment free counts. Time becomes O(n log n), space O(n)."
+    },
+    {
+      "q": "What if each task's running must be contiguous?",
+      "a": "Greedy slot-picking no longer works; the problem becomes an interval scheduling feasibility question solvable by checking, after sorting by end, whether each task's window has enough free contiguous room - solvable greedily in O(n log n) with a \"free interval\" set, or via binary search on a feasibility ordering."
+    },
+    {
+      "q": "What if tasks arrive as a stream and you must answer after each arrival?",
+      "a": "Keep the segment tree and process each new task incrementally with the same mark-rightmost routine, O(log T) per arrival; the running total of used slots is the answer after each insertion, giving O(n log T) total and O(T) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int N;\n    vector<int> sum;\n\n    void update(int node, int l, int r, int p, int v) {\n        if (l == r) { sum[node] += v; return; }\n        int m = (l + r) / 2;\n        if (p <= m) update(2*node, l, m, p, v);\n        else update(2*node+1, m+1, r, p, v);\n        sum[node] = sum[2*node] + sum[2*node+1];\n    }\n\n    int query(int node, int l, int r, int ql, int qr) {\n        if (qr < l || r < ql) return 0;\n        if (ql <= l && r <= qr) return sum[node];\n        int m = (l + r) / 2;\n        return query(2*node, l, m, ql, qr) + query(2*node+1, m+1, r, ql, qr);\n    }\n\n    // rightmost index in [ql,qr] with sum 0 (unused slot), or -1\n    int findRight(int node, int l, int r, int ql, int qr) {\n        if (qr < l || r < ql || sum[node] == r - l + 1) return -1;\n        if (l == r) return l;\n        int m = (l + r) / 2;\n        int res = findRight(2*node+1, m+1, r, ql, qr);\n        if (res != -1) return res;\n        return findRight(2*node, l, m, ql, qr);\n    }\n\npublic:\n    int findMinimumTime(vector<vector<int>>& tasks) {\n        N = 2048;\n        sum.assign(2*N, 0);\n        sort(tasks.begin(), tasks.end(), [](const vector<int>& a, const vector<int>& b) {\n            return a[1] < b[1];\n        });\n        for (auto& t : tasks) {\n            int s = t[0] - 1, e = t[1] - 1, d = t[2];\n            int used = query(1, 0, N-1, s, e);\n            int need = d - used;\n            for (int k = 0; k < need; ++k) {\n                int p = findRight(1, 0, N-1, s, e);\n                update(1, 0, N-1, p, 1);\n            }\n        }\n        return query(1, 0, N-1, 0, N-1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "beautiful-towers-ii",
+  "title": "Beautiful Towers II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Monotonic Stack",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> left: n entries → O(n)\n- vector<long long> right: n entries → O(n)\n- stack<int> stk: up to n entries → O(n)\n- recursion depth: none\n- not counted: input maxHeights, returned value",
+  "approach": "For a fixed peak at index i, the optimal heights going leftward form a non-increasing staircase: each tower's height is min(maxHeights[j], height of the tower to its right). This means all towers between the peak and the nearest index to its left with a smaller maxHeights get capped to maxHeights[i]. Using a monotonic stack, we compute left[i] (max prefix sum with peak at i) and right[i] (max suffix sum with peak at i) in O(n), then combine: answer = max(left[i] + right[i] − maxHeights[i]).",
+  "hints": [
+    "For a fixed peak index, what determines the height of each tower to its left in the optimal configuration? The constraint n ≤ 10^5 rules out recomputing the sum from scratch for each of the n possible peaks.",
+    "Use a monotonic stack to find, for each index i, the nearest index j to its left with maxHeights[j] < maxHeights[i]. For maxHeights = [5,3,4,1,1], when i=2 (value 4), the stack gives j=1 (value 3), so left[2] = left[1] + 4×(2−1) = 6+4 = 10.",
+    "```\nfor i from 0 to n-1:\n    while stack not empty and maxHeights[stack.top] >= maxHeights[i]:\n        pop stack\n    if stack empty:\n        left[i] = maxHeights[i] * (i + 1)\n    else:\n        j = stack.top\n        left[i] = left[j] + maxHeights[i] * (i - j)\n    push i onto stack\nrepeat symmetrically right-to-left for right[]\nanswer = max over i of (left[i] + right[i] - maxHeights[i])\n```",
+    "**Single element** - n=1, the only tower is the peak\n`Input: maxHeights = [7]` → `Expected: 7`\n⚠️ Bug: accessing stk.top() without checking stk.empty() → crash\n\n**Overflow** - n=10^5, all maxHeights=10^9, sum = 10^14\n`Input: maxHeights = [1000000000] × 10^5` → `Expected: 100000000000000`\n⚠️ Bug: using int for left/right/ans → 10^5 × 10^9 = 10^14 overflows 32-bit int, returns garbage\n\n**All equal** - every index is a valid peak\n`Input: maxHeights = [3,3,3]` → `Expected: 9`\n⚠️ Bug: computing left[i] + right[i] without subtracting maxHeights[i] → returns 12\n\n**Peak at boundary** - optimal peak is at index 0\n`Input: maxHeights = [5,4,3,2,1]` → `Expected: 15`\n⚠️ Bug: only trying peaks in range [1, n-2] → misses index 0, returns 14"
+  ],
+  "followUps": [
+    {
+      "q": "What if we need to output the actual heights array that achieves the maximum sum, not just the sum?",
+      "a": "Store the optimal peak index. Replay the left pass from that index leftward using the stack to reconstruct each height, and replay the right pass rightward. Each height is maxHeights[i] capped by the running minimum from the peak. Time O(n), space O(n) for the output."
+    },
+    {
+      "q": "What if maxHeights can be updated with point queries (change one element, re-query the max sum)?",
+      "a": "Maintain a segment tree where each node stores the monotonic-stack contribution for its segment. A point update triggers O(log n) recomputation along the path to the root. Each query is O(1) at the root. Total time O(q log n) for q updates, space O(n)."
+    },
+    {
+      "q": "What if the mountain must be strict (heights[j-1] < heights[j] before the peak, heights[k+1] < heights[k] after)?",
+      "a": "Each tower going leftward is capped at min(maxHeights[j], neighbor_height - 1), introducing a -1 decay per step. The monotonic stack recurrence changes to account for the arithmetic series decay. Time remains O(n), space O(n), but the formula for each segment becomes a sum of an arithmetic progression."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumSumOfHeights(vector<int>& maxHeights) {\n        int n = maxHeights.size();\n        vector<long long> left(n), right(n);\n        stack<int> stk;\n        \n        for (int i = 0; i < n; i++) {\n            while (!stk.empty() && maxHeights[stk.top()] >= maxHeights[i]) {\n                stk.pop();\n            }\n            if (stk.empty()) {\n                left[i] = (long long)maxHeights[i] * (i + 1);\n            } else {\n                int j = stk.top();\n                left[i] = left[j] + (long long)maxHeights[i] * (i - j);\n            }\n            stk.push(i);\n        }\n        \n        while (!stk.empty()) stk.pop();\n        \n        for (int i = n - 1; i >= 0; i--) {\n            while (!stk.empty() && maxHeights[stk.top()] >= maxHeights[i]) {\n                stk.pop();\n            }\n            if (stk.empty()) {\n                right[i] = (long long)maxHeights[i] * (n - i);\n            } else {\n                int j = stk.top();\n                right[i] = right[j] + (long long)maxHeights[i] * (j - i);\n            }\n            stk.push(i);\n        }\n        \n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            ans = max(ans, left[i] + right[i] - maxHeights[i]);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

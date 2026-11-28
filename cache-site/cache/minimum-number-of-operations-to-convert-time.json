@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-number-of-operations-to-convert-time",
+  "title": "Minimum Number of Operations to Convert Time",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int denoms[4]: fixed-size array of 4 ints → O(1)\n- scalar variables (cur, cor, diff, ops, i): O(1)\n- recursion depth: none\n- not counted: input strings",
+  "approach": "Convert both 24-hour times to total minutes since midnight and compute their difference. Since the allowed step sizes (60, 15, 5, 1) form a canonical coin system where each larger value is a multiple of the next smaller one, a greedy strategy is optimal: repeatedly use the largest step that fits. For each denomination, add `diff / denom` to the operation count and reduce `diff` to the remainder.",
+  "hints": [
+    "The four allowed step sizes are 60, 15, 5, and 1. How does each step size relate to the next smaller one?",
+    "Greedy coin-change with denominations {60, 15, 5, 1}: convert both times to minutes, then for each denomination from largest to smallest, take as many as fit. Example: diff = 125 → 125/60 = 2 ops (remainder 5), then 5/5 = 1 op → total 3.",
+    "```\ndiff = minutes(correct) - minutes(current)\nops = 0\nfor d in [60, 15, 5, 1]:\n    ops += diff / d\n    diff = diff % d\nreturn ops\n```",
+    "**Equal times** - current equals correct, so the difference is zero.\n`Input: current = \"12:00\", correct = \"12:00\"` → `Expected: 0`\n⚠️ Bug: initializing `ops = 1` instead of `0` → returns `1`\n\n**Exact multiple of 60** - the difference is exactly one hour.\n`Input: current = \"00:00\", correct = \"01:00\"` → `Expected: 1`\n⚠️ Bug: using `diff > d` instead of `diff >= d` in the loop condition → skips 60, uses four 15s → returns `4`\n\n**Requires all four denominations** - diff = 81 = 60 + 15 + 5 + 1.\n`Input: current = \"00:00\", correct = \"01:21\"` → `Expected: 4`\n⚠️ Bug: returning after the first denomination that fits → returns `1`\n\n**Largest possible difference** - diff = 1439 minutes (00:00 to 23:59).\n`Input: current = \"00:00\", correct = \"23:59\"` → `Expected: 32`\n⚠️ Bug: using `int8_t` for `diff` → overflow wraps around → returns a negative or wrong value"
+  ],
+  "followUps": [
+    {
+      "q": "What if the allowed step sizes were arbitrary, e.g., {1, 7, 11}?",
+      "a": "The greedy choice is no longer guaranteed optimal because the denominations don't form a canonical system. Use classic coin-change DP: `dp[x] = min over d of dp[x-d] + 1` for x from 0 to diff. TC becomes O(diff · k) where k is the number of denominations, SC O(diff)."
+    },
+    {
+      "q": "What if `current` could be greater than `correct`, meaning the target is the next day?",
+      "a": "Add 1440 (minutes in a day) to the difference when `correct < current`: `diff = minutes(correct) - minutes(current) + 1440`. The greedy loop is unchanged. TC and SC stay O(1)."
+    },
+    {
+      "q": "What if you needed to report the actual sequence of operations, not just the count?",
+      "a": "During each greedy step, instead of only adding `diff / d` to a counter, append `d` that many times to a result vector. The vector size equals the operation count (at most 32 for the largest input). TC O(1), SC O(1) for the output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int convertTime(string current, string correct) {\n        int cur = ((current[0] - '0') * 10 + (current[1] - '0')) * 60\n                + (current[3] - '0') * 10 + (current[4] - '0');\n        int cor = ((correct[0] - '0') * 10 + (correct[1] - '0')) * 60\n                + (correct[3] - '0') * 10 + (correct[4] - '0');\n        int diff = cor - cur;\n        int ops = 0;\n        int denoms[4] = {60, 15, 5, 1};\n        for (int i = 0; i < 4; i++) {\n            ops += diff / denoms[i];\n            diff %= denoms[i];\n        }\n        return ops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

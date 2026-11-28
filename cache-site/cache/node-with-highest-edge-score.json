@@ -1,0 +1,40 @@
+{
+  "slug": "node-with-highest-edge-score",
+  "title": "Node With Highest Edge Score",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Array Accumulation",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> score: n entries → O(n)\n- recursion depth: none\n- not counted: input edges, returned int",
+  "approach": "Each node i contributes its label i to the edge score of its target edges[i]. We allocate a `long long` array `score` of size n, then in a single pass do `score[edges[i]] += i` for every i. A second pass finds the node with the maximum score, using strict `>` so ties resolve to the smallest index. The sum can reach n(n−1)/2 ≈ 5×10⁹ for n = 10⁵, exceeding 32-bit int, so `long long` is required.",
+  "hints": [
+    "Each node i has exactly one outgoing edge to edges[i]. What does node i contribute to the edge score of its target, and in what amount?",
+    "Use a `long long` array `score` of size n. For each node i, add i to `score[edges[i]]`. Example: edges = [1,0,0,0,0,7,7,5], node 2 points to 0, so `score[0] += 2`.",
+    "```\nscore = array of n zeros (long long)\nfor i from 0 to n-1:\n    score[edges[i]] += i\nbest = -1\nans = 0\nfor i from 0 to n-1:\n    if score[i] > best:\n        best = score[i]\n        ans = i\nreturn ans\n```",
+    "**Overflow** - With n=10⁵, all nodes 1..99999 can point to node 0, giving score 1+2+…+99999 = 4,999,950,000 > 2³¹−1.\n`Input: edges = [1,0,0,...,0]` (n=100000) → `Expected: 0`\n⚠️ Bug: using `int` for the score array → 4,999,950,000 overflows to a negative value, returns a wrong node.\n\n**Tie-breaking** - Two nodes can have the same edge score; the smallest index wins.\n`Input: edges = [2,0,0,2]` → `Expected: 0`\n⚠️ Bug: using `>=` instead of `>` when comparing → returns 2 instead of 0.\n\n**Swapped accumulation** - The contribution is the source label i, not the target label edges[i].\n`Input: edges = [1,2,3,4,5,6,7,0]` → `Expected: 0`\n⚠️ Bug: writing `score[i] += edges[i]` instead of `score[edges[i]] += i` → returns 6 instead of 0.\n\n**Count vs sum** - The edge score is a sum of labels, not a count of incoming edges.\n`Input: edges = [2,2,0]` → `Expected: 0`\n⚠️ Bug: writing `score[edges[i]] += 1` instead of `score[edges[i]] += i` → returns 2 instead of 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if edges can change dynamically - node i switches its outgoing edge from a to b?",
+      "a": "Maintain the score array and update it in place: subtract i from score[a], add i to score[b]. To answer \"max score node\" queries efficiently, back the array with a segment tree supporting point updates and global max queries. TC: O(n) build, O(log n) per update/query. SC: O(n)."
+    },
+    {
+      "q": "What if we must return the top-k nodes by edge score instead of just the single best?",
+      "a": "Compute all scores in O(n) as before, then use `nth_element` to partition around the k-th largest in O(n) average, and sort just those k entries in O(k log k). TC: O(n + k log k). SC: O(n)."
+    },
+    {
+      "q": "What if the edge list arrives as a stream and is too large to store?",
+      "a": "Process each (i, edges[i]) pair as it arrives: add i to score[edges[i]]. Only the score array (size n) must reside in memory, not the full edge list. If n itself is too large, use a hash map keyed by target node for sparse scores. TC: O(n). SC: O(n) or O(unique targets) with a hash map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int edgeScore(vector<int>& edges) {\n        int n = edges.size();\n        vector<long long> score(n, 0);\n        for (int i = 0; i < n; i++) {\n            score[edges[i]] += i;\n        }\n        long long best = -1;\n        int ans = 0;\n        for (int i = 0; i < n; i++) {\n            if (score[i] > best) {\n                best = score[i];\n                ans = i;\n            }\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

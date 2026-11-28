@@ -1,0 +1,40 @@
+{
+  "slug": "triples-with-bitwise-and-equal-to-zero",
+  "title": "Triples with Bitwise AND Equal To Zero",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask Subset-Sum DP (SOS)",
+  "tc": "O(n² + 2^16 · 16)",
+  "sc": "O(2^16)",
+  "spaceBreakdown": "- vector<int> f of size 65536 (pair-AND counts, reused as SOS table) → O(2^16)\n- loop variables → O(1)\n- not counted: input nums, returned int",
+  "approach": "A triple (x, a, b) has AND zero iff a&b is a subset of the complement of x. Count, for every 16-bit mask v, how many ordered pairs (i,j) have nums[i]&nums[j] = v (O(n²)), then run a Sum-Over-Subsets (SOS) DP so f[mask] = number of pairs whose AND is a subset of mask (O(2^16·16)). The answer is the sum over every element x of f[~x & 0xFFFF].",
+  "hints": [
+    "The values are tiny (< 2^16) but n can be 1000 - instead of asking \"which triples work?\", ask: if for EVERY 16-bit mask you knew how many pairs of elements AND to something inside that mask, how fast could you finish each element x?\nWith n = 1000 there are ~10^6 pairs - that part is cheap; the question is what table makes the third element O(1).",
+    "Build a count array over all 2^16 masks of pair-AND values, then run a Sum-over-Subsets (SOS) DP so each cell holds the count of pairs whose AND is a subset of that mask. For nums = [2,1,3], pair-AND counts are 0→2, 1→3, 2→3, 3→1; after SOS, f[13] = 5 (pairs with AND ⊆ 13), and element 2 contributes f[~2 & 15] = f[13] = 5 triples.",
+    "cnt[mask of size 2^16] = 0\nfor each ordered pair (i, j):\n    cnt[nums[i] & nums[j]] += 1\nfor each bit b in 0..15:\n    for each mask in 0..2^16-1:\n        if mask has bit b:\n            cnt[mask] += cnt[mask XOR (1 << b)]\nans = 0\nfor each x in nums:\n    ans += cnt[complement of x within 16 bits]\nreturn ans",
+    "**Single element, value 0** - n = 1 with nums = [0]; the only triple is (0,0,0).\n`Input: [0]` → `Expected: 1`\n⚠️ Bug: skipping i==j==k pairs when filling the pair table (requiring distinct indices) → returns 0.\n\n**All equal, nonzero** - every triple ANDs to the same nonzero value.\n`Input: [1,1,1]` → `Expected: 0`\n⚠️ Bug: counting pairs whose AND is a SUPERSET of ~x instead of a subset → returns 27.\n\n**All zeros** - every pair ANDs to 0, which is a subset of every mask.\n`Input: [0,0,0]` → `Expected: 27`\n⚠️ Bug: forgetting mask 0 is a subset of every mask in the SOS base case → returns 0.\n\n**Maximum value element** - 65535 has no zero bits, so its complement is 0.\n`Input: [65535,1]` → `Expected: 4` (only triples containing the 1 work: 6 orderings minus the two all-65535-heavy ones... precisely the 4 triples with at least one 1)\n⚠️ Bug: indexing f[~x] without masking to 16 bits (negative index for values ≥ 2^15 if using signed shift) → out-of-bounds crash.\n\n**Count size** - worst case n = 1000 of zeros gives 1000³ = 10^9 triples.\n`Input: [0]*1000` → `Expected: 1000000000`\n⚠️ Bug: accumulating in a 16-bit or 8-bit counter during the SOS pass (a cell can hold up to 10^6 pair counts) → wrong counts."
+  ],
+  "followUps": [
+    {
+      "q": "What if values can be up to 2^20 and n up to 10^5?",
+      "a": "The pair table of size 2^20 is still feasible, but O(n²) = 10^10 pair enumeration is not; split elements into two halves and meet in the middle, or use the O(n · 2^b) trick of iterating masks per element only when n² < 2^b · b. Time becomes O(min(n², n·2^b) + 2^b·b), space O(2^b)."
+    },
+    {
+      "q": "What if you only need to know WHETHER a triple with AND zero exists, not the count?",
+      "a": "Keep the same SOS table but store booleans: mark which pair-AND values occur, propagate subset reachability with SOS, and answer exists iff any x has f[~x] > 0. Time stays O(n² + 2^16·16) but you can early-exit and use bitsets for space O(2^16/8) bytes."
+    },
+    {
+      "q": "What if the array is given as a stream and you must answer after each new element?",
+      "a": "Maintain the pair-count table incrementally: each new element x adds n+1 new pairs (x with each previous element and with itself), an O(n) update, then the SOS layer can also be updated incrementally per new pair in O(16). Per-element cost O(n·16), total O(n²·16), space O(2^16)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countTriplets(vector<int>& nums) {\n        const int FULL = 1 << 16;\n        vector<int> f(FULL, 0);\n        int n = nums.size();\n        for (int i = 0; i < n; ++i)\n            for (int j = 0; j < n; ++j)\n                ++f[nums[i] & nums[j]];\n        for (int b = 0; b < 16; ++b)\n            for (int mask = 0; mask < FULL; ++mask)\n                if (mask & (1 << b))\n                    f[mask] += f[mask ^ (1 << b)];\n        long long ans = 0;\n        for (int x : nums)\n            ans += f[(~x) & 0xFFFF];\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

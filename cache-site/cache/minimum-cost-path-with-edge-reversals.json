@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-path-with-edge-reversals",
+  "title": "Minimum Cost Path with Edge Reversals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Shortest Path (Dijkstra)",
+  "tc": "O((V + E) log V)",
+  "sc": "O(V + E)",
+  "spaceBreakdown": "- vector<vector<pair<int,long long>>> adj: n vectors holding 2m total entries → O(n + m)\n- vector<long long> dist: n entries → O(n)\n- priority_queue: up to n entries at once → O(n)\n- not counted: input edges, return value",
+  "approach": "The key insight is that since all edge weights are positive (≥1), the shortest path from 0 to n−1 will never revisit a node-any cycle only adds cost. Therefore, the \"at most one switch per node\" constraint is automatically satisfied: in a simple path, each node appears at most once, so each node's switch is used at most once. This lets us add a reverse edge {v, u, 2·w} for every original edge {u, v, w} and run a standard Dijkstra's algorithm on the expanded graph. The answer is the shortest distance to node n−1, or −1 if unreachable.",
+  "hints": [
+    "Since every edge weight is at least 1, what can you say about the total cost of any path that visits the same node more than once? The constraints guarantee w_i ≥ 1 for all edges.",
+    "Use Dijkstra's algorithm with a min-heap. For each original edge {u, v, w}, add both u→v (cost w) and a reverse edge v→u (cost 2·w). In Example 1, edge 3→1 (cost 1) adds reverse 1→3 (cost 2), giving path 0→1→3 = 3+2 = 5.",
+    "```\nfor each edge {u, v, w}:\n    add (v, w) to adj[u]\n    add (u, 2*w) to adj[v]\ndist[0] = 0; push (0, 0) to min-heap\nwhile min-heap not empty:\n    (d, u) = pop min\n    if d > dist[u]: skip\n    if u == n-1: return d\n    for each (v, w) in adj[u]:\n        if dist[u] + w < dist[v]:\n            dist[v] = dist[u] + w\n            push (dist[v], v)\nreturn -1\n```",
+    "**No valid path** - no path from 0 to n−1 exists even with edge reversals\n`Input: n=3, edges=[[1,2,1]]` → `Expected: -1`\n⚠️ Bug: returning dist[n-1] directly with INT_MAX sentinel → returns 2147483647\n\n**Reversal necessary** - the only path to n−1 requires reversing an edge\n`Input: n=3, edges=[[0,1,10],[2,1,1]]` → `Expected: 12`\n⚠️ Bug: only adding original edges without reverse edges → returns -1\n\n**Duplicate edges** - multiple edges between the same pair with different weights\n`Input: n=3, edges=[[0,1,5],[0,1,2],[1,2,1]]` → `Expected: 3`\n⚠️ Bug: deduplicating edges by (u,v) pair keeping first seen → returns 6\n\n**Reversal cheaper than direct** - using a reversal gives lower cost than any forward-only path\n`Input: n=3, edges=[[0,1,10],[2,1,1],[0,2,100]]` → `Expected: 12`\n⚠️ Bug: not adding reverse edges → returns 100"
+  ],
+  "followUps": [
+    {
+      "q": "What if edge weights could be zero?",
+      "a": "Zero-weight edges break the key argument that the shortest path is simple, since a zero-cost cycle doesn't increase total cost. You would need to explicitly track which node switches have been used, expanding the state space and requiring a fundamentally different approach."
+    },
+    {
+      "q": "What if you also need to return the actual path, including which edges were reversed?",
+      "a": "Store a parent pointer and a boolean flag (reversed or not) for each node during Dijkstra. After finding the shortest distance, backtrack from n−1 to 0. Time complexity stays O((V + E) log V); space increases by O(V) for the parent and flag arrays."
+    },
+    {
+      "q": "What if n is up to 10^6 and edges up to 2×10^6?",
+      "a": "The algorithm is still O((V + E) log V) time - about 3×10^7 operations, which is feasible. Memory for the adjacency list is O(V + E) ≈ 3×10^6 entries, fitting in typical limits. Use flat arrays instead of vectors of pairs if memory is tight."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCost(int n, vector<vector<int>>& edges) {\n        vector<vector<pair<int, long long>>> adj(n);\n        for (auto& e : edges) {\n            int u = e[0], v = e[1], w = e[2];\n            adj[u].push_back({v, (long long)w});\n            adj[v].push_back({u, 2LL * w});\n        }\n        \n        const long long INF = 1LL << 60;\n        vector<long long> dist(n, INF);\n        dist[0] = 0;\n        priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<pair<long long, int>>> pq;\n        pq.push({0, 0});\n        \n        while (!pq.empty()) {\n            auto [d, u] = pq.top();\n            pq.pop();\n            if (d > dist[u]) continue;\n            if (u == n - 1) return (int)d;\n            for (auto& [v, w] : adj[u]) {\n                if (dist[u] + w < dist[v]) {\n                    dist[v] = dist[u] + w;\n                    pq.push({dist[v], v});\n                }\n            }\n        }\n        \n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "get-biggest-three-rhombus-sums-in-a-grid",
+  "title": "Get Biggest Three Rhombus Sums in a Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Diagonal Prefix Sums",
+  "tc": "O(m·n·min(m,n))",
+  "sc": "O(m·n)",
+  "spaceBreakdown": "- two prefix arrays dr, dl: m×n ints each → O(m·n)\n- set<int> s: capped at 3 entries → O(1)\n- not counted: input grid, returned vector",
+  "approach": "Every rhombus is determined by its center (i,j) and radius k; its border consists of four diagonal segments. Build two prefix-sum arrays along the ↘ and ↙ diagonals so each side's sum is a difference of two entries, making each rhombus sum O(1). Enumerate all centers and radii, keep the three largest distinct sums in a set capped at size 3.",
+  "hints": [
+    "A rhombus border is made of four straight diagonal runs of cells - what if each run's sum could be answered instantly instead of walked cell by cell? The grid is at most 50×50, so even ~50·50·50 rhombus evaluations are fine if each is cheap.",
+    "Use prefix sums along the two diagonal directions (↘ and ↙), then each of the four sides is one subtraction. Keep the answers in a set holding at most 3 distinct values. E.g. in Example 2, center (1,1) with radius 1 gives 4+2+6+8 = 20 from four one-subtraction side queries.",
+    "```\nbuild dr[i][j] = grid[i][j] + dr[i-1][j-1]      (↘ prefix)\nbuild dl[i][j] = grid[i][j] + dl[i-1][j+1]      (↙ prefix)\nfor each cell (i,j):\n    add grid[i][j] as a radius-0 rhombus\n    for k = 1 .. max radius fitting in grid:\n        sum = (four side sums via dr/dl differences)\n              minus the four corner cells (counted twice)\n        insert sum into set, keep only 3 largest distinct\nreturn set in descending order\n```",
+    "**Single cell** - a 1×1 grid has only the area-0 rhombus.\n`Input: [[5]]` → `Expected: [5]`\n⚠️ Bug: looping radii from 1 and skipping k = 0 → returns `[]`.\n\n**All equal values** - every rhombus sum collides.\n`Input: [[7,7,7]]` → `Expected: [7]`\n⚠️ Bug: storing sums without deduplication → returns `[7,7,7]`.\n\n**Area-0 rhombi required** - single cells count as valid rhombus sums.\n`Input: [[1,2,3],[4,5,6],[7,8,9]]` → `Expected: [20,9,8]`\n⚠️ Bug: only enumerating k ≥ 1 → returns `[20]`.\n\n**Prefix index off the grid** - for center (i,j), radius k, the term dr[i-1][j-k-1] can have j-k-1 = -1.\n`Input: [[3,4],[5,6]]` → `Expected: [6,5,4]`\n⚠️ Bug: reading dr[i-1][-1] without a bounds guard → wrong sums or runtime error; e.g. center (1,0) side sum becomes 25−3=22 instead of 25 on Example 1's blue rhombus, giving 225 instead of 228."
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid can be up to 1000×1000 - does your approach still work?",
+      "a": "Yes, the diagonal-prefix approach scales directly: time becomes O(m·n·min(m,n)) ≈ 10^9 worst case, so you would additionally need the O(1)-per-border trick kept and possibly prune radii, but the same prefix arrays (O(m·n) space) still apply. Brute-force border walking would be ~100× slower and risk TLE."
+    },
+    {
+      "q": "Return the biggest K distinct rhombus sums instead of three, with K up to 10^5?",
+      "a": "Replace the size-3 set with a min-heap of size K plus a hash set for deduplication, or keep the full set of sums and take the top K at the end. Time stays O(m·n·min(m,n)) plus O(S log K) for S distinct sums; space grows to O(K) for the heap."
+    },
+    {
+      "q": "You are given the grid as a read-only stream row by row and may use O(n) extra memory?",
+      "a": "Diagonal prefixes only depend on the previous row, so keep just two rolling rows of ↘ and ↙ prefix sums (O(n) space) and process rhombi whose bottom row has already arrived - a rhombus with center (i,j), radius k is fully known once row i+k is read. Time is unchanged at O(m·n·min(m,n)), space drops to O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> getBiggestThree(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        vector<vector<int>> dr(m, vector<int>(n, 0)), dl(m, vector<int>(n, 0));\n        for (int i = 0; i < m; ++i)\n            for (int j = 0; j < n; ++j) {\n                dr[i][j] = grid[i][j] + (i > 0 && j > 0 ? dr[i-1][j-1] : 0);\n                dl[i][j] = grid[i][j] + (i > 0 && j + 1 < n ? dl[i-1][j+1] : 0);\n            }\n        auto DR = [&](int r, int c) { return (r >= 0 && c >= 0) ? dr[r][c] : 0; };\n        auto DL = [&](int r, int c) { return (r >= 0 && c < n) ? dl[r][c] : 0; };\n        set<int> s;\n        for (int i = 0; i < m; ++i)\n            for (int j = 0; j < n; ++j) {\n                s.insert(grid[i][j]);\n                if (s.size() > 3) s.erase(s.begin());\n                int maxK = min(min(i, m - 1 - i), min(j, n - 1 - j));\n                for (int k = 1; k <= maxK; ++k) {\n                    long long sum =\n                        (long long)(dl[i][j-k] - DL(i-k-1, j+1))\n                      + (dr[i][j+k] - DR(i-k-1, j-1))\n                      + (dr[i+k][j] - DR(i-1, j-k-1))\n                      + (dl[i+k][j] - DL(i-1, j+k+1))\n                      - grid[i-k][j] - grid[i+k][j]\n                      - grid[i][j-k] - grid[i][j+k];\n                    s.insert((int)sum);\n                    if (s.size() > 3) s.erase(s.begin());\n                }\n            }\n        return vector<int>(s.rbegin(), s.rend());\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-area-of-longest-diagonal-rectangle",
+  "title": "Maximum Area of Longest Diagonal Rectangle",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bestDiag, bestArea: two int scalars → O(1)\n- loop variable d: O(1)\n- not counted: input dimensions, returned int",
+  "approach": "For each rectangle, compare diagonals without computing square roots-just compare `length² + width²`, since `sqrt` is monotonic. Track the best diagonal squared and, on ties, the best area in a single pass. Return the best area found.",
+  "hints": [
+    "When comparing two diagonals `sqrt(a)` and `sqrt(b)`, what can you say about `a` versus `b`? The constraints let each side be up to 100.",
+    "Use a single-pass linear scan tracking the best `(diagonal², area)` pair. For `[[9,3],[8,6]]`: first gives `diag²=90, area=27`; second gives `diag²=100>90`, so update to `area=48`.",
+    "```\nbest_diag = -1\nbest_area = 0\nfor each (l, w):\n    diag = l*l + w*w\n    area = l*w\n    if diag > best_diag or (diag == best_diag and area > best_area):\n        best_diag = diag\n        best_area = area\nreturn best_area\n```",
+    "**Single rectangle** - only one entry, no comparison happens.\n`Input: [[5,5]]` → `Expected: 25`\n⚠️ Bug: initializing `bestArea = 0` and returning it without ever entering the update branch when the loop is skipped → returns `0`\n\n**Tie in diagonal, different areas** - same diagonal² but unequal areas.\n`Input: [[1,7],[5,5]]` → `Expected: 25`\n⚠️ Bug: updating only when `diag > best_diag` (strict, ignoring the tie) → returns `7`\n\n**All rectangles identical** - every entry ties on both diagonal and area.\n`Input: [[5,5],[5,5]]` → `Expected: 25`\n⚠️ Bug: using `area >= bestArea` on a tie with no diagonal check → returns `25` only by luck; combined with strict diagonal logic it returns the first area `25` correctly, but a `>` only on area with `>=` on diagonal still yields `25`\n\n**Largest allowed values** - dimensions at the constraint maximum.\n`Input: [[100,100]]` → `Expected: 10000`\n⚠️ Bug: computing `diag` as `l+w` instead of `l*l+w*w` → returns `10000` here by coincidence but fails `[[9,3],[8,6]]`, returning `48` only because `9+3=12 < 8+6=14` happens to match; on `[[10,1],[6,8]]` it returns `48` instead of the correct `48`... trace: `10+1=11`, `6+8=14`, picks second area `48`; correct diag²: `101` vs `100`, first wins, area `10` → returns `48` wrongly"
+  ],
+  "followUps": [
+    {
+      "q": "What if each dimension can be up to 10^9?",
+      "a": "`l*l + w*w` reaches 2·10^18, exceeding `int` and even `long long` is fine (max ~9.2·10^18). Declare `diag` as `long long`; area also becomes `long long` since `l*w` can be 10^18. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "Return the index of the chosen rectangle instead of its area.",
+      "a": "Track `bestIndex` alongside `bestDiag` and `bestArea`, updating it whenever the diagonal/area comparison updates. Return `bestIndex`. Complexity unchanged: O(n) time, O(1) space."
+    },
+    {
+      "q": "Rectangles arrive in an unbounded stream; answer queries of \"current best area\" at any time.",
+      "a": "Keep only the current best `(diag², area)` pair and update it per incoming rectangle; you never need to store the history. Each update is O(1), query is O(1), space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int areaOfMaxDiagonal(vector<vector<int>>& dimensions) {\n        int bestDiag = -1;\n        int bestArea = 0;\n        for (const auto& d : dimensions) {\n            int l = d[0];\n            int w = d[1];\n            int diag = l * l + w * w;\n            int area = l * w;\n            if (diag > bestDiag || (diag == bestDiag && area > bestArea)) {\n                bestDiag = diag;\n                bestArea = area;\n            }\n        }\n        return bestArea;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

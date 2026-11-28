@@ -1,0 +1,40 @@
+{
+  "slug": "difference-between-maximum-and-minimum-price-sum",
+  "title": "Difference Between Maximum and Minimum Price Sum",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Rerooting Tree DP",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- CSR adjacency (head/nxt/dst arrays): 2·(n−1) entries each → O(n)\n- par, order, g, up, best1, best2 vectors: n entries each → O(n)\n- BFS queue is the order vector itself → O(n)\n- no recursion (iterative BFS + two linear passes)\n- not counted: input edges/price, returned value",
+  "approach": "With all prices positive, the minimum path from any root is the root alone, so the cost for root r is (maximum downward path sum from r) − price[r]. Root the tree at 0, compute g[v] = best downward path sum starting at v (v included), then reroot: up[v] = best path sum from v going up through its parent. The answer is max over v of max(best child g of v, up[v] − price[v]). This is a two-pass tree DP (down + rerooting), O(n).",
+  "hints": [
+    "A path starting at the chosen root may consist of the root alone - with every price ≥ 1, what does that force the *minimum* path sum to be, no matter which node is the root?\nn ≤ 10^5 with n−1 edges means only linear-time traversals of the tree are affordable.",
+    "Root at 0: compute for each node the best downward path sum (tree DP over children), then reroot with a BFS order, keeping each parent's top two child values so a child can exclude itself. In example 2 (prices [1,1,1]), node 1 has downward best 2 and upward best 2, while node 0 gives 3 − 1 = 2.",
+    "root the tree at 0, get BFS order and parent of each node\nreverse pass:\n    g[v] = price[v] + best1[v]        # best1 = max child g (0 if leaf)\n    push g[v] into parent's (best1, best2)\nforward pass:\n    sib = best1[p] if g[v] < best1[p] else best2[p]\n    up[v] = price[v] + max(sib, up[p] − price[p])\n    ans = max(ans, max(best1[v], up[v] − price[v]))",
+    "**Single node** - no edges exist, no path has two nodes.\n`Input: n = 1, edges = [], price = [7]` → `Expected: 0`\n⚠️ Bug: assuming at least one edge and indexing edges[0] → runtime error.\n\n**All-equal chain** - every price identical, min path is the root alone.\n`Input: n = 3, edges = [[0,1],[1,2]], price = [1,1,1]` → `Expected: 2`\n⚠️ Bug: forgetting the min path is just the root and subtracting a leaf price too → returns 1.\n\n**Cheap center star** - the best root is a leaf, not node 0.\n`Input: n = 3, edges = [[0,1],[0,2]], price = [1,5,5]` → `Expected: 6`\n⚠️ Bug: only evaluating the candidate at the initial root 0 → returns 5.\n\n**Overflow** - 10^5 nodes each with price 10^5 in a chain: max path sum = 10^5 × 10^5 = 10^10 > 2^31 − 1.\n`Input: n = 100000, edges = [[i,i+1]...], price = [100000]×100000` → `Expected: 9999900000`\n⚠️ Bug: accumulating path sums in int → overflow, wrong (possibly negative) result.\n\n**Skewed tree** - a 10^5-node chain makes recursion depth 10^5.\n`Input: chain of 100000 nodes` → `Expected: sum of all prices minus price of an end node`\n⚠️ Bug: recursive DFS without increasing stack limits → stack overflow (use iterative BFS order)."
+  ],
+  "followUps": [
+    {
+      "q": "What if paths must contain at least two nodes?",
+      "a": "The minimum path is then root plus its best (cheapest) neighbor, so cost = maxDown(r) − price[r] − min child price of r; recompute the same DP tracking also the minimum child value. Still O(n) time and space."
+    },
+    {
+      "q": "What if node prices can be negative?",
+      "a": "The minimum path is no longer the root alone, so rerooting alone fails; you need max downward AND max upward path sums where paths may be empty, i.e., track both g and a \"best single node\" variant per node. Still O(n), but with four DP values per node."
+    },
+    {
+      "q": "Can this be done in O(n) memory less than the full adjacency, given edges as a stream?",
+      "a": "Store the tree in CSR form (three arrays of size ~2n), which is already the minimum needed since a tree DP needs the structure twice (down and up passes); a truly streaming solution is not possible because the up-pass needs parent/sibling information, so O(n) space is required."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxOutput(int n, vector<vector<int>>& edges, vector<int>& price) {\n        if (n == 1) return 0;\n        vector<int> head(n, -1), nxt(2 * (n - 1)), dst(2 * (n - 1));\n        for (int i = 0; i < n - 1; ++i) {\n            int a = edges[i][0], b = edges[i][1];\n            dst[2*i] = b;     nxt[2*i] = head[a]; head[a] = 2*i;\n            dst[2*i+1] = a;   nxt[2*i+1] = head[b]; head[b] = 2*i+1;\n        }\n        vector<int> par(n, -1), order;\n        order.reserve(n);\n        order.push_back(0);\n        par[0] = 0;\n        for (int i = 0; i < (int)order.size(); ++i) {\n            int u = order[i];\n            for (int e = head[u]; e != -1; e = nxt[e]) {\n                int v = dst[e];\n                if (v != par[u]) { par[v] = u; order.push_back(v); }\n            }\n        }\n        // g[v] = max downward path sum from v into its subtree (children only)\n        vector<long long> g(n), up(n), best1(n, 0), best2(n, 0);\n        for (int i = n - 1; i >= 0; --i) {\n            int v = order[i];\n            g[v] = price[v] + best1[v];\n            int p = par[v];\n            if (v != p) {\n                if (g[v] > best1[p]) { best2[p] = best1[p]; best1[p] = g[v]; }\n                else if (g[v] > best2[p]) best2[p] = g[v];\n            }\n        }\n        long long ans = 0;\n        for (int i = 0; i < n; ++i) {\n            int v = order[i];\n            if (v == 0) { up[v] = price[v]; continue; }\n            int p = par[v];\n            long long sib = (g[v] < best1[p]) ? best1[p] : best2[p];\n            // path v -> p -> best sibling subtree (needs price[p]) OR continue upward (up[p] already has price[p])\n            up[v] = price[v] + max(sib + (long long)price[p], up[p]);\n            long long cand = max(best1[v], up[v] - price[v]);\n            if (cand > ans) ans = cand;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

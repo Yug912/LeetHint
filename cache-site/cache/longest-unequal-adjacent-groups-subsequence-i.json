@@ -1,0 +1,40 @@
+{
+  "slug": "longest-unequal-adjacent-groups-subsequence-i",
+  "title": "Longest Unequal Adjacent Groups Subsequence I",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Single Pass",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- vector<string> res: output, not counted\n- int last, int i: O(1)\n- not counted: input words/groups, returned vector",
+  "approach": "Since groups are binary, any maximal alternating subsequence is obtained by collapsing each maximal run of identical group values into a single representative. Greedily take words[0], then for each i take words[i] iff groups[i] differs from the group of the last taken element. Taking an element whenever possible never reduces future options because the new \"last group\" is just the opposite bit, which is the only alternative anyway. This yields a longest alternating subsequence in one pass.",
+  "hints": [
+    "Groups only contain 0s and 1s. For a fixed last picked group value, how many elements from a run of identical group values can you actually use in the subsequence?",
+    "Greedy single pass: seed the answer with words[0], then append words[i] whenever groups[i] differs from the last appended group. On groups=[1,0,1,1]: take index 0 (group 1), take index 1 (0≠1), take index 2 (1≠0), skip index 3 (1==1) → [\"a\",\"b\",\"c\"].",
+    "```\nresult = [words[0]]\nlast = groups[0]\nfor i from 1 to n-1:\n    if groups[i] != last:\n        append words[i] to result\n        last = groups[i]\nreturn result\n```",
+    "**Single element** - n=1, only one word available\n`words=[\"x\"], groups=[0]` → `Expected: [\"x\"]`\n⚠️ Bug: initializing result as empty and only appending inside the loop (which never runs for n=1) → returns []\n\n**All same groups** - every group value identical, no alternation possible\n`words=[\"a\",\"b\",\"c\"], groups=[1,1,1]` → `Expected: [\"a\"]`\n⚠️ Bug: inverting the condition and appending when groups[i] == groups[i-1] → returns [\"a\",\"b\",\"c\"]\n\n**All alternating** - groups strictly alternate, every element should be picked\n`words=[\"a\",\"b\",\"c\",\"d\"], groups=[1,0,1,0]` → `Expected: [\"a\",\"b\",\"c\",\"d\"]`\n⚠️ Bug: forgetting to update `last` after appending, so last stays groups[0]=1 → appends only indices 1 and 3 → returns [\"a\",\"b\",\"d\"]\n\n**Multiple valid answers** - several subsequences tie for max length\n`words=[\"e\",\"a\",\"b\"], groups=[0,0,1]` → `Expected: [\"e\",\"b\"] (or [\"a\",\"b\"])`\n⚠️ Bug: skipping words[0] and starting the loop at i=0 comparing groups[i] != groups[i-1] → reads groups[-1], undefined behavior"
+  ],
+  "followUps": [
+    {
+      "q": "What if groups could take values 0..k-1 for k>2 instead of just 0/1?",
+      "a": "The same greedy still works: seed with words[0], append words[i] whenever groups[i] differs from the last appended group. Correctness is unchanged because picking an element only constrains the next pick to \"anything but this value,\" which never reduces reachable length. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if you must return the lexicographically smallest longest alternating subsequence?",
+      "a": "Greedy no longer suffices; use DP where dp[i][v] = length of longest alternating subsequence ending at i with last group v, plus parent pointers for reconstruction, then pick the smallest-valid path among maximum-length ones. Time O(n·k), space O(n·k)."
+    },
+    {
+      "q": "What if the input arrives as a stream and you must output each chosen word online with O(1) memory?",
+      "a": "Keep only the last emitted group value and emit words[i] when groups[i] differs from it, then update the stored value. This is exactly the greedy pass with O(1) working memory beyond the single stored group bit."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> getLongestSubsequence(vector<string>& words, vector<int>& groups) {\n        vector<string> res;\n        res.push_back(words[0]);\n        int last = groups[0];\n        for (int i = 1; i < (int)words.size(); ++i) {\n            if (groups[i] != last) {\n                res.push_back(words[i]);\n                last = groups[i];\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

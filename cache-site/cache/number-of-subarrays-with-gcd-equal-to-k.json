@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-subarrays-with-gcd-equal-to-k",
+  "title": "Number of Subarrays With GCD Equal to K",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Running GCD Map",
+  "tc": "O(n * log² V)",
+  "sc": "O(log V)",
+  "spaceBreakdown": "- unordered_map<int,int> prev: up to O(log V) entries → O(log V)\n- unordered_map<int,int> curr: up to O(log V) entries → O(log V)\n- recursion depth: none\n- not counted: input vector, returned int",
+  "approach": "The key insight is that the number of distinct GCD values among all subarrays ending at any fixed position is O(log V), because each time the GCD changes as we extend a subarray leftward, it at least halves. We maintain a hash map from GCD value to count of subarrays ending at the current position. For each new element x, we build a new map seeded with {x: 1}, then extend every GCD from the previous map by computing gcd(g, x) and accumulating counts. We add curr[k] to the answer at each step. This is correct because every subarray ending at position i is represented exactly once in the map at position i.",
+  "hints": [
+    "For a fixed ending index, how many distinct values can the GCD take across all subarrays that end there?",
+    "Maintain a hash map from GCD value to count of subarrays ending at the current position. At index 1 of [9,3,1,2,6,3], the previous map {9:1} extends to {3:2} via gcd(9,3)=3, giving 2 subarrays with GCD 3.",
+    "```\nprev = empty map\nfor each element x:\n    curr = {x: 1}\n    for each (g, count) in prev:\n        curr[gcd(g, x)] += count\n    answer += curr[k]\n    prev = curr\n```",
+    "**Single element** - the array has exactly one element equal to k\n`Input: nums = [3], k = 3` → `Expected: 1`\n⚠️ Bug: only extending from the previous map without seeding curr with the element itself → returns 0\n\n**Multiple of k** - GCD is divisible by k but not equal to k\n`Input: nums = [6], k = 3` → `Expected: 0`\n⚠️ Bug: checking `g % k == 0` instead of `g == k` → returns 1\n\n**Duplicate GCDs** - multiple subarrays ending at the same position share one GCD value\n`Input: nums = [6,3,3], k = 3` → `Expected: 5`\n⚠️ Bug: using a set instead of a map, losing multiplicity counts → returns 2\n\n**All elements equal to k** - every subarray has GCD k\n`Input: nums = [3,3,3], k = 3` → `Expected: 6`\n⚠️ Bug: only counting subarrays of length 1 → returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "Count subarrays where the GCD is a multiple of k (not necessarily equal to k).",
+      "a": "At each position, sum the counts of all GCDs in the map that are divisible by k instead of looking up only k. The map structure and update logic stay identical. TC: O(n * log² V), SC: O(log V)."
+    },
+    {
+      "q": "What if n can be up to 10⁶?",
+      "a": "Replace unordered_map with a small vector<pair<int,int>> since the map never exceeds ~30 entries. This removes hash overhead and improves cache locality. TC: O(n * log² V), SC: O(log V)."
+    },
+    {
+      "q": "Answer q queries, each with a different k, on the same array.",
+      "a": "Precompute and store the GCD-count map for every position. Each query scans the stored map at each position for the queried k, or pre-aggregate a global count per GCD value. Preprocessing: O(n * log² V), per query: O(n * log V) or O(1) with pre-aggregation, SC: O(n * log V)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int gcd(int a, int b) {\n        while (b) {\n            int t = a % b;\n            a = b;\n            b = t;\n        }\n        return a;\n    }\npublic:\n    int subarrayGCD(vector<int>& nums, int k) {\n        int ans = 0;\n        unordered_map<int, int> prev;\n        for (int x : nums) {\n            unordered_map<int, int> curr;\n            curr[x] = 1;\n            for (auto& [g, cnt] : prev) {\n                curr[gcd(g, x)] += cnt;\n            }\n            if (curr.count(k)) ans += curr[k];\n            prev = move(curr);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

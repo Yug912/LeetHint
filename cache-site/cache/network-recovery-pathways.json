@@ -1,0 +1,40 @@
+{
+  "slug": "network-recovery-pathways",
+  "title": "Network Recovery Pathways",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Binary Search on Answer + DAG DP",
+  "tc": "O((m + n) log m)",
+  "sc": "O(n + m)",
+  "spaceBreakdown": "- CSR adjacency arrays (head/next/to/cost): O(n + m)\n- topological order array: O(n)\n- dist array of long long per check (reused): O(n)\n- sorted unique cost vector: O(m)\n- Kahn queue during one-time topo sort: O(n)\n- not counted: input edges, online array",
+  "approach": "Binary search on the answer over the sorted distinct edge costs: a threshold t is feasible iff a 0→n−1 path using only edges with cost ≥ t, through online nodes, has total cost ≤ k. Feasibility is checked with a DP over a fixed topological order (DAG), relaxing dist[v] = min(dist[v], dist[u]+cost) for allowed edges. Monotonicity (raising the threshold only removes edges) makes the binary search correct.",
+  "hints": [
+    "If you only knew the smallest edge on the best path, what would make verifying a candidate value cheap on a DAG with n up to 5·10^4 and m up to 10^5? Note every edge cost lies between 0 and 10^9, and the answer must be one of the edge costs.",
+    "Binary search over the sorted distinct edge costs; for a pivot t, run a DP in topological order keeping the minimum total cost to each node using only edges with cost ≥ t. In Example 2 with t = 6: dist[2] = 6, node 3 is skipped (offline), dist[4] = 12 ≤ k = 12 → feasible.",
+    "collect distinct costs, sort them\ncompute topological order once\nlo = 0, hi = last, ans = -1\nwhile lo <= hi:\n    mid = middle cost\n    dist[0] = 0, others INF\n    for u in topo order:\n        if offline(u) or dist[u] = INF: skip\n        for edges u→v with cost >= mid: relax dist[v]\n    if dist[n-1] <= k: ans = mid, search higher\n    else: search lower\nreturn ans",
+    "**No edges at all** - n = 2 with an empty edge list means no path exists.\n`Input: edges = [], online = [true,true], k = 5` → `Expected: -1`\n⚠️ Bug: binary searching over an empty cost list without guarding → returns garbage or crashes instead of -1\n\n**Zero-cost edges with zero budget** - costs can be 0 and k can be 0.\n`Input: edges = [[0,1,0]], online = [true,true], k = 0` → `Expected: 0`\n⚠️ Bug: initialising the answer or dist so that a 0 total is treated as unreachable → returns -1 instead of 0\n\n**Offline intermediate node** - a cheap path through an offline node must be ignored even if its edges pass the threshold.\n`Input: edges = [[0,1,1],[1,2,1],[0,2,5]], online = [true,false,true], k = 10` → `Expected: 5`\n⚠️ Bug: propagating distances out of offline nodes → returns 1 instead of 5\n\n**Overflow in path sums** - up to 5·10^4 edges of cost 10^9 gives 5·10^13, past 2^31 − 1.\n`Input: edges = [[0,1,1000000000],[1,2,1000000000]], online = [true,true,true], k = 50000000000000` → `Expected: 1000000000`\n⚠️ Bug: storing dist in int → wraps around and wrongly reports feasibility → returns 1000000000 on inputs where the true sum exceeds k\n\n**Total cost exactly equal to k** - the constraint is ≤, not <.\n`Input: edges = [[0,1,7],[1,2,5]], online = [true,true,true], k = 12` → `Expected: 5`\n⚠️ Bug: using dist[n-1] < k in the feasibility check → returns -1 instead of 5"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph had cycles instead of being a DAG?",
+      "a": "Replace the topological-order DP with Dijkstra on the filtered subgraph per binary-search step, giving O((m + n) log n) per check and O((m + n) log n log m) overall. Space stays O(n + m)."
+    },
+    {
+      "q": "What if you needed the actual best path, not just its score?",
+      "a": "During the final successful check, store a parent pointer per node whenever dist[v] is improved, then reconstruct by walking parents back from n−1. This adds O(n) space and O(n) reconstruction time."
+    },
+    {
+      "q": "What if m were far too large to store, arriving as a stream?",
+      "a": "You cannot precompute a global topological order, so instead binary search on the cost value range (0..10^9) and run each check with two streaming passes: one to build the filtered adjacency actually needed via a BFS-reachable frontier, keeping memory O(n) per check. Time becomes O((m + n) log(10^9)) with O(n + working set) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int findMaxPathScore(vector<vector<int>>& edges, vector<bool>& online, long long k) {\n        int n = online.size();\n        int m = edges.size();\n        // CSR adjacency\n        vector<int> head(n, -1), nxt(m), to(m), ecost(m);\n        vector<int> indeg(n, 0);\n        for (int i = 0; i < m; ++i) {\n            to[i] = edges[i][1];\n            ecost[i] = edges[i][2];\n            nxt[i] = head[edges[i][0]];\n            head[edges[i][0]] = i;\n            indeg[edges[i][1]]++;\n        }\n        // topological order (Kahn), computed once on full graph\n        vector<int> order;\n        order.reserve(n);\n        vector<int> deg = indeg;\n        vector<int> q;\n        q.reserve(n);\n        for (int i = 0; i < n; ++i) if (deg[i] == 0) q.push_back(i);\n        for (size_t qi = 0; qi < q.size(); ++qi) {\n            int u = q[qi];\n            order.push_back(u);\n            for (int e = head[u]; e != -1; e = nxt[e]) {\n                if (--deg[to[e]] == 0) q.push_back(to[e]);\n            }\n        }\n        // distinct sorted costs\n        vector<int> costs;\n        costs.reserve(m);\n        for (int i = 0; i < m; ++i) costs.push_back(ecost[i]);\n        sort(costs.begin(), costs.end());\n        costs.erase(unique(costs.begin(), costs.end()), costs.end());\n        int t = costs.size();\n        if (t == 0) return -1;\n        const long long INF = (long long)4e18;\n        vector<long long> dist(n);\n        auto feasible = [&](int thr) -> bool {\n            for (int i = 0; i < n; ++i) dist[i] = INF;\n            dist[0] = 0;\n            for (int idx = 0; idx < n; ++idx) {\n                int u = order[idx];\n                if (dist[u] == INF) continue;\n                if (!online[u]) continue;\n                for (int e = head[u]; e != -1; e = nxt[e]) {\n                    if (ecost[e] < thr) continue;\n                    int v = to[e];\n                    long long nd = dist[u] + ecost[e];\n                    if (nd < dist[v]) dist[v] = nd;\n                }\n            }\n            return dist[n - 1] <= k;\n        };\n        int lo = 0, hi = t - 1, ans = -1;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (feasible(costs[mid])) { ans = mid; lo = mid + 1; }\n            else hi = mid - 1;\n        }\n        return ans == -1 ? -1 : costs[ans];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

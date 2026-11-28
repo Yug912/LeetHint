@@ -1,0 +1,40 @@
+{
+  "slug": "get-watched-videos-by-your-friends",
+  "title": "Get Watched Videos by Your Friends",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Breadth-First Search",
+  "tc": "O(n + E + V·L·log V)",
+  "sc": "O(n + V·L)",
+  "spaceBreakdown": "- vector<int> dist: n entries → O(n)\n- queue<int> q: up to n entries → O(n)\n- unordered_map<string,int> freq: up to V entries → O(V)\n- vector<pair<int,string>> v: up to V entries → O(V)\n- sort(): O(log V) stack\n- not counted: input, returned vector",
+  "approach": "Run a BFS from `id` to compute the shortest-path distance to every other person. Collect the watched videos of all people whose distance equals `level`, count frequencies, then sort by (frequency ascending, name ascending). BFS guarantees we get the shortest path, so each person is assigned exactly one level.",
+  "hints": [
+    "What does \"level k\" really mean for a person relative to you - is it about who they know, or about the minimum number of friendship hops to reach them?",
+    "Use BFS from `id`; the BFS layer at depth `level` is exactly the set of kth-level friends. In Example 2, BFS from 0 gives layer 1 = {1,2}, layer 2 = {3}, so we collect videos of person 3 only → [\"D\"].",
+    "```\ndist[id] = 0; push id into queue\nwhile queue not empty:\n    u = pop\n    if dist[u] == level: skip expansion\n    for v in friends[u]:\n        if dist[v] unset:\n            dist[v] = dist[u] + 1\n            push v\ncount videos of every u with dist[u] == level\nsort by (count asc, name asc)\n```",
+    "**Self-friend / duplicate edge** - a person could appear in their own friend list or twice in another's.\n`watchedVideos=[[\"A\"]], friends=[[0,0]], id=0, level=1` → `Expected: []`\n⚠️ Bug: not marking `dist[id]=0` before BFS and pushing neighbors blindly → returns `[\"A\"]`.\n\n**Tie in frequencies** - two videos with equal counts must break ties alphabetically.\n`watchedVideos=[[\"B\"],[\"A\"]], friends=[[1],[0]], id=0, level=1` → `Expected: [\"A\",\"B\"]`\n⚠️ Bug: sorting only by frequency with no secondary comparator → returns `[\"B\",\"A\"]`.\n\n**Target level unreachable** - no node sits at exactly `level` hops.\n`watchedVideos=[[\"A\"],[\"B\"]], friends=[[1],[0]], id=0, level=5` → `Expected: []`\n⚠️ Bug: assuming BFS always reaches `level` and indexing a layer vector by `level` → undefined behavior / crash.\n\n**Same video watched by multiple kth-level friends** - frequencies must accumulate, not dedupe.\n`watchedVideos=[[\"X\"],[\"X\"]], friends=[[1],[0]], id=0, level=1` → `Expected: [\"X\"]`\n⚠️ Bug: inserting each video into a set instead of counting → returns `[\"X\"]` but with wrong frequency if a third friend also watched \"X\"."
+  ],
+  "followUps": [
+    {
+      "q": "If n can be up to 10^6 and the friendship graph is stored as an adjacency list, how does the approach change?",
+      "a": "BFS still works in O(n + E), but use a flat CSR adjacency array instead of vector<vector<int>> to reduce cache misses and memory overhead. The video-counting step is unchanged; total time stays O(n + E + V log V)."
+    },
+    {
+      "q": "If videos are streamed one at a time and you must answer queries online for different (id, level) pairs, how would you adapt?",
+      "a": "Precompute all-pairs shortest distances with BFS from every node in O(n·(n+E)); then each query is O(V log V) for collecting and sorting videos at the fixed distance. This trades O(n²) precomputation and storage for O(1)-per-query distance lookup."
+    },
+    {
+      "q": "If you only need the single most frequent video at level k (ties broken alphabetically), can you avoid the full sort?",
+      "a": "Yes - during counting, track the current best (frequency, name) pair in one pass over the frequency map. Time drops to O(n + E + V) with O(V) space, since no sort is needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<string> watchedVideosByFriends(vector<vector<string>>& watchedVideos, vector<vector<int>>& friends, int id, int level) {\n        int n = (int)friends.size();\n        vector<int> dist(n, -1);\n        queue<int> q;\n        dist[id] = 0;\n        q.push(id);\n        while (!q.empty()) {\n            int u = q.front(); q.pop();\n            if (dist[u] == level) continue;\n            for (int v : friends[u]) {\n                if (dist[v] == -1) {\n                    dist[v] = dist[u] + 1;\n                    q.push(v);\n                }\n            }\n        }\n        unordered_map<string,int> freq;\n        for (int i = 0; i < n; i++) {\n            if (dist[i] == level) {\n                for (const string& s : watchedVideos[i]) {\n                    freq[s]++;\n                }\n            }\n        }\n        vector<pair<int,string>> items;\n        items.reserve(freq.size());\n        for (const auto& p : freq) {\n            items.push_back({p.second, p.first});\n        }\n        sort(items.begin(), items.end(), [](const pair<int,string>& a, const pair<int,string>& b){\n            if (a.first != b.first) return a.first < b.first;\n            return a.second < b.second;\n        });\n        vector<string> res;\n        res.reserve(items.size());\n        for (const auto& p : items) {\n            res.push_back(p.second);\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "adjacent-increasing-subarrays-detection-ii",
+  "title": "Adjacent Increasing Subarrays Detection II",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Run-Length Decomposition",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (ans, prevRunLen, i, j, runLen): constant count → O(1)\n- no containers, no recursion, no auxiliary arrays\n- not counted: input vector nums",
+  "approach": "Decompose the array into maximal strictly increasing runs. For a run of length L, two adjacent subarrays of length k can both fit inside it with k up to ⌊L/2⌋. At the boundary between two consecutive runs of lengths L1 and L2, the first subarray can occupy the tail of run1 and the second the head of run2, giving k up to min(L1, L2). The answer is the maximum over all runs and all adjacent run pairs. This is a single-pass O(n) algorithm using O(1) extra space.",
+  "hints": [
+    "If you break the array into maximal contiguous strictly increasing runs, what property of each run's length and its neighbor's length limits how large k can be for two adjacent length-k subarrays that are both strictly increasing?",
+    "Compute each maximal strictly increasing run's length in one pass. In Example 1, runs have lengths 5, 3, 1, 1; the boundary between the first two gives min(5,3)=3, which is the answer.",
+    "```\nans = 0\nprevLen = 0\nfor each maximal increasing run of length L:\n    ans = max(ans, L / 2)\n    if prevLen > 0:\n        ans = max(ans, min(prevLen, L))\n    prevLen = L\nreturn ans\n```",
+    "**All equal** - no two consecutive elements increase, so every run has length 1.\n`Input: nums = [5,5,5,5]` → `Expected: 1`\n⚠️ Bug: only checking `L / 2` per run without checking `min(prevLen, L)` at boundaries → returns 0\n\n**Single long run** - the entire array is one strictly increasing run.\n`Input: nums = [1,2,3,4,5,6]` → `Expected: 3`\n⚠️ Bug: only checking boundaries between different runs, skipping the `L / 2` case → returns 0\n\n**Two equal-length runs** - boundary between two runs of the same length.\n`Input: nums = [1,2,3,1,2,3]` → `Expected: 3`\n⚠️ Bug: using `min(prevLen, L) - 1` instead of `min(prevLen, L)` → returns 2\n\n**Descending array** - every element is its own run of length 1.\n`Input: nums = [5,4,3,2,1]` → `Expected: 1`\n⚠️ Bug: skipping runs of length 1 in the boundary check → returns 0\n\n**Minimum input** - n = 2, the smallest valid array.\n`Input: nums = [2,1]` → `Expected: 1`\n⚠️ Bug: initializing `ans = 1` and returning early when no run exceeds length 1 without checking boundaries → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the two subarrays need not be adjacent, only non-overlapping (a < b and b ≥ a + k)?",
+      "a": "Precompute `right[i]` = length of the longest strictly increasing run starting at i. For a fixed k, scan left to right tracking whether any index ≤ i−k had `right ≥ k`, and check if `right[i] ≥ k`. Binary search on k. Time: O(n log n), Space: O(n)."
+    },
+    {
+      "q": "What if you must find the largest k such that at least m disjoint pairs of adjacent increasing subarrays of length k exist?",
+      "a": "For each k, count how many adjacent pairs satisfy the condition using the same run-length pass (each run of length L contributes ⌊L/2⌋ internal pairs plus boundary pairs). Binary search on k for the count ≥ m. Time: O(n log n), Space: O(1)."
+    },
+    {
+      "q": "What if nums arrives as a streaming input of unknown length and you cannot store the full array?",
+      "a": "Maintain the current run length and the previous run length in two variables. On each new element, extend or finalize the current run, updating the answer with `currentLen / 2` and `min(prevLen, currentLen)` at each run boundary. Time: O(n), Space: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxIncreasingSubarrays(vector<int>& nums) {\n        int n = nums.size();\n        int ans = 0;\n        int prevRunLen = 0;\n        int i = 0;\n        while (i < n) {\n            int j = i;\n            while (j + 1 < n && nums[j] < nums[j + 1]) {\n                j++;\n            }\n            int runLen = j - i + 1;\n            ans = max(ans, runLen / 2);\n            if (prevRunLen > 0) {\n                ans = max(ans, min(prevRunLen, runLen));\n            }\n            prevRunLen = runLen;\n            i = j + 1;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-minimum-amount-of-time-to-brew-potions",
+  "title": "Find the Minimum Amount of Time to Brew Potions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Simulation with Free-Time Array",
+  "tc": "O(n·m)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> f: n entries → O(n)\n- recursion depth: none\n- not counted: input vectors skill, mana",
+  "approach": "Track each wizard's earliest free time f[i] after the last potion. For each new potion with mana x, do a forward pass computing the actual start time now = max(now + skill[i-1]*x, f[i]), giving completion f[n-1] = now + skill[n-1]*x; then back-propagate f[i] = f[i+1] - skill[i+1]*x so every wizard's timeline is consistent with this potion's actual schedule. This is O(n·m) = 25M operations for n,m ≤ 5000, and correctness follows because each wizard starts a potion exactly when it arrives, no earlier than their free time.",
+  "hints": [
+    "Potion j+1 cannot simply start when potion j leaves wizard 0 - wizard 3 might still be busy. If you knew exactly when each wizard finished the previous potion, what determines the earliest moment the new potion can pass through wizard i?\n(Example 1 shows potion 1 waiting until t = 52 even though wizard 0 was free at t = 60... or was it earlier?)",
+    "Keep an array f[] of each wizard's free time. For mana = 1 with skill = [1,1,1]: forward pass gives starts 0→1→2, end = 3; then walk backwards setting f[1] = 3−1 = 2, f[0] = 2−1 = 1, so the next potion starts at 1 and finishes at 4.",
+    "f = array of n zeros\nfor each potion x in mana:\n    now = f[0]\n    for i in 1..n-1:\n        now = max(now + skill[i-1]*x, f[i])\n    f[n-1] = now + skill[n-1]*x\n    for i in n-2 down to 0:\n        f[i] = f[i+1] - skill[i+1]*x\nreturn f[n-1]",
+    "**Overflow** - with n = m = 5000 and all values 5000, the answer is 5000·5000·(5000·5000) = 6.25×10^14, far past 2^31−1.\n`Input: skill = [5000]*5000, mana = [5000]*5000` → `Expected: 625000000000000`\n⚠️ Bug: accumulating times in int → overflow, returns a garbage/wrapped value instead of 625000000000000.\n\n**Single wizard** - no passing between wizards, answer is just the sum of skill[0]*mana[j].\n`Input: skill = [2], mana = [3,4]` → `Expected: 14`\n⚠️ Bug: a loop written for i in 1..n-1 that also runs when n = 1 reads skill[0] twice → returns 20 instead of 14.\n\n**Wizard 3 still busy** - the forward pass must take the max with the wizard's free time, not just accumulate.\n`Input: skill = [1,5], mana = [2,2]` → `Expected: 22`\n⚠️ Bug: computing now = now + skill[i-1]*x without max(now, f[i]) → returns 14 instead of 22.\n\n**All equal values** - every potion waits exactly one wizard-step; check the back-propagation keeps f strictly consistent.\n`Input: skill = [1,1], mana = [2,2]` → `Expected: 6`\n⚠️ Bug: back-propagating f[i] = f[i+1] - skill[i]*x (wrong index) → f[0] = 4, next potion ends at 8 instead of 6."
+  ],
+  "followUps": [
+    {
+      "q": "Return the completion time of every potion instead of only the last one.",
+      "a": "Record f[n-1] after each potion's forward+backward pass into a result vector. Same O(n·m) time, space becomes O(n + m)."
+    },
+    {
+      "q": "Mana values arrive as a stream (you cannot store all m potions).",
+      "a": "The algorithm already processes potions one at a time and only needs the f[] array, so streaming works unchanged: O(n) extra space, O(n) per potion, O(n·m) total."
+    },
+    {
+      "q": "Each wizard needs a fixed cooldown c[i] before starting a new potion - how does the solution change?",
+      "a": "In the forward pass use now = max(now + skill[i-1]*x, f[i] + c[i]) and back-propagate f[i] = f[i+1] - skill[i+1]*x as before; time stays O(n·m), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long minTime(vector<int>& skill, vector<int>& mana) {\n        int n = skill.size(), m = mana.size();\n        vector<long long> f(n, 0);\n        for (int j = 0; j < m; j++) {\n            long long x = mana[j];\n            long long now = f[0];\n            for (int i = 1; i < n; i++) {\n                now = max(now + (long long)skill[i - 1] * x, f[i]);\n            }\n            f[n - 1] = now + (long long)skill[n - 1] * x;\n            for (int i = n - 2; i >= 0; i--) {\n                f[i] = f[i + 1] - (long long)skill[i + 1] * x;\n            }\n        }\n        return f[n - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-amount-of-money-robot-can-earn",
+  "title": "Maximum Amount of Money Robot Can Earn",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP on Grid with Rolling Rows",
+  "tc": "O(m·n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- two vectors of array<int,3>, each n entries → O(n)\n- no recursion\n- not counted: input grid",
+  "approach": "Track the best profit at each cell for each count of neutralizations used (0, 1, 2). Each state comes from the cell above or to the left with the same count, or - when the current cell has a robber - from a state with one fewer neutralization (neutralizing here). Since each row only depends on the previous row, keep two 1-D arrays of n×3 states and swap them, giving O(m·n) time and O(n) space.",
+  "hints": [
+    "The robot may skip at most 2 robbers - how would you describe a \"best plan so far\" at a cell if you also need to remember how many skips were already spent along the way? (Grid is up to 500×500, so per-cell work must stay constant.)",
+    "Use DP with state (cell, number of robbers neutralized so far), stored per row. In Example 1, at (1,1) with 1 neutralization the value is 1 (robber skipped), which then feeds (1,2)=4 and (2,2)=8.",
+    "for each row i:\n  for each column j:\n    for k in 0..2:\n      best = max(state above, state left) + coins[i][j]\n      if coins[i][j] < 0 and k > 0:\n        best = max(best, max(above, left) with k-1)   # neutralize here\n      write best into current row's state\n  swap previous/current row arrays\nanswer = max over k of final cell's state",
+    "**Single cell** - 1×1 grid with a robber.\n`Input: [[-5]]` → `Expected: 0`\n⚠️ Bug: initializing only k=0 and returning dp[0][0] → returns -5.\n\n**All robbers** - every cell negative, neutralizations are the whole game.\n`Input: [[-1,-1],[-1,-1]]` → `Expected: -1`\n⚠️ Bug: forgetting the k-1 transition when adding the cell value → returns -3.\n\n**Answer across states** - the best path may use fewer than 2 neutralizations.\n`Input: [[10,10,10],[10,10,10]]` → `Expected: 40`\n⚠️ Bug: returning only the k=2 state when unreachable states leak as INT_MIN sentinels → wrong/garbage answer; take max over k=0,1,2.\n\n**Sentinel underflow** - unreachable states must not be incremented by cell values.\n`Input: [[-1000,-1000]]` → `Expected: 0`\n⚠️ Bug: adding -1000 to INT_MIN repeatedly without a reachability guard → signed overflow / wrong value."
+  ],
+  "followUps": [
+    {
+      "q": "What if the robot could neutralize up to K robbers instead of 2?",
+      "a": "Extend the state to k in 0..K; time becomes O(m·n·K) and rolling space O(n·K). With K up to m+n this is still feasible for moderate K."
+    },
+    {
+      "q": "What if the robot could move right, down, and diagonally down-right?",
+      "a": "Add the up-left diagonal cell as a third predecessor in each transition; the recurrence is unchanged otherwise, still O(m·n) time and O(n) rolling space."
+    },
+    {
+      "q": "What if the grid is too large to store (streamed row by row)?",
+      "a": "The rolling-row solution already handles this: keep only two rows of n×3 states and process each incoming row once, using O(n) memory total and one pass over the stream."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumAmount(vector<vector<int>>& coins) {\n        int m = coins.size(), n = coins[0].size();\n        const int NEG = INT_MIN / 2;\n        vector<array<int,3>> dp(n), ndp(n);\n        for (int j = 0; j < n; j++) dp[j] = {NEG, NEG, NEG};\n        dp[0][0] = coins[0][0];\n        if (coins[0][0] < 0) dp[0][1] = 0;\n        for (int j = 1; j < n; j++) {\n            int c = coins[0][j];\n            for (int k = 0; k < 3; k++) {\n                int best = dp[j-1][k];\n                if (best > NEG) best += c; else best = NEG;\n                dp[j][k] = best;\n                if (c < 0 && k > 0 && dp[j-1][k-1] > NEG)\n                    dp[j][k] = max(dp[j][k], dp[j-1][k-1]);\n            }\n        }\n        for (int i = 1; i < m; i++) {\n            for (int j = 0; j < n; j++) ndp[j] = {NEG, NEG, NEG};\n            int c = coins[i][0];\n            for (int k = 0; k < 3; k++) {\n                int best = dp[0][k];\n                if (best > NEG) best += c; else best = NEG;\n                ndp[0][k] = best;\n                if (c < 0 && k > 0 && dp[0][k-1] > NEG)\n                    ndp[0][k] = max(ndp[0][k], dp[0][k-1]);\n            }\n            for (int j = 1; j < n; j++) {\n                int c2 = coins[i][j];\n                for (int k = 0; k < 3; k++) {\n                    int best = max(dp[j][k], ndp[j-1][k]);\n                    if (best > NEG) best += c2; else best = NEG;\n                    ndp[j][k] = best;\n                    if (c2 < 0 && k > 0) {\n                        int nb = max(dp[j][k-1], ndp[j-1][k-1]);\n                        if (nb > NEG) ndp[j][k] = max(ndp[j][k], nb);\n                    }\n                }\n            }\n            swap(dp, ndp);\n        }\n        return max({dp[n-1][0], dp[n-1][1], dp[n-1][2]});\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

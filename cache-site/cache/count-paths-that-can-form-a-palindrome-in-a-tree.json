@@ -1,0 +1,40 @@
+{
+  "slug": "count-paths-that-can-form-a-palindrome-in-a-tree",
+  "title": "Count Paths That Can Form a Palindrome in a Tree",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask XOR + Hash Map Counting",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> children: n vectors, n-1 total entries → O(n)\n- vector<int> mask: n entries → O(n)\n- vector<int> q (BFS queue): n entries → O(n)\n- unordered_map<int,int> seen: up to n entries → O(n)\n- not counted: input parent, input s, returned value",
+  "approach": "A string can be rearranged into a palindrome iff at most one character has odd frequency. Define `mask[v]` as the 26-bit XOR of character parities on the root-to-v path. The parity of each character on the path u→v equals `mask[u] XOR mask[v]` (the shared root-to-LCA portion cancels). So a pair (u,v) is valid iff `mask[u] XOR mask[v]` has at most 1 bit set (is 0 or a power of 2). We compute all masks via BFS, then for each node in order, count previously-seen nodes whose mask equals the current mask or differs by exactly one bit, using a hash map.",
+  "hints": [
+    "For a path between two nodes in a tree, which characters appear an odd number of times - and what does that have to do with the two paths from the root to each node? With n up to 10^5, checking every pair directly is too slow.",
+    "Use a 26-bit parity mask per node (root-to-node path) stored in a hash map. In Example 1, node 3 has mask 5 (bits for 'a' and 'c'); pairing it with node 5 (also mask 5) gives XOR 0 - a valid palindrome path.",
+    "```\ncompute mask[v] for all v via BFS from root:\n    mask[child] = mask[parent] XOR (1 << (s[child] - 'a'))\nseen = empty map\nans = 0\nfor each node v in 0..n-1:\n    ans += seen[mask[v]]\n    for c in 0..25:\n        ans += seen[mask[v] XOR (1 << c)]\n    seen[mask[v]] += 1\nreturn ans\n```",
+    "**Single node** - n = 1, only the root exists, no pairs possible.\n`parent = [-1], s = \"a\"` → `Expected: 0`\n⚠️ Bug: initializing ans to 1 instead of 0 → returns 1\n\n**Two nodes** - smallest non-trivial tree, one edge.\n`parent = [-1,0], s = \"ab\"` → `Expected: 1`\n⚠️ Bug: only counting pairs where mask[u] == mask[v] (XOR == 0), skipping the single-odd-character case → returns 0\n\n**All same character** - every edge is 'a', so masks are only 0 or 1.\n`parent = [-1,0,0,0,0], s = \"aaaaa\"` → `Expected: 10`\n⚠️ Bug: only counting XOR == 0 pairs → returns 6 (misses the 4 pairs where XOR == 1, a power of 2)\n\n**Large pair count overflow** - n = 10^5, all edges 'a', answer exceeds 2^31.\n`parent = [-1,0,1,2,...,99998], s = \"a\" repeated 100000` → `Expected: 4999950000`\n⚠️ Bug: using int for the answer accumulator → returns 705032704 (4999950000 mod 2^32)"
+  ],
+  "followUps": [
+    {
+      "q": "What if the alphabet includes uppercase letters too (52 characters)?",
+      "a": "Use a 52-bit mask (fits in a long long). The XOR approach is identical - just widen the mask and iterate over 52 bits instead of 26. TC: O(52n), SC: O(n)."
+    },
+    {
+      "q": "Answer online queries: given (u, v), is the path u→v a palindrome?",
+      "a": "Precompute mask[v] for all v once. Each query checks popcount(mask[u] XOR mask[v]) ≤ 1 in O(1). TC: O(n) preprocessing + O(1) per query, SC: O(n)."
+    },
+    {
+      "q": "What if edges have digit weights 1-9 instead of lowercase letters?",
+      "a": "Use a 10-bit mask (one bit per digit). Same XOR cancellation and counting approach applies. TC: O(10n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long countPalindromePaths(vector<int>& parent, string s) {\n        int n = parent.size();\n        vector<vector<int>> children(n);\n        for (int i = 1; i < n; i++) {\n            children[parent[i]].push_back(i);\n        }\n        vector<int> mask(n, 0);\n        vector<int> q;\n        q.push_back(0);\n        for (int i = 0; i < (int)q.size(); i++) {\n            int u = q[i];\n            for (int v : children[u]) {\n                mask[v] = mask[u] ^ (1 << (s[v] - 'a'));\n                q.push_back(v);\n            }\n        }\n        unordered_map<int,int> seen;\n        long long ans = 0;\n        for (int i = 0; i < n; i++) {\n            int m = mask[i];\n            auto it = seen.find(m);\n            if (it != seen.end()) ans += it->second;\n            for (int c = 0; c < 26; c++) {\n                it = seen.find(m ^ (1 << c));\n                if (it != seen.end()) ans += it->second;\n            }\n            seen[m]++;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

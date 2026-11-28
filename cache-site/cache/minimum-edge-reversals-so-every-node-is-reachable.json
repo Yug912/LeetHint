@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-edge-reversals-so-every-node-is-reachable",
+  "title": "Minimum Edge Reversals So Every Node Is Reachable",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Rerooting Tree DP",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- adjacency list of pair<int,int>: 2(n−1) entries → O(n)\n- dp, par, parDir, vis, order, queue vectors: O(n) each → O(n)\n- recursion depth: none (iterative BFS order used)\n- not counted: input edges, returned vector",
+  "approach": "Root the tree at node 0 and compute dp[x] = reversals needed so x reaches its subtree, via a post-order pass (dp[x] = Σ dp[child] + 1 if the edge points child→parent). Then reroot: answer[child] = answer[parent] + 1 if the edge points parent→child, else −1, propagated in pre-order. Both passes are O(n) using a BFS order, so every node's answer is computed without a per-node traversal.",
+  "hints": [
+    "If you knew the answer for one node, how would the answer for its tree-neighbor differ - and what does the single edge between them contribute? With n up to 10^5, computing each node's reachability from scratch is out of the question.",
+    "Rerooting with two linear passes over the tree. In example 1, node 2 needs 0 reversals; its child 1 needs dp-based 1, and moving the root from 2 to 1 changes the count by exactly the effect of edge [2,1].",
+    "```\nbuild adjacency with a direction flag per endpoint\nBFS from node 0 recording parent, parent-edge direction, visit order\nfor nodes in reverse BFS order:\n    dp[parent] += dp[node] + (1 if edge points node->parent else 0)\nanswer[0] = dp[0]\nfor nodes in BFS order (skip root):\n    answer[node] = answer[parent] + (1 if edge points parent->node else -1)\n```",
+    "**Smallest input** - n = 2 with a single edge either direction.\n`Input: n = 2, edges = [[1,0]]` → `Expected: [1,0]`\n⚠️ Bug: initializing dp for the root but forgetting the child contributes +1 when the edge points child→parent → returns [0,0]\n\n**Skewed tree** - a path of 10^5 nodes makes recursion depth O(n).\n`Input: n = 100000, edges = [[i+1,i] for i in 0..99998]` → `Expected: [99999,99998,...,0]`\n⚠️ Bug: recursive DFS without increasing stack size → stack overflow / runtime error on deep chains\n\n**Direction sign mix-up** - rerooting step must add +1 when the edge points parent→child (root loses that reversal) and −1 otherwise.\n`Input: n = 3, edges = [[1,2],[2,0]]` → `Expected: [2,0,1]`\n⚠️ Bug: swapping the +1/−1 cases in the rerooting pass → returns [2,2,0] instead of [2,0,1]\n\n**Star away from center** - all edges point outward from node 0's neighbor.\n`Input: n = 4, edges = [[0,1],[0,2],[0,3]]` → `Expected: [0,1,1,1]`\n⚠️ Bug: counting reversals for edges already pointing the needed way → returns [3,0,0,0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if the graph is a general directed graph whose underlying undirected graph is still connected but has cycles?",
+      "a": "Rerooting no longer applies directly; you'd compute, for each strongly connected component condensation, the minimum reversals to make it a DAG reachable from each source, which becomes a harder optimization. On a general tree this DP is optimal, but cycles break the \"one edge between neighbors\" invariant the recurrence relies on."
+    },
+    {
+      "q": "What if only k nodes need to be reachable from node i, not all nodes?",
+      "a": "Root the tree anywhere, compute dp over subtrees, then for each query node take the sum of dp values along the path to the k-node subtree - answerable in O(log n) per query with binary lifting after O(n) preprocessing, instead of O(n) per query."
+    },
+    {
+      "q": "Can this be done with O(1) extra memory beyond the output array?",
+      "a": "Not quite O(1), but you can drop the adjacency list by storing each edge twice in a compact CSR-style array and reuse the answer array to hold dp during the first pass, reducing auxiliary space to a few O(n) integer arrays with no per-node structures."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> minEdgeReversals(int n, vector<vector<int>>& edges) {\n        vector<vector<pair<int,int>>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back({e[1], 0}); // edge parent->child direction\n            adj[e[1]].push_back({e[0], 1}); // edge child->parent direction\n        }\n        vector<int> dp(n, 0), par(n, -1), parDir(n, 0), order;\n        vector<char> vis(n, 0);\n        order.reserve(n);\n        vector<int> q;\n        q.reserve(n);\n        q.push_back(0);\n        vis[0] = 1;\n        for (size_t i = 0; i < q.size(); ++i) {\n            int x = q[i];\n            order.push_back(x);\n            for (auto& [y, d] : adj[x]) {\n                if (!vis[y]) {\n                    vis[y] = 1;\n                    par[y] = x;\n                    parDir[y] = d;\n                    q.push_back(y);\n                }\n            }\n        }\n        for (int i = n - 1; i >= 1; --i) {\n            int x = order[i];\n            dp[par[x]] += dp[x] + parDir[x];\n        }\n        vector<int> ans(n);\n        ans[0] = dp[0];\n        for (int i = 1; i < n; ++i) {\n            int x = order[i];\n            ans[x] = ans[par[x]] + (parDir[x] == 0 ? 1 : -1);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

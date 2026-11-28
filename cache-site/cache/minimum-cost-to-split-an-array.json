@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-cost-to-split-an-array",
+  "title": "Minimum Cost to Split an Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with Incremental Counting",
+  "tc": "O(n^2)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> dp: n+1 entries → O(n)\n- vector<int> freq: n entries (reused per r) → O(n)\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "Use DP where dp[r] = minimum cost to split the first r elements. For each r, scan l from r−1 down to 0, maintaining a frequency table so the importance of nums[l..r−1] updates in O(1) per step. When prepending nums[l]: if its frequency was 0, trimmed length is unchanged (new unique); if it was 1, trimmed grows by 2 (was unique, now duplicated); if ≥2, trimmed grows by 1 (already duplicated). This yields O(n²) time and O(n) space.",
+  "hints": [
+    "If you already know the trimmed length of nums[l+1..r], what single fact about nums[l] tells you how the trimmed length changes when you prepend it? The constraints allow n up to 1000.",
+    "Dynamic programming: dp[r] = min cost to split the first r elements. For each r, scan l downward from r−1 to 0, keeping a frequency table so each importance(nums[l..r−1]) is O(1) from the previous. Example: for r=7 in [1,2,1,2,1,3,3], going from l=6 (subarray [3], trimmed=0) to l=5 (subarray [3,3], adding 3 with freq 1→2, trimmed +=2).",
+    "```\ndp[0] = 0\nfor r = 1 to n:\n    freq = empty table, trimmed = 0\n    for l = r-1 down to 0:\n        x = nums[l]\n        if freq[x] == 0:   # new unique, no change\n        elif freq[x] == 1: trimmed += 2  # was unique, now duplicated\n        else:              trimmed += 1  # already duplicated\n        freq[x] += 1\n        dp[r] = min(dp[r], dp[l] + k + trimmed)\nreturn dp[n]\n```",
+    "**Single element** - n=1, only one possible split.\n`Input: nums = [0], k = 5` → `Expected: 5`\n⚠️ Bug: returning dp[n-1] instead of dp[n] → returns 0\n\n**All elements distinct** - trimmed length is always 0, so one subarray is optimal.\n`Input: nums = [0,1,2,3], k = 10` → `Expected: 10`\n⚠️ Bug: incrementing trimmed when freq[x] == 0 → returns 14\n\n**All elements equal** - the second occurrence of a value adds 2 to trimmed, not 1.\n`Input: nums = [1,1,1], k = 2` → `Expected: 5`\n⚠️ Bug: adding trimmed += 1 instead of += 2 when freq[x] == 1 → returns 4\n\n**Large k, all distinct** - one subarray is optimal; dp must be initialized to a large value.\n`Input: nums = [0,1,2,3], k = 100` → `Expected: 100`\n⚠️ Bug: initializing dp[r] to 0 instead of a large sentinel → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums.length could be up to 10^5?",
+      "a": "The O(n²) DP is too slow. You would need a data structure (e.g., segment tree) that can maintain dp[l] + importance(nums[l..r]) as r advances and query the minimum efficiently. The key challenge is that importance changes for many l values simultaneously when a new element is added, making this significantly harder. New TC would target O(n log n) or O(n √n)."
+    },
+    {
+      "q": "What if elements could be negative or larger than n?",
+      "a": "Replace the vector<int> freq(n, 0) with an unordered_map<int,int>. The logic is identical; only the frequency lookup changes from O(1) worst-case to O(1) average. TC stays O(n²) average, SC stays O(n)."
+    },
+    {
+      "q": "What if k could be 0?",
+      "a": "The algorithm handles k=0 naturally since k is just added to each importance value. With k=0 there is no per-subarray overhead, so the DP tends to prefer more subarrays, but the recurrence still finds the true minimum without modification."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minCost(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> dp(n + 1, LLONG_MAX);\n        dp[0] = 0;\n        for (int r = 1; r <= n; r++) {\n            vector<int> freq(n, 0);\n            long long trimmed = 0;\n            for (int l = r - 1; l >= 0; l--) {\n                int x = nums[l];\n                if (freq[x] == 0) {\n                    // new unique element: not in trimmed yet\n                } else if (freq[x] == 1) {\n                    trimmed += 2;\n                } else {\n                    trimmed += 1;\n                }\n                freq[x]++;\n                long long cost = dp[l] + (long long)k + trimmed;\n                if (cost < dp[r]) dp[r] = cost;\n            }\n        }\n        return (int)dp[n];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

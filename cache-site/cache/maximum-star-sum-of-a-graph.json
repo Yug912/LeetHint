@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-star-sum-of-a-graph",
+  "title": "Maximum Star Sum of a Graph",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy with Sorting",
+  "tc": "O(V + E log E)",
+  "sc": "O(V + E)",
+  "spaceBreakdown": "- vector<vector<int>> adj(n): n inner vectors holding 2E total integers → O(V + E)\n- sort() stack: O(log deg) per call, max O(log E)\n- no recursion, no other containers\n- not counted: input vals, edges, returned int",
+  "approach": "For each node, the best star centered there includes the node itself plus up to k of its neighbors with the largest positive values (negative neighbors only reduce the sum). Build an adjacency list storing neighbor values, sort each node's list descending, greedily add positive values up to k, and track the global maximum. This is correct because including any neighbor with a positive value always improves the sum, while including a non-positive neighbor never does.",
+  "hints": [
+    "Given that you can choose any subset of at most k neighbors for a center node, what distinguishes a neighbor worth including from one worth skipping? k can be 0, meaning the star is just the center node alone.",
+    "Sort each node's neighbor values in descending order, then greedily add positive ones up to k. For node 3 in Example 1, neighbor values [2, 10, -10, -20] sorted descending are [10, 2, -10, -20]; taking the top 2 positive gives 10 + 2, so the sum is 4 + 10 + 2 = 16.",
+    "```\nbuild adjacency list storing neighbor values\nfor each node i:\n    sort neighbor values descending\n    sum = vals[i]\n    for j = 0 to min(k, degree) - 1:\n        if neighbor[j] > 0: sum += neighbor[j]\n        else: break\n    ans = max(ans, sum)\nreturn ans\n```",
+    "**Single node, no edges** - n = 1 with no edges, the star is just the node itself\n`Input: vals = [-5], edges = [], k = 0` → `Expected: -5`\n⚠️ Bug: initializing `ans = 0` instead of `INT_MIN` → returns 0\n\n**All negatives** - every neighbor decreases the sum, so the best star is a single node\n`Input: vals = [-1,-2,-3], edges = [[0,1],[1,2]], k = 2` → `Expected: -1`\n⚠️ Bug: adding neighbors without checking `adj[i][j] > 0` → node 0 gives -1 + (-2) = -3, returns -3\n\n**k = 0** - no neighbors allowed, answer is the maximum node value\n`Input: vals = [1,2,3], edges = [[0,1],[1,2]], k = 0` → `Expected: 3`\n⚠️ Bug: loop condition `j <= k` instead of `j < k` → adds one neighbor, node 1 gives 2 + 3 = 5, returns 5\n\n**Unsorted neighbors** - must sort before taking top k, not just first k in insertion order\n`Input: vals = [1,2,3,4,5], edges = [[0,1],[0,2],[0,3],[0,4]], k = 2` → `Expected: 10`\n⚠️ Bug: skipping the sort and taking first k neighbors → adj[0] = [2,3,4,5], takes 2+3=5, sum = 1+5=6, returns 6"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need the max star sum for every k from 0 to n-1 simultaneously?",
+      "a": "For each node, sort neighbors descending and compute prefix sums of positive values. Sweep k from 0 upward: each node's contribution steps up as k crosses thresholds. Maintain a running max across all nodes. TC: O(E log E + n), SC: O(V + E)."
+    },
+    {
+      "q": "What if edges can be added or removed dynamically with online max-star-sum queries?",
+      "a": "Maintain a sorted multiset of neighbor values per node. On edge update, insert/erase in both endpoints' multisets in O(log deg). Recompute the star sum only for the two affected nodes. TC: O(log deg) per update, O(V·k) per full query."
+    },
+    {
+      "q": "What if the graph is too large to store in memory and edges arrive as a stream?",
+      "a": "Make two passes over the edge stream. First pass counts each node's degree to preallocate arrays. Second pass fills neighbor values. Then sort and process each node independently. TC: O(E log E), SC: O(V + max_deg) - only one node's neighbor list needs to be in memory at a time during the final pass."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxStarSum(vector<int>& vals, vector<vector<int>>& edges, int k) {\n        int n = vals.size();\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) {\n            adj[e[0]].push_back(vals[e[1]]);\n            adj[e[1]].push_back(vals[e[0]]);\n        }\n        int ans = INT_MIN;\n        for (int i = 0; i < n; i++) {\n            sort(adj[i].begin(), adj[i].end(), greater<int>());\n            long long sum = vals[i];\n            for (int j = 0; j < (int)adj[i].size() && j < k; j++) {\n                if (adj[i][j] > 0) sum += adj[i][j];\n                else break;\n            }\n            ans = max(ans, (int)sum);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

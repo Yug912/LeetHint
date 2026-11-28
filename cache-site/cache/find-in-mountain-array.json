@@ -1,0 +1,51 @@
+{
+  "slug": "find-in-mountain-array",
+  "title": "Find in Mountain Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Binary Search (Ternary Search for peak + two standard binary searches)",
+  "tc": "O(log n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, lo, hi, mid, peak, a, b, v): constant count → O(1)\n- recursion depth: none (iterative)\n- not counted: input MountainArray, returned int",
+  "approach": "The mountain array strictly increases to a peak then strictly decreases. First, locate the peak by binary search: compare arr[mid] with arr[mid+1] - if arr[mid] < arr[mid+1], the peak lies to the right; otherwise it's at mid or to the left. Once the peak is known, binary search the ascending left half [0..peak] for target (standard direction). If not found, binary search the descending right half [peak+1..n-1] with reversed comparison direction. Return the first hit (left side is always a smaller index). Total get() calls ≈ 3·log₂(n) ≈ 42 for n=10⁴, well under 100.",
+  "hints": [
+    "The array strictly increases to one peak then strictly decreases. What single comparison between two adjacent elements tells you which half the peak is in?\nThe array length can be up to 10⁴, and you may call get() at most 100 times.",
+    "Binary search. Compare arr[mid] with arr[mid+1]: if arr[mid] < arr[mid+1] the peak is right of mid, else at mid or left. In [1,2,3,4,5,3,1], mid=3 gives 4 < 5, so search the right half.",
+    "```\npeak = binary_search(lo=1, hi=n-2):\n    if arr[mid] < arr[mid+1]: lo = mid+1\n    else: hi = mid\nidx = binary_search_ascending(0, peak, target)\nif idx found: return idx\nidx = binary_search_descending(peak+1, n-1, target)\nif idx found: return idx\nreturn -1\n```",
+    "**Smallest array** - n=3 is the minimum allowed; the peak is always at index 1.\n`Input: [1,2,1], target=2` → `Expected: 1`\n⚠️ Bug: searching left part as [0..peak-1] instead of [0..peak] → misses the peak index → returns -1 instead of 1.\n\n**Target at last index** - target sits at the very end of the descending tail.\n`Input: [1,5,3], target=3` → `Expected: 2`\n⚠️ Bug: right search range [peak+1..n-2] instead of [peak+1..n-1] → never checks the last index → returns -1 instead of 2.\n\n**Target on both sides** - target appears in both the ascending and descending parts.\n`Input: [1,2,3,4,5,3,1], target=3` → `Expected: 2`\n⚠️ Bug: searching the descending part before the ascending part → returns 5 instead of 2.\n\n**Descending search direction** - the right half is sorted in decreasing order, so the comparison direction must flip.\n`Input: [1,5,4,3,2], target=4` → `Expected: 2`\n⚠️ Bug: using the same direction as the ascending search (v < target → lo = mid+1) → moves right where values are smaller → returns -1 instead of 2."
+  ],
+  "followUps": [
+    {
+      "q": "What if the array could have plateaus (equal adjacent values) instead of strict increase/decrease?",
+      "a": "The peak-finding comparison arr[mid] vs arr[mid+1] no longer cleanly indicates direction when they are equal. You would need to scan past equal runs or fall back to a linear scan for a local maximum, degrading the peak step to O(n) in the worst case. The two side searches would also need to handle duplicate ranges."
+    },
+    {
+      "q": "What if you must return ALL indices where the value equals target?",
+      "a": "Because the mountain array is strictly increasing then strictly decreasing, target can appear at most once on each side - at most two occurrences total. After finding the peak, binary search both sides as before; collect up to two hits. Time stays O(log n), space O(1)."
+    },
+    {
+      "q": "What if the array length is up to 10⁹ and you may call get() only 200 times?",
+      "a": "Each binary search uses ⌈log₂(10⁹)⌉ ≈ 30 calls, so three searches total ≈ 90 calls - still under 200. The identical approach scales directly with no structural change."
+    }
+  ],
+  "code": {
+    "cpp": "class MountainArray {\npublic:\n    int get(int index);\n    int length();\n};\n\nclass Solution {\npublic:\n    int findInMountainArray(int target, MountainArray &mountainArr) {\n        int n = mountainArr.length();\n        int lo = 1, hi = n - 2;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            int a = mountainArr.get(mid);\n            int b = mountainArr.get(mid + 1);\n            if (a < b) lo = mid + 1;\n            else hi = mid;\n        }\n        int peak = lo;\n        lo = 0; hi = peak;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            int v = mountainArr.get(mid);\n            if (v == target) return mid;\n            if (v < target) lo = mid + 1;\n            else hi = mid - 1;\n        }\n        lo = peak + 1; hi = n - 1;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            int v = mountainArr.get(mid);\n            if (v == target) return mid;\n            if (v < target) hi = mid - 1;\n            else lo = mid + 1;\n        }\n        return -1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

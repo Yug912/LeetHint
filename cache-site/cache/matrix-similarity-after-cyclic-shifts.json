@@ -1,0 +1,40 @@
+{
+  "slug": "matrix-similarity-after-cyclic-shifts",
+  "title": "Matrix Similarity After Cyclic Shifts",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Modular Arithmetic",
+  "tc": "O(m * n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables m, n, k, row, col, target: constant → O(1)\n- no containers, no recursion, no heap/stack allocated\n- not counted: input matrix mat",
+  "approach": "After n cyclic shifts (n = number of columns), every row returns to its original arrangement, so we only need to check k % n effective shifts. For each even-indexed row, a left shift by s means the element at position col must equal the element at position (col + s) % n. For each odd-indexed row, a right shift by s means the element at position col must equal the element at position (col - s + n) % n. If every cell satisfies this condition, the matrix is similar.",
+  "hints": [
+    "After how many cyclic shifts does a single row of length n return to its starting arrangement? k can be as large as 50 while each row has at most 25 columns.",
+    "Use modular arithmetic: reduce k to k % n first. For even-indexed rows check mat[row][col] == mat[row][(col + k) % n]; for odd rows check mat[row][col] == mat[row][(col - k + n) % n]. In Example 2, row 0 with k%4=2: mat[0][0]=1 matches mat[0][(0+2)%4]=mat[0][2]=1.",
+    "```\nk = k % n\nfor each row in 0..m-1:\n    for each col in 0..n-1:\n        if row is even:\n            target = (col + k) % n\n        else:\n            target = (col - k + n) % n\n        if mat[row][col] != mat[row][target]:\n            return false\nreturn true\n```",
+    "**k is a multiple of n** - the effective shift is 0, so the matrix is always unchanged.\n`mat = [[1,2,3],[4,5,6]], k = 3` → `Expected: true`\n⚠️ Bug: using k % m (row count) instead of k % n (column count) → 3%2=1, checks mat[0][0]=1 vs mat[0][1]=2 → returns false\n\n**Periodic row, partial match** - the first element matches its shifted position but a later column does not.\n`mat = [[1,2,1,3],[5,5,5,5]], k = 2` → `Expected: false`\n⚠️ Bug: only checking mat[row][0] == mat[row][k%n] → mat[0][0]=1==mat[0][2]=1 and mat[1][0]=5==mat[1][2]=5 → returns true\n\n**All elements equal** - every shift leaves the matrix identical regardless of k.\n`mat = [[2,2,2],[2,2,2]], k = 1` → `Expected: true`\n⚠️ Bug: returning false whenever k % n != 0 → 1%3=1≠0 → returns false\n\n**k larger than n** - k must be reduced modulo n before computing shifted indices.\n`mat = [[1,1,1,1],[2,2,2,2]], k = 5` → `Expected: true`\n⚠️ Bug: computing (col - k) % n without first reducing k → (0-5)%4 = -1 in C++, negative array index → undefined behavior / crash"
+  ],
+  "followUps": [
+    {
+      "q": "Return the minimum positive k for which the matrix becomes similar to the original.",
+      "a": "For each row, find the smallest shift s in [1, n] such that the row is invariant under that shift. The answer is the LCM of all per-row minimums. TC: O(m * n²), SC: O(1)."
+    },
+    {
+      "q": "k can be up to 10^18 - does the solution still work?",
+      "a": "Yes. The reduction k %= n handles arbitrarily large k in O(1). The rest of the algorithm is unchanged. TC: O(m * n), SC: O(1)."
+    },
+    {
+      "q": "The matrix arrives as a stream of rows and you can only store one row at a time.",
+      "a": "Each row is checked independently, so process rows one at a time and only keep the current row in memory. TC: O(m * n), SC: O(n) for one row."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool areSimilar(vector<vector<int>>& mat, int k) {\n        int m = mat.size();\n        int n = mat[0].size();\n        k %= n;\n        for (int row = 0; row < m; row++) {\n            for (int col = 0; col < n; col++) {\n                int target;\n                if (row % 2 == 0) {\n                    target = (col + k) % n;\n                } else {\n                    target = (col - k + n) % n;\n                }\n                if (mat[row][col] != mat[row][target]) {\n                    return false;\n                }\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

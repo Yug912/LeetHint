@@ -1,0 +1,40 @@
+{
+  "slug": "decrease-elements-to-make-array-zigzag",
+  "title": "Decrease Elements To Make Array Zigzag",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Casework",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- a few int locals (n, case1, case2, left, right, m, i): constant → O(1)\n- no containers, no recursion\n- not counted: input vector nums",
+  "approach": "There are two independent zigzag patterns: even-indexed peaks or odd-indexed peaks. Since moves only decrease values, in each pattern we only ever lower the valley positions (never the peaks). For each valley index, the cost to make it strictly smaller than both neighbors is `max(0, nums[i] - min(left,right) + 1)`, treating a missing neighbor as +∞. Sum costs per pattern and return the smaller total.",
+  "hints": [
+    "The only move decreases a value. For each of the two zigzag patterns, which positions would ever need to be lowered?",
+    "Greedy per-pattern sum: for each valley index, add `max(0, nums[i] - min(neighbors) + 1)`. In [9,6,1,6,2] with odd-indexed peaks, index 0 must drop below 6: 9→5 costs 4.",
+    "```\nfor i in 0..n-1:\n    m = min(left neighbor or INF, right neighbor or INF)\n    if i even: caseEvenValley += max(0, nums[i] - m + 1)\n    else:     caseOddValley  += max(0, nums[i] - m + 1)\nreturn min(caseEvenValley, caseOddValley)\n```",
+    "**Single element** - no neighbors exist, array is already zigzag.\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: reading `nums[i-1]`/`nums[i+1]` without bounds guard → undefined behavior / wrong output.\n\n**All equal** - every valley ties its neighbors, so a strict decrease is required.\n`Input: [4,4,4]` → `Expected: 1`\n⚠️ Bug: using `nums[i] > m` instead of `nums[i] >= m` → returns `0`.\n\n**Two elements** - boundary index has only one neighbor.\n`Input: [2,1]` → `Expected: 0`\n⚠️ Bug: initializing the missing-neighbor sentinel to `0` instead of a large value → returns `2`.\n\n**Already zigzag** - no decreases needed.\n`Input: [9,6,1,6,2]` → `Expected: 4`\n⚠️ Bug: swapping which parity is the valley (decreasing peaks instead) → returns `12`."
+  ],
+  "followUps": [
+    {
+      "q": "What if you could both increase and decrease elements (cost 1 each)?",
+      "a": "Then peaks and valleys are symmetric: for each position, push peaks up to max(neighbors)+1 and valleys down to min(neighbors)-1, taking the cheaper side per pattern. Still O(n) time, O(1) space."
+    },
+    {
+      "q": "What if nums.length ≤ 10^5 and nums[i] ≤ 10^9?",
+      "a": "The same greedy loop runs in O(n) with no issue; just accumulate moves in a `long long` since per-index cost can reach ~10^9 and totals ~10^14. Time O(n), space O(1)."
+    },
+    {
+      "q": "What if elements arrive in a stream and you must answer after each prefix?",
+      "a": "Maintain running totals for both patterns incrementally; each new element only affects its own valley cost and the cost of its already-seen neighbor. O(1) amortized per element, O(1) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int movesToMakeZigzag(vector<int>& nums) {\n        int n = nums.size();\n        int caseEvenPeaks = 0; // odd indices are valleys\n        int caseOddPeaks  = 0; // even indices are valleys\n        const int INF = 1001;\n        for (int i = 0; i < n; i++) {\n            int left  = (i > 0)     ? nums[i-1] : INF;\n            int right = (i < n - 1) ? nums[i+1] : INF;\n            int m = min(left, right);\n            int cost = (nums[i] >= m) ? (nums[i] - m + 1) : 0;\n            if (i % 2 == 0) caseOddPeaks  += cost;\n            else            caseEvenPeaks += cost;\n        }\n        return min(caseEvenPeaks, caseOddPeaks);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

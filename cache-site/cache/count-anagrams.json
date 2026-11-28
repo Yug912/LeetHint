@@ -1,0 +1,40 @@
+{
+  "slug": "count-anagrams",
+  "title": "Count Anagrams",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Combinatorics with Modular Inverses",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- arrays fact, inv_fact of size n+1 (max 10^5+1 long longs) → O(n)\n- per-word count array cnt[26] → O(1)\n- recursion depth: none\n- not counted: input string s",
+  "approach": "Each word is independent, so the answer is the product over words of the multinomial L!/(c1!·c2!·…·ck!) where L is the word length and ci are letter counts. Precompute factorials and inverse factorials mod 1e9+7 up to 10^5 using Fermat's little theorem, then multiply per-word results. Correctness follows from the standard distinct-permutations formula, and independence of words from the problem definition.",
+  "hints": [
+    "The words don't interact - what does the total count look like if you know the count for one word alone?\nFor a word with repeated letters, how many distinct arrangements of its letters exist?",
+    "Precompute factorials and inverse factorials mod 1e9+7. For \"too\": 3!/2! = 3 arrangements; \"hot\": 3! = 6; product 3×6 = 18.",
+    "```\nprecompute fact[0..n], inv_fact[0..n] mod M\nans = 1\nfor each word w in s:\n    cnt = letter counts of w\n    term = fact[len(w)]\n    for each c in cnt:\n        term = term * inv_fact[c] mod M\n    ans = ans * term mod M\nreturn ans\n```",
+    "**Single word, all distinct** - no spaces at all, one word of length n.\n`Input: \"abcd\"` → `Expected: 24`\n⚠️ Bug: forgetting to multiply the last word's term (looping only between spaces) → returns 1.\n\n**All letters equal** - every permutation is identical.\n`Input: \"aaa\"` → `Expected: 1`\n⚠️ Bug: computing 3!/3! with integer division (3/3 then dividing factorials as ints) can yield wrong intermediate values; must use modular inverse factorials, not division.\n\n**Overflow in factorials** - n up to 10^5, so 10^5! mod 1e9+7 involves products of two ~10^9 values.\n`Input: \"a b c ... (many words)\"` → `Expected: 1` (all single letters)\n⚠️ Bug: multiplying two ints mod 1e9+7 without long long → 10^9 × 10^9 ≈ 10^18 overflows 32-bit, returns garbage.\n\n**Multiple words each with repeats** - product of multinomials.\n`Input: \"too hot\"` → `Expected: 18`\n⚠️ Bug: counting permutations of the whole string instead of per word (treating the space as removable) → 6!/2! = 360, wrong.\n\n**Smallest input** - one character.\n`Input: \"a\"` → `Expected: 1`\n⚠️ Bug: fact table sized 0 or skipping index 1 → out-of-bounds or wrong term for length-1 word."
+  ],
+  "followUps": [
+    {
+      "q": "What if the string can contain uppercase letters and digits?",
+      "a": "Widen the count array to 62 (or use a hash map) and reset counts per word; everything else is unchanged. Time and space stay O(n)."
+    },
+    {
+      "q": "What if the answer must be returned exactly (no modulo) for short strings?",
+      "a": "Use big integers (Python ints or Java BigInteger): compute L! and divide by each count factorial per word, then multiply across words. Complexity becomes dominated by big-integer multiplication, roughly O(n^2) bit operations worst case."
+    },
+    {
+      "q": "What if words can be rearranged across positions too (any permutation of all letters ignoring word boundaries)?",
+      "a": "Then count all non-space letters once and answer L!/(∏ ci!) for the whole string, ignoring word structure - a single multinomial instead of a product. Still O(n) time, O(n) space for factorials."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    static const long long MOD = 1000000007LL;\n    vector<long long> fact, inv_fact;\n\n    long long power(long long b, long long e) {\n        long long r = 1;\n        b %= MOD;\n        while (e > 0) {\n            if (e & 1) r = r * b % MOD;\n            b = b * b % MOD;\n            e >>= 1;\n        }\n        return r;\n    }\n\npublic:\n    int countAnagrams(string s) {\n        int n = s.size();\n        fact.resize(n + 1);\n        inv_fact.resize(n + 1);\n        fact[0] = 1;\n        for (int i = 1; i <= n; i++) fact[i] = fact[i - 1] * i % MOD;\n        inv_fact[n] = power(fact[n], MOD - 2);\n        for (int i = n; i >= 1; i--) inv_fact[i - 1] = inv_fact[i] * i % MOD;\n\n        long long ans = 1;\n        int cnt[26];\n        int i = 0;\n        while (i <= n) {\n            if (i == n || s[i] == ' ') {\n                // word ended at i; process [start, i)\n                i++;\n                continue;\n            }\n            int start = i;\n            while (i < n && s[i] != ' ') i++;\n            int len = i - start;\n            for (int k = 0; k < 26; k++) cnt[k] = 0;\n            for (int j = start; j < start + len; j++) cnt[s[j] - 'a']++;\n            long long term = fact[len];\n            for (int k = 0; k < 26; k++)\n                if (cnt[k] > 1) term = term * inv_fact[cnt[k]] % MOD;\n            ans = ans * term % MOD;\n            i++; // skip space\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

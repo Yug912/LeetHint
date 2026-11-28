@@ -1,0 +1,40 @@
+{
+  "slug": "cyclically-rotating-a-grid",
+  "title": "Cyclically Rotating a Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Matrix Layer Simulation with In-Place Cycle Replacement",
+  "tc": "O(m*n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- scalar locals (m, n, t, h, w, L, kk, g, s, j, nj, tmp, rs, cs, rj, cj, rn, cn): O(1)\n- recursion depth: none\n- not counted: input grid, returned grid (modified in place)",
+  "approach": "Each layer is a ring of L = 2(h+w)−4 cells read clockwise; one rotation shifts every element one step counter-clockwise, so after k rotations new[j] = old[(j+k) mod L]. Instead of copying the ring into a buffer, rotate in place with cycle replacement: for each of the gcd(L, k) cycles, follow indices j → (j+k) mod L, shifting values forward and keeping one temp. Total work is O(cells) = O(m·n) time with O(1) extra space.",
+  "hints": [
+    "If you walk the border of a layer clockwise and list its cells, what single arithmetic operation on a cell's position in that walk tells you where its value must come from after k rotations - and can you apply it without storing the whole walk anywhere?\n(The outermost layer of a 50×50 grid has 196 cells; k can be up to 10^9.)",
+    "Treat each ring as a circular array and rotate it in place by cycle replacement: start at index s, repeatedly write grid[j] = grid[(j+k) mod L] while saving one overwritten value in a temp, closing the cycle when you return to s. Example 1: ring order is 40,10,20,30; with k=1 the cycle writes 40→pos3, 10→pos0, 20→pos1, 30→pos2, giving [[10,20],[40,30]].",
+    "for each layer t:\n    h, w = current rectangle size; L = 2*(h+w) - 4\n    kk = k mod L; if kk == 0 continue\n    g = gcd(L, kk)\n    for s in 0..g-1:\n        tmp = value at ring index s\n        j = s\n        loop:\n            nj = (j + kk) mod L\n            if nj == s: break\n            write value at ring index nj into ring index j\n            j = nj\n        write tmp into ring index j\nring index → (row, col): top row left→right, then right column downward, bottom row right→left, left column upward",
+    "**Smallest grid** - a 2×2 grid has a single layer of length 4.\n`Input: grid = [[40,10],[30,20]], k = 1` → `Expected: [[10,20],[40,30]]`\n⚠️ Bug: rotating clockwise instead of counter-clockwise (writing grid[j+1] = grid[j]) → returns [[30,40],[20,10]].\n\n**k larger than ring length** - k up to 10^9 must be reduced modulo the ring length before cycling.\n`Input: grid = [[40,10],[30,20]], k = 5` → `Expected: [[10,20],[40,30]]`\n⚠️ Bug: looping the shift k times without mod → 10^9 iterations, TLE; or modding by m*n instead of L → wrong layout.\n\n**Multi-layer grid** - a 4×4 grid has two independent rings; the inner ring has length 4, not 12.\n`Input: grid = [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]], k = 2` → `Expected: [[3,4,8,12],[2,11,10,16],[1,7,6,15],[5,9,13,14]]`\n⚠️ Bug: computing the inner layer's length with the outer dimensions → inner ring indices go out of bounds or overwrite outer cells.\n\n**k a multiple of ring length** - the ring must come back unchanged.\n`Input: grid = [[1,2],[3,4]], k = 4` → `Expected: [[1,2],[3,4]]`\n⚠️ Bug: skipping the gcd and starting only cycle s=0 → only every gcd-th position is rotated, e.g. yields [[3,2],[4,1]] instead of the identity.\n\n**Non-square grid** - for m < n the top and bottom rows have different lengths than the side columns; the index→coordinate mapping must handle each side separately.\n`Input: grid = [[1,2,3,4],[5,6,7,8]], k = 1` → `Expected: [[2,3,4,8],[1,7,6,5]]`\n⚠️ Bug: assuming the ring is a square (using one side length for all four edges) → misplaces cells, e.g. returns [[2,3,4,1],[5,6,7,8]]."
+  ],
+  "followUps": [
+    {
+      "q": "Rotate only a given rectangular sub-grid (r1,c1,r2,c2) instead of the whole matrix.",
+      "a": "Run the same per-layer cycle replacement, offsetting each layer's top-left corner into the sub-rectangle and stopping when the layer thickness exceeds half the sub-rectangle's smaller side. Time is O(area of the sub-grid), extra space stays O(1)."
+    },
+    {
+      "q": "k up to 10^18 with many queries on the same grid.",
+      "a": "Precompute nothing per query - reduce k modulo each ring's length L (at most min(m,n)/2 rings), so each query is still O(m·n) time and O(1) space; the mod step is what makes huge k irrelevant."
+    },
+    {
+      "q": "Rotate each layer i by k_i steps given as an array, under a strict O(1) memory limit.",
+      "a": "Process layers one at a time with the same in-place cycle replacement using k_i mod L_i; no ring is ever materialized, so time stays O(m·n) and auxiliary space O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    long gcd(long a, long b) {\n        while (b) { long t = a % b; a = b; b = t; }\n        return a;\n    }\n    pair<int,int> pos(int t, long idx, int h, int w) {\n        int top = t, left = t, bottom = t + h - 1, right = t + w - 1;\n        long side = w;\n        if (idx < side) return {top, left + (int)idx};\n        idx -= side;\n        side = h - 1;\n        if (idx < side) return {top + 1 + (int)idx, right};\n        idx -= side;\n        side = w - 1;\n        if (idx < side) return {bottom, right - 1 - (int)idx};\n        idx -= side;\n        return {bottom - 1 - (int)idx, left};\n    }\npublic:\n    vector<vector<int>> rotateGrid(vector<vector<int>>& grid, int k) {\n        int m = grid.size(), n = grid[0].size();\n        for (int t = 0; t < min(m, n) / 2; t++) {\n            int h = m - 2 * t, w = n - 2 * t;\n            long L = 2L * (h + w) - 4;\n            long kk = k % L;\n            if (kk == 0) continue;\n            long g = gcd(L, kk);\n            for (long s = 0; s < g; s++) {\n                auto [rs, cs] = pos(t, s, h, w);\n                int tmp = grid[rs][cs];\n                long j = s;\n                while (true) {\n                    long nj = (j + kk) % L;\n                    if (nj == s) break;\n                    auto [rj, cj] = pos(t, j, h, w);\n                    auto [rn, cn] = pos(t, nj, h, w);\n                    grid[rj][cj] = grid[rn][cn];\n                    j = nj;\n                }\n                auto [rj, cj] = pos(t, j, h, w);\n                grid[rj][cj] = tmp;\n            }\n        }\n        return grid;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

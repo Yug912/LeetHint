@@ -1,0 +1,40 @@
+{
+  "slug": "number-of-distinct-roll-sequences",
+  "title": "Number of Distinct Roll Sequences",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "DP with State Compression",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- dp[7][7]: 49 long long entries, constant → O(1)\n- ndp[7][7]: 49 long long entries, constant → O(1)\n- recursion depth: none (iterative)\n- not counted: input n, returned int",
+  "approach": "The gap-2 rule means a new roll only conflicts with the previous two rolls, so the state is just the last two rolls (prev_prev, prev). We use DP where dp[a][b] counts valid sequences ending in rolls (a, b). For each new roll b, we sum dp[prev][a] over all prev such that gcd(a,b)=1, b≠a, b≠prev, and gcd(prev,a)=1. Base case (length 2): dp[a][b]=1 for each valid coprime pair with a≠b. The answer is the sum of all dp entries after n steps (with n=1 special-cased to 6).",
+  "hints": [
+    "When you place the i-th roll, which previous rolls can possibly conflict with it under the two rules? The constraint n ≤ 10^4 rules out enumerating all 6^n sequences.",
+    "Use dynamic programming where the state is the last two rolls (prev_prev, prev). For n=4, from state (1,2) you can extend to (2,3) since gcd(2,3)=1 and 3 differs from both 1 and 2.",
+    "```\ndp[a][b] = 1 for each pair with a≠b and gcd(a,b)=1\nfor len = 3 to n:\n    ndp[a][b] = sum of dp[p][a] over all p where\n        p ≠ a, p ≠ b, gcd(p,a)=1, gcd(a,b)=1\n    dp = ndp\nanswer = sum of all dp[a][b]\n```",
+    "**Smallest input** - n=1, no adjacency or gap constraints apply yet\n`Input: n = 1` → `Expected: 6`\n⚠️ Bug: initialising dp for length 2 and summing without special-casing n=1 → returns 0\n\n**GCD adjacency** - adjacent rolls must be coprime, e.g. (3,6) is excluded\n`Input: n = 2` → `Expected: 22`\n⚠️ Bug: omitting the gcd(a,b)==1 check, only requiring a≠b → returns 30\n\n**Gap of exactly 2** - equal values at distance 2 are forbidden, e.g. (1,2,1) is invalid\n`Input: n = 3` → `Expected: 66`\n⚠️ Bug: only checking b≠a but allowing b==prev_prev → returns 88"
+  ],
+  "followUps": [
+    {
+      "q": "What if the die has k sides instead of 6?",
+      "a": "The state space becomes k² instead of 36, and each transition iterates over k possible prev values. Precompute the valid transition table once. Time O(n·k³), space O(k²)."
+    },
+    {
+      "q": "What if equal values must be 4+ apart instead of 3+?",
+      "a": "The state must track the last 3 rolls: dp[a][b][c]. Each transition checks c against all three previous values. Time O(n·k⁴), space O(k³)."
+    },
+    {
+      "q": "What if n can be up to 10^18?",
+      "a": "Build the 36×36 transition matrix M where M[(a,b)][(b,c)] = 1 if the transition is valid. Use matrix exponentiation to compute M^(n-2) applied to the initial vector. Time O(36³·log n), space O(36²)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    int gcd(int a, int b) {\n        while (b) { int t = a % b; a = b; b = t; }\n        return a;\n    }\npublic:\n    int distinctSequences(int n) {\n        const int MOD = 1e9 + 7;\n        if (n == 1) return 6;\n\n        // dp[a][b]: count of valid sequences ending with rolls (a, b)\n        vector<vector<long long>> dp(7, vector<long long>(7, 0));\n        for (int a = 1; a <= 6; a++)\n            for (int b = 1; b <= 6; b++)\n                if (a != b && gcd(a, b) == 1)\n                    dp[a][b] = 1;\n\n        for (int len = 3; len <= n; len++) {\n            vector<vector<long long>> ndp(7, vector<long long>(7, 0));\n            for (int a = 1; a <= 6; a++) {\n                for (int b = 1; b <= 6; b++) {\n                    if (a == b || gcd(a, b) != 1) continue;\n                    for (int p = 1; p <= 6; p++) {\n                        if (p == a || p == b || gcd(p, a) != 1) continue;\n                        ndp[a][b] = (ndp[a][b] + dp[p][a]) % MOD;\n                    }\n                }\n            }\n            dp = move(ndp);\n        }\n\n        long long ans = 0;\n        for (int a = 1; a <= 6; a++)\n            for (int b = 1; b <= 6; b++)\n                ans = (ans + dp[a][b]) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

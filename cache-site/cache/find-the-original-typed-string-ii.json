@@ -1,0 +1,40 @@
+{
+  "slug": "find-the-original-typed-string-ii",
+  "title": "Find the Original Typed String II",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Complement Counting + Run-Length DP with Prefix Sum",
+  "tc": "O(n + k²)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vectors f, nf, pre: each size k (or k+1) → O(k)\n- pass 1 and pass 2 scan word with index variables only, no run storage → O(1)\n- not counted: input string word",
+  "approach": "Split the answer as (all strings) − (strings of length < k). The total is the product of the run lengths of equal characters; the \"too short\" count is computed with a DP over runs where state j = current length (0…k−1), updated per run with a sliding-window/prefix-sum sum. Since k ≤ 2000, if the number of runs is ≥ k every string already has length ≥ k, so we skip the DP entirely; otherwise there are < k runs, giving O(k²) DP. Two passes over word avoid storing the run list, keeping space O(k).",
+  "hints": [
+    "Every maximal block of identical letters in word - how does the count of possible original strings depend only on the lengths of these blocks, not on their order or letters?\nConstraint check: word can be 5·10^5 chars but k ≤ 2000 - what does that gap suggest about which lengths you must count exactly?",
+    "Complement counting with a DP indexed by total length. For \"aabbccdd\", k=7: runs are 2,2,2,2, total strings = 2·2·2·2 = 16; the DP over lengths 0…6 counts the 11 strings shorter than 7, giving 16 − 11 = 5.",
+    "pass 1: scan word, count runs g, product P of run lengths (mod 1e9+7)\nif g ≥ k: return P\nreset scan; f[0] = 1, f otherwise 0 (indices 0..k-1)\nfor each run of length r:\n    c = min(r, k)\n    build prefix sums pre of f\n    newf[t] = pre[t] − pre[max(0, t−c)]   for t = 0..k−1\n    f = newf\nreturn P − sum(f[0..k−1])  (mod 1e9+7)",
+    "**Single character, k = 1** - one run means g ≥ k, so the DP must be skipped entirely.\n`Input: word = \"a\", k = 1` → `Expected: 1`\n⚠️ Bug: running the DP even when g ≥ k and returning sum(f) − (P − sum(f)) style mixups → returns 0 instead of 1.\n\n**All distinct characters, small k** - g = n ≥ k triggers the product-only path.\n`Input: word = \"abc\", k = 2` → `Expected: 1`\n⚠️ Bug: forgetting the g ≥ k shortcut and capping run lengths at k in the DP → still 1 here, but O(n·k) time → TLE on 5·10^5 distinct letters.\n\n**Long single run, large k** - run length 5·10^5 with k = 2000 must be clamped, and the product needs modular arithmetic.\n`Input: word = \"aaa…a\" (5·10^5 a's), k = 2000` → `Expected: 498001`\n⚠️ Bug: iterating i = 1..runLength inside the DP instead of clamping c = min(r, k) → O(n·k) TLE; multiplying P in int without mod → overflow since the true product reaches 5·10^5 only here but 2^31 is exceeded once several runs multiply (e.g. 1000 runs of 500 → 5·10^14).\n\n**Negative after subtraction** - P − bad can go negative before the mod.\n`Input: word = \"aabbccdd\", k = 8` → `Expected: 1`\n⚠️ Bug: returning (P − bad) % MOD without adding MOD → returns −14 % 10^9+7 = −14 instead of 1."
+  ],
+  "followUps": [
+    {
+      "q": "What if k could be up to 5·10^5 (same as n)?",
+      "a": "The O(k²) DP no longer fits; you would need the full O(n·k)-style DP with prefix sums over all runs, which is too slow, so instead count strings of length < k directly with a generating-function/NTT-style convolution of run-length polynomials truncated at k, achieving roughly O(k log k). Space becomes O(k)."
+    },
+    {
+      "q": "Return the actual number of original strings of length exactly k?",
+      "a": "Use the same DP but read only f[k] at the end instead of the sum over 0…k−1; runs must not be clamped below k+1, so cap at k instead. Time stays O(n + k²) when runs < k, space O(k)."
+    },
+    {
+      "q": "Stream the input (no random access, word longer than memory)?",
+      "a": "The two-pass design already works in one logical stream if you buffer only the current run: pass 1 computes g and P, and if g ≥ k you never need the data again; otherwise re-stream (or, with O(n) space, store run lengths - at most k of them matter once g < k). Time O(n + k²), space O(k) with re-streaming or O(k) run storage in one pass by keeping only the first k runs and merging the rest's product."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int possibleStringCount(string word, int k) {\n        const long long MOD = 1000000007;\n        int n = word.size();\n        long long P = 1;\n        int g = 0;\n        for (int i = 0; i < n; ) {\n            int j = i;\n            while (j < n && word[j] == word[i]) j++;\n            int r = j - i;\n            g++;\n            P = P * r % MOD;\n            i = j;\n        }\n        if (g >= k) return (int)P;\n        vector<long long> f(k, 0), nf(k, 0), pre(k + 1, 0);\n        f[0] = 1;\n        for (int i = 0; i < n; ) {\n            int j = i;\n            while (j < n && word[j] == word[i]) j++;\n            int c = j - i;\n            if (c > k) c = k;\n            pre[0] = 0;\n            for (int t = 0; t < k; t++) pre[t + 1] = (pre[t] + f[t]) % MOD;\n            for (int t = 0; t < k; t++) {\n                int lo = t - c;\n                if (lo < 0) lo = 0;\n                nf[t] = (pre[t] - pre[lo] + MOD) % MOD;\n            }\n            swap(f, nf);\n            i = j;\n        }\n        long long bad = 0;\n        for (int t = 0; t < k; t++) bad = (bad + f[t]) % MOD;\n        return (int)((P - bad + MOD) % MOD);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

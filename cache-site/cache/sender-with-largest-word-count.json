@@ -1,0 +1,40 @@
+{
+  "slug": "sender-with-largest-word-count",
+  "title": "Sender With Largest Word Count",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Map Counting",
+  "tc": "O(n * L)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<string,int> cnt: up to n distinct senders → O(n)\n- string best: max sender length ≤ 10 → O(1)\n- recursion depth: none\n- not counted: input vectors, returned string",
+  "approach": "Count words per message as (number of spaces + 1), avoiding string splitting. Accumulate these counts in a hash map keyed by sender name. After processing all messages, scan the map: track the sender with the maximum count, breaking ties by the lexicographically larger name (C++ `std::string` comparison already matches the required ASCII ordering where uppercase precedes lowercase).",
+  "hints": [
+    "Without splitting a message into words, what single character can you count to determine how many words it contains? Each message has no leading/trailing spaces and exactly one space between consecutive words.",
+    "Use a hash map from sender name to accumulated word count. For \"Hello userTwooo\" sent by Alice, count 1 space → 2 words, then add 2 to Alice's running total.",
+    "```\nfor each i from 0 to n-1:\n    words = 1 + count of spaces in messages[i]\n    cnt[senders[i]] += words\nbest = \"\", bestCnt = -1\nfor each (name, c) in cnt:\n    if c > bestCnt or (c == bestCnt and name > best):\n        bestCnt = c\n        best = name\nreturn best\n```",
+    "**Tie-break direction** - two senders tie in word count, names differ in case\n`Input: messages = [\"Hi\",\"Hello\"], senders = [\"alice\",\"Alice\"]` → `Expected: \"alice\"`\n⚠️ Bug: using `name < best` instead of `name > best` in the tie branch → returns \"Alice\"\n\n**Overwrite vs accumulate** - same sender appears in multiple messages\n`Input: messages = [\"a\",\"b c\",\"d e\"], senders = [\"Alice\",\"Alice\",\"Bob\"]` → `Expected: \"Alice\"`\n⚠️ Bug: assigning `cnt[sender] = words` instead of `+=` → Alice gets 2 (last message only), ties Bob at 2, returns \"Bob\"\n\n**Case sensitivity** - \"Alice\" and \"alice\" are distinct senders\n`Input: messages = [\"Hi there\",\"Yo\"], senders = [\"Alice\",\"alice\"]` → `Expected: \"Alice\"`\n⚠️ Bug: lowercasing sender names before using as keys → merges both into one entry, returns \"alice\"\n\n**Minimum input** - single message, single sender\n`Input: messages = [\"Hi\"], senders = [\"Alice\"]` → `Expected: \"Alice\"`\n⚠️ Bug: initializing `bestCnt = 0` and only updating when `c > bestCnt` strictly → still works here, but initializing `best = \"\"` and comparing names first returns \"\" if no sender exceeds 0 words, which cannot happen under constraints but breaks if word counts could be zero"
+  ],
+  "followUps": [
+    {
+      "q": "If messages could be edited (word inserted/deleted) dynamically, how would you maintain the answer?",
+      "a": "Keep the hash map of per-sender counts and a max-heap keyed by (count, name). On each edit, update the sender's count and push a new heap entry; lazily pop stale top entries whose count no longer matches the map. Each query is O(log n) amortized, updates O(log n)."
+    },
+    {
+      "q": "If senders could be very numerous (10^9 distinct) but only the top-k matter, how would you reduce memory?",
+      "a": "Replace the full hash map with a bounded structure like a min-heap of size k tracking the top-k senders by (count, name). For senders already in the top-k, update in place; for new senders, only insert if they beat the current minimum. Space drops to O(k) but you may undercount senders who later reappear, so you still need a full count map unless messages arrive in sender-grouped order."
+    },
+    {
+      "q": "If the log arrives as an unbounded stream and you must answer \"current leader\" at any time, what changes?",
+      "a": "Maintain the count map plus a variable tracking the current best (count, name). On each incoming message, increment the sender's count; if that sender now exceeds the current best or ties with a lexicographically larger name, update the best. This gives O(L) per message and O(1) per query, with O(n) space for the map."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    string largestWordCount(vector<string>& messages, vector<string>& senders) {\n        unordered_map<string, int> cnt;\n        int n = messages.size();\n        for (int i = 0; i < n; i++) {\n            int words = 1;\n            for (char c : messages[i]) {\n                if (c == ' ') words++;\n            }\n            cnt[senders[i]] += words;\n        }\n        string best;\n        int bestCnt = -1;\n        for (auto& [name, c] : cnt) {\n            if (c > bestCnt || (c == bestCnt && name > best)) {\n                bestCnt = c;\n                best = name;\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "apply-operations-on-array-to-maximize-sum-of-squares",
+  "title": "Apply Operations on Array to Maximize Sum of Squares",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Bit Redistribution",
+  "tc": "O((n + k) log V)",
+  "sc": "O(log V)",
+  "spaceBreakdown": "- int cnt[31]: fixed 31 integers → O(1)\n- no recursion, no heap, no dynamic containers\n- not counted: input vector nums, returned int",
+  "approach": "The operation (a, b) → (a AND b, a OR b) preserves the count of set bits at each position across the entire array - it only redistributes them. To maximize the sum of squares (a convex function), we concentrate bits into as few elements as possible. For each bit position b, count how many elements have that bit set. Then construct k numbers greedily: the i-th number (0-indexed, largest first) gets bit b if the count for that bit exceeds i. Sum the squares of these k numbers modulo 10^9+7.",
+  "hints": [
+    "The operation replaces (a, b) with (a AND b, a OR b). For any single bit position, how does the total number of 1s across all array elements change after one operation? The constraint n ≤ 10^5 means we cannot try every possible sequence of operations.",
+    "For each bit position, count how many elements have that bit set - this count is invariant. Build k numbers greedily: the i-th number (0-indexed) gets bit b if the count for bit b exceeds i. Example: nums = [2,6,5,8], k=2 → bit counts are bit0=1, bit1=2, bit2=2, bit3=1 → number 0 = 15, number 1 = 6 → 15²+6² = 261.",
+    "```\nfor each bit b in 0..30:\n    count[b] = number of elements with bit b set\nans = 0\nfor i in 0..k-1:\n    num = 0\n    for b in 0..30:\n        if count[b] > i:\n            set bit b in num\n    ans = (ans + num * num) mod MOD\nreturn ans\n```",
+    "**Single element** - n = k = 1, no operation can change anything\n`Input: nums = [7], k = 1` → `Expected: 49`\n⚠️ Bug: using `cnt[b] >= i` with 0-indexed `i` → `cnt[b] >= 0` is always true → number 0 gets all 31 bits (value 2147483647) → returns 588298198\n\n**Overflow** - large values, squares exceed 2^31\n`Input: nums = [1000000000, 1000000000], k = 2` → `Expected: 98`\n⚠️ Bug: using `int` for `num` and computing `num * num` as `int` multiplication → 10^9 × 10^9 = 10^18 overflows 32-bit int → wrong output\n\n**Complementary bits** - two elements with disjoint bits can merge into one\n`Input: nums = [1, 2], k = 2` → `Expected: 9`\n⚠️ Bug: returning sum of squares of original elements without applying operations → 1 + 4 = 5 instead of 9\n\n**k equals n** - all bits can concentrate into one element\n`Input: nums = [1, 2, 4], k = 3` → `Expected: 49`\n⚠️ Bug: sorting and picking top-k original elements → 4² + 2² + 1² = 21 instead of 49"
+  ],
+  "followUps": [
+    {
+      "q": "What if you are limited to at most m operations?",
+      "a": "Each operation can transfer multiple bits between two elements at once, so the minimum operations to reach the optimal distribution is not simply the number of misplaced bits. You would need to analyze how to pair elements to move bits efficiently - the bit-count array gives the target state, but reaching it in m operations requires a matching argument."
+    },
+    {
+      "q": "What if nums[i] can be up to 10^18?",
+      "a": "Use 60 bits instead of 31. The algorithm is identical: count set bits per position, then construct k numbers. Time complexity becomes O(60n + 60k) = O(n + k), space O(60) = O(1)."
+    },
+    {
+      "q": "What if nums arrives as a stream and you can only store O(1) words of memory?",
+      "a": "The bit-count array (60 integers) is already O(1) space. Process each element as it arrives, incrementing the relevant bit counts. After the stream ends, construct the k largest numbers from the counts. No change to the algorithm needed."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxSum(vector<int>& nums, int k) {\n        const long long MOD = 1000000007;\n        int cnt[31] = {0};\n        for (int x : nums) {\n            for (int b = 0; b < 31; b++) {\n                if (x & (1 << b)) cnt[b]++;\n            }\n        }\n        long long ans = 0;\n        for (int i = 0; i < k; i++) {\n            long long num = 0;\n            for (int b = 0; b < 31; b++) {\n                if (cnt[b] > i) {\n                    num |= (1LL << b);\n                }\n            }\n            long long sq = (num % MOD) * (num % MOD) % MOD;\n            ans = (ans + sq) % MOD;\n        }\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

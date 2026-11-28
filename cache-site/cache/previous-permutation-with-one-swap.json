@@ -1,0 +1,40 @@
+{
+  "slug": "previous-permutation-with-one-swap",
+  "title": "Previous Permutation With One Swap",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Scan",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables i, bestJ, j, n: O(1)\n- swap: in-place, O(1)\n- not counted: input vector arr (modified in place), returned vector",
+  "approach": "To get the lexicographically largest permutation smaller than `arr` with one swap, we must change the rightmost possible position so the prefix stays identical as long as possible. We find the rightmost descent `i` where `arr[i] > arr[i+1]` - this is the rightmost index that can be decreased by swapping with a smaller value to its right. Then we scan `arr[i+1..n-1]` for the largest value strictly less than `arr[i]`; on ties we keep the leftmost occurrence so that `arr[i]` lands as far left as possible, maximizing the suffix. If no descent exists, the array is non-decreasing and already the smallest permutation.",
+  "hints": [
+    "When two permutations are compared lexicographically, which is the first position that decides which is larger? Given that, where should your single swap act to keep the result as close to the original as possible? A swap at positions i < j makes the result smaller only if arr[i] > arr[j].",
+    "Scan right-to-left to find the rightmost descent `arr[i] > arr[i+1]`, then scan right of `i` for the largest value below `arr[i]` (leftmost on ties). In `[1,9,4,6,7]` the rightmost descent is index 1 (9 > 4); the largest value below 9 in `[4,6,7]` is 7 at index 4, so swap indices 1 and 4 → `[1,7,4,6,9]`.",
+    "```\ni = n - 2\nwhile i >= 0 and arr[i] <= arr[i+1]:\n    i = i - 1\nif i < 0:\n    return arr\nbestJ = i + 1\nfor j = i + 2 to n - 1:\n    if arr[j] < arr[i] and arr[j] > arr[bestJ]:\n        bestJ = j\nswap arr[i], arr[bestJ]\nreturn arr\n```",
+    "**Single element** - n = 1, no swap is possible.\n`Input: arr = [5]` → `Expected: [5]`\n⚠️ Bug: not guarding `i < 0` before indexing `arr[i]` → out-of-bounds access\n\n**Non-decreasing with duplicates** - equal adjacent values hide the real descent.\n`Input: arr = [2,1,1]` → `Expected: [1,2,1]`\n⚠️ Bug: using `arr[i] < arr[i+1]` (strict) instead of `<=` in the descent loop → stops at i=1 (1 is not < 1), swaps equal values, returns `[2,1,1]`\n\n**Ties in max value** - multiple equal candidates for the swap target.\n`Input: arr = [1,3,2,2]` → `Expected: [1,2,3,2]`\n⚠️ Bug: updating bestJ on `arr[j] >= arr[bestJ]` (picking rightmost tie) → returns `[1,2,2,3]`\n\n**Leftmost vs rightmost descent** - must pick the rightmost descent to keep the prefix longest.\n`Input: arr = [3,2,1]` → `Expected: [3,1,2]`\n⚠️ Bug: scanning left-to-right for the first descent (i=0, 3>2) and swapping 3 with max < 3 in `[2,1]` = 2 at j=1 → returns `[2,3,1]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if you are allowed at most k swaps instead of exactly one?",
+      "a": "Repeat the one-swap greedy up to k times, re-running the rightmost-descent search after each swap. Each iteration is O(n), so total time is O(k·n), space O(1). The greedy choice at each step is still locally optimal because each swap fixes the rightmost decreasable position."
+    },
+    {
+      "q": "What if arr.length can be up to 10^7 - can you avoid two separate passes?",
+      "a": "Yes. During the right-to-left scan for the descent, also track the maximum value and its leftmost index seen so far to the right. When you find the descent at i, you already know the best swap target, collapsing both passes into one. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "Return the count of distinct one-swap permutations that are lexicographically smaller than arr.",
+      "a": "For each index i, count values to its right that are strictly smaller than arr[i], deduplicating by value. Sum over all i. This is O(n²) naively or O(n log n) with a Fenwick tree on compressed values. Space becomes O(n) for the Fenwick tree."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> prevPermOpt1(vector<int>& arr) {\n        int n = arr.size();\n        int i = n - 2;\n        while (i >= 0 && arr[i] <= arr[i + 1]) i--;\n        if (i < 0) return arr;\n        int bestJ = i + 1;\n        for (int j = i + 2; j < n; j++) {\n            if (arr[j] < arr[i] && arr[j] > arr[bestJ]) {\n                bestJ = j;\n            }\n        }\n        swap(arr[i], arr[bestJ]);\n        return arr;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

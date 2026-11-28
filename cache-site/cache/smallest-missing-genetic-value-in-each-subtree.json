@@ -1,0 +1,40 @@
+{
+  "slug": "smallest-missing-genetic-value-in-each-subtree",
+  "title": "Smallest Missing Genetic Value in Each Subtree",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Path Traversal with Incremental DFS",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<vector<int>> children: up to n-1 edges → O(n)\n- vector<bool> seen: size n+2 → O(n)\n- vector<bool> visited: size n → O(n)\n- stack<int> st: up to n nodes → O(n)\n- not counted: input parents/nums, returned ans",
+  "approach": "Only subtrees containing the node with value 1 can have an answer > 1; all others get answer 1. Walk up from the node holding value 1 toward the root, maintaining a `seen` boolean array (bounded by n+2, since any subtree's answer is at most n+1) and a monotonically increasing `missing` counter. At each step, DFS the current node's subtree (skipping already-visited nodes so each node is processed once total), mark values ≤ n+1 as seen, advance `missing` past all consecutive seen values, and record `ans[cur] = missing`. Total work is O(n) since every node is visited once and `missing` only increases.",
+  "hints": [
+    "Which nodes' subtrees are guaranteed to contain the value 1? For every other node, what must the answer be?",
+    "Use a boolean `seen` array (sized n+2) and a `miss` counter starting at 1. Process the path from the value-1 node up to the root; for each path node, iteratively DFS to mark values, then advance `miss` past consecutive seen values. In Example 2, node 4 holds value 1, so path = [4,3,0]; processing node 4 marks seen[1], miss advances to 2, ans[4]=2.",
+    "```\nfind node with value 1\nbuild path from that node to root\nseen = boolean array of size n+2, miss = 1\nfor each node p in path (bottom to top):\n    iteratively DFS from p, marking seen[val] for each unvisited node\n    while seen[miss]: miss++\n    ans[p] = miss\nset ans = 1 for all nodes not on path\n```",
+    "**Wrong miss start** - The missing-value counter is initialized to 0 instead of 1.\n`Input: parents = [-1,0,0], nums = [1,2,3]` → `Expected: [4,1,1]`\n⚠️ Bug: Initializing miss to 0 instead of 1 → seen[0] is always false, miss stays 0, returns [0,1,1].\n\n**Wrong path order** - Path nodes are processed from root down instead of from value-1 node up.\n`Input: parents = [-1,0,1], nums = [3,2,1]` → `Expected: [4,3,2]`\n⚠️ Bug: Processing path top-down with a visited array → all nodes visited at root, miss=4 for all, returns [4,4,4].\n\n**Uninitialized answers** - Default answer for non-path nodes is left at 0.\n`Input: parents = [-1,0,0,2], nums = [1,2,3,4]` → `Expected: [5,1,1,1]`\n⚠️ Bug: Initializing ans to 0 instead of 1 → non-path nodes get 0, returns [5,0,0,0].\n\n**Incomplete path** - Only the value-1 node is processed, not its ancestors.\n`Input: parents = [-1,0,1], nums = [3,2,1]` → `Expected: [4,3,2]`\n⚠️ Bug: Only processing the value-1 node → ancestors keep default ans=1, returns [1,1,2]."
+  ],
+  "followUps": [
+    {
+      "q": "What if genetic values can be up to 10^9 instead of 10^5?",
+      "a": "Replace the `seen` boolean array with an unordered_set, inserting only values ≤ n+1 since miss never exceeds n+1. The rest of the algorithm stays the same. Time remains O(n) expected, space O(n)."
+    },
+    {
+      "q": "What if we need to support point updates (changing a node's genetic value) and re-query all answers?",
+      "a": "Each update could move value 1 to a different node, shifting the critical path entirely. We'd recompute the path and re-run the bottom-up collection from scratch, costing O(n) per update. For frequent updates, a segment tree over the Euler tour of the tree could maintain subtree value sets, giving O(n log n) preprocessing and O(log n) per query."
+    },
+    {
+      "q": "What if the tree is given as undirected edges instead of parent pointers, and we must handle it in a single pass?",
+      "a": "First build parent pointers via BFS or DFS from node 0, which is O(n). Then apply the same path-based approach unchanged. Total time and space remain O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> smallestMissingValueSubtree(vector<int>& parents, vector<int>& nums) {\n        int n = parents.size();\n        vector<vector<int>> children(n);\n        for (int i = 1; i < n; i++) {\n            children[parents[i]].push_back(i);\n        }\n        \n        vector<int> ans(n, 1);\n        \n        int oneNode = -1;\n        for (int i = 0; i < n; i++) {\n            if (nums[i] == 1) { oneNode = i; break; }\n        }\n        \n        if (oneNode == -1) return ans;\n        \n        vector<bool> seen(n + 2, false);\n        vector<bool> visited(n, false);\n        int missing = 1;\n        \n        int cur = oneNode;\n        while (cur != -1) {\n            stack<int> st;\n            st.push(cur);\n            while (!st.empty()) {\n                int u = st.top(); st.pop();\n                if (visited[u]) continue;\n                visited[u] = true;\n                if (nums[u] <= n + 1) seen[nums[u]] = true;\n                for (int c : children[u]) {\n                    if (!visited[c]) st.push(c);\n                }\n            }\n            while (missing <= n + 1 && seen[missing]) missing++;\n            ans[cur] = missing;\n            cur = parents[cur];\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

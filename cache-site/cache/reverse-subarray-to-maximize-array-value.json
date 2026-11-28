@@ -1,0 +1,40 @@
+{
+  "slug": "reverse-subarray-to-maximize-array-value",
+  "title": "Reverse Subarray To Maximize Array Value",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Sign-Case Decomposition",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- bestPair[2][2] of long long: fixed 4 entries → O(1)\n- loop scalars: O(1)\n- recursion depth: none\n- not counted: input vector nums",
+  "approach": "The value only changes at the two \"seams\" of the reversed block, so a reversal [L,R] changes the total by |a[L-1]-a[R]| + |a[L]-a[R+1]| - d[L-1] - d[R] (interior), plus simpler boundary cases for prefix/suffix reversals. Expanding each abs as max(±x±y) decouples the expression into a \"left pair\" (a[L-1],a[L]) and a \"right pair\" (a[R],a[R+1]); precompute the best left pair for each of the 4 sign combinations, then scan all right pairs. Total gain = base value + best candidate over all cases; everything is O(n).",
+  "hints": [
+    "When a block is reversed, which adjacent pairs of the array actually change, and how many of them are there? With n up to 3·10^4, checking every (L, R) pair is off the table - what does that force you to look at instead?",
+    "Brute-force the gain formula only over the two seam pairs: for [2,4,9,24,2,1,10], reversing [24,2] changes only the seams (9,24)→(9,2) and (2,1)→(24,1), a gain of |9-2|+|24-1|-15-1 = 14, and 54+14 = 68. Since |x-y| = max(x-y, y-x), the two seam terms split into 4 independent sign cases you can maximize in one pass.",
+    "base = sum of |a[i+1]-a[i]|\nbest = 0\nfor each i: consider prefix reversal gain |a[0]-a[i+1]| - d[i] and suffix gain |a[n-1]-a[i]| - d[i]\nfor s in {+1,-1}, t in {+1,-1}:\n    left[s][t] = max over i of (s*a[i] + t*a[i+1] - d[i])\nfor each j:\n    best = max(best, max over s,t of left[s][t] - s*a[j] - t*a[j+1] - d[j])\nreturn base + best",
+    "**Two elements** - the smallest allowed array has one adjacent pair and no interior reversal.\n`Input: [2,4]` → `Expected: 2`\n⚠️ Bug: assuming an interior reversal [L,R] with L>0 and R<n-1 always exists and iterating only that case → returns 0.\n\n**Overflow in base** - n = 3·10^4 with alternating ±10^5 gives base ≈ 3·10^4 × 2·10^5 = 6·10^9.\n`Input: [100000,-100000,100000,-100000,... (3·10^4 elems)]` → `Expected: 5999800002` (fits in int per guarantee, intermediates do not)\n⚠️ Bug: accumulating base in an int → wraps around and returns a negative/wrong value.\n\n**All elements equal** - every difference is 0 and every candidate gain is ≤ 0.\n`Input: [5,5,5,5]` → `Expected: 0`\n⚠️ Bug: initialising best gain to a value like -1 instead of 0 and returning base + best → returns -1.\n\n**Boundary reversal beats interior** - the best move can be reversing a prefix or suffix, which the 4-case interior formula never considers.\n`Input: [1,2,3,4,5]` → `Expected: 7` (reverse [1,2,3,4] prefix part: gain |1-5|-|4-5| = 3, base 4 → 7)\n⚠️ Bug: only evaluating the interior seam formula → returns 4.\n\n**Negative values** - signs matter in the ± expansion; a naive max over unsigned assumptions breaks.\n`Input: [-5,-1,3]` → `Expected: 8` (base 4+4=8, no reversal helps)\n⚠️ Bug: initialising the 4 sign-case maxima to 0 instead of LLONG_MIN-style sentinels → a spurious case pollutes the max."
+  ],
+  "followUps": [
+    {
+      "q": "What if you could perform k reversals instead of one?",
+      "a": "With multiple reversals the seam analysis no longer decomposes independently; a common variant is k non-overlapping reversals, solvable by DP over positions tracking the best gain, giving O(n·k) time and O(k) space with a rolling array."
+    },
+    {
+      "q": "What if you must reverse exactly one subarray, even if it lowers the value?",
+      "a": "Then the answer is base + max(0 is disallowed), so you take the best gain even when negative - the same O(n) scan but you initialise best to the worst candidate (e.g. reversing any single pair, gain -2·d[i] at minimum) instead of 0."
+    },
+    {
+      "q": "Can this be done with O(1) extra space on a streaming read of the array?",
+      "a": "Yes - the algorithm only needs the previous element, the running base sum, the 4 sign-case maxima, and the first/last elements seen so far, so a single pass with O(1) memory works; note the suffix-boundary case needs the final element, so a second pass or storing a[n-1] at the end is required."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maxValueAfterReverse(vector<int>& nums) {\n        int n = nums.size();\n        long long base = 0;\n        for (int i = 0; i + 1 < n; ++i)\n            base += abs(nums[i + 1] - nums[i]);\n\n        long long best = 0;\n\n        // Boundary reversals: prefix [0..i] and suffix [i+1..n-1]\n        for (int i = 0; i + 1 < n; ++i) {\n            long long d = abs(nums[i] - nums[i + 1]);\n            best = max(best, (long long)abs(nums[0] - nums[i + 1]) - d);\n            best = max(best, (long long)abs(nums[n - 1] - nums[i]) - d);\n        }\n\n        // Interior reversals via 4 sign cases.\n        // left[s][t] = max over i of (s*a[i] + t*a[i+1] - d[i]), s,t in {-1,+1}\n        long long left[2][2];\n        const long long NEG = LLONG_MIN / 4;\n        for (int s = 0; s < 2; ++s)\n            for (int t = 0; t < 2; ++t)\n                left[s][t] = NEG;\n\n        for (int j = 0; j + 1 < n; ++j) {\n            long long x = nums[j], y = nums[j + 1];\n            long long d = abs(y - x);\n            // update left table with pair (x, y) as the (L-1, L) pair\n            for (int s = 0; s < 2; ++s) {\n                long long sx = s ? x : -x;\n                for (int t = 0; t < 2; ++t) {\n                    long long ty = t ? y : -y;\n                    left[s][t] = max(left[s][t], sx + ty - d);\n                }\n            }\n            // use pair (x, y) as the (R, R+1) pair: contribution -s*x - t*y - d\n            for (int s = 0; s < 2; ++s) {\n                long long sx = s ? x : -x;\n                for (int t = 0; t < 2; ++t) {\n                    long long ty = t ? y : -y;\n                    if (left[s][t] != NEG)\n                        best = max(best, left[s][t] - sx - ty - d);\n                }\n            }\n        }\n\n        return (int)(base + best);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
