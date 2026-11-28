@@ -1,0 +1,51 @@
+{
+  "slug": "design-add-and-search-words-data-structure",
+  "title": "Design Add and Search Words Data Structure",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-26",
+  "pattern": "Trie with DFS",
+  "tc": "O(L)",
+  "sc": "O(N · L)",
+  "spaceBreakdown": "- Trie nodes: up to N·L nodes, each with 26 pointers + 1 bool → O(N·L)\n- Recursion call stack: up to L = 25 deep → O(L)\n- Not counted: input strings, returned bool",
+  "approach": "Use a trie (prefix tree) where each node stores 26 child pointers and an end-of-word flag. `addWord` walks from the root, creating nodes as needed and marking the final node. `search` uses DFS: for a normal letter, follow the corresponding child; for `'.'`, recursively try all non-null children. Since at most 2 dots appear per query, the branching is bounded (26² = 676), keeping search fast.",
+  "hints": [
+    "When adding \"bad\" and \"bat\", which characters are identical, and how could you avoid re-examining them for each word? word.length ≤ 25 and at most 2 dots appear in any search.",
+    "Use a trie (prefix tree): each node has 26 child pointers and an end-of-word flag. Adding \"bad\" creates root→b→a→d with the flag set at \"d\"; searching \".ad\" tries all children of root, then follows a→d.",
+    "```\naddWord(word): walk from root, create missing nodes, set isEnd at last node\nsearch(word): dfs(root, word, 0)\ndfs(node, word, i):\n    if i == len(word): return node.isEnd\n    if word[i] == '.': try dfs on all non-null children, return true if any succeeds\n    else: follow node.children[word[i]], return false if null\n```",
+    "**Prefix not a word** - search string is a proper prefix of an added word\n`Input: [\"WordDictionary\",\"addWord\",\"search\"],[[],[\"bad\"],[\"ba\"]]` → `Expected: [null,null,false]`\n⚠️ Bug: returning true when the search index reaches the end without checking the isEnd flag → returns true\n\n**Non-existent character** - search word has a letter not present at that trie position\n`Input: [\"WordDictionary\",\"addWord\",\"search\"],[[],[\"bad\"],[\"pad\"]]` → `Expected: [null,null,false]`\n⚠️ Bug: not checking if children[idx] is null before recursing in the non-dot branch → dereferences null pointer, crash\n\n**Dot at last position** - wildcard is the final character, but the only matching child is not an end node\n`Input: [\"WordDictionary\",\"addWord\",\"search\"],[[],[\"bade\"],[\"ba.\"]]` → `Expected: [null,null,false]`\n⚠️ Bug: when handling '.', returning true if any child exists instead of recursing to check isEnd → returns true\n\n**Single character word** - word length is 1\n`Input: [\"WordDictionary\",\"addWord\",\"search\",\"search\"],[[],[\"a\"],[\"a\"],[\".\"]]` → `Expected: [null,null,true,true]`\n⚠️ Bug: using `i < word.size() - 1` as the loop bound in addWord with size_t when size is 1, making the bound 0 and skipping the only character → isEnd set on root, search(\"a\") returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if search also supports '*' matching zero or more of any character?",
+      "a": "Extend the DFS: at '*', either skip it (match zero) or consume one character and stay at the same node (match more). This adds branching at each '*', making search O(L · 26^d · 2^s) where s is the number of '*' characters. Space stays O(N·L)."
+    },
+    {
+      "q": "Add a deleteWord(word) method that removes a word from the structure.",
+      "a": "Traverse to the word's end node, unset isEnd, then walk back up pruning nodes that have no children and no isEnd flag. Time O(L) per deletion, space unchanged at O(N·L)."
+    },
+    {
+      "q": "Memory is tight - can you reduce per-node overhead?",
+      "a": "Replace the fixed 26-pointer array with an unordered_map<char, Node*> per node. This stores only existing edges, cutting per-node overhead from 26 pointers to just the actual children. Lookup becomes O(1) amortized; big-O space stays O(N·L) but the constant factor drops dramatically for sparse tries."
+    }
+  ],
+  "code": {
+    "cpp": "class WordDictionary {\n    struct TrieNode {\n        TrieNode* children[26] = {};\n        bool isEnd = false;\n    };\n    TrieNode* root;\n\n    bool dfs(TrieNode* node, const string& word, int i) {\n        if (i == (int)word.size()) return node->isEnd;\n        char c = word[i];\n        if (c == '.') {\n            for (int j = 0; j < 26; j++) {\n                if (node->children[j] && dfs(node->children[j], word, i + 1))\n                    return true;\n            }\n            return false;\n        }\n        int idx = c - 'a';\n        if (!node->children[idx]) return false;\n        return dfs(node->children[idx], word, i + 1);\n    }\n\npublic:\n    WordDictionary() {\n        root = new TrieNode();\n    }\n\n    void addWord(string word) {\n        TrieNode* cur = root;\n        for (char c : word) {\n            int idx = c - 'a';\n            if (!cur->children[idx])\n                cur->children[idx] = new TrieNode();\n            cur = cur->children[idx];\n        }\n        cur->isEnd = true;\n    }\n\n    bool search(string word) {\n        return dfs(root, word, 0);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": true,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:glm-5.2"
+      ],
+      "cases": 900,
+      "maxMs": 3,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "slug": "design-circular-deque",
+  "title": "Design Circular Deque",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Circular Buffer / Ring Buffer",
+  "tc": "O(1)",
+  "sc": "O(k)",
+  "spaceBreakdown": "- vector<int> arr: exactly k integers → O(k)\n- front, rear, size, capacity: O(1) scalars\n- recursion depth: none",
+  "approach": "Use a fixed-size array of capacity k with two indices `front` and `rear` and a `size` counter. `front` points to the first element; `rear` points to the next free slot at the back. All index updates use modular arithmetic `(idx ± 1 + k) % k` so both ends wrap around without shifting. The `size` counter cleanly distinguishes empty (size==0) from full (size==k), avoiding the classic ambiguity of using only two pointers.",
+  "hints": [
+    "With a fixed maximum capacity, what property of array indices would let you add and remove elements at both ends without ever shifting the others?",
+    "Use a circular array (ring buffer) with `front`, `rear` pointers and a `size` counter. Example: insertLast(1) on capacity 3 → store at arr[0], advance rear to 1, size becomes 1.",
+    "```\ninsertFront(v):\n  if full: return false\n  front = (front - 1 + cap) % cap\n  arr[front] = v; size++\ninsertLast(v):\n  if full: return false\n  arr[rear] = v\n  rear = (rear + 1) % cap; size++\ngetRear():\n  return arr[(rear - 1 + cap) % cap]\n```",
+    "**Single slot** - k=1, only one element fits at a time.\n`[\"MyCircularDeque\",\"insertFront\",\"insertLast\",\"getFront\",\"getRear\"]` `[[1],[5],[6],[],[]]` → `[null,true,false,5,5]`\n⚠️ Bug: not checking isFull() before writing in insertLast → overwrites arr[0] with 6, returns true, getFront returns 6.\n\n**Empty deque** - no elements stored yet.\n`[\"MyCircularDeque\",\"getFront\",\"getRear\",\"deleteFront\",\"deleteLast\"]` `[[3],[],[],[],[]]` → `[null,-1,-1,false,false]`\n⚠️ Bug: not checking isEmpty() in getFront → returns arr[0] (uninitialized 0) instead of -1.\n\n**Negative modulo** - front at index 0, insertFront must wrap to the last slot.\n`[\"MyCircularDeque\",\"insertFront\",\"getFront\"]` `[[3],[1],[]]` → `[null,true,1]`\n⚠️ Bug: computing `front = (front - 1) % capacity` without adding capacity first → front becomes -1 in C++, arr[-1] is out of bounds.\n\n**Full capacity** - all k slots filled, must distinguish full from empty.\n`[\"MyCircularDeque\",\"insertLast\",\"insertLast\",\"insertLast\",\"isFull\"]` `[[3],[1],[2],[3],[]]` → `[null,true,true,true,true]`\n⚠️ Bug: using `(rear+1)%capacity == front` for isFull (wasting one slot) → third insertLast returns false, only 2 of 3 slots usable."
+  ],
+  "followUps": [
+    {
+      "q": "What if the deque must grow dynamically when full instead of rejecting inserts?",
+      "a": "Double the array capacity on a full insert, then copy elements in linear order starting from front into the new array, resetting front=0 and rear=size. Amortized O(1) per insert with O(k) worst-case for a single resize; space becomes O(current size) instead of O(k)."
+    },
+    {
+      "q": "What if insertFront and insertLast are called concurrently from multiple threads?",
+      "a": "Wrap each public method in a mutex for correctness, or use atomic compare-and-swap on size and the pointers for a lock-free variant. Per-operation time stays O(1) but with a higher constant from synchronization overhead."
+    },
+    {
+      "q": "What if each value is a large object (e.g., a 1KB struct) instead of an int?",
+      "a": "Store pointers or indices in the ring buffer and manage object lifetime in a separate pool or via smart pointers. Each operation remains O(1) with no copy cost; space is O(k) pointers plus the object storage."
+    }
+  ],
+  "code": {
+    "cpp": "class MyCircularDeque {\n    vector<int> arr;\n    int front;\n    int rear;\n    int size;\n    int capacity;\npublic:\n    MyCircularDeque(int k) {\n        capacity = k;\n        arr.resize(k);\n        front = 0;\n        rear = 0;\n        size = 0;\n    }\n    \n    bool insertFront(int value) {\n        if (isFull()) return false;\n        front = (front - 1 + capacity) % capacity;\n        arr[front] = value;\n        size++;\n        return true;\n    }\n    \n    bool insertLast(int value) {\n        if (isFull()) return false;\n        arr[rear] = value;\n        rear = (rear + 1) % capacity;\n        size++;\n        return true;\n    }\n    \n    bool deleteFront() {\n        if (isEmpty()) return false;\n        front = (front + 1) % capacity;\n        size--;\n        return true;\n    }\n    \n    bool deleteLast() {\n        if (isEmpty()) return false;\n        rear = (rear - 1 + capacity) % capacity;\n        size--;\n        return true;\n    }\n    \n    int getFront() {\n        if (isEmpty()) return -1;\n        return arr[front];\n    }\n    \n    int getRear() {\n        if (isEmpty()) return -1;\n        return arr[(rear - 1 + capacity) % capacity];\n    }\n    \n    bool isEmpty() {\n        return size == 0;\n    }\n    \n    bool isFull() {\n        return size == capacity;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

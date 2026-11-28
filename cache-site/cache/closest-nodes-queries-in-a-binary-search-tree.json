@@ -1,0 +1,40 @@
+{
+  "slug": "closest-nodes-queries-in-a-binary-search-tree",
+  "title": "Closest Nodes Queries in a Binary Search Tree",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "In-order Traversal + Binary Search",
+  "tc": "O(n + m log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> vals: up to n entries → O(n)\n- recursion depth (inorder): worst case O(n) for skewed tree, O(log n) balanced\n- vector<vector<int>> ans: returned output, not counted",
+  "approach": "In-order traversal of a BST yields node values in strictly increasing order, giving a sorted array. For each query q, use `lower_bound` to find the first value ≥ q at index i: the smallest value ≥ q is `vals[i]` (or -1 if i is past the end), and the largest value ≤ q is `vals[i]` if it equals q, otherwise `vals[i-1]` (or -1 if i == 0). This handles exact matches and the two boundary cases uniformly.",
+  "hints": [
+    "What single ordering of the tree's nodes would let you answer both \"largest ≤ q\" and \"smallest ≥ q\" for any q in logarithmic time per query? The tree has up to 10^5 nodes and up to 10^5 queries, so a per-query linear scan of the tree is too slow.",
+    "Collect node values via an in-order traversal into a sorted vector, then for each query use `lower_bound`. For query 5 on the sorted array [1,2,4,6,9,13,14,15], `lower_bound(5)` lands on index 3 (value 6), so the answer is [4,6].",
+    "```\nvals = inorder(root)\nfor each q in queries:\n    i = lower_bound(vals, q)\n    mx = (i < len(vals)) ? vals[i] : -1\n    if i < len(vals) and vals[i] == q:\n        mn = vals[i]\n    else if i > 0:\n        mn = vals[i-1]\n    else:\n        mn = -1\n    append [mn, mx] to answer\n```",
+    "**Query below all values** - query smaller than every node value\n`Input: root = [4,null,9], queries = [3]` → `Expected: [[-1,4]]`\n⚠️ Bug: using `lower_bound` index `i` directly as min_i without checking `i > 0` → returns `[4,4]`\n\n**Query above all values** - query larger than every node value\n`Input: root = [4,null,9], queries = [10]` → `Expected: [[9,-1]]`\n⚠️ Bug: not checking `i < n` before reading `vals[i]` for max_i → out-of-bounds access\n\n**Exact match** - query equals an existing node value\n`Input: root = [6,2,13,1,4,9,15,null,null,null,null,null,null,14], queries = [2]` → `Expected: [[2,2]]`\n⚠️ Bug: using `upper_bound` instead of `lower_bound` and unconditionally taking `vals[i-1]` as min_i and `vals[i]` as max_i → returns `[2,4]`\n\n**Skewed tree** - tree shaped like a linked list, recursion goes n deep\n`Input: root = [5,4,null,3,null,2,null,1], queries = [3]` → `Expected: [[3,3]]`\n⚠️ Bug: recursive in-order DFS on a 10^5-node left-skewed tree → stack overflow / crash"
+  ],
+  "followUps": [
+    {
+      "q": "What if the tree can be modified (insertions/deletions) between queries?",
+      "a": "Keep the values in a self-balancing BST (e.g., std::set) instead of a frozen sorted vector. Each update and each query is O(log n), giving O((n + m) log n) total time and O(n) space."
+    },
+    {
+      "q": "What if queries arrive as an unbounded stream and you cannot store them all?",
+      "a": "Precompute the sorted array once via in-order traversal, then answer each incoming query online in O(log n) with binary search. Space stays O(n) for the array plus O(1) per query."
+    },
+    {
+      "q": "What if you must use only O(1) extra space (no array conversion)?",
+      "a": "For each query, descend from the root tracking the largest value ≤ q and the smallest value ≥ q seen along the path. Each query is O(h) time, O(1) extra space; total O(m·h), which is O(m log n) on a balanced tree."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> closestNodes(TreeNode* root, vector<int>& queries) {\n        vector<int> vals;\n        inorder(root, vals);\n        vector<vector<int>> ans;\n        int n = vals.size();\n        for (int q : queries) {\n            int i = lower_bound(vals.begin(), vals.end(), q) - vals.begin();\n            int mx = (i < n) ? vals[i] : -1;\n            int mn;\n            if (i < n && vals[i] == q) {\n                mn = vals[i];\n            } else if (i > 0) {\n                mn = vals[i - 1];\n            } else {\n                mn = -1;\n            }\n            ans.push_back({mn, mx});\n        }\n        return ans;\n    }\nprivate:\n    void inorder(TreeNode* node, vector<int>& vals) {\n        if (!node) return;\n        inorder(node->left, vals);\n        vals.push_back(node->val);\n        inorder(node->right, vals);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "slug": "minimum-score-by-changing-two-elements",
+  "title": "Minimum Score by Changing Two Elements",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear Scan / Partial Selection",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- six scalar ints (s1,s2,s3,l1,l2,l3): constant → O(1)\n- loop index / value: constant → O(1)\n- not counted: input vector",
+  "approach": "The score equals (max−min) + (min adjacent difference). Since we can change two elements to the same value, the low score can always be made 0, so we only need to minimize the high score (max−min) of the remaining elements. After \"removing\" two elements (by changing them to lie inside the range), the candidates for the new range are: drop two smallest → a[n-1]−a[2]; drop two largest → a[n-3]−a[0]; drop one of each → a[n-2]−a[1]. We compute these using only the 3 smallest and 3 largest values, found in a single linear pass with O(1) extra space.",
+  "hints": [
+    "What is the smallest possible value of the low score, and once you achieve it, which elements determine the high score? The array has at least 3 elements, so at least one element remains unchanged after modifying two.",
+    "Linear scan to track the 3 smallest and 3 largest elements in one pass. For [1,4,7,8,5], the 3 smallest are {1,4,5} and 3 largest are {5,7,8}; answer = min(5−1, 7−4, 8−5) = 3.",
+    "```\nscan array, maintaining 3 smallest (s1 ≤ s2 ≤ s3) and 3 largest (l1 ≤ l2 ≤ l3)\nanswer = min(l1 - s1, l2 - s2, l3 - s3)\nreturn answer\n```",
+    "**Remove two from same end (right)** - Both largest values are outliers; removing them gives the best range.\n`Input: nums = [1,2,3,100,101]` → `Expected: 2`\n⚠️ Bug: Only computing a[n-2]-a[1] (removing one from each end) → returns 98\n\n**Remove two from same end (left)** - Both smallest values are outliers; removing them gives the best range.\n`Input: nums = [1,2,100,101,102]` → `Expected: 2`\n⚠️ Bug: Only computing a[n-2]-a[1] (removing one from each end) → returns 99\n\n**Wrong initialization** - All values are positive, so initializing smallest-trackers to 0 skips every element.\n`Input: nums = [10,20,30,40,50]` → `Expected: 20`\n⚠️ Bug: Initializing s1,s2,s3 to 0 instead of LLONG_MAX → returns 30\n\n**Large outlier at one end** - Removing the two smallest leaves a huge range; the correct move is removing one from each end.\n`Input: nums = [1,2,3,4,100]` → `Expected: 2`\n⚠️ Bug: Only computing a[n-1]-a"
+  ],
+  "followUps": [],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimizeSum(vector<int>& nums) {\n        int s1 = INT_MAX, s2 = INT_MAX, s3 = INT_MAX;\n        int l1 = INT_MIN, l2 = INT_MIN, l3 = INT_MIN;\n        for (int x : nums) {\n            // maintain three smallest: s1 <= s2 <= s3\n            if (x < s1) {\n                s3 = s2; s2 = s1; s1 = x;\n            } else if (x < s2) {\n                s3 = s2; s2 = x;\n            } else if (x < s3) {\n                s3 = x;\n            }\n            // maintain three largest: l3 <= l2 <= l1\n            if (x > l1) {\n                l3 = l2; l2 = l1; l1 = x;\n            } else if (x > l2) {\n                l3 = l2; l2 = x;\n            } else if (x > l3) {\n                l3 = x;\n            }\n        }\n        // Option 1: change two smallest -> range = max - third smallest\n        int opt1 = l1 - s3;\n        // Option 2: change two largest -> range = third largest - min\n        int opt2 = l3 - s1;\n        // Option 3: change one smallest and one largest -> range = second largest - second smallest\n        int opt3 = l2 - s2;\n        return min({opt1, opt2, opt3});\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

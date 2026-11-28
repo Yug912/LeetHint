@@ -1,0 +1,40 @@
+{
+  "slug": "find-kth-largest-xor-coordinate-value",
+  "title": "Find Kth Largest XOR Coordinate Value",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "2D Prefix XOR",
+  "tc": "O(m×n)",
+  "sc": "O(m×n)",
+  "spaceBreakdown": "- vector<int> values: up to m×n = 10^6 entries → O(m×n)\n- matrix modified in place: not counted (input)\n- recursion depth: none",
+  "approach": "The key insight is that XOR is self-inverse (A ^ A = 0), so the XOR of the rectangle from (0,0) to (a,b) can be computed from three overlapping smaller rectangles via inclusion-exclusion: prefix[a][b] = matrix[a][b] ^ prefix[a-1][b] ^ prefix[a][b-1] ^ prefix[a-1][b-1]. We compute all m×n prefix values in row-major order (each in O(1) from already-computed neighbors, modifying the matrix in place), collect them into a flat vector, and use quickselect (nth_element) to find the k-th largest in O(m×n) average time.",
+  "hints": [
+    "The value at each coordinate is the XOR of all elements in the rectangle from (0,0) to that coordinate. With up to 10^6 coordinates, recomputing each rectangle from scratch is too slow. What algebraic property of XOR is relevant to combining overlapping rectangles?",
+    "Use a 2D prefix XOR table where prefix[a][b] = matrix[a][b] ^ prefix[a-1][b] ^ prefix[a][b-1] ^ prefix[a-1][b-1]. For coordinate (1,1) in [[5,2],[1,6]]: 6 ^ 7 ^ 4 ^ 5 = 0.",
+    "```\nfor i from 0 to m-1:\n    for j from 0 to n-1:\n        val = matrix[i][j]\n        if i > 0: val ^= prefix[i-1][j]\n        if j > 0: val ^= prefix[i][j-1]\n        if i > 0 and j > 0: val ^= prefix[i-1][j-1]\n        prefix[i][j] = val\n        append val to list\nreturn k-th largest of list via quickselect\n```",
+    "**Off-by-one in selection** - k is 1-indexed but code treats it as 0-indexed.\n`Input: matrix = [[5,2],[1,6]], k = 1` → `Expected: 7`\n⚠️ Bug: `nth_element(begin, begin + k, end, greater<int>())` then `return values[k]` → places 2nd largest at index 1, returns 5 instead of 7\n\n**Wrong operation** - using addition/subtraction instead of XOR for inclusion-exclusion.\n`Input: matrix = [[5,2],[1,6]], k = 1` → `Expected: 7`\n⚠️ Bug: `prefix[a][b] = matrix[a][b] + prefix[a-1][b] + prefix[a][b-1] - prefix[a-1][b-1]` → prefix[1][1] = 14, values = [5,7,6,14], returns 14 instead of 7\n\n**Wrong comparator** - selecting k-th smallest instead of k-th largest.\n`Input: matrix = [[5,2],[1,6]], k = 1` → `Expected: 7`\n⚠️ Bug: `nth_element(begin, begin + (k-1), end, less<int>())` → selects 1st smallest (0), returns 0 instead of 7\n\n**Single row** - m = 1, prefix is a 1D running XOR along the row.\n`Input: matrix = [[5,2]], k = 1` → `Expected: 7`\n⚠️ Bug: guarding all prefix updates behind `if (i > 0 && j > 0)`, skipping first row and column → prefix[0][1] stays 2, values = [5,2], returns 5 instead of 7"
+  ],
+  "followUps": [
+    {
+      "q": "If you needed the k-th largest *distinct* XOR coordinate value, how would you adapt?",
+      "a": "Compute all prefix XOR values as before, then deduplicate using an unordered_set before selecting. Copy the set into a vector and apply nth_element. TC: O(m×n) expected, SC: O(m×n)."
+    },
+    {
+      "q": "If matrix values could be up to 10^18, what changes?",
+      "a": "XOR of values up to 10^18 can reach ~2^60, exceeding int. Use long long for the prefix computation and values vector. The algorithm structure is identical. TC: O(m×n), SC: O(m×n)."
+    },
+    {
+      "q": "If rows arrive one at a time as a stream and you can only store O(n + k) values, how would you find the k-th largest?",
+      "a": "Keep only the current and previous row of prefix values (O(n) space). Push each prefix value into a min-heap capped at size k that tracks the k largest values seen. After all rows, the heap top is the answer. TC: O(m×n log k), SC: O(n + k)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int kthLargestValue(vector<vector<int>>& matrix, int k) {\n        int m = matrix.size();\n        int n = matrix[0].size();\n        \n        vector<int> values;\n        values.reserve(m * n);\n        \n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                int val = matrix[i][j];\n                if (i > 0) val ^= matrix[i - 1][j];\n                if (j > 0) val ^= matrix[i][j - 1];\n                if (i > 0 && j > 0) val ^= matrix[i - 1][j - 1];\n                matrix[i][j] = val;\n                values.push_back(val);\n            }\n        }\n        \n        nth_element(values.begin(), values.begin() + (k - 1), values.end(), greater<int>());\n        return values[k - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

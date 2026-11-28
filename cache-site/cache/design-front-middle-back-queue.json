@@ -1,0 +1,51 @@
+{
+  "slug": "design-front-middle-back-queue",
+  "title": "Design Front Middle Back Queue",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Two-Deque Half-Splitting",
+  "tc": "O(1)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- deque<int> left: up to ⌈n/2⌉ elements → O(n)\n- deque<int> right: up to ⌈n/2⌉ elements → O(n)\n- recursion depth: none\n- not counted: input, returned values",
+  "approach": "Maintain two deques: `left` holds the first half and `right` holds the second half, with the invariant that `right.size()` equals or exceeds `left.size()` by at most one. The middle element always sits at the boundary - it is the last element of `left` when sizes are equal, or the first element of `right` when `right` is larger. Each push/pop touches only an end of one deque (O(1)), followed by a rebalance that moves at most one element between deques, yielding O(1) amortized per operation.",
+  "hints": [
+    "For [1,2,3,4,5] and [1,2,3,4,5,6], which element is the middle in each case? The frontmost middle is chosen when two exist.",
+    "Use two deques - `left` for the first half, `right` for the second. For [1,2,3,4,5,6]: left=[1,2,3], right=[4,5,6], so popMiddle returns left.back() = 3.",
+    "```\nmaintain: right.size == left.size OR right.size == left.size + 1\n\npushMiddle(val): right.push_front(val); rebalance()\npopMiddle(): if left.size == right.size: return left.pop_back()\n             else: return right.pop_front()\nrebalance(): if left.size > right.size: move left.back → right.front\n             if right.size > left.size + 1: move right.front → left.back\n```",
+    "**Empty queue** - no elements stored, every pop must return -1.\n`Input: popFront()` → `Expected: -1`\n⚠️ Bug: accessing `left.front()` without an empty check → undefined behavior / crash\n\n**Two elements, popMiddle** - frontmost middle is the first element.\n`Input: pushFront(1); pushBack(2); popMiddle()` → `Expected: 1`\n⚠️ Bug: using `left.size() > right.size()` (strict) to decide which half to pop → pops right front, returns 2\n\n**Even-length popMiddle** - middle is the last element of the left half.\n`Input: pushBack(1); pushBack(2); pushBack(3); pushBack(4); pushBack(5); pushBack(6); popMiddle()` → `Expected: 3`\n⚠️ Bug: using `left.size() > right.size()` to decide → pops right front, returns 4\n\n**Rebalance after popFront** - removing from left can leave right with two extra elements.\n`Input: pushFront(1); pushBack(2); pushBack(3); popFront(); pushMiddle(4); popFront()` → `Expected: 2`\n⚠️ Bug: skipping rebalance after popFront → queue becomes [4,2,3], popFront returns 4"
+  ],
+  "followUps": [
+    {
+      "q": "Add a `get(int index)` method for random access by index in O(1).",
+      "a": "Both deques support O(1) indexing. If index < left.size(), return left[index]; otherwise return right[index - left.size()]. No structural change needed. TC: O(1), SC: O(n)."
+    },
+    {
+      "q": "What if \"middle\" means the backmost middle position instead of the frontmost?",
+      "a": "Flip the invariant so left.size() >= right.size() with left exceeding right by at most one. pushMiddle pushes to the back of left; popMiddle always pops from the back of left. TC: O(1) amortized, SC: O(n)."
+    },
+    {
+      "q": "Add a capacity limit k - when the queue is full, pushing evicts from the opposite end.",
+      "a": "After each push, if total size exceeds k, pop from the opposite end (pushFront evicts back, pushBack evicts front, pushMiddle evicts whichever end keeps the halves balanced). Each eviction is one deque pop plus a rebalance. TC: O(1) amortized, SC: O(k)."
+    }
+  ],
+  "code": {
+    "cpp": "class FrontMiddleBackQueue {\n    deque<int> left, right;\n\n    void rebalance() {\n        if (left.size() > right.size()) {\n            right.push_front(left.back());\n            left.pop_back();\n        } else if (right.size() > left.size() + 1) {\n            left.push_back(right.front());\n            right.pop_front();\n        }\n    }\n\npublic:\n    FrontMiddleBackQueue() {}\n\n    void pushFront(int val) {\n        left.push_front(val);\n        rebalance();\n    }\n\n    void pushMiddle(int val) {\n        right.push_front(val);\n        rebalance();\n    }\n\n    void pushBack(int val) {\n        right.push_back(val);\n        rebalance();\n    }\n\n    int popFront() {\n        if (left.empty() && right.empty()) return -1;\n        int val;\n        if (!left.empty()) {\n            val = left.front();\n            left.pop_front();\n        } else {\n            val = right.front();\n            right.pop_front();\n        }\n        rebalance();\n        return val;\n    }\n\n    int popMiddle() {\n        if (left.empty() && right.empty()) return -1;\n        int val;\n        if (left.size() == right.size()) {\n            val = left.back();\n            left.pop_back();\n        } else {\n            val = right.front();\n            right.pop_front();\n        }\n        rebalance();\n        return val;\n    }\n\n    int popBack() {\n        if (left.empty() && right.empty()) return -1;\n        int val = right.back();\n        right.pop_back();\n        rebalance();\n        return val;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

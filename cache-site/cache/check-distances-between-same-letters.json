@@ -1,0 +1,40 @@
+{
+  "slug": "check-distances-between-same-letters",
+  "title": "Check Distances Between Same Letters",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "First-Occurrence Tracking",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int first[26]: fixed 26 entries → O(1)\n- not counted: input string s, input distance vector",
+  "approach": "Track the first occurrence index of each letter in a fixed-size array of 26 entries (initialized to -1). On the second encounter of a letter c at index i, the number of letters between the two occurrences is i - first[c] - 1; compare it to distance[c]. Since every letter appears exactly twice, this single pass fully verifies the string.",
+  "hints": [
+    "Each letter appears exactly twice. What single piece of information about each letter would let you verify its spacing the moment you encounter its second occurrence?",
+    "Use an array first[26] storing the index of the first occurrence of each letter. For \"abaccb\", when 'a' is seen again at index 2, compute 2 - 0 - 1 = 1 and compare to distance[0].",
+    "```\nfirst[26] = -1\nfor i in 0..n-1:\n    c = s[i] - 'a'\n    if first[c] == -1:\n        first[c] = i\n    else:\n        if i - first[c] - 1 != distance[c]:\n            return false\nreturn true\n```",
+    "**Smallest input** - only one letter, occurrences adjacent.\n`Input: s = \"aa\", distance = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]` → `Expected: true`\n⚠️ Bug: using `i - first[c]` instead of `i - first[c] - 1` → returns false (1 != 0)\n\n**Adjacent pair, wrong distance** - distance demands a gap that does not exist.\n`Input: s = \"aa\", distance = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]` → `Expected: false`\n⚠️ Bug: comparing `i - first[c]` (== 1) to distance[0] (== 1) → returns true\n\n**Interleaved pairs** - letters alternate so gaps are non-zero.\n`Input: s = \"abab\", distance = [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]` → `Expected: true`\n⚠️ Bug: initializing first[] to 0 instead of -1 → first occurrence of 'a' recorded as 0 only by luck, but 'b' at index 1 overwrites nothing; on second 'b' at index 3, 3 - 1 - 1 = 1 == distance[1] passes, yet a letter never seen still reads 0 and a stray second-occurrence check on an unseen letter is skipped - however if the loop also checked unseen letters at the end using first[]==0, it would wrongly flag them.\n\n**Maximum input** - all 26 letters twice, length 52.\n`Input: s = \"aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz\", distance = [0,0,...,0] (all 0)` → `Expected: true`\n⚠️ Bug: using a map keyed by char but forgetting to handle the second-occurrence branch → returns true without checking any distance"
+  ],
+  "followUps": [
+    {
+      "q": "What if each letter could appear any number of times, and you must verify the gap between every consecutive pair equals distance[letter]?",
+      "a": "Keep first[] as the most recent occurrence; on every repeat, check i - first[c] - 1 == distance[c], then update first[c] = i. Time stays O(n), space O(1)."
+    },
+    {
+      "q": "What if the string is a stream you can only read once and cannot store?",
+      "a": "Keep the same 26-entry array of last-seen indices; each new character triggers at most one comparison and one update. Time O(n), space O(1), single pass with no buffering."
+    },
+    {
+      "q": "What if distance applied to pairs of distinct letters (e.g., distance between the first 'a' and first 'b')?",
+      "a": "You would need to record first occurrence of every letter, then after the stream ends check all ordered pairs - O(n + 26^2) time, O(26) space, but the verification is no longer single-pass online."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool checkDistances(string s, vector<int>& distance) {\n        int first[26];\n        for (int i = 0; i < 26; i++) first[i] = -1;\n        for (int i = 0; i < (int)s.size(); i++) {\n            int c = s[i] - 'a';\n            if (first[c] == -1) {\n                first[c] = i;\n            } else {\n                if (i - first[c] - 1 != distance[c]) return false;\n            }\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

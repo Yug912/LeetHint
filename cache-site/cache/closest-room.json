@@ -1,0 +1,40 @@
+{
+  "slug": "closest-room",
+  "title": "Closest Room",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Offline Query Processing with Sorted Set",
+  "tc": "O((n+k) log(n+k))",
+  "sc": "O(n+k)",
+  "spaceBreakdown": "- set<int> ids: up to n room IDs inserted → O(n)\n- vector<int> qidx: k query indices → O(k)\n- vector<int> ans: k entries (returned output, not counted)\n- sort() stack: O(log n) for rooms, O(log k) for qidx\n- not counted: input rooms, input queries, returned ans",
+  "approach": "Sort rooms by size descending and queries by minSize descending. Process queries offline: as minSize decreases, only new rooms become eligible (the eligible set monotonically grows). Insert each newly-eligible room's ID into a sorted set. For each query, use lower_bound on the set to find the two candidate IDs bracketing the preferred value, then pick the one with smallest absolute difference (tie → smaller ID). This avoids re-scanning all rooms per query.",
+  "hints": [
+    "With n up to 10^5 rooms and k up to 10^4 queries, checking every room for every query is too slow. As the minimum-size requirement of a query decreases, what happens to the collection of rooms that satisfy it?",
+    "Process queries in decreasing minSize order while maintaining eligible room IDs in a sorted set (std::set). For each query, use lower_bound to find the two IDs bracketing the preferred value. Example: query [2,4] with IDs {1,3} in the set - lower_bound(2) gives 3 (diff 1), predecessor 1 (diff 1) - pick the smaller ID, 1.",
+    "```\nsort rooms by size descending\nsort query indices by minSize descending\nroomPtr = 0, sortedSet = empty\nfor each query (preferred, minSize, origIdx) in sorted order:\n    while roomPtr < n and rooms[roomPtr].size >= minSize:\n        insert rooms[roomPtr].id into sortedSet\n        roomPtr++\n    if sortedSet is empty:\n        ans[origIdx] = -1\n    else:\n        it = lower_bound(sortedSet, preferred)\n        check *it and *(it-1), pick closest (tie → smaller id)\n        ans[origIdx] = best\n```",
+    "**Tie-breaking by smaller ID** - Two rooms equidistant from preferred; the smaller ID must win.\n`rooms = [[1,5],[3,5]], queries = [[2,3]]` → `Expected: [1]`\n⚠️ Bug: only checking the lower_bound result (3) without checking its predecessor → returns [3]\n\n**Preferred beyond all room IDs** - The preferred value is larger than every room ID in the set.\n`rooms = [[1,5],[2,5]], queries = [[10,3]]` → `Expected: [2]`\n⚠️ Bug: returning -1 when lower_bound returns end() without checking the predecessor → returns [-1]\n\n**No room meets the size requirement** - All rooms are too small for the query.\n`rooms = [[1,1]], queries = [[1,5]]` → `Expected: [-1]`\n⚠️ Bug: calling lower_bound on an empty set without an emptiness check → undefined behavior or crash\n\n**Exact match in set** - The preferred ID is itself present in the eligible set.\n`rooms = [[5,5],[7,5]], queries = [[5,3]]` → `Expected: [5]`\n⚠️ Bug: using upper_bound instead of lower_bound and only checking one side → may return [7]"
+  ],
+  "followUps": [
+    {
+      "q": "What if rooms can be added or removed dynamically between queries?",
+      "a": "Use an online balanced BST (or std::set) for room IDs and a Fenwick/segment tree over sizes to track which rooms are active. Each query still does lower_bound on the ID set, but insertion/deletion is O(log n). TC becomes O((n + k) log n) with O(n) space."
+    },
+    {
+      "q": "What if the tie-break rule were \"largest such id\" instead of \"smallest\"?",
+      "a": "When comparing the two candidates from lower_bound, flip the tie-break condition to prefer the larger cand. No structural change needed; TC and SC remain O((n + k) log n) and O(n + k)."
+    },
+    {
+      "q": "What if k can be up to 10^6 (streaming queries, limited memory)?",
+      "a": "Process queries in batches that fit in memory, sorting each batch by minSize. Maintain the sorted set of room IDs across batches (never reset it). Each batch costs O(batch_size · log n). Overall TC stays O((n + k) log n), SC drops to O(n + batch_size)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> closestRoom(vector<vector<int>>& rooms, vector<vector<int>>& queries) {\n        int n = rooms.size();\n        int k = queries.size();\n        \n        sort(rooms.begin(), rooms.end(), [](const vector<int>& a, const vector<int>& b){\n            return a[1] > b[1];\n        });\n        \n        vector<int> qidx(k);\n        for (int i = 0; i < k; i++) qidx[i] = i;\n        sort(qidx.begin(), qidx.end(), [&](int a, int b){\n            return queries[a][1] > queries[b][1];\n        });\n        \n        vector<int> ans(k, -1);\n        set<int> ids;\n        int ri = 0;\n        for (int i = 0; i < k; i++) {\n            int qi = qidx[i];\n            int preferred = queries[qi][0];\n            int minSize = queries[qi][1];\n            \n            while (ri < n && rooms[ri][1] >= minSize) {\n                ids.insert(rooms[ri][0]);\n                ri++;\n            }\n            \n            if (ids.empty()) {\n                ans[qi] = -1;\n                continue;\n            }\n            \n            auto it = ids.lower_bound(preferred);\n            int best = -1;\n            int bestDiff = INT_MAX;\n            \n            if (it != ids.end()) {\n                int cand = *it;\n                int diff = abs(cand - preferred);\n                if (diff < bestDiff || (diff == bestDiff && cand < best)) {\n                    bestDiff = diff;\n                    best = cand;\n                }\n            }\n            if (it != ids.begin()) {\n                --it;\n                int cand = *it;\n                int diff = abs(cand - preferred);\n                if (diff < bestDiff || (diff == bestDiff && cand < best)) {\n                    bestDiff = diff;\n                    best = cand;\n                }\n            }\n            ans[qi] = best;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

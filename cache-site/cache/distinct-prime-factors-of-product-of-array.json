@@ -1,0 +1,40 @@
+{
+  "slug": "distinct-prime-factors-of-product-of-array",
+  "title": "Distinct Prime Factors of Product of Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prime Factorization",
+  "tc": "O(n·√m)",
+  "sc": "O(m/log m)",
+  "spaceBreakdown": "- unordered_set<int> primes: at most 168 entries (number of primes ≤ 1000) → O(1)\n- no recursion, no other containers\n- not counted: input vector, returned int",
+  "approach": "The prime factors of a product are exactly the union of the prime factors of each multiplicand. So instead of multiplying all numbers (which would overflow), we factorize each number individually via trial division and collect every prime divisor into a hash set. The set's size is the answer. Since each nums[i] ≤ 1000, trial division up to √1000 ≈ 31 is extremely fast.",
+  "hints": [
+    "When you multiply several integers together, how do the prime factors of each individual integer relate to the prime factors of their product? Each nums[i] is at most 1000.",
+    "Use a hash set to collect distinct prime factors found by trial division of each number. For nums = [2,4,3,7,10,6], factorizing 10 gives 2 and 5 - both get inserted into the set.",
+    "```\nprimes = empty set\nfor each num in nums:\n    d = 2\n    while d * d <= num:\n        while num divisible by d:\n            add d to primes\n            num = num / d\n        d = d + 1\n    if num > 1:\n        add num to primes\nreturn size of primes\n```",
+    "**Single element** - only one number to factorize\n`Input: nums = [2]` → `Expected: 1`\n⚠️ Bug: skipping the `if num > 1` remainder check after the loop → returns 0\n\n**Large prime** - 997 is prime and exceeds √1000 ≈ 31\n`Input: nums = [997]` → `Expected: 1`\n⚠️ Bug: only checking divisors up to √1000 and discarding the leftover → returns 0\n\n**All equal** - every element is the same prime\n`Input: nums = [2,2,2,2]` → `Expected: 1`\n⚠️ Bug: using a vector instead of a set to collect factors → returns 4\n\n**Composite remainder** - 9 = 3² is a perfect square of a prime\n`Input: nums = [9, 3]` → `Expected: 1`\n⚠️ Bug: using `d * d < num` instead of `d * d <= num` → 9 is not fully factored, both 9 and 3 are added → returns 2"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] can be up to 10⁹?",
+      "a": "Trial division up to √10⁹ ≈ 31623 per number is too slow for large n. Precompute all primes up to 31623 with a sieve, then trial-divide each number using only those primes. TC: O(n · π(√m)) where π is the prime-counting function; SC: O(√m) for the sieve."
+    },
+    {
+      "q": "What if the array arrives as a stream and you can only hold O(1) memory?",
+      "a": "Since nums[i] ≤ 1000, there are only 168 possible primes. Replace the hash set with a fixed bitmask of 168 bits (3 uint64_t values). Each prime maps to a fixed bit index. TC unchanged; SC: O(1) with no hash-table overhead."
+    },
+    {
+      "q": "What if you must return the distinct prime factor count for every prefix of the array?",
+      "a": "Process elements left to right, maintaining the same set. After processing each element, append the current set size to the result vector. TC: O(n · √m); SC: O(n) for the output vector, plus O(1) for the set."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int distinctPrimeFactors(vector<int>& nums) {\n        unordered_set<int> primes;\n        for (int num : nums) {\n            for (int d = 2; d * d <= num; d++) {\n                while (num % d == 0) {\n                    primes.insert(d);\n                    num /= d;\n                }\n            }\n            if (num > 1) {\n                primes.insert(num);\n            }\n        }\n        return primes.size();\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

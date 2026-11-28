@@ -1,0 +1,40 @@
+{
+  "slug": "k-highest-ranked-items-within-a-price-range",
+  "title": "K Highest Ranked Items Within a Price Range",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "BFS + Heap",
+  "tc": "O(m * n log k)",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- queue<pair<int,int>> q: up to m * n entries → O(m * n)\n- priority_queue<Item, vector<Item>, Comparator> pq: up to k entries → O(k)\n- not counted: input grid (modified in place), returned vector",
+  "approach": "Perform a Breadth-First Search (BFS) from the starting position to compute the shortest distance to all reachable cells. During the BFS, if a cell contains an item within the given price range, we consider it as a candidate. To efficiently keep track of the top `k` highest-ranked items, we use a max-heap (priority queue) of size `k`. The heap is ordered by the ranking criteria (distance, price, row, column) such that the \"worst\" ranked item is at the top. If the heap exceeds size `k`, we pop the worst item. Finally, we extract the elements from the heap, reverse them to get the best to worst order, and return their coordinates.",
+  "hints": [
+    "The first ranking criterion is the length of the shortest path from start to each item, and m·n ≤ 10^5. What must you compute for every reachable cell before any ranking can begin?",
+    "Breadth-first search from the start gives every reachable cell its shortest distance; a max-heap of size k (ordered by distance, then price, then row, then col) keeps only the k best. In Example 1, (0,1) at distance 1 enters the heap, and when (2,2) at distance 4 arrives with the heap full, the worst item is evicted.",
+    "```\nBFS from start, recording dist[r][c] for each reachable cell\nmax_heap ordered by (distance, price, row, col) descending\nfor each dequeued cell (r, c) with price in [low, high]:\n    push (dist[r][c], price, r, c) onto max_heap\n    if heap size > k: pop top (the worst)\npop all from heap (worst to best), reverse, return as [row, col] pairs\n```",
+    "**Start cell in price range** - the starting position itself can be an item with a price in [low, high], giving distance 0.\n`Input: grid = [[5]], pricing = [2,5], start = [0,0], k = 1` → `Expected: [[0,0]]`\n⚠️ Bug: only checking prices of cells discovered as neighbors, never the start cell itself → returns `[]`\n\n**Tie on distance and price** - two items at the same distance and price must be distinguished by row, then column.\n`Input: grid = [[3,1,3]], pricing = [3,3], start = [0,1], k = 2` → `Expected: [[0,0],[0,2]]`\n⚠️ Bug: heap comparator omits row and col, leaving tie order undefined → returns `[[0,2],[0,0]]`\n\n**Fewer than k valid items** - only 2 reachable items in range but k = 3.\n`Input: grid = [[1,1,1],[0,0,1],[2,3,4]], pricing = [2,3], start = [0,0], k = 3` → `Expected: [[2,1],[2,0]]`\n⚠️ Bug: padding result to k entries with out-of-range cells → returns `[[2,1],[2,0],[0,0]]`\n\n**Unreachable items behind walls** - an item in the price range is walled off from start.\n`Input: grid = [[1,0,5]], pricing = [2,5], start = [0,0], k = 1` → `Expected: []`\n⚠️ Bug: scanning all grid cells instead of only BFS-reachable ones → returns `[[0,2]]`"
+  ],
+  "followUps": [
+    {
+      "q": "What if diagonal moves are also allowed (8-directional movement)?",
+      "a": "BFS still works - add four more directions to the neighbor exploration. Each cell still receives its correct shortest distance. Time and space complexity remain O(m·n log k) and O(m·n)."
+    },
+    {
+      "q": "What if k is very large, close to m·n?",
+      "a": "The heap of size k approaches O(m·n) and each operation costs O(log(m·n)). Sorting all valid items would have the same O(m·n log(m·n)) complexity, so the heap offers no advantage when k ≈ m·n but still produces the correct result."
+    },
+    {
+      "q": "What if you need to support multiple queries with different start positions on the same static grid?",
+      "a": "Run BFS from each query's start independently - O(m·n log k) per query. If the same start is reused across queries, cache the BFS distances and only re-filter by price range and re-rank, reducing subsequent queries to O(m·n log k) without re-running BFS."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    struct Item {\n        int dist;\n        int price;\n        int r;\n        int c;\n    };\n\n    struct Comparator {\n        bool operator()(const Item& a, const Item& b) const {\n            if (a.dist != b.dist) return a.dist < b.dist;\n            if (a.price != b.price) return a.price < b.price;\n            if (a.r != b.r) return a.r < b.r;\n            return a.c < b.c;\n        }\n    };\n\n    vector<vector<int>> highestRankedKItems(vector<vector<int>>& grid, vector<int>& pricing, vector<int>& start, int k) {\n        int m = grid.size();\n        int n = grid[0].size();\n        int low = pricing[0];\n        int high = pricing[1];\n        int sr = start[0];\n        int sc = start[1];\n\n        queue<pair<int, int>> q;\n        q.push({sr, sc});\n        int start_price = grid[sr][sc];\n        grid[sr][sc] = 0;\n\n        priority_queue<Item, vector<Item>, Comparator> pq;\n\n        if (start_price >= low && start_price <= high) {\n            pq.push(Item{0, start_price, sr, sc});\n            if (pq.size() > k) {\n                pq.pop();\n            }\n        }\n\n        int dist = 0;\n        int dr[] = {0, 0, 1, -1};\n        int dc[] = {1, -1, 0, 0};\n\n        while (!q.empty()) {\n            int size = q.size();\n            dist++;\n            for (int i = 0; i < size; ++i) {\n                pair<int, int> p = q.front();\n                q.pop();\n                int r = p.first;\n                int c = p.second;\n\n                for (int j = 0; j < 4; ++j) {\n                    int nr = r + dr[j];\n                    int nc = c + dc[j];\n                    if (nr >= 0 && nr < m && nc >= 0 && nc < n && grid[nr][nc] != 0) {\n                        int price = grid[nr][nc];\n                        grid[nr][nc] = 0;\n                        q.push({nr, nc});\n\n                        if (price >= low && price <= high) {\n                            pq.push(Item{dist, price, nr, nc});\n                            if (pq.size() > k) {\n                                pq.pop();\n                            }\n                        }\n                    }\n                }\n            }\n        }\n\n        vector<vector<int>> res;\n        while (!pq.empty()) {\n            Item item = pq.top();\n            pq.pop();\n            res.push_back({item.r, item.c});\n        }\n        reverse(res.begin(), res.end());\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

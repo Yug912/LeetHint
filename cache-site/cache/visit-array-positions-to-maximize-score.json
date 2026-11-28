@@ -1,0 +1,40 @@
+{
+  "slug": "visit-array-positions-to-maximize-score",
+  "title": "Visit Array Positions to Maximize Score",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dynamic Programming with Parity States",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long dp[2]: 2 elements → O(1)\n- no recursion, no containers, no heap\n- not counted: input vector nums",
+  "approach": "The key insight is that the only state we need to track is the parity of the last visited element's value. We maintain two DP values: `dp[0]` = best score ending at an even-valued position, `dp[1]` = best score ending at an odd-valued position. For each new element, we either extend from the same parity (no penalty) or switch parity (subtract x), then take the maximum. This works because any optimal path ending at position i with parity p can only be extended by future positions, and the penalty depends solely on the parity of the last element.",
+  "hints": [
+    "As you scan left to right, what is the only piece of information about your past choices that determines whether your next move costs x or not? The array can have up to 10^5 elements, so you cannot afford to remember the full path.",
+    "Use DP with two states indexed by parity: `dp[0]` = best score ending at an even value, `dp[1]` = best score ending at an odd value. For nums = [2,3,6,1,9,2] with x=5, after processing index 0 we have dp[0]=2, dp[1]=−∞; after index 1 (value 3, odd) we get dp[1] = max(−∞, 2−5) + 3 = 0.",
+    "```\ndp[0] = dp[1] = -inf\ndp[nums[0] % 2] = nums[0]\nfor i = 1 to n-1:\n    p = nums[i] % 2\n    best = max(dp[p], dp[1-p] - x) + nums[i]\n    dp[p] = max(dp[p], best)\nreturn max(dp[0], dp[1])\n```",
+    "**Overflow** - 10^5 elements each up to 10^6, total sum = 10^11\n`nums = [1000000, 1000000, ..., 1000000] (10^5 elements), x = 1` → `Expected: 100000000000`\n⚠️ Bug: using `int` for dp values → 10^11 exceeds INT_MAX (≈2.1×10^9), returns wrapped garbage\n\n**All same parity** - no penalty should ever be applied\n`nums = [2, 4, 6, 8], x = 3` → `Expected: 20`\n⚠️ Bug: subtracting x on every transition without checking parity → returns 20 − 3×3 = 11\n\n**Unreachable state** - only one parity is reachable from the start\n`nums = [2, 3], x = 5` → `Expected: 2`\n⚠️ Bug: initializing both dp states to 0 instead of −∞ → returns 3 (treats the unreachable odd state as having score 0)\n\n**Large x** - switching parity always loses more than it gains\n`nums = [2, 3, 6], x = 100` → `Expected: 8`\n⚠️ Bug: visiting every position without considering skips → returns 2 + 3 − 100 + 6 − 100 = −189"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums can contain negative values?",
+      "a": "The recurrence still works because `dp[p] = max(dp[p], best)` naturally skips positions where `best < dp[p]`. However, we must also allow not starting at position 0 if nums[0] is negative - initialize both states to 0 and process from index 0, so the empty path (score 0) is always an option. TC remains O(n), SC O(1)."
+    },
+    {
+      "q": "What if you can move at most k positions forward (j − i ≤ k)?",
+      "a": "Replace the O(1) lookback with a sliding window maximum using a monotonic deque per parity. Maintain two deques storing (index, value) pairs, evicting entries older than k. For each position, query the front of both deques to compute best, then push into the matching parity's deque. TC becomes O(n), SC O(k)."
+    },
+    {
+      "q": "What if x varies per position (moving from i costs x[i])?",
+      "a": "The parity-state DP still applies, but the penalty now depends on the source position. Store dp[p] as before, but when transitioning, subtract x[i] (the cost of leaving position i) rather than a global x. The recurrence becomes `best = max(dp[p], dp[1-p] - x[i]) + nums[i]`. TC remains O(n), SC O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maxScore(vector<int>& nums, int x) {\n        const long long NEG = -1000000000000000000LL;\n        long long dp[2];\n        dp[0] = dp[1] = NEG;\n        dp[nums[0] % 2] = nums[0];\n        for (int i = 1; i < (int)nums.size(); i++) {\n            int p = nums[i] % 2;\n            long long best = max(dp[p], dp[1 - p] - (long long)x) + nums[i];\n            dp[p] = max(dp[p], best);\n        }\n        return max(dp[0], dp[1]);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-seconds-to-equalize-a-circular-array",
+  "title": "Minimum Seconds to Equalize a Circular Array",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Circular Gap Analysis",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> pos: stores all n indices across all groups → O(n)\n- no recursion, no other containers\n- not counted: input vector, return value",
+  "approach": "For each candidate final value x, the time to equalize is determined by the largest circular gap between consecutive occurrences of x. If x appears at positions i and j (consecutive in circular order), the gap of size (j−i) takes ⌊(j−i)/2⌋ seconds to fill because x spreads inward from both ends simultaneously. We group indices by value using a hash map, compute the max gap per value (including the wrap-around from last to first occurrence), and return the minimum ⌊maxGap/2⌋ across all values.",
+  "hints": [
+    "If you fix the final value x, what property of the positions where x already appears determines how many seconds it takes for x to reach every position? The array is circular and n ≤ 10^5.",
+    "Group indices by value using a hash map. For nums = [2,1,3,3,2], value 3 appears at indices [2,3]; the circular gap from index 3 back to index 2 is (2+5−3)=4, so spreading 3 takes ⌊4/2⌋=2 seconds.",
+    "```\ngroup indices by value\nans = n\nfor each value v with indices list:\n    max_gap = 0\n    for each consecutive pair (i, j) in circular order:\n        max_gap = max(max_gap, j - i)\n    ans = min(ans, max_gap / 2)\nreturn ans\n```",
+    "**Single occurrence** - a value appears exactly once; its gap wraps the entire array.\n`Input: nums = [1,2,3,4,5]` → `Expected: 2`\n⚠️ Bug: not adding n for the wrap-around gap → gap = 0 → returns 0\n\n**Easy vs hard value** - one value spreads quickly, another slowly.\n`Input: nums = [1,2,2,2,2,2,2,2,2,2]` → `Expected: 0`\n⚠️ Bug: using max instead of min to combine per-value answers → returns 5\n\n**Two distinct elements** - n=2, both different.\n`Input: nums = [1,2]` → `Expected: 1`\n⚠️ Bug: iterating `for (int i = 0; i < m - 1; i++)` instead of `i < m` → loop body never runs for m=1 → maxGap = 0 → returns 0\n\n**Alternating values** - values alternate, creating gaps of exactly 2.\n`Input: nums = [1,2,1,2,1,2,1,2,1,2]` → `Expected: 1`\n⚠️ Bug: computing gap as `j - i - 1` instead of `j - i` → maxGap = 1 → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if the array is linear (not circular)?",
+      "a": "The first and last positions can only spread inward, so for each value we also check the distance from position 0 to its first occurrence and from its last occurrence to position n−1. The per-value answer becomes max(first_dist, last_dist, max_gap/2). TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if each second an element can copy from any element within distance k?",
+      "a": "The gap formula becomes ⌊gap/(2k)⌋ instead of ⌊gap/2⌋. Everything else stays the same - group by value, find max circular gap, divide by 2k. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if the array arrives as a stream too large to store?",
+      "a": "For each distinct value, track only its first occurrence, last occurrence, and max gap between consecutive occurrences. Update these as each element arrives. After the stream ends, compute the wrap-around gap from last to first. TC: O(n), SC: O(d) where d is the number of distinct values."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumSeconds(vector<int>& nums) {\n        int n = nums.size();\n        unordered_map<int, vector<int>> pos;\n        for (int i = 0; i < n; i++) {\n            pos[nums[i]].push_back(i);\n        }\n        \n        int ans = n;\n        for (auto& [val, indices] : pos) {\n            int m = indices.size();\n            int maxGap = 0;\n            for (int i = 0; i < m; i++) {\n                int gap = indices[(i + 1) % m] - indices[i];\n                if (i == m - 1) gap += n;\n                maxGap = max(maxGap, gap);\n            }\n            ans = min(ans, maxGap / 2);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

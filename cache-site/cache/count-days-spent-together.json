@@ -1,0 +1,40 @@
+{
+  "slug": "count-days-spent-together",
+  "title": "Count Days Spent Together",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Interval Intersection",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int days[12]: fixed 12 ints → O(1)\n- lambda toDay: no heap allocation → O(1)\n- not counted: input strings, returned int",
+  "approach": "Convert each \"MM-DD\" date to a day-of-year number (1-365) using the given non-leap month lengths. Alice's stay and Bob's stay are then two inclusive integer intervals; their overlap is [max(startA, startB), min(endA, endB)]. If that interval is empty (start > end) return 0, otherwise return end − start + 1 (inclusive count).",
+  "hints": [
+    "Each person's trip is a contiguous range of calendar days. What single range represents the days when both are present simultaneously?",
+    "Convert each \"MM-DD\" to a day-of-year integer (1-365) using the month lengths [31,28,31,...], then intersect the two inclusive intervals. For Example 1, \"08-15\"→227 and \"08-18\"→230 for Alice, \"08-16\"→228 and \"08-19\"→231 for Bob; overlap is [228,230] = 3 days.",
+    "function toDay(s):\n    m = month part, d = day part\n    total = sum of days[0..m-2]\n    return total + d\nstart = max(toDay(arriveAlice), toDay(arriveBob))\nend   = min(toDay(leaveAlice),  toDay(leaveBob))\nif start > end: return 0\nreturn end - start + 1",
+    "**Boundary touch** - Alice leaves the exact day Bob arrives, so they share one day.\n`arriveAlice=\"01-01\", leaveAlice=\"01-10\", arriveBob=\"01-10\", leaveBob=\"01-20\"` → `Expected: 1`\n⚠️ Bug: using `start >= end` to detect no overlap → returns 0\n\n**Single shared day** - both trips are exactly the same single day.\n`arriveAlice=\"06-15\", leaveAlice=\"06-15\", arriveBob=\"06-15\", leaveBob=\"06-15\"` → `Expected: 1`\n⚠️ Bug: returning `end - start` instead of `end - start + 1` → returns 0\n\n**Full year overlap** - both stay the entire non-leap year.\n`arriveAlice=\"01-01\", leaveAlice=\"12-31\", arriveBob=\"01-01\", leaveBob=\"12-31\"` → `Expected: 365`\n⚠️ Bug: summing `days[0..m-1]` (one extra month) in toDay → returns 396\n\n**One trip nested inside the other** - Bob's whole trip is inside Alice's.\n`arriveAlice=\"03-01\", leaveAlice=\"03-31\", arriveBob=\"03-10\", leaveBob=\"03-20\"` → `Expected: 11`\n⚠️ Bug: taking `min` of the two starts and `min` of the two ends → returns 31"
+  ],
+  "followUps": [
+    {
+      "q": "What if the trips can span multiple calendar years, including leap years?",
+      "a": "Convert each date to an absolute day count from a fixed epoch (e.g., 1970-01-01), adding 366 for leap years and 365 otherwise when crossing year boundaries. The interval-intersection logic stays identical. Time and space remain O(1)."
+    },
+    {
+      "q": "What if there are N travelers and you want days when at least k of them overlap?",
+      "a": "Treat each trip as an interval and use a sweep line: at each start event +1, at each end+1 event −1, then count days where the running count ≥ k. Time O(N log N) for sorting events, space O(N)."
+    },
+    {
+      "q": "What if dates arrive as a streaming log of (person, arrive/leave, date) events and you must answer \"days together so far\" after each event?",
+      "a": "Maintain the current intersection interval incrementally: update start = max(start, newArrive) and end = min(end, newLeave) on arrivals, and recompute from active intervals on leaves using a multiset of active starts/ends. Each query is O(log N); space O(N) for active intervals."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countDaysTogether(string arriveAlice, string leaveAlice, string arriveBob, string leaveBob) {\n        int days[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};\n        auto toDay = [&](const string& s) {\n            int m = (s[0] - '0') * 10 + (s[1] - '0');\n            int d = (s[3] - '0') * 10 + (s[4] - '0');\n            int total = 0;\n            for (int i = 0; i < m - 1; ++i) total += days[i];\n            return total + d;\n        };\n        int a1 = toDay(arriveAlice);\n        int a2 = toDay(leaveAlice);\n        int b1 = toDay(arriveBob);\n        int b2 = toDay(leaveBob);\n        int start = max(a1, b1);\n        int end = min(a2, b2);\n        if (start > end) return 0;\n        return end - start + 1;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

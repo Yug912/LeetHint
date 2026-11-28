@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-swaps-to-sort-by-digit-sum",
+  "title": "Minimum Swaps to Sort by Digit Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Permutation Cycle Decomposition",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> sum: n entries → O(n)\n- vector<int> idx: n entries → O(n)\n- vector<bool> visited: n bits → O(n)\n- sort() introsort stack: O(log n)\n- not counted: input nums",
+  "approach": "The key insight is that once we compute the target sorted order (by digit sum, then by value as tiebreaker), the problem reduces to finding the minimum number of swaps to transform the current array into that target. This is equivalent to decomposing the permutation mapping current positions to target positions into cycles: each cycle of length k needs k−1 swaps, so the total is n − (number of cycles). We precompute digit sums, sort indices by (digit_sum, value), then traverse the resulting permutation counting cycles.",
+  "hints": [
+    "Once every element has a designated final position, what recurring structure in the position-to-position mapping controls how many swaps suffice?",
+    "Cycle decomposition of a permutation. For [18,43,34,16], target is [16,34,43,18]; positions 0↔3 and 1↔2 form two 2-cycles, so answer = 4 − 2 = 2.",
+    "```\ncompute digit sum for each element\nsort indices by (digit_sum, value) → permutation p\nvisited = [false] * n;  cycles = 0\nfor i in 0..n-1:\n    if not visited[i]:\n        cycles += 1\n        j = i\n        while not visited[j]:\n            visited[j] = true\n            j = p[j]\nreturn n - cycles\n```",
+    "**Single element** - n = 1, trivially sorted\n`Input: [5]` → `Expected: 0`\n⚠️ Bug: cycle-counting loop `for (int i = 0; i < n - 1; i++)` skips the only element → returns 1\n\n**Ties in digit sum** - multiple numbers share the same digit sum, value decides order\n`Input: [18,43,34,16]` → `Expected: 2`\n⚠️ Bug: sorting only by digit sum with `stable_sort` and no value tiebreaker → target [43,34,16,18], one 4-cycle, returns 3\n\n**Already sorted** - array already matches target order\n`Input: [22,14,33,7]` → `Expected: 0`\n⚠️ Bug: same off-by-one loop `for (int i = 0; i < n - 1; i++)` skips last self-cycle → returns 1\n\n**Multi-digit numbers** - digit sum must sum every digit\n`Input: [19,28]` → `Expected: 0`\n⚠️ Bug: computing digit sum as `x % 10` (last digit only) → sums [9,8], target [28,19], returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums may contain duplicate values (not necessarily distinct)?",
+      "a": "Multiple current positions can fill the same target slot, so cycle decomposition no longer applies directly. You must find the assignment of elements to target positions that maximizes the number of cycles, which becomes a graph matching problem. Time complexity rises to O(n²) or worse depending on the matching algorithm used."
+    },
+    {
+      "q": "What if you can only swap adjacent elements?",
+      "a": "The minimum adjacent swaps to reach a target permutation equals the inversion count of the position mapping. Replace cycle decomposition with inversion counting via a Fenwick tree or merge sort. Time complexity stays O(n log n), space O(n)."
+    },
+    {
+      "q": "What if the sort key changes from digit sum to popcount (number of set bits)?",
+      "a": "Replace the digit sum computation with `__builtin_popcount` (O(1) per element). Everything else - sorting by (key, value), cycle decomposition, n − cycles - stays identical. Time O(n log n), space O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minSwaps(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> sum(n);\n        for (int i = 0; i < n; i++) {\n            int x = nums[i], s = 0;\n            while (x > 0) { s += x % 10; x /= 10; }\n            sum[i] = s;\n        }\n        vector<int> idx(n);\n        for (int i = 0; i < n; i++) idx[i] = i;\n        sort(idx.begin(), idx.end(), [&](int a, int b) {\n            if (sum[a] != sum[b]) return sum[a] < sum[b];\n            return nums[a] < nums[b];\n        });\n        vector<bool> visited(n, false);\n        int cycles = 0;\n        for (int i = 0; i < n; i++) {\n            if (visited[i]) continue;\n            cycles++;\n            int j = i;\n            while (!visited[j]) {\n                visited[j] = true;\n                j = idx[j];\n            }\n        }\n        return n - cycles;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

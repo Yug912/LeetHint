@@ -1,0 +1,40 @@
+{
+  "slug": "maximize-number-of-subsequences-in-a-string",
+  "title": "Maximize Number of Subsequences in a String",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Greedy Prefix Counting",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- No containers, arrays, or strings allocated\n- Scalar variables only: existing, count0, count1, p0, p1 → O(1)\n- No recursion\n- not counted: input string text, input string pattern",
+  "approach": "The key insight is that adding `pattern[0]` at the very beginning maximizes new subsequences (it pairs with every `pattern[1]` in the text), and adding `pattern[1]` at the very end maximizes new subsequences (it pairs with every `pattern[0]` in the text). We count existing subsequences in a single left-to-right pass, maintaining a running count of `pattern[0]` seen so far - each time we encounter `pattern[1]`, we add that running count to the total. The answer is the existing count plus the maximum of the total counts of `pattern[0]` and `pattern[1]` in the text, since those represent the best-case gains from each insertion option.",
+  "hints": [
+    "Where in the text should you place the new character so it can form the most new subsequences with existing characters? The text can be up to 10^5 characters, so checking every insertion position is too slow.",
+    "Use a single left-to-right pass maintaining a running count of pattern[0] seen so far; each time you encounter pattern[1], add that running count to the total. In Example 1 (\"abdcdbc\", \"ac\"), reaching the first 'c' adds 1 (one 'a' seen so far), and reaching the second 'c' adds 1 again, giving existing = 2.",
+    "```\ncount0 = 0, count1 = 0, existing = 0\nfor each char c in text:\n    if c == pattern[1]:\n        existing += count0\n        count1 += 1\n    if c == pattern[0]:\n        count0 += 1\nreturn existing + max(count0, count1)\n```",
+    "**Same characters in pattern** - pattern[0] equals pattern[1], so the order of the two if-checks determines whether a character pairs with itself.\n`Input: text = \"aaa\", pattern = \"aa\"` → `Expected: 6`\n⚠️ Bug: incrementing count0 before checking pattern[1] when pattern[0]==pattern[1] → returns 9\n\n**Overflow** - 10^5 identical characters yield ~5×10^9 subsequences, exceeding 32-bit int range.\n`Input: text = \"a\"×100000, pattern = \"aa\"` → `Expected: 5000050000`\n⚠️ Bug: using int instead of long long for existing → returns 705082704\n\n**Single character text** - only one character exists, so existing subsequences is 0 and the answer comes entirely from the added character.\n`Input: text = \"a\", pattern = \"ab\"` → `Expected: 1`\n⚠️ Bug: returning existing without adding max(count0, count1) → returns 0\n\n**Only pattern[1] characters present** - adding pattern[0] at the start is optimal, but a solution that only tries adding pattern[1] at the end misses it.\n`Input: text = \"bbb\", pattern = \"ab\"` → `Expected: 3`\n⚠️ Bug: only computing existing + count0 (adding pattern[1] at end) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if pattern length is k instead of 2?",
+      "a": "Maintain a running count for each prefix of the pattern. For each character in text, update counts from the longest prefix down to the shortest, so each character contributes to all matching prefixes in one pass. TC: O(n·k), SC: O(k)."
+    },
+    {
+      "q": "What if you can add up to k characters instead of just 1?",
+      "a": "If pattern[0] ≠ pattern[1], add all k copies of whichever character has the higher total count in text, giving existing + k × max(count0, count1). If pattern[0] == pattern[1], the answer is C(count + k, 2) where count is the number of that character in text. TC: O(n), SC: O(1)."
+    },
+    {
+      "q": "What if text arrives as a stream and you can only store O(1) state?",
+      "a": "The solution already uses a single pass with only three counters, so it works unchanged for streaming input. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumSubsequenceCount(string text, string pattern) {\n        long long existing = 0;\n        long long count0 = 0, count1 = 0;\n        char p0 = pattern[0], p1 = pattern[1];\n        \n        for (char c : text) {\n            if (c == p1) {\n                existing += count0;\n                count1++;\n            }\n            if (c == p0) {\n                count0++;\n            }\n        }\n        \n        return existing + max(count0, count1);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

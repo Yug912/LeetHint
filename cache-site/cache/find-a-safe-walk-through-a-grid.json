@@ -1,0 +1,40 @@
+{
+  "slug": "find-a-safe-walk-through-a-grid",
+  "title": "Find a Safe Walk Through a Grid",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "0-1 BFS",
+  "tc": "O(m * n)",
+  "sc": "O(m * n)",
+  "spaceBreakdown": "- vector<vector<int>> dist: m×n entries → O(m*n)\n- deque<pair<int,int>> dq: at most O(m*n) entries → O(m*n)\n- dx/dy arrays: constant → O(1)\n- not counted: input grid",
+  "approach": "Model each cell as a graph node and each move as an edge with weight 0 (target cell is safe) or 1 (target cell is unsafe). The minimum total weight on any path from (0,0) to (m−1,n−1) equals the fewest unsafe cells you must step on. Since edge weights are only 0 or 1, a 0-1 BFS with a deque finds this minimum in linear time. The trip is possible iff that minimum is strictly less than `health` (health must stay ≥ 1).",
+  "hints": [
+    "Each move to a neighbor either costs 0 health or exactly 1. If you could label every cell with the fewest unsafe cells any route to it must cross, what would the label on the bottom-right cell tell you?",
+    "Use 0-1 BFS with a deque. In Example 1, from (0,0) you push neighbors onto the front of the deque if the target cell is 0, or the back if it is 1, always relaxing the best-known cost.",
+    "```\ndist[0][0] = grid[0][0]\ndeque.push_front((0,0))\nwhile deque not empty:\n    (x,y) = deque.pop_front()\n    for each neighbor (nx,ny):\n        w = grid[nx][ny]\n        if dist[x][y] + w < dist[nx][ny]:\n            dist[nx][ny] = dist[x][y] + w\n            if w == 0: push_front((nx,ny))\n            else:      push_back((nx,ny))\nreturn dist[m-1][n-1] < health\n```",
+    "**Unsafe start cell, health 1** - the starting cell itself is unsafe and health is exactly 1.\n`Input: grid = [[1,0]], health = 1` → `Expected: false`\n⚠️ Bug: initializing `dist[0][0] = 0` instead of `grid[0][0]` → returns `true`\n\n**Off-by-one on the final check** - minimum damage equals health exactly.\n`Input: grid = [[0,1,0]], health = 1` → `Expected: false`\n⚠️ Bug: using `dist <= health` instead of `dist < health` → returns `true`\n\n**Need to move up or left** - the only zero-damage path requires backtracking.\n`Input: grid = [[0,1,0,0],[0,0,0,0]], health = 1` → `Expected: true`\n⚠️ Bug: only exploring right and down neighbors → returns `false`\n\n**All unsafe, health equals true damage** - every cell including start costs 1.\n`Input: grid = [[1,1],[1,1]], health = 3` → `Expected: false`\n⚠️ Bug: not counting the start cell's damage → returns `true`"
+  ],
+  "followUps": [
+    {
+      "q": "What if the grid is 10^5 × 10^5 and you only need to know if a path with zero damage exists?",
+      "a": "Run a plain BFS/DFS restricted to cells with value 0, starting from (0,0). If (m−1,n−1) is reachable, return true. Time O(m×n), space O(min(m,n)) with row-by-row visited tracking."
+    },
+    {
+      "q": "What if each cell carries an arbitrary positive integer damage instead of just 0 or 1?",
+      "a": "Replace the deque with a min-heap and run Dijkstra's algorithm. Time O(m×n·log(m×n)), space O(m×n)."
+    },
+    {
+      "q": "What if you must return one valid path instead of just true/false?",
+      "a": "Store a parent pointer for each cell during the 0-1 BFS, then backtrack from (m−1,n−1) to (0,0). Time O(m×n), space O(m×n) for the parent map plus O(path length) for the output."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool findSafeWalk(vector<vector<int>>& grid, int health) {\n        int m = grid.size();\n        int n = grid[0].size();\n        vector<vector<int>> dist(m, vector<int>(n, INT_MAX));\n        deque<pair<int,int>> dq;\n        dist[0][0] = grid[0][0];\n        dq.push_front({0, 0});\n        int dx[4] = {0, 0, 1, -1};\n        int dy[4] = {1, -1, 0, 0};\n        while (!dq.empty()) {\n            pair<int,int> cur = dq.front();\n            dq.pop_front();\n            int x = cur.first, y = cur.second;\n            for (int k = 0; k < 4; k++) {\n                int nx = x + dx[k];\n                int ny = y + dy[k];\n                if (nx < 0 || nx >= m || ny < 0 || ny >= n) continue;\n                int w = grid[nx][ny];\n                if (dist[x][y] + w < dist[nx][ny]) {\n                    dist[nx][ny] = dist[x][y] + w;\n                    if (w == 0) dq.push_front({nx, ny});\n                    else dq.push_back({nx, ny});\n                }\n            }\n        }\n        return dist[m-1][n-1] < health;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

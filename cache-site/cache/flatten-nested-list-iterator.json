@@ -1,0 +1,51 @@
+{
+  "slug": "flatten-nested-list-iterator",
+  "title": "Flatten Nested List Iterator",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Stack-based DFS",
+  "tc": "O(1)",
+  "sc": "O(d)",
+  "spaceBreakdown": "- stack<pair<const vector<NestedInteger>*, int>> stk: up to d entries (d = max nesting depth) → O(d)\n- recursion depth: none (explicit stack)\n- not counted: input vector",
+  "approach": "The nested list is a tree (lists = internal nodes, integers = leaves). We need lazy left-to-right DFS. Use an explicit stack of (list pointer, index) pairs. `hasNext()` unwinds the stack: pop exhausted lists, stop at integers, expand nested lists by pushing them. `next()` calls `hasNext()` then reads and advances past the integer on top.",
+  "hints": [
+    "If you draw each list as a box containing its elements, what shape emerges, and what does \"the next integer\" correspond to in a traversal of that shape?",
+    "Use a stack of (list pointer, current index) pairs. For `[[1,1],2,[1,1]]`, start with the outer list at index 0; when you hit `[1,1]` (a list, not an integer), push it and descend until you reach the integer `1`.",
+    "```\nhasNext:\n  while stack not empty:\n    (list, idx) = top of stack\n    if idx >= size(list): pop\n    elif list[idx] is integer: return true\n    else: increment top index; push (list[idx].getList, 0)\n  return false\n```",
+    "**Empty nested lists** - inner lists can be empty and must be skipped\n`Input: [[],[1],[]]` → `Expected: [1]`\n⚠️ Bug: not checking `idx >= list.size()` before accessing `list[idx]` → undefined behavior on empty list\n\n**Deeply nested single element** - nesting can be arbitrarily deep\n`Input: [[[[[5]]]]]` → `Expected: [5]`\n⚠️ Bug: recursive flattening in constructor → stack overflow on deep nesting\n\n**All empty lists** - no integers exist anywhere\n`Input: [[],[]]` → `Expected: []`\n⚠️ Bug: `hasNext` returning `!stk.empty()` without unwinding exhausted lists → infinite loop, `next` accesses empty list\n\n**Single integer at top level** - the simplest non-list element\n`Input: [42]` → `Expected: [42]`\n⚠️ Bug: always calling `getList()` without checking `isInteger()` first → undefined behavior on integer"
+  ],
+  "followUps": [
+    {
+      "q": "What if you need to flatten the list in reverse order (right-to-left)?",
+      "a": "Push elements onto the stack from right to left instead of left to right. When expanding a list, iterate its elements in reverse order. TC remains O(1) amortized per call, SC remains O(d)."
+    },
+    {
+      "q": "What if the nested list can be modified during iteration (elements added or removed)?",
+      "a": "Live pointers into the original structure become dangling. You must either snapshot the structure at construction time (O(n) space) or use a fail-fast check that detects structural modifications and throws an exception."
+    },
+    {
+      "q": "What if you need to support a `remove()` operation that deletes the last returned integer?",
+      "a": "Track the (list, index) of the last returned integer. Erasing from a vector is O(n) per operation. To achieve O(1) removal, mark elements as deleted and skip them during traversal, at the cost of wasted memory until compaction."
+    }
+  ],
+  "code": {
+    "cpp": "class NestedIterator {\n    stack<pair<const vector<NestedInteger>*, int>> stk;\npublic:\n    NestedIterator(vector<NestedInteger> &nestedList) {\n        stk.push({&nestedList, 0});\n    }\n    \n    int next() {\n        hasNext();\n        const vector<NestedInteger>* list = stk.top().first;\n        int idx = stk.top().second;\n        stk.top().second++;\n        return (*list)[idx].getInteger();\n    }\n    \n    bool hasNext() {\n        while (!stk.empty()) {\n            const vector<NestedInteger>* list = stk.top().first;\n            int idx = stk.top().second;\n            if (idx >= (int)list->size()) {\n                stk.pop();\n            } else if ((*list)[idx].isInteger()) {\n                return true;\n            } else {\n                stk.top().second++;\n                stk.push({&(*list)[idx].getList(), 0});\n            }\n        }\n        return false;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

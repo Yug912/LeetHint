@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-length-substring-with-two-occurrences",
+  "title": "Maximum Length Substring With Two Occurrences",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sliding Window",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int cnt[26]: fixed 26 entries → O(1)\n- int left, ans, right: scalars → O(1)\n- not counted: input string s, returned int",
+  "approach": "Use a sliding window over `s` with a frequency array of size 26. Expand the right end; whenever the character at `right` reaches count 3, shrink from the left until its count drops back to 2. The window always holds a substring where every character appears at most twice, so the maximum window size seen is the answer. Correctness follows because any valid substring is a contiguous window and the algorithm never skips a maximal one: when a window becomes invalid, only shrinking the left can restore validity.",
+  "hints": [
+    "If you fix the right end of a substring and extend it by one character, what happens to the set of left ends that still keep every character's count at most two? The constraint n ≤ 100 is small enough that even O(n²) checking would pass.",
+    "Use a sliding window with a 26-element frequency array. On `s = \"bcbbbcba\"`, after adding the third `b` at index 3 the window `bcbb` is invalid, so move `left` past the first `b` to restore validity.",
+    "```\nleft = 0, ans = 0, cnt[26] = 0\nfor right in 0..n-1:\n    cnt[s[right]] += 1\n    while cnt[s[right]] > 2:\n        cnt[s[left]] -= 1\n        left += 1\n    ans = max(ans, right - left + 1)\nreturn ans\n```",
+    "**Smallest input** - only two characters, both valid.\n`Input: s = \"ab\"` → `Expected: 2`\n⚠️ Bug: returning `right - left` instead of `right - left + 1` → returns `1`\n\n**All equal characters** - window must cap at two of the same letter.\n`Input: s = \"aaaa\"` → `Expected: 2`\n⚠️ Bug: shrinking while `cnt[s[right]] >= 2` instead of `> 2` → returns `1`\n\n**Valid window at the very end** - answer is found on the last expansion.\n`Input: s = \"bcbbbcba\"` → `Expected: 4`\n⚠️ Bug: updating `ans` before the `while` shrink loop → returns `3`\n\n**Single repeated pair** - two distinct letters each appearing twice.\n`Input: s = \"aabb\"` → `Expected: 4`\n⚠️ Bug: initializing `ans = 1` instead of `0` and never updating on equal-length windows → returns `1` (or wrong if logic skips)"
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to \"at most k occurrences of each character\" for arbitrary k.",
+      "a": "Replace the threshold 2 with k in the while condition. Time stays O(n), space stays O(1) for the 26-letter alphabet."
+    },
+    {
+      "q": "Scale s.length up to 10^6; does the approach still hold?",
+      "a": "Yes, the sliding window is already O(n) with a fixed array, so it scales directly. Just avoid per-step `unordered_map` operations; the int[26] array keeps cache behavior tight."
+    },
+    {
+      "q": "Answer many queries of the form \"is substring s[l..r] valid?\".",
+      "a": "Precompute prefix frequency arrays prefix[c][i] for each of 26 letters in O(26·n) time and space. Each query checks prefix[c][r+1] - prefix[c][l] ≤ 2 for all c in O(26) per query."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumLengthSubstring(string s) {\n        int cnt[26] = {0};\n        int left = 0, ans = 0;\n        for (int right = 0; right < (int)s.size(); right++) {\n            int idx = s[right] - 'a';\n            cnt[idx]++;\n            while (cnt[idx] > 2) {\n                cnt[s[left] - 'a']--;\n                left++;\n            }\n            if (right - left + 1 > ans) ans = right - left + 1;\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

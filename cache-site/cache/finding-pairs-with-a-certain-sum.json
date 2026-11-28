@@ -1,0 +1,51 @@
+{
+  "slug": "finding-pairs-with-a-certain-sum",
+  "title": "Finding Pairs With a Certain Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Hash Table Frequency Count",
+  "tc": "O(n1)",
+  "sc": "O(n1 + n2)",
+  "spaceBreakdown": "- vector<int> nums1: up to 1000 elements → O(n1)\n- vector<int> nums2: up to 10^5 elements → O(n2)\n- unordered_map<int,int> freq2: up to n2 distinct values → O(n2)\n- recursion depth: none\n- not counted: input parameters",
+  "approach": "Since nums1 is small (≤1000) and nums2 is large (≤10^5), maintain a frequency map of nums2 values. For count(tot), iterate over each element x in nums1 and look up (tot − x) in the frequency map, summing the counts. For add(index, val), decrement the frequency of the old value at nums2[index], update the value, and increment the frequency of the new value. This makes add O(1) and count O(n1).",
+  "hints": [
+    "nums1 has at most 1000 elements while nums2 has up to 10^5. For a fixed nums1[i] and a target tot, what single piece of information about nums2 would let you count all valid j values instantly?",
+    "Use a hash map storing the frequency of each value in nums2. For count(7) with nums1 = [1,1,2,2,2,3], look up freq[7−2] = freq[5] = 2 for each occurrence of 2, contributing 2+2+2 = 6 from those alone.",
+    "```\nconstructor:\n  store nums1 and nums2\n  build freq map: for each v in nums2, freq[v]++\n\nadd(index, val):\n  freq[nums2[index]] -= 1\n  nums2[index] += val\n  freq[nums2[index]] += 1\n\ncount(tot):\n  res = 0\n  for each x in nums1:\n    if (tot - x) in freq:\n      res += freq[tot - x]\n  return res\n```",
+    "**Duplicates in nums1** - nums1 has repeated values, each must be counted separately.\n`Input: FindSumPairs([2,2,2], [5]), count(7)` → `Expected: 3`\n⚠️ Bug: deduplicating nums1 into a set before iterating → returns 1\n\n**All elements equal** - every pair sums to the target.\n`Input: FindSumPairs([3,3], [4,4,4]), count(7)` → `Expected: 6`\n⚠️ Bug: storing only unique nums1 values in a set → returns 3\n\n**Negative lookup** - target minus a nums1 element is negative, absent from nums2.\n`Input: FindSumPairs([10], [1]), count(5)` → `Expected: 0`\n⚠️ Bug: using an array indexed by value without bounds checking → out-of-bounds access on index −5\n\n**Boundary index** - add at the first element of nums2.\n`Input: FindSumPairs([1], [1]), add(0, 2), count(3)` → `Expected: 1`\n⚠️ Bug: decrementing freq after updating nums2[index] (reads new value instead of old) → freq map corrupted, returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if both arrays could be up to 10^5 in length?",
+      "a": "Maintain frequency maps for both arrays. For count(tot), iterate over the map with fewer distinct keys, looking up (tot − key) in the other map. This gives O(min(d1, d2)) per count where d1, d2 are the distinct value counts of each array."
+    },
+    {
+      "q": "What if we need to support range updates on nums2 (add val to all elements in a range of indices)?",
+      "a": "A per-value frequency map becomes hard to maintain for range updates. Use a Fenwick tree indexed by nums2 value (range up to 10^5 after accounting for adds) to track counts. For count(tot), iterate over nums1 and query the tree for the count of (tot − nums1[i])."
+    },
+    {
+      "q": "What if count queries vastly outnumber add queries (10^6 count, 10 add)?",
+      "a": "After each add, recompute a frequency map for nums1 as well. For count, iterate over whichever frequency map has fewer distinct keys and look up complements in the other. If both have many distinct values, batch adds and rebuild a sorted nums2 with binary search for count queries."
+    }
+  ],
+  "code": {
+    "cpp": "class FindSumPairs {\nprivate:\n    vector<int> nums1;\n    vector<int> nums2;\n    unordered_map<int, int> freq2;\npublic:\n    FindSumPairs(vector<int>& nums1, vector<int>& nums2) {\n        this->nums1 = nums1;\n        this->nums2 = nums2;\n        for (int x : nums2) {\n            freq2[x]++;\n        }\n    }\n    \n    void add(int index, int val) {\n        freq2[nums2[index]]--;\n        nums2[index] += val;\n        freq2[nums2[index]]++;\n    }\n    \n    int count(int tot) {\n        int res = 0;\n        for (int x : nums1) {\n            auto it = freq2.find(tot - x);\n            if (it != freq2.end()) {\n                res += it->second;\n            }\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 3,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

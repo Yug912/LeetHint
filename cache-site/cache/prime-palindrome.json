@@ -1,0 +1,40 @@
+{
+  "slug": "prime-palindrome",
+  "title": "Prime Palindrome",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Constructive Search",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- long long p, int x, long long i: scalar variables → O(1)\n- recursion depth: none\n- no containers or arrays allocated",
+  "approach": "All even-digit palindromes are divisible by 11, so the only even-digit prime palindrome is 11 itself. For n ≤ 11, we return the answer directly (2, 3, 5, 7, or 11). For n > 11, we generate odd-length palindromes in increasing order by mirroring a \"root\" number (appending the reverse of root without its last digit) and test each for primality via trial division up to √p. The first palindrome ≥ n that is prime is the answer.",
+  "hints": [
+    "Among palindromes grouped by their digit count, which groups contain no primes at all (except possibly one small member)? The answer is guaranteed to be at most 2 × 10⁸.",
+    "Generate odd-length palindromes by mirroring a root number's prefix, then test each with trial division. For n = 13, root 10 produces 101, which is prime, so return 101.",
+    "```\nif n <= 11: return smallest prime palindrome in [n, 11]\nfor root = 1, 2, 3, ...:\n    p = root concatenated with reverse(root without last digit)\n    if p >= n and isPrime(p):\n        return p\n```",
+    "**Smallest input** - n = 1 means the answer is the smallest prime palindrome overall; 1 is not prime.\n`Input: 1` → `Expected: 2`\n⚠️ Bug: treating 1 as prime → returns 1\n\n**Even-length exception** - n = 8 requires 11, the only even-digit prime palindrome.\n`Input: 8` → `Expected: 11`\n⚠️ Bug: skipping all even-length palindromes without special-casing 11 → returns 101\n\n**Boundary at exception** - n = 11 is itself the even-length exception.\n`Input: 11` → `Expected: 11`\n⚠️ Bug: using `n < 11` instead of `n <= 11` → falls through to the odd-length loop, returns 101\n\n**Input equals answer** - n is itself a prime palindrome, so the answer is n.\n`Input: 101` → `Expected: 101`\n⚠️ Bug: using `p > n` instead of `p >= n` → skips 101, returns 131"
+  ],
+  "followUps": [
+    {
+      "q": "Find the smallest prime palindrome strictly greater than n (not ≥ n).",
+      "a": "Change the condition from `p >= n` to `p > n`. For n ≤ 11, shift each threshold up (e.g., n = 7 now returns 11 instead of 7). The rest of the approach stays identical. TC unchanged, SC unchanged."
+    },
+    {
+      "q": "n can be up to 10¹⁸. How does the approach change?",
+      "a": "Trial division becomes infeasible for √p ≈ 10⁹; replace isPrime with Miller-Rabin probabilistic primality testing (O(log²p) per check). Palindrome generation stays the same but roots grow to ~10⁹. TC becomes O(√n · log²n), SC stays O(1)."
+    },
+    {
+      "q": "Answer many queries on a stream of integers, each up to 10⁸.",
+      "a": "Precompute all prime palindromes up to 2×10⁸ (there are only a few hundred) by running the generator once, store them in a sorted array, and binary search per query. Precomputation TC O(√N · √N) = O(N), per-query TC O(log K) where K ≈ 600 is the count of prime palindromes, SC O(K) for the precomputed list."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int primePalindrome(int n) {\n        if (n <= 2) return 2;\n        if (n <= 3) return 3;\n        if (n <= 5) return 5;\n        if (n <= 7) return 7;\n        if (n <= 11) return 11;\n\n        for (int root = 1; ; root++) {\n            long long p = makePalindrome(root);\n            if (p >= n && isPrime(p)) return (int)p;\n        }\n    }\n\nprivate:\n    long long makePalindrome(int root) {\n        long long p = root;\n        int x = root / 10;\n        while (x > 0) {\n            p = p * 10 + x % 10;\n            x /= 10;\n        }\n        return p;\n    }\n\n    bool isPrime(long long x) {\n        if (x < 2) return false;\n        if (x < 4) return true;\n        if (x % 2 == 0) return false;\n        for (long long i = 3; i * i <= x; i += 2) {\n            if (x % i == 0) return false;\n        }\n        return true;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "power-grid-maintenance",
+  "title": "Power Grid Maintenance",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Union-Find with Ordered Set",
+  "tc": "O((c + n + q) log c)",
+  "sc": "O(c)",
+  "spaceBreakdown": "- parent: vector<int> of size c+1 → O(c)\n- rank_: vector<int> of size c+1 → O(c)\n- compSets: unordered_map<int, set<int>> with c total elements across all sets → O(c)\n- online: vector<bool> of size c+1 → O(c)\n- recursion depth for find: O(log c) call stack (union by rank bounds tree height)\n- not counted: input connections/queries, returned result vector",
+  "approach": "The grid structure is fixed-taking a station offline doesn't change connectivity. So we precompute connected components once using Union-Find with path compression and union by rank. For each component, we maintain a `set<int>` of online station IDs. Type 1 queries check if x is online (return x) or look up the smallest element in x's component's set (or -1 if empty). Type 2 queries erase x from its component's set. Each query is O(log c) after O(c log c) preprocessing.",
+  "hints": [
+    "With up to 2×10^5 queries and 10^5 stations, re-examining the grid for each query is too slow. What property of the grid stays constant across all queries, given that taking a station offline does not alter connectivity?",
+    "Use Union-Find to assign each station a component ID, then maintain a `set<int>` of online stations per component. In Example 1, all five stations share one component; after query [2,1] removes station 1, the set holds {2,3,4,5}, so query [1,1] returns 2.",
+    "```\nbuild Union-Find from connections\nfor each station i in 1..c:\n    insert i into its component's ordered set\nfor each query [type, x]:\n    if type == 1:\n        if x is online: answer x\n        else if component set non-empty: answer smallest element\n        else: answer -1\n    if type == 2:\n        remove x from its component's set\n        mark x offline\n```",
+    "**Single station** - c = 1, no connections, one query\n`c = 1, connections = [], queries = [[1,1]]` → `Expected: [1]`\n⚠️ Bug: Allocating parent array of size c instead of c+1 → parent[1] out of bounds\n\n**All offline in one component** - every station goes offline before a type 1 query\n`c = 3, connections = [[1,2],[2,3]], queries = [[2,1],[2,2],[2,3],[1,2]]` → `Expected: [-1]`\n⚠️ Bug: Dereferencing set.begin() without checking if set is empty → undefined behavior\n\n**Disconnected components** - stations in different grids\n`c = 4, connections = [[1,2]], queries = [[2,1],[1,1],[1,3]]` → `Expected: [2, 3]`\n⚠️ Bug: Using a single global set instead of per-component sets → returns 2 for query [1,3] instead of 3\n\n**Cyclic graph** - connections form a cycle\n`c = 3, connections = [[1,2],[2,3],[3,1]], queries = [[1,1]]` → `Expected: [1]`\n⚠️ Bug: DFS without visited array → infinite recursion / stack overflow"
+  ],
+  "followUps": [
+    {
+      "q": "Add a third query type [3, x] that brings station x back online. How does this change the solution?",
+      "a": "Insert x back into its component's ordered set and mark it online. Each query remains O(log c). The ordered set handles re-insertion naturally, so no structural changes are needed."
+    },
+    {
+      "q": "What if cables can be added between queries, merging two components?",
+      "a": "Use Union-Find to merge components on the fly, then merge their ordered sets using small-to-large merging (insert all elements of the smaller set into the larger). Each merge costs O(k log c) where k is the smaller set's size, giving amortized O(log² c) per element across all merges."
+    },
+    {
+      "q": "What if c is up to 10^9 but only 10^5 stations ever appear in connections or queries?",
+      "a": "Replace the fixed-size parent/rank arrays with a hash map, storing only stations that appear. Space drops to O(n + q) instead of O(c). All operations remain O(log c) amortized."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<int> parent, rank_;\n    \n    int find(int x) {\n        if (parent[x] != x) parent[x] = find(parent[x]);\n        return parent[x];\n    }\n    \n    void unite(int x, int y) {\n        int px = find(x), py = find(y);\n        if (px == py) return;\n        if (rank_[px] < rank_[py]) swap(px, py);\n        parent[py] = px;\n        if (rank_[px] == rank_[py]) rank_[px]++;\n    }\n    \npublic:\n    vector<int> processQueries(int c, vector<vector<int>>& connections, vector<vector<int>>& queries) {\n        parent.resize(c + 1);\n        rank_.resize(c + 1, 0);\n        for (int i = 0; i <= c; i++) parent[i] = i;\n        \n        for (auto& conn : connections) {\n            unite(conn[0], conn[1]);\n        }\n        \n        unordered_map<int, set<int>> compSets;\n        for (int i = 1; i <= c; i++) {\n            int root = find(i);\n            compSets[root].insert(i);\n        }\n        \n        vector<bool> online(c + 1, true);\n        \n        vector<int> result;\n        for (auto& q : queries) {\n            int type = q[0], x = q[1];\n            int root = find(x);\n            if (type == 1) {\n                if (online[x]) {\n                    result.push_back(x);\n                } else {\n                    auto& s = compSets[root];\n                    if (s.empty()) {\n                        result.push_back(-1);\n                    } else {\n                        result.push_back(*s.begin());\n                    }\n                }\n            } else {\n                if (online[x]) {\n                    online[x] = false;\n                    compSets[root].erase(x);\n                }\n            }\n        }\n        \n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

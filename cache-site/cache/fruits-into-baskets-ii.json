@@ -1,0 +1,40 @@
+{
+  "slug": "fruits-into-baskets-ii",
+  "title": "Fruits Into Baskets II",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Segment Tree with Range-Max Query and Point Update",
+  "tc": "O(n log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> tree: 2*size elements, size is next power of 2 ≥ n, so ≤ 4n → O(n)\n- recursion depth (query/update): O(log n)\n- not counted: input vectors fruits, baskets; returned int",
+  "approach": "Build a segment tree over `baskets` where each node stores the maximum capacity in its range. For each fruit (left to right), query the leftmost basket index whose capacity is at least the fruit quantity by descending from the root: if the left child's range-max is sufficient, recurse left; otherwise recurse right; if the root's max is insufficient, the fruit is unplaced. After placing, point-update that basket's capacity to 0. This yields O(n log n) time and O(n) space.",
+  "hints": [
+    "What single summary value for a contiguous range of baskets would let you decide, in one comparison, whether any basket in that range can hold the current fruit? The statement says each basket holds only one fruit type.",
+    "A segment tree storing each range's maximum basket capacity. For `fruits=[4,2,5]`, `baskets=[3,5,4]`: root max is 5 ≥ 4, left child max is 5 ≥ 4 so descend left, left leaf 3 < 4 so go right to index 1 (basket 5); set it to 0.",
+    "```\nbuild segment tree: each node = max capacity in its range\nunplaced = 0\nfor each fruit f:\n    idx = query(root, f)\n        if node.max < f: return -1\n        if leaf: return index\n        if left.max >= f: recurse left\n        else: recurse right\n    if idx == -1: unplaced++\n    else: update(root, idx, 0)\nreturn unplaced\n```",
+    "**Equal capacity** - fruit quantity exactly equals a basket capacity\n`fruits = [3], baskets = [3]` → `Expected: 0`\n⚠️ Bug: using `>` instead of `>=` when comparing basket capacity to fruit → returns 1\n\n**All baskets too small** - no basket can hold any fruit\n`fruits = [5,5], baskets = [1,2]` → `Expected: 2`\n⚠️ Bug: omitting the `if (tree[v] < val) return -1` guard at the start of query → returns index 1 (basket 2) → returns 0\n\n**Duplicate capacities** - multiple baskets with the same capacity, each used once\n`fruits = [3,3,3], baskets = [3,3]` → `Expected: 1`\n⚠️ Bug: forgetting to call update after placing a fruit → all three fruits \"placed\" in basket 0 → returns 0\n\n**Rightmost valid basket** - fruit must skip an insufficient left basket\n`fruits = [3], baskets = [1,3]` → `Expected: 0`\n⚠️ Bug: returning -1 when the left child is insufficient instead of recursing right → returns 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^6 - does the approach still hold?",
+      "a": "Yes. Build is O(n) and each query/update is O(log n), so total O(n log n) time with O(n) space. Switch to an iterative segment tree to cut the constant factor and avoid recursion-stack overhead."
+    },
+    {
+      "q": "What if each basket can hold multiple fruit types (reused, not consumed)?",
+      "a": "Skip the point-update after each placement; the tree's max values never change. Each fruit still queries the leftmost sufficient basket in O(log n), giving O(n log n) time and O(n) space."
+    },
+    {
+      "q": "What if fruits arrive online and you must report the running count of placed fruits after each arrival?",
+      "a": "Keep a running `placed` counter incremented on each successful query. The segment tree already supports online queries and updates, so each step is O(log n); total O(n log n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\n    vector<int> tree;\n    int size;\n\n    int query(int v, int tl, int tr, int val) {\n        if (tree[v] < val) return -1;\n        if (tl == tr) return tl;\n        int tm = (tl + tr) / 2;\n        if (tree[2 * v] >= val) return query(2 * v, tl, tm, val);\n        return query(2 * v + 1, tm + 1, tr, val);\n    }\n\n    void update(int v, int tl, int tr, int pos) {\n        if (tl == tr) {\n            tree[v] = 0;\n            return;\n        }\n        int tm = (tl + tr) / 2;\n        if (pos <= tm) update(2 * v, tl, tm, pos);\n        else update(2 * v + 1, tm + 1, tr, pos);\n        tree[v] = max(tree[2 * v], tree[2 * v + 1]);\n    }\n\npublic:\n    int numOfUnplacedFruits(vector<int>& fruits, vector<int>& baskets) {\n        int n = baskets.size();\n        size = 1;\n        while (size < n) size *= 2;\n        tree.assign(2 * size, 0);\n        for (int i = 0; i < n; i++) tree[size + i] = baskets[i];\n        for (int i = size - 1; i >= 1; i--)\n            tree[i] = max(tree[2 * i], tree[2 * i + 1]);\n\n        int unplaced = 0;\n        for (int f : fruits) {\n            int idx = query(1, 0, size - 1, f);\n            if (idx == -1 || idx >= n) unplaced++;\n            else update(1, 0, size - 1, idx);\n        }\n        return unplaced;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-and-sum-of-array",
+  "title": "Maximum AND Sum of Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(numSlots * 2^(2 * numSlots))",
+  "sc": "O(2^(2 * numSlots))",
+  "spaceBreakdown": "- vector<int> dp: 1 << (2 * numSlots) entries, max 262144 ints → O(2^(2 * numSlots))\n- recursion depth: none\n- not counted: input nums, returned int",
+  "approach": "Model each slot as two identical positions, so there are m = 2 * numSlots positions and position p belongs to slot p / 2 + 1. Use DP over a bitmask of occupied positions: after placing the first popcount(mask) numbers, dp[mask] stores the best AND sum. Transition by putting nums[popcount(mask)] into any free position. This enumerates every valid placement exactly once, so the maximum over all masks with n bits is the answer.",
+  "hints": [
+    "Each slot can hold two numbers, so there are at most 18 individual places, and the two places in a slot always give the same AND value. What information about the places do you need to carry from one partial placement to the next?",
+    "Use DP over a bitmask of the 2*numSlots individual positions; position p belongs to slot p/2+1. For nums=[1,2,3,4,5,6], numSlots=3, mask 1 (position 0, slot 1) has value 1; adding position 2 (slot 2) for 2 adds 2&2=2.",
+    "```\ndp[0] = 0\nfor mask in 0 .. (1 << (2*numSlots)) - 1:\n    if dp[mask] is invalid: continue\n    i = popcount(mask)\n    if i == n: ans = max(ans, dp[mask])\n    else:\n        for each free position p:\n            slot = p / 2 + 1\n            dp[mask | (1 << p)] = max(dp[mask | (1 << p)],\n                                     dp[mask] + (nums[i] & slot))\nreturn ans\n```",
+    "**Smallest input** - n=1, numSlots=1; only slot 1 is available.\n`Input: nums = [15], numSlots = 1` → `Expected: 1`\n⚠️ Bug: returning `dp[(1 << (2 * numSlots)) - 1]` (the all-positions mask) → returns `-1` because that mask is never reached with only one number.\n\n**Duplicate numbers fill one slot** - both numbers must use the same slot because there is only one slot.\n`Input: nums = [1, 1], numSlots = 1` → `Expected: 2`\n⚠️ Bug: using a mask with one bit per slot and allowing each slot once → returns `1`.\n\n**Full capacity with maximum values** - all 18 numbers are 15; each slot s contributes 15&s, and every slot is used twice.\n`Input: nums = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15], numSlots = 9` → `Expected: 90`\n⚠️ Bug: using `slot = position / 2` (0-based) instead of `position / 2 + 1` → returns `72`."
+  ],
+  "followUps": [
+    {
+      "q": "What if numSlots is increased to 15 (n ≤ 30)?",
+      "a": "The position-bitmask DP has 2^30 states, too large. Encode each slot's remaining capacity (0, 1, or 2) in base 3; dp over 3^numSlots states, transition by choosing a slot with remaining capacity. Complexity becomes O(numSlots * 3^numSlots) and memory O(3^numSlots)."
+    },
+    {
+      "q": "What if nums[i] can be up to 10^9 while numSlots stays ≤9?",
+      "a": "The DP structure is unchanged; just compute nums[i] & slot with int/long long. With slot numbers still 1..9, AND is at most 9, so int remains safe; if slot numbers also grow, use long long. Complexity unchanged."
+    },
+    {
+      "q": "What if memory is limited to 1 MB?",
+      "a": "The 262,144-int dp uses about 1 MB, so the position-bitmask version is too large. Use the base-3 capacity DP: 3^9 = 19,683 states, about 78 KB, with O(numSlots * 3^numSlots) time. It still processes numbers in order and chooses a slot with remaining capacity."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumANDSum(vector<int>& nums, int numSlots) {\n        int n = nums.size();\n        int m = 2 * numSlots;\n        int total = 1 << m;\n        vector<int> dp(total, -1);\n        dp[0] = 0;\n        int ans = 0;\n\n        for (int mask = 0; mask < total; ++mask) {\n            if (dp[mask] < 0) continue;\n            int used = __builtin_popcount(mask);\n            if (used == n) {\n                if (dp[mask] > ans) ans = dp[mask];\n                continue;\n            }\n            for (int p = 0; p < m; ++p) {\n                if (mask & (1 << p)) continue;\n                int slot = p / 2 + 1;\n                int nm = mask | (1 << p);\n                int val = dp[mask] + (nums[used] & slot);\n                if (val > dp[nm]) dp[nm] = val;\n            }\n        }\n\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

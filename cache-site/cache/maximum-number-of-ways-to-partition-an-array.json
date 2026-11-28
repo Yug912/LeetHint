@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-number-of-ways-to-partition-an-array",
+  "title": "Maximum Number of Ways to Partition an Array",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum + Hash Map Sweep",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<long long> prefix: n entries → O(n)\n- unordered_map<long long,int> rightCount: up to n-1 entries → O(n)\n- unordered_map<long long,int> leftCount: up to n-1 entries → O(n)\n- recursion depth: none",
+  "approach": "A pivot p is valid iff 2·prefix[p-1] == total. If we change nums[i] to k (delta = k - nums[i]), pivots p ≤ i need 2·prefix[p-1] == total + delta, while pivots p > i need 2·prefix[p-1] == total - delta. Sweep i from left to right, maintaining two hash maps: leftCount (pivots 1..i) and rightCount (pivots i+1..n-1). At each step, move pivot i from right to left, then query both maps with the appropriate target. The answer is the max over all i plus the no-change baseline.",
+  "hints": [
+    "For a pivot p, the equality \"sum of first p elements == sum of the rest\" simplifies to a relation between just two quantities - which two? With n up to 10^5, re-checking every pivot for each candidate element change is too slow.",
+    "Use a hash map from 2·prefix[p-1] to pivot count. In Example 1 (nums=[2,-1,2], total=3), pivot values are {4, 2}; changing nums[0] to k=3 gives delta=1, so we count pivots with value total-delta=2 on the right side → 1 way.",
+    "```\ntotal = sum(nums)\nrightCount = count of 2*prefix[p-1] for p in 1..n-1\nleftCount = empty\nans = rightCount[total]          // no-change baseline\nfor i = 0 to n-1:\n    if i >= 1: move pivot i from rightCount to leftCount\n    delta = k - nums[i]\n    ways = leftCount[total + delta] + rightCount[total - delta]\n    ans = max(ans, ways)\nreturn ans\n```",
+    "**Overflow** - total can reach 10^5 × 10^5 = 10^10, exceeding INT_MAX (≈2.1×10^9).\n`nums = [100000]*100000, k = 0` → `Expected: 1`\n⚠️ Bug: storing total/prefix as `int` → 10^10 overflows → returns 0.\n\n**Smallest input** - n=2, only one pivot exists.\n`nums = [5, 5], k = 3` → `Expected: 1`\n⚠️ Bug: iterating pivots from p=0 instead of p=1 → returns 0 or 2.\n\n**No-change baseline** - the best option is leaving the array unchanged.\n`nums = [2, 2], k = 99` → `Expected: 1`\n⚠️ Bug: skipping the no-change baseline (only counting modified scenarios) → returns 0.\n\n**All elements equal, k different** - changing the middle element can activate two pivots.\n`nums = [3, 3, 3], k = 0` → `Expected: 2`\n⚠️ Bug: only trying the first element as the change position → returns 1.\n\n**Negatives and zeros** - delta can be negative, targets shift in both directions.\n`nums = [-1, 2, -1], k = 0` → `Expected: 2`\n⚠️ Bug: computing delta as `nums[i] - k` (reversed sign) → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if you can change up to two elements to k?",
+      "a": "With two changes at positions i < j, each pivot falls into one of three regions (p ≤ i, i < p ≤ j, p > j), each with a different combined delta. You'd sweep i and j while maintaining three hash maps, giving O(n²) time and O(n) space. No known O(n) approach exists for the two-change variant."
+    },
+    {
+      "q": "What if nums arrives as a stream too large to store in memory?",
+      "a": "Make two passes: pass one computes the total and builds rightCount (storing 2·prefix[p-1] per pivot); pass two recomputes prefix on the fly and performs the sweep. Space drops to O(n) for the two maps only - the input array itself need not be retained."
+    },
+    {
+      "q": "What if k is not given - find the value k that maximizes the answer?",
+      "a": "For each pivot p, the required delta is (2·prefix[p-1] − total) when p is on the left of the change, or (total − 2·prefix[p-1]) when on the right. Sweep i as before, but instead of querying one delta, maintain a single vote map: when pivot i moves from right to left, decrement its old delta vote and increment the new one. The answer is the max vote count seen. O(n) time, O(n) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int waysToPartition(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> prefix(n);\n        prefix[0] = nums[0];\n        for (int i = 1; i < n; i++) prefix[i] = prefix[i-1] + nums[i];\n        long long total = prefix[n-1];\n        \n        unordered_map<long long, int> leftCount, rightCount;\n        for (int p = 1; p < n; p++) {\n            rightCount[2 * prefix[p-1]]++;\n        }\n        \n        int ans = rightCount[total];\n        \n        for (int i = 0; i < n; i++) {\n            if (i >= 1) {\n                long long v = 2 * prefix[i-1];\n                rightCount[v]--;\n                leftCount[v]++;\n            }\n            long long delta = (long long)k - nums[i];\n            int ways = leftCount[total + delta] + rightCount[total - delta];\n            if (ways > ans) ans = ways;\n        }\n        \n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

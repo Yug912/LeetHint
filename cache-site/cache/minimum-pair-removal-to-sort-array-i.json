@@ -1,0 +1,40 @@
+{
+  "slug": "minimum-pair-removal-to-sort-array-i",
+  "title": "Minimum Pair Removal to Sort Array I",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Direct Simulation",
+  "tc": "O(n^2)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- nums: modified in place (input, not counted)\n- a few int/long long scalars: O(1)\n- recursion depth: none\n- not counted: input, returned int",
+  "approach": "Since n ≤ 50, we can directly simulate the operation. Each operation shrinks the array by one element, and a single-element array is always non-decreasing, so the process always terminates in at most n−1 steps. In each step: (1) check if the array is already non-decreasing - if so, stop; (2) scan all adjacent pairs to find the one with the minimum sum, breaking ties by the leftmost index; (3) replace that pair with its sum. The count of performed operations is the answer.",
+  "hints": [
+    "Each operation removes exactly one element from the array. With n ≤ 50, what is the maximum number of operations that could ever be needed, and what does that bound suggest about how to find the answer?",
+    "Directly simulate the operation using the array itself. In [5,2,3,1], the adjacent sums are 7, 5, 4; the minimum is 4 at pair (3,1), so merge it to get [5,2,4], then repeat.",
+    "```\nops = 0\nwhile array is not non-decreasing:\n    bestIdx = 0, bestSum = +infinity\n    for i in 0 .. size-2:\n        s = arr[i] + arr[i+1]\n        if s < bestSum:\n            bestSum = s, bestIdx = i\n    arr[bestIdx] = arr[bestIdx] + arr[bestIdx+1]\n    erase arr[bestIdx+1]\n    ops = ops + 1\nreturn ops\n```",
+    "**Single element** - the array has length 1, which is already non-decreasing.\n`Input: nums = [5]` → `Expected: 0`\n⚠️ Bug: looping `while (nums.size() > 1)` without first checking sortedness → returns 0 only by accident, but the same loop on `[1,2,2]` returns 2 instead of 0.\n\n**Already sorted** - no operation is needed.\n`Input: nums = [1,2,2]` → `Expected: 0`\n⚠️ Bug: always merging until size 1 without an early sorted-check → returns 2.\n\n**Tie in minimum sum** - multiple pairs share the minimum sum; the leftmost must be chosen.\n`Input: nums = [1,2,1,2]` → `Expected: 2`\n⚠️ Bug: picking the rightmost minimum-sum pair → merges (1,2) at index 2 first, giving [1,2,3] which is already sorted, returning 1.\n\n**Negatives / reverse sorted** - all values are negative and the array is strictly decreasing.\n`Input: nums = [-1,-3,-5]` → `Expected: 2`\n⚠️ Bug: initializing `bestSum` to 0 instead of a large sentinel → with all-negative sums the comparison `s < 0` still updates, but if the sentinel were `INT_MIN` the loop never updates `bestIdx` and reads garbage."
+  ],
+  "followUps": [
+    {
+      "q": "What if n can be up to 10^5 - how do you avoid the O(n) scan per operation?",
+      "a": "Store each adjacent pair's sum in a min-heap keyed by (sum, index), and keep a doubly-linked list of nodes so that after merging you only need to update the two neighboring pairs (remove the old ones, insert the new one). Each operation becomes O(log n), giving O(n log n) total time and O(n) space."
+    },
+    {
+      "q": "What if, instead of minimum sum, the rule were \"minimum product\" of the adjacent pair?",
+      "a": "The structure is identical - only the pair key changes. With values in [-1000, 1000], products fit in int, so the same simulation works; for the large-n variant you'd key the heap on (product, index) and update neighbors the same way, still O(n log n)."
+    },
+    {
+      "q": "What if you must answer for many queries, each asking \"how many operations if we start from nums[i..j]\"?",
+      "a": "Precompute nothing global - the merge choices depend on the exact subarray, so each query is an independent simulation. With small n this is fine; for large n you'd need a persistent/link-cut structure, which is an open research-grade extension beyond this pattern."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minimumPairRemoval(vector<int>& nums) {\n        int ops = 0;\n        while (true) {\n            int sz = (int)nums.size();\n            bool sorted = true;\n            for (int i = 1; i < sz; i++) {\n                if (nums[i] < nums[i - 1]) { sorted = false; break; }\n            }\n            if (sorted) break;\n\n            int bestIdx = 0;\n            long long bestSum = LLONG_MAX;\n            for (int i = 0; i + 1 < sz; i++) {\n                long long s = (long long)nums[i] + nums[i + 1];\n                if (s < bestSum) {\n                    bestSum = s;\n                    bestIdx = i;\n                }\n            }\n\n            nums[bestIdx] = nums[bestIdx] + nums[bestIdx + 1];\n            nums.erase(nums.begin() + bestIdx + 1);\n            ops++;\n        }\n        return ops;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-good-people-based-on-statements",
+  "title": "Maximum Good People Based on Statements",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask Enumeration",
+  "tc": "O(2^n · n²)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int variables (n, best, mask, i, j, expected, actual): O(1)\n- bool valid: O(1)\n- no containers or recursion allocated",
+  "approach": "Since n ≤ 15, we enumerate all 2^n possible good/bad assignments using a bitmask (bit i = 1 ⇒ person i is good). For each mask, we validate: every good person's non-trivial statement must match the mask (statement 1 ⇒ target is good, statement 0 ⇒ target is bad). Bad people's statements are unconstrained. If valid, we count set bits and track the maximum. This is correct because good people always tell the truth, so their statements fully determine consistency; bad people impose no constraints.",
+  "hints": [
+    "With n ≤ 15, how many total ways can you label each person as good or bad? The constraint is small enough to check every labeling one by one.",
+    "Represent each labeling as a bitmask (bit i set ⇒ person i is good). For mask 011 in Example 1, person 0 is good and states person 1 is good - verify bit 1 is set in the mask; person 2 is bad so their statement is ignored.",
+    "```\nbest = 0\nfor mask in 0 .. 2^n - 1:\n    valid = true\n    for each i where bit i is set in mask:\n        for each j where statements[i][j] != 2:\n            if statements[i][j] != bit j of mask:\n                valid = false\n    if valid:\n        best = max(best, popcount(mask))\nreturn best\n```",
+    "**All no statements** - every entry is 2, so every mask is valid.\n`Input: [[2,2],[2,2]]` → `Expected: 2`\n⚠️ Bug: starting the mask loop at 1 instead of 0 and returning best initialized to 0 without checking mask 0 → returns 0\n\n**Mutual accusation** - both say the other is bad.\n`Input: [[2,0],[0,2]]` → `Expected: 1`\n⚠️ Bug: validating bad people's statements as if they always lie (statement must be opposite of mask) → mask 01 fails because person 1 (bad) says 0 is bad but 0 is good, returns 0\n\n**Good-claim-only check** - person 0 says 1 is good, person 1 says 0 is bad.\n`Input: [[2,1],[0,2]]` → `Expected: 1`\n⚠️ Bug: only checking statements[i][j] == 1 and skipping == 0 → mask 11 appears valid, returns 2\n\n**Self-consistent chain** - person 0 says 1 good, person 1 says 2 bad, person 2 says 0 bad.\n`Input: [[2,1,2],[2,2,0],[0,2,2]]` → `Expected: 2`\n⚠️ Bug: breaking the inner loop but not propagating `valid = false` to the outer loop → mask 111 is wrongly accepted, returns 3"
+  ],
+  "followUps": [
+    {
+      "q": "What if n could be up to 30?",
+      "a": "2^30 is too large for full enumeration. Split the people into two halves of size n/2, enumerate valid masks for each half independently (checking internal statements), then combine compatible half-masks by cross-checking inter-half statements. This gives O(2^(n/2) · n²) time, feasible for n = 30."
+    },
+    {
+      "q": "What if bad people always lie instead of sometimes telling the truth?",
+      "a": "Then every person's statement must be consistent: good people's statements match the mask, bad people's statements are the opposite. Same bitmask enumeration, but the validation also checks bad people with an inverted expectation. TC and SC remain O(2^n · n²) and O(1)."
+    },
+    {
+      "q": "What if you must return one valid assignment achieving the maximum, not just the count?",
+      "a": "Store the best mask alongside the best count whenever a valid mask exceeds the current maximum. At the end, extract the set bits of the stored mask as the list of good people. TC and SC are unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int maximumGood(vector<vector<int>>& statements) {\n        int n = statements.size();\n        int best = 0;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            bool valid = true;\n            for (int i = 0; i < n && valid; i++) {\n                if (!(mask & (1 << i))) continue;\n                for (int j = 0; j < n; j++) {\n                    if (statements[i][j] == 2) continue;\n                    int expected = statements[i][j];\n                    int actual = (mask >> j) & 1;\n                    if (expected != actual) {\n                        valid = false;\n                        break;\n                    }\n                }\n            }\n            if (valid) {\n                best = max(best, __builtin_popcount(mask));\n            }\n        }\n        return best;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

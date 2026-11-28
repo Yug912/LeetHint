@@ -1,0 +1,40 @@
+{
+  "slug": "count-number-of-special-subsequences",
+  "title": "Count Number of Special Subsequences",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Linear DP with constant state",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- three long long counters a, b, c: O(1)\n- loop variable x: O(1)\n- not counted: input vector nums",
+  "approach": "Maintain three running counts while scanning left to right: `a` = number of non-empty subsequences of only 0s seen so far, `b` = number of subsequences of form 0+1+ (positive 0s then positive 1s), `c` = number of complete special subsequences (0+1+2+). On reading a 0, you can either start a new all-0 subsequence or append to an existing one: `a = 2a + 1`. On reading a 1, you can extend any `b` subsequence, or append this 1 to any `a` subsequence: `b = 2b + a`. On reading a 2, similarly `c = 2c + b`. Each element is considered exactly once, so the recurrence is correct because every special subsequence is built by appending its last element to a shorter valid prefix-subsequence, and the factor of 2 accounts for \"skip vs. take\" of the current element.",
+  "hints": [
+    "A special subsequence passes through three phases: some 0s, then some 1s, then some 2s. As you read the array left to right, for each element, in how many ways could it extend a partially-built subsequence currently sitting in each of those three phases?",
+    "Use dynamic programming with three running counts `a`, `b`, `c` for the three phases. On the first `0` in `[0,1,2,2]`, `a` becomes `2·0 + 1 = 1` (start fresh, or extend nothing).",
+    "```\na = b = c = 0\nfor x in nums:\n    if x == 0: a = 2*a + 1\n    if x == 1: b = 2*b + a\n    if x == 2: c = 2*c + b\n    apply mod M to the updated variable\nreturn c\n```",
+    "**Smallest input** - only one element, cannot contain all three phases.\n`Input: nums = [0]` → `Expected: 0`\n⚠️ Bug: initialising `a = 1` instead of `a = 0` before the loop → returns `1`.\n\n**No zeros present** - phase 1 never starts, so `a` stays 0 and nothing propagates.\n`Input: nums = [1,2,1,2]` → `Expected: 0`\n⚠️ Bug: updating `b` with `b = 2*b + 1` (using a constant instead of `a`) → returns `7`.\n\n**All equal** - only one phase ever gets contributions.\n`Input: nums = [2,2,2,2]` → `Expected: 0`\n⚠️ Bug: updating `c` with `c = 2*c + 1` (constant instead of `b`) → returns `15`.\n\n**Overflow** - with n = 10^5, counts double each step and reach ~2^100000, far beyond 2^31 - 1.\n`Input: nums = [0,0,...,0,1,1,...,1,2,2,...,2]` (≈3.3·10^4 of each) → `Expected: (2^33334 - 1)^3 mod 10^9+7`\n⚠️ Bug: using `int` for `a, b, c` and skipping the modulo → silent overflow, returns garbage.\n\n**Order matters** - a 2 appearing before any 1 must contribute nothing to `c`.\n`Input: nums = [2,0,1,2]` → `Expected: 1`\n⚠️ Bug: updating `c` before checking that `b > 0`, e.g. `c = 2*c + max(b, 1)` → returns `2`."
+  ],
+  "followUps": [
+    {
+      "q": "Generalize to an alphabet of k symbols where a special subsequence is 0+1+2+...+(k-1)+. How does the solution change?",
+      "a": "Keep an array `d[0..k-1]` of running counts. On reading value `v`, set `d[v] = 2*d[v] + d[v-1]`, treating `d[-1]` as 1 (the \"start fresh\" case for v=0). TC O(n·k) if k is variable, O(n) for fixed k. SC O(k)."
+    },
+    {
+      "q": "The array arrives as an unbounded stream you cannot store. Can you still answer?",
+      "a": "Yes - the algorithm already touches one element at a time and keeps only three counters, so it works unchanged on a stream. TC O(n), SC O(1)."
+    },
+    {
+      "q": "Count subsequences that are special and contain at least L zeros, at least L ones, and at least L twos (L given).",
+      "a": "Replace each counter with a vector of size L+1 tracking \"exactly j copies so far\"; on reading a 0, shift the 0-vector up by one in addition to the doubling. TC O(n·L), SC O(L)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int countSpecialSubsequences(vector<int>& nums) {\n        const long long M = 1000000007LL;\n        long long a = 0, b = 0, c = 0;\n        for (int x : nums) {\n            if (x == 0) {\n                a = (2LL * a + 1LL) % M;\n            } else if (x == 1) {\n                b = (2LL * b + a) % M;\n            } else {\n                c = (2LL * c + b) % M;\n            }\n        }\n        return (int)c;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

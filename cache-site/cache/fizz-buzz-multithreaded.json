@@ -1,0 +1,51 @@
+{
+  "slug": "fizz-buzz-multithreaded",
+  "title": "Fizz Buzz Multithreaded",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Condition Variable / Monitor",
+  "tc": "O(n)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- int counter: single integer → O(1)\n- mutex mtx: single mutex → O(1)\n- condition_variable cv: single CV → O(1)\n- not counted: input n, thread stacks (LeetCode-managed)",
+  "approach": "All four threads share a single integer counter that tracks the next position in the sequence (1-indexed). Each thread acquires a mutex, then waits on a condition variable whose predicate checks whether the current counter matches that thread's divisibility rule (e.g., fizz waits for `counter % 3 == 0 && counter % 5 != 0`). When a thread's predicate is satisfied, it prints its token, increments the counter, and calls `notify_all` so the next eligible thread can proceed. The predicate also includes `counter > n` so that when the sequence is complete, all threads wake up and exit cleanly.",
+  "hints": [
+    "Four threads must produce one shared sequence in order. What single piece of shared state could each thread inspect to decide whether it is its turn to print?",
+    "Use a **mutex + condition_variable** guarding a shared counter. For example, when the counter reaches 3, the fizz thread's predicate (`counter % 3 == 0 && counter % 5 != 0`) becomes true, so it wakes, prints \"fizz\", increments the counter to 4, and notifies all.",
+    "```\ncounter = 1\neach thread:\n    lock mutex\n    while counter <= n:\n        wait until counter > n OR my_condition(counter)\n        if counter > n: return\n        print my token\n        counter++\n        notify all\n```",
+    "**Smallest input** - n = 1, only the number thread should produce output.\n`Input: n = 1` → `Expected: [1]`\n⚠️ Bug: initializing counter to 0 instead of 1 → 0 is divisible by 15, so fizzbuzz prints \"fizzbuzz\" first → output `[\"fizzbuzz\", 1]`\n\n**Off-by-one, buzz** - n = 5, the last token is \"buzz\" at counter = 5.\n`Input: n = 5` → `Expected: [1,2,\"fizz\",4,\"buzz\"]`\n⚠️ Bug: using `while (counter < n)` instead of `<=` → buzz exits at counter = 5 without printing → output `[1,2,\"fizz\",4]`\n\n**Off-by-one, fizzbuzz** - n = 15, the last token is \"fizzbuzz\" at counter = 15.\n`Input: n = 15` → `Expected: [1,2,\"fizz\",4,\"buzz\",\"fizz\",7,8,\"fizz\",\"buzz\",11,\"fizz\",13,14,\"fizzbuzz\"]`\n⚠️ Bug: using `while (counter < n)` instead of `<=` → fizzbuzz exits at counter = 15 without printing → output `[1,2,\"fizz\",4,\"buzz\",\"fizz\",7,8,\"fizz\",\"buzz\",11,\"fizz\",13,14]`\n\n**Print after increment** - n = 5, the number thread increments before printing.\n`Input: n = 5` → `Expected: [1,2,\"fizz\",4,\"buzz\"]`\n⚠️ Bug: calling `counter++` before `printNumber(counter)` → every number is off by one → output `[2,3,\"fizz\",5,\"buzz\"]`"
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle n up to 10^8 efficiently?",
+      "a": "Replace the mutex + condition_variable with an atomic counter and spin-wait (e.g., `std::atomic<int>` with `compare_exchange`). Each thread busy-waits until the counter matches its condition, avoiding lock contention and context-switch overhead. TC: O(n), SC: O(1), but higher CPU utilization."
+    },
+    {
+      "q": "Generalize to k divisor-word pairs (e.g., (3,\"fizz\"), (5,\"buzz\"), (7,\"pop\")) where a number divisible by multiple divisors prints all matching words concatenated.",
+      "a": "Each thread checks `counter % d == 0` for its divisor d. When multiple threads match, they must concatenate in a fixed order - use the counter value to determine ordering and have each thread append its word to a shared buffer protected by the same mutex. TC: O(n × k), SC: O(1)."
+    },
+    {
+      "q": "How would you produce the same output in a single-threaded context for testing?",
+      "a": "Iterate i from 1 to n, check divisibility by each divisor in order, and append the corresponding word or the number itself. No synchronization needed. TC: O(n), SC: O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class FizzBuzz {\nprivate:\n    int n;\n    int counter;\n    mutex mtx;\n    condition_variable cv;\n\npublic:\n    FizzBuzz(int n) {\n        this->n = n;\n        counter = 1;\n    }\n\n    void fizz(function<void()> printFizz) {\n        unique_lock<mutex> lk(mtx);\n        while (counter <= n) {\n            cv.wait(lk, [this]{ return counter > n || (counter % 3 == 0 && counter % 5 != 0); });\n            if (counter > n) return;\n            printFizz();\n            counter++;\n            cv.notify_all();\n        }\n    }\n\n    void buzz(function<void()> printBuzz) {\n        unique_lock<mutex> lk(mtx);\n        while (counter <= n) {\n            cv.wait(lk, [this]{ return counter > n || (counter % 5 == 0 && counter % 3 != 0); });\n            if (counter > n) return;\n            printBuzz();\n            counter++;\n            cv.notify_all();\n        }\n    }\n\n    void fizzbuzz(function<void()> printFizzBuzz) {\n        unique_lock<mutex> lk(mtx);\n        while (counter <= n) {\n            cv.wait(lk, [this]{ return counter > n || (counter % 15 == 0); });\n            if (counter > n) return;\n            printFizzBuzz();\n            counter++;\n            cv.notify_all();\n        }\n    }\n\n    void number(function<void(int)> printNumber) {\n        unique_lock<mutex> lk(mtx);\n        while (counter <= n) {\n            cv.wait(lk, [this]{ return counter > n || (counter % 3 != 0 && counter % 5 != 0); });\n            if (counter > n) return;\n            printNumber(counter);\n            counter++;\n            cv.notify_all();\n        }\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "adaption:qwen3.5-397b",
+        "adaption:gemma-4-31b-it"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "adaption:qwen3.5-397b",
+      "at": "2026-11-28"
+    }
+  }
+}

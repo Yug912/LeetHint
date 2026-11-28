@@ -1,0 +1,40 @@
+{
+  "slug": "count-the-number-of-square-free-subsets",
+  "title": "Count the Number of Square-Free Subsets",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP",
+  "tc": "O(n · 2^10)",
+  "sc": "O(2^10)",
+  "spaceBreakdown": "- int valMask[31]: fixed 31 entries → O(1)\n- int primes[10]: fixed → O(1)\n- vector<long long> dp(1024): 2^10 entries → O(2^10)\n- recursion depth: none\n- not counted: input nums",
+  "approach": "Since nums[i] ≤ 30, only 10 primes (2,3,5,7,11,13,17,19,23,29) can appear. Represent each number's square-free part as a 10-bit mask (bit i = 1 if prime i divides it). A number with any squared prime factor (like 4, 8, 9, 12, …) is permanently excluded. Use bitmask DP: dp[mask] = count of subsets whose combined prime mask equals `mask`. For each number with mask m, transition dp[mask|m] += dp[mask] for all masks disjoint from m. The answer is (sum of all dp) − 1 (subtract the empty subset).",
+  "hints": [
+    "With nums[i] ≤ 30, how many distinct primes could possibly divide the product of any subset?",
+    "Use bitmask dynamic programming: each number's prime factorization maps to a 10-bit mask (one bit per prime ≤ 30). For nums = [3,4,4,5], 3 → mask 0b10, 5 → mask 0b100; 4 is skipped because 2² makes it non-square-free.",
+    "```\nprimes = {2,3,5,7,11,13,17,19,23,29}\ndp[0] = 1\nfor each num in nums:\n    m = prime-mask of num   # -1 if num has a squared factor\n    if m == -1: continue\n    for mask from 2^10 - 1 down to 0:\n        if mask & m == 0:\n            dp[mask | m] += dp[mask]\nreturn (sum of all dp[mask]) - 1\n```",
+    "**Single 1** - nums[i]=1 has an empty prime mask, identical to the empty subset's mask.\n`Input: nums = [1]` → `Expected: 1`\n⚠️ Bug: returning only sum(dp[1..1023]) and ignoring dp[0]-1 → returns 0\n\n**Non-square-free element** - 4 = 2² is divisible by a perfect square.\n`Input: nums = [4]` → `Expected: 0`\n⚠️ Bug: not detecting cnt ≥ 2 in factorization, treating 4 as mask 0b1 → returns 1\n\n**Duplicate primes** - two copies of the same prime cannot appear together.\n`Input: nums = [2,2]` → `Expected: 2`\n⚠️ Bug: not checking (mask & m) == 0 before combining, so dp[1] self-adds → returns 3\n\n**All 1s** - each 1 doubles every existing subset count.\n`Input: nums = [1,1,1]` → `Expected: 7`\n⚠️ Bug: skipping numbers with mask 0 (treating 1 as non-square-free) → returns 0"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] ≤ 10^9 instead of 30?",
+      "a": "Each square-free number ≤ 10^9 has at most 9 distinct prime factors (2·3·5·7·11·13·17·19·23 ≈ 2.2×10^8; adding 29 exceeds 10^9). You'd factorize each number on the fly, but different numbers use different primes, so a global bitmask no longer works. A hash-map keyed by the set of used primes could work for small n, but the state space grows rapidly, likely requiring meet-in-the-middle for large n."
+    },
+    {
+      "q": "What if you must count only subsets of exactly size k?",
+      "a": "Add a second dimension: dp[mask][j] = number of j-element subsets with prime mask. Transition becomes dp[mask|m][j+1] += dp[mask][j]. TC becomes O(n · k · 2^10), SC becomes O(k · 2^10)."
+    },
+    {
+      "q": "What if nums arrives as a stream and you can only store O(1) elements at a time?",
+      "a": "The DP array of size 2^10 = 1024 is already O(1) relative to n. Process each number as it arrives, updating dp in place with the reverse-mask loop. No need to store the full array. TC unchanged, SC O(2^10) = O(1)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int squareFreeSubsets(vector<int>& nums) {\n        const int MOD = 1000000007;\n        int primes[10] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29};\n        int valMask[31];\n        for (int v = 0; v <= 30; v++) valMask[v] = 0;\n        for (int v = 1; v <= 30; v++) {\n            int x = v;\n            int mask = 0;\n            bool ok = true;\n            for (int i = 0; i < 10; i++) {\n                int p = primes[i];\n                int cnt = 0;\n                while (x % p == 0) { x /= p; cnt++; }\n                if (cnt >= 2) { ok = false; break; }\n                if (cnt == 1) mask |= (1 << i);\n            }\n            if (ok && x == 1) valMask[v] = mask;\n            else valMask[v] = -1;\n        }\n        \n        vector<long long> dp(1 << 10, 0);\n        dp[0] = 1;\n        \n        for (int num : nums) {\n            int m = valMask[num];\n            if (m == -1) continue;\n            for (int mask = (1 << 10) - 1; mask >= 0; mask--) {\n                if ((mask & m) == 0) {\n                    dp[mask | m] = (dp[mask | m] + dp[mask]) % MOD;\n                }\n            }\n        }\n        \n        long long ans = 0;\n        for (int mask = 0; mask < (1 << 10); mask++) {\n            ans = (ans + dp[mask]) % MOD;\n        }\n        ans = (ans - 1 + MOD) % MOD;\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

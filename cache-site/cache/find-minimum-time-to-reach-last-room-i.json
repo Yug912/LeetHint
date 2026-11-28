@@ -1,0 +1,40 @@
+{
+  "slug": "find-minimum-time-to-reach-last-room-i",
+  "title": "Find Minimum Time to Reach Last Room I",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Dijkstra on Grid",
+  "tc": "O(nm log(nm))",
+  "sc": "O(nm)",
+  "spaceBreakdown": "- vector<vector<long long>> dist: n*m entries → O(nm)\n- priority_queue<pair<long long,int>> pq: up to O(nm) entries → O(nm)\n- int dirs[4][2]: O(1)\n- recursion depth: none\n- not counted: input moveTime, returned int",
+  "approach": "The key transition is: if you are in a room at time `t`, entering an adjacent room `v` takes `max(t, moveTime[v]) + 1` seconds, because you wait until `v` opens and then move for one second. This transition always increases time and is nondecreasing, so Dijkstra's algorithm on the grid gives the earliest arrival time for every room. Start with `dist[0][0] = 0` and relax all four neighbors.",
+  "hints": [
+    "At the moment you decide to enter an adjacent room, what two quantities decide the time you arrive there?",
+    "Use Dijkstra's algorithm with a priority queue, where the distance of a room is the earliest time you can be in it. In Example 1, from (0,0) at time 0, the neighbor (1,0) has moveTime 4, so its tentative time is max(0,4)+1=5.",
+    "```\ndist[start] = 0\npush (0, start)\nwhile heap is not empty:\n    pop smallest time d for room r\n    if d > dist[r]: continue\n    for each neighbor v:\n        nd = max(d, moveTime[v]) + 1\n        if nd < dist[v]:\n            dist[v] = nd\n            push (nd, v)\nreturn dist[target]\n```",
+    "**Start room opening time** - moveTime[0][0] is large but start is already occupied at t=0.\n`Input: [[100,0],[0,0]]` → `Expected: 2`\n⚠️ Bug: setting `dist[0][0] = moveTime[0][0]` → returns 102.\n\n**Waiting before moving** - A neighbor opens later than your current time; you wait, then take 1 second.\n`Input: [[0,4],[4,4]]` → `Expected: 6`\n⚠️ Bug: using `max(t + 1, moveTime[v])` → returns 5.\n\n**Move cost omitted** - All rooms are open at time 0, so only the one-second moves matter.\n`Input: [[0,0,0],[0,0,0]]` → `Expected: 3`\n⚠️ Bug: relaxing with `max(t, moveTime[v])` and forgetting `+1` → returns 0."
+  ],
+  "followUps": [
+    {
+      "q": "What if moving between adjacent rooms takes w seconds instead of 1?",
+      "a": "Change the relaxation to `nd = max(d, moveTime[v]) + w`. Dijkstra still works because each move still increases time. TC remains O(nm log(nm)), SC remains O(nm)."
+    },
+    {
+      "q": "What if you also need to output the actual path?",
+      "a": "Store a parent coordinate whenever `dist` is improved, then backtrack from the target to the start. TC remains O(nm log(nm)), SC remains O(nm)."
+    },
+    {
+      "q": "What if some rooms are blocked and cannot be entered?",
+      "a": "Skip blocked cells during neighbor relaxation and return -1 if the target stays unreachable. TC remains O(nm log(nm)), SC remains O(nm)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int minTimeToReach(vector<vector<int>>& moveTime) {\n        int n = moveTime.size();\n        int m = moveTime[0].size();\n        const long long INF = (1LL << 62);\n        vector<vector<long long>> dist(n, vector<long long>(m, INF));\n        priority_queue<pair<long long, int>> pq;\n\n        dist[0][0] = 0;\n        pq.push({0, 0});\n\n        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};\n\n        while (!pq.empty()) {\n            pair<long long, int> cur = pq.top();\n            pq.pop();\n            long long d = -cur.first;\n            int idx = cur.second;\n            int r = idx / m;\n            int c = idx % m;\n\n            if (d != dist[r][c]) continue;\n            if (r == n - 1 && c == m - 1) return (int)d;\n\n            for (int k = 0; k < 4; ++k) {\n                int nr = r + dirs[k][0];\n                int nc = c + dirs[k][1];\n                if (nr < 0 || nr >= n || nc < 0 || nc >= m) continue;\n\n                long long nd = d;\n                if ((long long)moveTime[nr][nc] > nd) nd = moveTime[nr][nc];\n                nd += 1;\n\n                if (nd < dist[nr][nc]) {\n                    dist[nr][nc] = nd;\n                    pq.push({-nd, nr * m + nc});\n                }\n            }\n        }\n\n        return (int)dist[n - 1][m - 1];\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

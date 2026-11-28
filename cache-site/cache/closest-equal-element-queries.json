@@ -1,0 +1,40 @@
+{
+  "slug": "closest-equal-element-queries",
+  "title": "Closest Equal Element Queries",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Grouping + Circular Neighbor Scan",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<int, vector<int>> pos: total n indices stored across all buckets → O(n)\n- vector<int> ans: n entries → O(n)\n- vector<int> result: returned output, not counted\n- recursion call-stack: none",
+  "approach": "Group indices by their value using a hash map; since we scan left to right, each group's index list is automatically sorted. For any index in a group of size ≥ 2, the closest same-value index (circularly) must be one of its two immediate neighbors in that sorted list - including the wrap-around pair connecting the first and last element. So for each index we only check its circular previous and circular next neighbor in its group, compute the circular distance `min(|a-b|, n-|a-b|)` for each, and take the minimum. Indices in groups of size 1 get answer -1. This avoids per-query binary search and runs in O(n) total.",
+  "hints": [
+    "For a fixed value, if you write down every index where it appears in increasing order, which of those indices could possibly be the nearest one to any particular index in that list?",
+    "Group indices by value with a hash map; for each group of size ≥ 2, only the circular previous and circular next index in the sorted group can be the closest. In nums = [1,3,1,4,1,3,2], value 1 appears at [0,2,4]; for index 0 the candidates are 4 (wrap-around previous) and 2 (next), giving min circular distance 2.",
+    "build map: value -> sorted list of indices\nfor each group with size >= 2:\n    for each position j in group:\n        prev = group[(j-1+k) mod k]\n        next = group[(j+1) mod k]\n        ans[group[j]] = min(circ_dist(group[j], prev), circ_dist(group[j], next))\nfor each query q: output ans[q]",
+    "**Single element** - only one index exists, no other index can match.\n`Input: nums = [5], queries = [0]` → `Expected: [-1]`\n⚠️ Bug: not skipping groups of size 1 → returns 0 (distance to itself)\n\n**All elements equal** - every index has the same value, wrap-around matters.\n`Input: nums = [7,7,7], queries = [0,1,2]` → `Expected: [1,1,1]`\n⚠️ Bug: ignoring circular wrap-around between first and last group element → returns [1,1,2]\n\n**Two equal values at the ends** - the closest path goes through the array boundary.\n`Input: nums = [1,2,3,1], queries = [0,3]` → `Expected: [1,1]`\n⚠️ Bug: using only linear distance |a-b| → returns [3,3]\n\n**All unique values** - no index has a matching value.\n`Input: nums = [1,2,3,4], queries = [0,1,2,3]` → `Expected: [-1,-1,-1,-1]`\n⚠️ Bug: initializing ans to 0 instead of -1 → returns [0,0,0,0]"
+  ],
+  "followUps": [
+    {
+      "q": "What if nums arrives as a streaming input you cannot store fully, and queries arrive after?",
+      "a": "You must store at least the index list per value to answer circular-distance queries, so a true streaming solution is impossible; with a sliding window of the last W indices you can only answer nearest-within-window queries, giving O(W) space and O(n·W) time."
+    },
+    {
+      "q": "What if each query asks for the k-th nearest same-value index instead of the nearest?",
+      "a": "Keep the full sorted index list per value and binary-search the k nearest candidates around the query index in circular order; each query becomes O(k + log(group size)), total O(q·k + n)."
+    },
+    {
+      "q": "What if point updates to nums are allowed between queries (change nums[i] to a new value)?",
+      "a": "Maintain a balanced BST (e.g., std::set) of indices per value; on update, remove i from its old value's set and insert into the new value's set, then query predecessor/successor in O(log n) per operation, giving O((q+u) log n) for u updates."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> solveQueries(vector<int>& nums, vector<int>& queries) {\n        int n = nums.size();\n        unordered_map<int, vector<int>> pos;\n        pos.reserve(n);\n        for (int i = 0; i < n; i++) {\n            pos[nums[i]].push_back(i);\n        }\n        vector<int> ans(n, -1);\n        for (auto& kv : pos) {\n            vector<int>& idxs = kv.second;\n            int k = idxs.size();\n            if (k < 2) continue;\n            for (int j = 0; j < k; j++) {\n                int cur = idxs[j];\n                int prevIdx = idxs[(j - 1 + k) % k];\n                int nextIdx = idxs[(j + 1) % k];\n                int d1 = abs(cur - prevIdx);\n                d1 = min(d1, n - d1);\n                int d2 = abs(cur - nextIdx);\n                d2 = min(d2, n - d2);\n                int best = min(d1, d2);\n                if (ans[cur] == -1 || best < ans[cur]) {\n                    ans[cur] = best;\n                }\n            }\n        }\n        vector<int> result;\n        result.reserve(queries.size());\n        for (int q : queries) {\n            result.push_back(ans[q]);\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

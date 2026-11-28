@@ -1,0 +1,51 @@
+{
+  "slug": "design-bitset",
+  "title": "Design Bitset",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-27",
+  "pattern": "Lazy Update Flag",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<char> bits: n elements → O(n)\n- int n, int ones, bool flipped: O(1)\n- toString local string res: O(n) but returned output (not counted per LeetCode convention)",
+  "approach": "Maintain a `flipped` boolean flag instead of physically flipping every bit on each `flip()` call - just toggle the flag in O(1). Track `ones` = count of stored 1s. When `flipped` is true, the logical value of each bit is the complement of what's stored, so `count()` returns `n - ones`; fix/unfix write the opposite stored value. `toString()` (called ≤ 5 times) is the only O(n) operation, building the string while applying the flag.",
+  "hints": [
+    "With up to 10^5 calls and size up to 10^5, a flip that touches every bit could cost 10^10 operations. Given that flipping every bit twice restores the original state, how much information is actually needed to capture the cumulative effect of all flips made so far?",
+    "Maintain a boolean `flipped` flag and an integer `ones` count. fix/unfix write the complement of the desired value when `flipped` is true; `count()` returns `ones` or `size - ones` accordingly. Example: after `fix(3)` on \"00000\" (ones=1, flipped=false), calling `flip()` sets flipped=true, so `count()` returns 5−1=4.",
+    "```\nfix(idx):\n  if not flipped: if bits[idx]==0: bits[idx]=1; ones++\n  else:           if bits[idx]==1: bits[idx]=0; ones--\nunfix(idx):\n  if not flipped: if bits[idx]==1: bits[idx]=0; ones--\n  else:           if bits[idx]==0: bits[idx]=1; ones++\nflip(): flipped = !flipped\ncount(): return flipped ? size - ones : ones\nall():   return count() == size\none():   return count() > 0\ntoString(): for each i, output (flipped ? 1-bits[i] : bits[i])\n```",
+    "**Single bit** - size=1, flip toggles the only bit\n`[\"Bitset\",\"fix\",\"flip\",\"count\"], [[1],[0],[],[]]` → `Expected: 0`\n⚠️ Bug: `count()` returns `ones` without complementing when flipped → returns 1\n\n**all() after flip** - all bits set, then flipped, all() must be false\n`[\"Bitset\",\"fix\",\"fix\",\"fix\",\"flip\",\"all\"], [[3],[0],[1],[2],[],[]]` → `Expected: false`\n⚠️ Bug: `all()` checks `ones == n` ignoring the flag → returns true\n\n**count() after flip with zero ones** - empty bitset flipped should be full\n`[\"Bitset\",\"flip\",\"count\"], [[3],[],[]]` → `Expected: 3`\n⚠️ Bug: `count()` returns `ones` (0) without complementing → returns 0\n\n**toString after single flip** - must reflect logical (flipped) state\n`[\"Bitset\",\"fix\",\"flip\",\"toString\"], [[2],[0],[],[]]` → `Expected: \"01\"`\n⚠️ Bug: both flipping bits in place AND tracking the flag → double-applies, returns \"10\""
+  ],
+  "followUps": [
+    {
+      "q": "What if `toString` could be called up to 10^5 times instead of 5?",
+      "a": "Each toString is O(n), so 10^5 calls × 10^5 size = 10^10 - TLE. Maintain two cached strings (normal and flipped) and swap pointers on flip; fix/unfix update both in O(1). TC becomes O(1) per op including toString, SC stays O(n)."
+    },
+    {
+      "q": "What if size could be up to 10^9?",
+      "a": "Can't allocate an array of 10^9 bits. Store only set-bit indices in a hash set; `count()` returns `flipped ? size − setSize : setSize`. fix/unfix are O(1) average. toString can't return a 10^9-char string, so the API must change to `bitAt(idx)`. SC: O(min(ones, zeros))."
+    },
+    {
+      "q": "What if you need range queries: count ones in [l, r]?",
+      "a": "Use a Fenwick tree over the bit array. fix/unfix update in O(log n); range count is `query(l,r)` or `(r−l+1) − query(l,r)` when flipped. flip stays O(1) via the flag. TC: O(log n) per fix/unfix/query, SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Bitset {\n    vector<char> bits;\n    int n;\n    int ones;\n    bool flipped;\npublic:\n    Bitset(int size) : bits(size, 0), n(size), ones(0), flipped(false) {\n        \n    }\n    \n    void fix(int idx) {\n        if (!flipped) {\n            if (bits[idx] == 0) {\n                bits[idx] = 1;\n                ones++;\n            }\n        } else {\n            if (bits[idx] == 1) {\n                bits[idx] = 0;\n                ones--;\n            }\n        }\n    }\n    \n    void unfix(int idx) {\n        if (!flipped) {\n            if (bits[idx] == 1) {\n                bits[idx] = 0;\n                ones--;\n            }\n        } else {\n            if (bits[idx] == 0) {\n                bits[idx] = 1;\n                ones++;\n            }\n        }\n    }\n    \n    void flip() {\n        flipped = !flipped;\n    }\n    \n    bool all() {\n        return count() == n;\n    }\n    \n    bool one() {\n        return count() > 0;\n    }\n    \n    int count() {\n        return flipped ? (n - ones) : ones;\n    }\n    \n    string toString() {\n        string res(n, '0');\n        for (int i = 0; i < n; i++) {\n            char logical = flipped ? (1 - bits[i]) : bits[i];\n            res[i] = logical ? '1' : '0';\n        }\n        return res;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 1,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

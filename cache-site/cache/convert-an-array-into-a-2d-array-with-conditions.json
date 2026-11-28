@@ -1,0 +1,51 @@
+{
+  "slug": "convert-an-array-into-a-2d-array-with-conditions",
+  "title": "Convert an Array Into a 2D Array With Conditions",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Frequency Counting / Greedy Distribution",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> freq(n+1): up to n+1 entries → O(n)\n- vector<int> seen(n+1): up to n+1 entries → O(n)\n- not counted: input nums, returned result",
+  "approach": "The minimum number of rows equals the maximum frequency of any value in `nums`: a value appearing `k` times must occupy `k` distinct rows (rows hold distinct values), and `k` rows always suffice by placing the `i`-th occurrence of each value into row `i`. First pass counts frequencies to determine row count; second pass uses a per-value \"next row\" counter to distribute each occurrence into the correct row. Both passes are linear.",
+  "hints": [
+    "If a value appears `k` times in `nums`, what is the fewest number of rows it could possibly be spread across, given each row holds distinct integers? Now ask: what single statistic of the whole input forces the answer's row count?",
+    "Use a frequency array (size `n+1`, since `1 ≤ nums[i] ≤ n`) to find the max frequency, which is the row count. For `nums = [1,3,4,1,2,3,1]`, frequencies are `1→3, 2→1, 3→2, 4→1`, so max = 3 rows.",
+    "```\nfreq = count of each value\nrows = max(freq)\nresult = array of `rows` empty lists\nnext = zeroed array indexed by value\nfor x in nums:\n    result[next[x]].append(x)\n    next[x] += 1\nreturn result\n```",
+    "**Single element** - smallest allowed input.\n`Input: nums = [1]` → `Expected: [[1]]`\n⚠️ Bug: allocating `freq` with size `n` instead of `n+1` and indexing `freq[nums[i]]` → out-of-bounds access when `nums[i] == n`.\n\n**All equal** - every occurrence of the same value must land in a different row.\n`Input: nums = [1,1,1]` → `Expected: [[1],[1],[1]]`\n⚠️ Bug: reusing `freq[x]` directly as the row index during the second pass without a separate counter → for the first `1`, `freq[1]==3`, so `result[3]` is accessed out of bounds.\n\n**All distinct** - max frequency is 1, so one row holds everything.\n`Input: nums = [1,2,3,4]` → `Expected: [[1,2,3,4]]`\n⚠️ Bug: always creating at least 2 rows → returns `[[1,2,3,4],[]]`, an extra empty row.\n\n**Max value equals length** - exercises the `n+1` sizing.\n`Input: nums = [3,3,3]` → `Expected: [[3],[3],[3]]`\n⚠️ Bug: `freq` sized to `n` (here 3) so `freq[3]` is out of bounds → undefined behavior / wrong count."
+  ],
+  "followUps": [
+    {
+      "q": "What if `nums[i]` can be up to 10^9 instead of `≤ n`?",
+      "a": "Replace the two `vector<int>` frequency/next arrays with `unordered_map<int,int>`. Logic is unchanged; TC stays O(n) amortized, SC stays O(n) but with a larger constant."
+    },
+    {
+      "q": "What if `nums` arrives as an unbounded stream you cannot store, and you must emit rows incrementally?",
+      "a": "Keep an `unordered_map<int,int>` tracking the next row index for each value, and grow `result` lazily: when `next[x] == result.size()`, append a new row. TC O(n) amortized, SC O(n) for the map plus the output."
+    },
+    {
+      "q": "What if, among all valid answers, you must also minimize the maximum row length?",
+      "a": "After computing frequencies, distribute values round-robin but sort values by descending frequency first so heavy values fill early rows first; this balances row sizes. TC O(n + u log u) where u is the number of distinct values, SC O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> findMatrix(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> freq(n + 1, 0);\n        int rows = 0;\n        for (int x : nums) {\n            freq[x]++;\n            if (freq[x] > rows) rows = freq[x];\n        }\n        vector<vector<int>> result(rows);\n        vector<int> next(n + 1, 0);\n        for (int x : nums) {\n            result[next[x]].push_back(x);\n            next[x]++;\n        }\n        return result;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "reviewed": 2,
+    "strict": {
+      "ok": true,
+      "version": 1,
+      "tests": [
+        "groq:openai/gpt-oss-120b",
+        "adaption:qwen3.5-397b"
+      ],
+      "cases": 900,
+      "maxMs": 0,
+      "reviewer": "groq:openai/gpt-oss-120b",
+      "at": "2026-11-28"
+    }
+  }
+}

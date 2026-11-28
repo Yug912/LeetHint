@@ -1,0 +1,40 @@
+{
+  "slug": "maximum-good-subarray-sum",
+  "title": "Maximum Good Subarray Sum",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Prefix Sum + Hash Map",
+  "tc": "O(n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- unordered_map<long long,long long> minPrefix: up to n entries (one per unique value) → O(n)\n- recursion depth: none\n- not counted: input vector, returned scalar",
+  "approach": "The sum of subarray [i..j] equals prefix[j+1] − prefix[i], where prefix[x] is the sum of nums[0..x−1]. For each ending index j, a valid start i must satisfy nums[i] ∈ {nums[j]−k, nums[j]+k}. To maximize the subarray sum we want the **minimum** prefix[i] among all valid starts. We maintain a hash map from each element value to the minimum prefix sum seen before the current index. For each j we look up nums[j]±k in the map, compute the candidate sum, then update the map with the current prefix before advancing.",
+  "hints": [
+    "With n up to 10^5, checking every subarray pair is too slow. For a subarray ending at position j, what determines which starting positions i are valid, and among those valid starts, what single quantity about position i controls how large the subarray sum is?",
+    "Use a hash map storing each value's minimum prefix sum before the current index. For nums = [1,2,3,4,5,6], k=1: at j=5 (value 6), look up 5 in the map → prefix sum 10, compute 21 − 10 = 11.",
+    "```\nprefix = 0, ans = -inf, map = {}\nfor j in 0..n-1:\n    for target in {nums[j] - k, nums[j] + k}:\n        if target in map:\n            ans = max(ans, prefix + nums[j] - map[target])\n    map[nums[j]] = min(map[nums[j]], prefix)\n    prefix += nums[j]\nreturn ans if found else 0\n```",
+    "**All negative values** - the best good subarray has a negative sum\n`Input: nums = [-1,-2,-3,-4], k = 2` → `Expected: -6`\n⚠️ Bug: initializing ans to 0 instead of LLONG_MIN → returns 0 instead of -6\n\n**No valid subarray** - no pair of elements differs by exactly k\n`Input: nums = [1,3,5], k = 1` → `Expected: 0`\n⚠️ Bug: returning ans directly without checking if any match was found → returns LLONG_MIN instead of 0\n\n**Duplicate values at different positions** - same value appears multiple times with different preceding sums\n`Input: nums = [3,1,2,3,2], k = 1` → `Expected: 11`\n⚠️ Bug: overwriting the stored prefix sum instead of keeping the minimum → at j=4, map[3]=6 instead of 0, computes 9+2−6=5, returns 8\n\n**Overflow** - prefix sums can reach 10^5 × 10^9 = 10^14\n`Input: nums = [1000000000, 999999999, 1000000000, 999999999], k = 1` → `Expected: 3999999998`\n⚠️ Bug: using int for prefix sum → 3×10^9 exceeds INT_MAX (2147483647), wraps to 852516351, returns 1999999999"
+  ],
+  "followUps": [
+    {
+      "q": "What if you must return the actual subarray indices [i, j], not just the sum?",
+      "a": "Store both the minimum prefix sum and its corresponding start index in the map. When a candidate improves the answer, also record the matched start index and current j. The rest of the algorithm is unchanged. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if k can be 0, allowing subarrays where the first and last elements are equal?",
+      "a": "The algorithm already handles k=0: both targets become nums[j], and since we look up the map before inserting the current value, we only match previous occurrences of the same value. No code change needed. TC: O(n), SC: O(n)."
+    },
+    {
+      "q": "What if you need the maximum sum of a good subarray with length at least L?",
+      "a": "For each value, maintain a monotonic deque of (prefix_sum, index) pairs, evicting entries whose index is within L−1 of j. The deque keeps prefix sums in increasing order so the front gives the minimum valid prefix sum. TC: O(n), SC: O(n)."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    long long maximumSubarraySum(vector<int>& nums, int k) {\n        unordered_map<long long, long long> minPrefix;\n        long long prefix = 0;\n        long long ans = LLONG_MIN;\n        for (int j = 0, n = nums.size(); j < n; j++) {\n            long long val = nums[j];\n            auto it1 = minPrefix.find(val - k);\n            if (it1 != minPrefix.end())\n                ans = max(ans, prefix + val - it1->second);\n            auto it2 = minPrefix.find(val + k);\n            if (it2 != minPrefix.end())\n                ans = max(ans, prefix + val - it2->second);\n            auto it = minPrefix.find(val);\n            if (it != minPrefix.end())\n                it->second = min(it->second, prefix);\n            else\n                minPrefix[val] = prefix;\n            prefix += val;\n        }\n        return ans == LLONG_MIN ? 0 : ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "slug": "sort-matrix-by-diagonals",
+  "title": "Sort Matrix by Diagonals",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Diagonal Traversal + Sorting",
+  "tc": "O(n² log n)",
+  "sc": "O(n)",
+  "spaceBreakdown": "- vector<int> vals: at most n entries per diagonal → O(n)\n- sort(): C++ introsort uses O(log n) stack\n- not counted: input grid (modified in place), returned reference",
+  "approach": "Each diagonal of the matrix consists of cells where (row − col) is constant. The sign of this value splits the matrix: (row − col) ≥ 0 is the bottom-left triangle (including the main diagonal), and (row − col) < 0 is the top-right triangle. For each diagonal, collect its values, sort them (non-increasing for d ≥ 0, non-decreasing for d < 0), then write them back in the same traversal order. This is correct because cells on the same diagonal are independent of cells on other diagonals.",
+  "hints": [
+    "Look at the (row, col) pairs of cells that lie on the same down-right diagonal - what quantity stays constant as you move along it, and how does that quantity's sign differ between the two triangles the problem names?",
+    "Collect each diagonal (keyed by row − col) into a vector, sort it, then write the sorted values back along the same cells. Example: the main diagonal of [[1,7,3],[9,8,2],[4,5,6]] is [1,8,6]; sort non-increasing → [8,6,1] and place at (0,0),(1,1),(2,2).",
+    "for d from -(n-1) to (n-1):\n    vals = [ grid[i][i-d] for i where 0 <= i-d < n ]\n    if d >= 0: sort vals descending\n    else:      sort vals ascending\n    write vals back to grid[i][i-d] in same i order\nreturn grid",
+    "**Single cell** - n = 1, the only diagonal has one element.\n`Input: [[1]]` → `Expected: [[1]]`\n⚠️ Bug: skipping diagonals where the list has length 1 → returns `[[1]]` (harmless here, but a loop `while vals.size() > 1` would drop it).\n\n**Middle diagonal direction** - the main diagonal belongs to the bottom-left triangle and must be non-increasing.\n`Input: [[1,7,3],[9,8,2],[4,5,6]]` → `Expected: [[8,2,3],[9,6,7],[4,5,1]]`\n⚠️ Bug: treating d == 0 as top-right (non-decreasing) → main diagonal becomes [1,6,8], returns `[[1,2,3],[9,6,7],[4,5,8]]`.\n\n**Negatives and zeros** - values can be negative; sorting must use the actual comparator, not assume positivity.\n`Input: [[-1,0],[2,-3]]` → `Expected: [[-1,0],[2,-3]]` (d=0: [-1,-3] non-increasing → [-1,-3]; d=-1: [0]; d=1: [2])\n⚠️ Bug: sorting by absolute value → d=0 becomes [-1,-3] reordered to [-1,-3] only by luck; on `[[-5,0],[2,-3]]` it would wrongly keep [-5,-3] instead of [-3,-5], returning `[[-5,0],[2,-3]]` instead of `[[-3,0],[2,-5]]`.\n\n**All elements equal** - every diagonal is already sorted either way.\n`Input: [[7,7],[7,7]]` → `Expected: [[7,7],[7,7]]`\n⚠️ Bug: using `std::unique` before sorting to \"remove duplicates\" → returns `[[7,7],[7,7]]` only if re-expanded; a naive version returns `[[7,0],[0,7]]`.\n\n**Already reverse-sorted main diagonal** - main diagonal must stay non-increasing.\n`Input: [[2,1],[1,0]]` → `Expected: [[2,1],[1,0]]`\n⚠️ Bug: always sorting every diagonal non-decreasing → d=0 [2,0] becomes [0,2], returns `[[0,1],[1,2]]`."
+  ],
+  "followUps": [
+    {
+      "q": "How would you handle an m × n rectangular matrix where diagonals have different lengths?",
+      "a": "The same approach works unchanged: iterate d from -(n-1) to (m-1), collect grid[i][i-d] for valid i, sort by the same sign rule (using d ≥ 0 vs d < 0), and write back. Time becomes O(mn log(min(m,n))), space O(min(m,n))."
+    },
+    {
+      "q": "Can you do it with O(1) extra space (beyond the input)?",
+      "a": "Yes - sort each diagonal in place using an index-based selection/insertion sort over the cells (i, i-d) without materializing a vector. Time rises to O(n³) in the worst case for an in-place quadratic sort per diagonal, but space drops to O(1) (introsort's recursion stack excluded)."
+    },
+    {
+      "q": "Instead of fully sorting each diagonal, return the k-th smallest value on every diagonal in one pass.",
+      "a": "For each diagonal, use quickselect on its collected vector to find the k-th element in O(|diag|) average time, giving O(n²) total average time and O(n) space. If k is fixed across diagonals, a size-k max-heap streamed along each diagonal also yields O(n² log k) time and O(k) space."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<vector<int>> sortMatrix(vector<vector<int>>& grid) {\n        int n = (int)grid.size();\n        for (int d = -(n - 1); d <= n - 1; ++d) {\n            vector<int> vals;\n            for (int i = 0; i < n; ++i) {\n                int j = i - d;\n                if (j >= 0 && j < n) vals.push_back(grid[i][j]);\n            }\n            if (d >= 0) sort(vals.begin(), vals.end(), greater<int>());\n            else sort(vals.begin(), vals.end());\n            int idx = 0;\n            for (int i = 0; i < n; ++i) {\n                int j = i - d;\n                if (j >= 0 && j < n) grid[i][j] = vals[idx++];\n            }\n        }\n        return grid;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

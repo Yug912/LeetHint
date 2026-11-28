@@ -1,0 +1,40 @@
+{
+  "slug": "count-number-of-rectangles-containing-each-point",
+  "title": "Count Number of Rectangles Containing Each Point",
+  "difficulty": "Medium",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Sorting + Binary Search",
+  "tc": "O(R log R + P · 100 · log R)",
+  "sc": "O(R)",
+  "spaceBreakdown": "- vector<vector<int>> byHeight(101): 101 buckets holding R total entries → O(R)\n- sort() introsort stack: O(log R) per call, sequential → O(log R)\n- ans: returned output, not counted",
+  "approach": "Since heights and y-coordinates are bounded by 100, group rectangles by height into 101 buckets, each holding a sorted list of lengths. For each point (x, y), iterate over every height h from y to 100; at each height, binary-search the sorted length list to count how many rectangles have length ≥ x. Summing across all valid heights gives the answer. This avoids the O(R·P) brute force by exploiting the tiny height domain.",
+  "hints": [
+    "The heights h_i and y-coordinates y_j are both at most 100. For a single point, what could you do 100 times that would be impossible if heights reached 10^9?",
+    "Group rectangles by height into sorted lists of lengths. For point (2,1) in Example 1, scan heights 1-100; at height 3 the sorted list [2] yields one rectangle with length ≥ 2, and at height 5 another, giving 2.",
+    "```\ngroup rectangles by height; sort each group's lengths\nfor each point (x, y):\n    count = 0\n    for h from y to 100:\n        idx = lower_bound(group[h], x)\n        count += len(group[h]) - idx\n    output count\n```",
+    "**Point on right edge** - x equals a rectangle's length, edge inclusion applies\n`Input: rectangles = [[3,5]], points = [[3,3]]` → `Expected: [1]`\n⚠️ Bug: using upper_bound (strictly greater) instead of lower_bound → returns [0]\n\n**Point above all rectangles** - y exceeds every rectangle's height\n`Input: rectangles = [[5,2]], points = [[3,5]]` → `Expected: [0]`\n⚠️ Bug: iterating heights from 1 instead of from y → checks height 2, counts length 5 ≥ 3, returns [1]\n\n**Minimum input** - one rectangle, one point\n`Input: rectangles = [[1,1]], points = [[1,1]]` → `Expected: [1]`\n⚠️ Bug: loop condition `h < 100` instead of `h <= 100` → skips height 1, returns [0]\n\n**Unsorted lengths at same height** - rectangles given out of length order\n`Input: rectangles = [[3,3],[1,3],[2,3]], points = [[2,3]]` → `Expected: [2]`\n⚠️ Bug: skipping the sort step → lower_bound on unsorted [3,1,2] returns index 2, count = 1"
+  ],
+  "followUps": [
+    {
+      "q": "What if heights could also be up to 10^9?",
+      "a": "Bucketing by height no longer works. Sort rectangles by height descending and points by y descending, then sweep: maintain a Fenwick tree (or sorted multiset) of lengths, inserting rectangles whose height ≥ current point's y, and query how many lengths ≥ x. TC: O((R+P) log R), SC: O(R)."
+    },
+    {
+      "q": "What if points arrive one at a time in a stream with no pre-storage?",
+      "a": "Preprocess rectangles offline into the height-bucketed sorted lists once. Each streaming query then costs O(100 log R). If rectangles also stream, you need an online sorted structure per height bucket (e.g., a balanced BST per height) with O(log R) insert and O(log R) query."
+    },
+    {
+      "q": "What if edges are excluded (strict containment: x < l_i and y < h_i)?",
+      "a": "Replace lower_bound with upper_bound for the length check, and iterate heights from y+1 to 100 instead of y to 100. Everything else stays identical. TC and SC unchanged."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    vector<int> countRectangles(vector<vector<int>>& rectangles, vector<vector<int>>& points) {\n        vector<vector<int>> byHeight(101);\n        for (auto& r : rectangles) {\n            byHeight[r[1]].push_back(r[0]);\n        }\n        for (int h = 1; h <= 100; h++) {\n            sort(byHeight[h].begin(), byHeight[h].end());\n        }\n        vector<int> ans;\n        ans.reserve(points.size());\n        for (auto& p : points) {\n            int x = p[0], y = p[1];\n            int cnt = 0;\n            for (int h = y; h <= 100; h++) {\n                auto& v = byHeight[h];\n                int idx = lower_bound(v.begin(), v.end(), x) - v.begin();\n                cnt += (int)v.size() - idx;\n            }\n            ans.push_back(cnt);\n        }\n        return ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}

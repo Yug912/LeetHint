@@ -1,0 +1,40 @@
+{
+  "slug": "determine-if-two-events-have-conflict",
+  "title": "Determine if Two Events Have Conflict",
+  "difficulty": "Easy",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Interval Overlap Check",
+  "tc": "O(1)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- no containers allocated\n- no recursion\n- not counted: input vectors event1, event2",
+  "approach": "Two intervals overlap unless one ends strictly before the other starts. Since every time string is a zero-padded 5-character HH:MM value, lexicographic string comparison is identical to chronological comparison - no parsing needed. Return true unless event1 ends before event2 starts or event2 ends before event1 starts.",
+  "hints": [
+    "Every time string is exactly five characters with a leading zero for single-digit hours. What does that uniformity let you do when comparing two times directly, without converting them to numbers?",
+    "Direct string comparison for interval overlap. For event1=[\"01:15\",\"02:00\"] and event2=[\"02:00\",\"03:00\"], check if event1[1] < event2[0]: \"02:00\" is not less than \"02:00\", so the events are not disjoint.",
+    "```\nif event1.end < event2.start: return false\nif event2.end < event1.start: return false\nreturn true\n```",
+    "**Touching at boundary** - events share exactly one moment\n`Input: event1 = [\"01:15\",\"02:00\"], event2 = [\"02:00\",\"03:00\"]` → `Expected: true`\n⚠️ Bug: using `<=` instead of `<` in the non-overlap test (`!(event1[1] <= event2[0] || event2[1] <= event1[0])`) → returns false\n\n**Event2 entirely before event1** - the second event precedes the first\n`Input: event1 = [\"14:00\",\"15:00\"], event2 = [\"10:00\",\"11:00\"]` → `Expected: false`\n⚠️ Bug: only checking `event1[1] < event2[0]` and ignoring the reverse direction → returns true\n\n**Full containment** - one event entirely inside the other\n`Input: event1 = [\"01:00\",\"05:00\"], event2 = [\"02:00\",\"03:00\"]` → `Expected: true`\n⚠️ Bug: only checking if event1's start falls within event2 (`event1[0] >= event2[0] && event1[0] <= event2[1]`) → returns false\n\n**Both events identical** - same start and end\n`Input: event1 = [\"01:00\",\"02:00\"], event2 = [\"01:00\",\"02:00\"]` → `Expected: true`\n⚠️ Bug: returning the non-overlap formula directly without negation (`event1[1] < event2[0] || event2[1] < event1[0]`) → returns false"
+  ],
+  "followUps": [
+    {
+      "q": "What if an event could span midnight, e.g., [\"23:00\",\"01:00\"]?",
+      "a": "String comparison breaks because \"01:00\" < \"23:00\" lexicographically but the event wraps past midnight. Parse each time to minutes since midnight; if end < start, add 1440 to end. Then apply the same overlap check with adjusted values. TC stays O(1), SC O(1)."
+    },
+    {
+      "q": "Given n events, determine if any two conflict.",
+      "a": "Sort events by start time, then scan left to right checking whether each event's start is ≤ the running maximum end seen so far. TC O(n log n) for the sort, SC O(1) extra (in-place sort) or O(n) if copying."
+    },
+    {
+      "q": "Events arrive one at a time in a stream; flag each new event that conflicts with any seen so far.",
+      "a": "Maintain a balanced BST of seen intervals keyed by start time. For each new event, check only its predecessor and successor in the tree for overlap. TC O(n log n) total, SC O(n) for the tree."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    bool haveConflict(vector<string>& event1, vector<string>& event2) {\n        return !(event1[1] < event2[0] || event2[1] < event1[0]);\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "3/3",
+    "reviewed": 2
+  }
+}

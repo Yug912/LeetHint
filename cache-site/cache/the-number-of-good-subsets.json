@@ -1,0 +1,40 @@
+{
+  "slug": "the-number-of-good-subsets",
+  "title": "The Number of Good Subsets",
+  "difficulty": "Hard",
+  "promptVersion": "p9",
+  "generatedAt": "2026-11-28",
+  "pattern": "Bitmask DP (Knapsack over prime masks)",
+  "tc": "O(n + 30·1024)",
+  "sc": "O(1)",
+  "spaceBreakdown": "- freq[31]: fixed 31 longs → O(1)\n- dp[1024]: fixed 1024 longs → O(1)\n- numMask[31], ok[31], primes[10]: fixed arrays → O(1)\n- recursion depth: none\n- not counted: input vector",
+  "approach": "Since nums[i] ≤ 30, only the 10 primes up to 30 matter. A number can appear in a good subset only if it is squarefree (no repeated prime factor); each such number maps to a 10-bit mask of its prime factors. We run a knapsack-style bitmask DP: dp[mask] = number of ways to choose a subset of distinct squarefree numbers whose combined prime set is exactly mask. For each squarefree value v > 1 with frequency c, we update dp in decreasing mask order (so v is used at most once), adding dp[mask]·c to dp[mask | mask_v] when the masks are disjoint. The final answer is the sum of dp[mask] for all non-zero masks, multiplied by 2^(count of 1s) since 1 can be freely added to any good subset without changing the product.",
+  "hints": [
+    "With nums[i] ≤ 30, only 10 distinct primes can ever appear. What must be true about the prime factorization of a number for it to participate in a subset whose product has no repeated prime?",
+    "Use bitmask DP over the 10 primes. In Example 1, the value 2 maps to mask 001 and 3 maps to mask 010; combining them (masks disjoint) gives mask 011 with product 6 = 2·3.",
+    "```\ndp[0] = 1\nfor each squarefree value v in 2..30 with freq c and prime-mask m:\n    for mask from 1023 down to 0:\n        if dp[mask] > 0 and (mask & m) == 0:\n            dp[mask | m] += dp[mask] * c\nanswer = sum(dp[mask] for mask != 0) * 2^(freq[1])\n```",
+    "**All ones** - no squarefree value > 1 exists, so no good subset is possible.\n`Input: nums = [1,1,1]` → `Expected: 0`\n⚠️ Bug: counting the empty subset or 1-only subsets as good → returns 1 or more.\n\n**Non-squarefree only** - every element has a repeated prime factor.\n`Input: nums = [4]` → `Expected: 0`\n⚠️ Bug: not filtering out non-squarefree numbers, so 4 maps to mask 001 and dp[001] = 1 → returns 1.\n\n**Single valid element** - exactly one good subset exists: the element itself.\n`Input: nums = [2]` → `Expected: 1`\n⚠️ Bug: including dp[0] (the empty subset) in the final sum → returns 2.\n\n**Duplicate valid elements** - each copy is a distinct subset by index, but they cannot combine.\n`Input: nums = [2,2]` → `Expected: 2`\n⚠️ Bug: iterating masks low-to-high (or looping per copy) lets the same value be used twice → returns 3."
+  ],
+  "followUps": [
+    {
+      "q": "What if nums[i] could be up to 300 instead of 30?",
+      "a": "The number of primes up to 300 is 62, so the mask would need 62 bits (use unsigned long long or __int128). The DP table grows to 2^62 which is infeasible, so you would need a meet-in-the-middle approach: split primes into two halves, enumerate reachable masks on each side, then combine compatible pairs. Time becomes O(30 · 2^31) per half which is still too large, so you'd also prune to only reachable masks."
+    },
+    {
+      "q": "What if the array is a streaming input with no known length and you must answer after each element?",
+      "a": "Maintain the dp table incrementally: for each incoming squarefree value, update dp in decreasing mask order as before. Each update is O(1024). Space stays O(1024). The 1-count is tracked separately and applied at query time."
+    },
+    {
+      "q": "What if a good subset's product must use all 10 primes (i.e., the product is the primorial 2·3·5·…·29)?",
+      "a": "After computing dp, return dp[1023] (the full mask) multiplied by 2^(freq[1]) instead of summing all non-zero masks. Everything else in the solution stays identical."
+    }
+  ],
+  "code": {
+    "cpp": "class Solution {\npublic:\n    int numberOfGoodSubsets(vector<int>& nums) {\n        const long long MOD = 1000000007;\n        int primes[10] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29};\n\n        int numMask[31];\n        bool ok[31];\n        for (int i = 0; i <= 30; i++) { numMask[i] = 0; ok[i] = true; }\n\n        for (int i = 1; i <= 30; i++) {\n            int x = i, m = 0;\n            for (int j = 0; j < 10; j++) {\n                int p = primes[j];\n                if (x % p == 0) {\n                    x /= p;\n                    m |= (1 << j);\n                    if (x % p == 0) { ok[i] = false; break; }\n                }\n            }\n            numMask[i] = m;\n        }\n\n        long long freq[31];\n        for (int i = 0; i <= 30; i++) freq[i] = 0;\n        for (int x : nums) freq[x]++;\n\n        long long dp[1024];\n        for (int i = 0; i < 1024; i++) dp[i] = 0;\n        dp[0] = 1;\n\n        for (int v = 2; v <= 30; v++) {\n            if (!ok[v] || freq[v] == 0) continue;\n            int m = numMask[v];\n            for (int mask = 1023; mask >= 0; mask--) {\n                if (dp[mask] == 0) continue;\n                if ((mask & m) == 0) {\n                    dp[mask | m] = (dp[mask | m] + dp[mask] * freq[v]) % MOD;\n                }\n            }\n        }\n\n        long long ans = 0;\n        for (int mask = 1; mask < 1024; mask++) ans = (ans + dp[mask]) % MOD;\n\n        long long pow2 = 1, base = 2, e = freq[1];\n        while (e > 0) {\n            if (e & 1) pow2 = pow2 * base % MOD;\n            base = base * base % MOD;\n            e >>= 1;\n        }\n        ans = ans * pow2 % MOD;\n\n        return (int)ans;\n    }\n};"
+  },
+  "verified": {
+    "compiled": true,
+    "examples": "2/2",
+    "reviewed": 2
+  }
+}
